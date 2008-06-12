@@ -30,10 +30,16 @@ foreach my $argnum ( 0 .. 0 ) {
 		print STDERR "WARNINGS: Record $count : " .  join(":",@warnings) . " : continuing...\n" if ( @warnings );
 
         for (my $i = 0; $i < scalar(@desired_tags_subfields); $i+=2) {
+            my $first = 1;
 		    my @tags; if ($record->field($desired_tags_subfields[$i])) { @tags = $record->field($desired_tags_subfields[$i]); }
             foreach my $f ( @tags ) { 
                 if ($f->subfield($desired_tags_subfields[$i+1])) { 
-                    print STDOUT $f->subfield($desired_tags_subfields[$i+1]) . "\t";
+                    if ($first) {
+                        $first = 0;
+                    } else {
+                        print STDOUT "\t";
+                    }
+                    print STDOUT $f->subfield($desired_tags_subfields[$i+1]);
                 } 
             }
         }
