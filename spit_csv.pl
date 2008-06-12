@@ -7,6 +7,7 @@ use Unicode::Normalize;
 
 my @desired_tags_subfields = ();
 foreach my $argnum ( 1 .. $#ARGV) {
+    print STDERR $ARGV[$argnum] . "\n";
     push @desired_tags_subfields, $ARGV[$argnum];
 }
 
@@ -31,7 +32,16 @@ foreach my $argnum ( 0 .. 0 ) {
 
         my $first = 1;
         for (my $i = 0; $i < scalar(@desired_tags_subfields); $i+=2) {
-		    my @tags; if ($record->field($desired_tags_subfields[$i])) { @tags = $record->field($desired_tags_subfields[$i]); }
+		    my @tags = (); 
+            if ($record->field($desired_tags_subfields[$i])) { 
+                @tags = $record->field($desired_tags_subfields[$i]); 
+            }
+            if (scalar(@tags)>1) { 
+                die "Multiple $desired_tags_subfields[$i]\n"; 
+            } elsif (scalar(@tags)==0) { 
+                print STDERR "Record $count missing $desired_tags_subfields[$i]\n"; 
+                goto END_OF_WHILE; 
+            }
             foreach my $f ( @tags ) { 
                 if ($f->subfield($desired_tags_subfields[$i+1])) { 
                     if ($first) {
@@ -44,7 +54,7 @@ foreach my $argnum ( 0 .. 0 ) {
             }
         }
         print STDOUT "\n";
-
+        END_OF_WHILE:
 	}
 	print STDERR "Processed $count records\n";
 }
