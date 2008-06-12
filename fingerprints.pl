@@ -46,39 +46,8 @@ foreach $argnum ( 3 .. $#ARGV ) {
 				$item_form = substr($my_008,23,1) if ($my_008);
 			}
 
-        my @titles = ();
-		my $my_245 = $record->field('245'); 
-			if ( $my_245 ) { 
-                my $title = $my_245->subfield('a');
-                $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go; $title = lc($title); $title =~ s/\W+$//go; $title =~ s/^\W+//go; push @titles, $title;
-                if ($my_245->subfield('b')) {
-                    $title = $my_245->subfield('a') . ', ' . $my_245->subfield('b');
-                    $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go; $title = lc($title); $title =~ s/\W+$//go; $title =~ s/^\W+//go; push @titles, $title;
-
-                    $title = "_magic_prefix_for_special_case_1_" .$my_245->subfield('b');
-                    $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go; $title = lc($title); $title =~ s/\W+$//go; $title =~ s/^\W+//go; push @titles, $title;
-                }
-                if ($title->subfield('p')) {
-                    $title = $my_245->subfield('a') . ', ' . $my_245->subfield('p');
-                    $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go; $title = lc($title); $title =~ s/\W+$//go; $title =~ s/^\W+//go; push @titles, $title;
-                }
-                my $my_440 = $record->field('440');
-                if ($my_440 && $my_440->subfield('a')) {
-                    $title = $my_440->subfield('a') . ', ' . $my_245->subfield('a');
-                    $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go; $title = lc($title); $title =~ s/\W+$//go; $title =~ s/^\W+//go; push @titles, $title;
-
-                    $title = "_magic_prefix_for_special_case_1_" .$my_245->subfield('a');
-                    $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go; $title = lc($title); $title =~ s/\W+$//go; $title =~ s/^\W+//go; push @titles, $title;
-                }
-                my $my_490 = $record->field('490');
-                if ($my_490 && $my_490->subfield('a')) {
-                    $title = $my_490->subfield('a') . ', ' . $my_245->subfield('a');
-                    $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go; $title = lc($title); $title =~ s/\W+$//go; $title =~ s/^\W+//go; push @titles, $title;
-
-                    $title = "_magic_prefix_for_special_case_1_" .$my_245->subfield('a');
-                    $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go; $title = lc($title); $title =~ s/\W+$//go; $title =~ s/^\W+//go; push @titles, $title;
-                }
-            }
+		my $title = $record->field('245'); 
+			if ( $title ) { $title = $title->subfield('a'); }
         
         my @isbns = ();
 		my @isbns_020; if ($record->field('020')) { @isbns_020 = $record->field('020'); }
@@ -100,8 +69,8 @@ foreach $argnum ( 3 .. $#ARGV ) {
 			}
 		my $desc = $record->field('300');
 			if ( $desc ) { $desc = $desc->subfield('a'); }
-		my $pagination;
-			if ($desc =~ /(\d+)/) { $pagination = $1; }
+		my $pages;
+			if ($desc =~ /(\d+)/) { $pages = $1; }
 		my $my_260 = $record->field('260');
 		my $publisher = $my_260->subfield('b') if ( $my_260 );
 		my $pubyear = $my_260->subfield('c') if ( $my_260 );
@@ -113,6 +82,11 @@ foreach $argnum ( 3 .. $#ARGV ) {
 
 		# NORMALIZE
 		if ($record_type == ' ') { $record_type = 'a'; }
+		if ($title) {
+			$title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go;
+			$title = lc($title);
+			$title =~ s/\W+$//go;
+		}
 		if ($author) {
 			$author = NFD($author); $author =~ s/[\x{80}-\x{ffff}]//go;
 			$author = lc($author);
@@ -130,34 +104,39 @@ foreach $argnum ( 3 .. $#ARGV ) {
 			}
 		}
 
-		# SPIT OUT FINGERPRINTS FROM THE "MODIFIED LOIS ALGORITHM"
+		# SPIT OUT FINGERPRINTS FROM THE "LOIS ALGORITHM"
 		# If we're not getting good matches, we may want to change this.  The same thing goes for some other fields.
-		if ($item_form && ($date1 =~ /\d\d\d\d/) && $record_type && $bib_lvl && $title && $author && $publisher && $pubyear && $pagination) {
+		if ($item_form && ($date1 =~ /\d\d\d\d/) && $record_type && $bib_lvl && $title) {
 
             if ($which eq "primary") {
-                print STDOUT join("\t",$id,$item_form,$date1,$record_type,$bib_lvl,$title,$author,$publisher,$pubyear,$pagination) . "\n"; 
+			    print STDOUT join("\t",$id,$item_form,$date1,$record_type,$bib_lvl,$title) . "\n"; 
             } else {
 			
-                # case a : isbn 
-                if (scalar(@isbns)>0) {
+                # case a : isbn and pages
+                if (scalar(@isbns)>0 && $pages) {
                     foreach my $isbn ( @isbns ) {
-                        print STDOUT join("\t",$id,"case a",$item_form,$date1,$record_type,$bib_lvl,$title,$author,$publisher,$pubyear,$pagination,$isbn) . "\n"; 
+                        print STDOUT join("\t",$id,"case a",$item_form,$date1,$record_type,$bib_lvl,$title,$isbn,$pages) . "\n"; 
                     }
                 }
 
                 # case b : edition
                 if ($edition) {
-                    print STDOUT join("\t",$id,"case b",$item_form,$date1,$record_type,$bib_lvl,$title,$author,$publisher,$pubyear,$pagination,$edition) . "\n"; 
+                    print STDOUT join("\t",$id,"case b",$item_form,$date1,$record_type,$bib_lvl,$title,$edition) . "\n"; 
                 }
 
                 # case c : issn
                 if ($issn) {
-                    print STDOUT join("\t",$id,"case c",$item_form,$date1,$record_type,$bib_lvl,$title,$author,$publisher,$pubyear,$pagination,$issn) . "\n"; 
+                    print STDOUT join("\t",$id,"case c",$item_form,$date1,$record_type,$bib_lvl,$title,$issn) . "\n"; 
                 }
 
                 # case d : lccn
                 if ($lccn) {
-                    print STDOUT join("\t",$id,"case d",$item_form,$date1,$record_type,$bib_lvl,$title,$author,$publisher,$pubyear,$pagination,$lccn) . "\n"; 
+                    print STDOUT join("\t",$id,"case d",$item_form,$date1,$record_type,$bib_lvl,$title,$lccn) . "\n"; 
+                }
+
+                # case e : author, publisher, pubyear, pages
+                if ($author && $publisher && $pubyear && $pages) {
+                    print STDOUT join("\t",$id,"case e",$item_form,$date1,$record_type,$bib_lvl,$title,$author,$publisher,$pubyear,$pages) . "\n"; 
                 }
 
             }
@@ -169,10 +148,6 @@ foreach $argnum ( 3 .. $#ARGV ) {
 			print STDERR "Missing record_type. " unless ($record_type);
 			print STDERR "Missing bib_lvl. " unless ($bib_lvl);
 			print STDERR "Missing title. " unless ($title);
-			print STDERR "Missing author. " unless ($author);
-			print STDERR "Missing publisher. " unless ($publisher);
-			print STDERR "Missing pubyear. " unless ($pubyear);
-			print STDERR "Missing pagination. " unless ($pagination);
 			print STDERR "\n";
 
 		}
