@@ -29,8 +29,8 @@ foreach my $argnum ( 0 .. 0 ) {
 
 		print STDERR "WARNINGS: Record $count : " .  join(":",@warnings) . " : continuing...\n" if ( @warnings );
 
+        my $first = 1;
         for (my $i = 0; $i < scalar(@desired_tags_subfields); $i+=2) {
-            my $first = 1;
 		    my @tags; if ($record->field($desired_tags_subfields[$i])) { @tags = $record->field($desired_tags_subfields[$i]); }
             foreach my $f ( @tags ) { 
                 if ($f->subfield($desired_tags_subfields[$i+1])) { 
