@@ -43,18 +43,18 @@ foreach my $argnum ( 0 .. $#ARGV ) {
         foreach my $tag ( @tags ) {
             print join("\t",
                 $my_903a,
-                $tag->subfield('m'), # library
-                $tag->subfield('i'), # barcode
-                $tag->subfield('k'), # current location
-                $tag->subfield('l'), # home location
-                $tag->subfield('a'), # call number
-                $tag->subfield('t'), # item type
-                $tag->subfield('u'), # acq date
-                $tag->subfield('p'), # price
-                $tag->subfield('r'), # circulate flag
-                $tag->subfield('n'), # total charges
-                $tag->subfield('x'), # cat1
-                $tag->subfield('z')  # cat2
+                $tag->subfield('m') || '', # library
+                $tag->subfield('i') || '', # barcode
+                $tag->subfield('k') || '', # current location
+                $tag->subfield('l') || '', # home location
+                $tag->subfield('a') || '', # call number
+                $tag->subfield('t') || '', # item type
+                $tag->subfield('u') || '', # acq date
+                $tag->subfield('p') || '', # price
+                $tag->subfield('r') || '', # circulate flag
+                $tag->subfield('n') || '', # total charges
+                $tag->subfield('x') || '', # cat1
+                $tag->subfield('z') || ''  # cat2
             ) . "\n";
         }
 
