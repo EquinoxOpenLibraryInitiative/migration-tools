@@ -4,7 +4,9 @@ use MARC::Record;
 use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 use MARC::Field;
 
-my $record_id_file = $ARGV[0];
+my $format = $ARGV[0];
+
+my $record_id_file = $ARGV[1];
 my %record_ids;
 
 open FILE, $record_id_file;
@@ -13,12 +15,12 @@ while (my $record_id = <FILE>) {
 }
 close FILE;
 
-my $id_tag = $ARGV[1]; my $id_subfield = $ARGV[2];
+my $id_tag = $ARGV[2]; my $id_subfield = $ARGV[3];
 
 binmode(STDOUT, ':utf8');
 binmode(STDIN, ':utf8');
 
-foreach $argnum ( 3 .. $#ARGV ) {
+foreach $argnum ( 4 .. $#ARGV ) {
 
 	print STDERR "Processing " . $ARGV[$argnum] . "\n";
 
@@ -40,8 +42,12 @@ foreach $argnum ( 3 .. $#ARGV ) {
 		$id = $id->as_string($id_subfield);
 
         if (! defined $record_ids{ $id }) {
-            print STDOUT '=-' x 39 . "\n";
-            print STDOUT $record->as_formatted() . "\n";
+            if ($format eq 'text') {
+                print STDOUT '=-' x 39 . "\n";
+                print STDOUT $record->as_formatted() . "\n";
+            } else {
+                print STDOUT $record->as_xml() . "\n";
+            }
         }
 	}
     print STDERR "Processed $count records.\n";
