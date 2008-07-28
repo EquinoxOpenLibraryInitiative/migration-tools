@@ -1,7 +1,4 @@
 #!/usr/bin/perl
-#
-# WARNING: This doesn't handle Rob's address-database-enhanced Patron XML format, with such things as Change of Address information
-#
 use strict;
 use warnings;
 
@@ -146,7 +143,7 @@ sub parse_date {
 		}
 	}
 
-	my $date;
+	my $date = $string;
 	if ($y && $m && $d) {
 		eval {
 			$date = sprintf('%04d-%02d-%-2d',$y, $m, $d)
