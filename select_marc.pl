@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+use open ':utf8';
 use MARC::Batch;
 use MARC::Record;
 use MARC::File::XML ( BinaryEncoding => 'utf-8' );
