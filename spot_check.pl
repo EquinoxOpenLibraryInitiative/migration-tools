@@ -10,11 +10,15 @@ my $count = 0;
 binmode(STDOUT, ':utf8');
 binmode(STDIN, ':utf8');
 
+my $M;
+
 foreach $argnum ( 0 .. $#ARGV ) {
 
 	print STDERR "Processing " . $ARGV[$argnum] . "\n";
 
-	my $batch = MARC::Batch->new('XML',$ARGV[$argnum]);
+	open $M, '<:utf8', $ARGV[$argnum];
+
+	my $batch = MARC::Batch->new('XML',$M);
 	$batch->strict_off();
 	$batch->warnings_off();
 
@@ -28,6 +32,10 @@ foreach $argnum ( 0 .. $#ARGV ) {
             $last_successful_record = $record->as_xml();
 
             print STDERR "WARNINGS: Record $count : " . join(":",@warnings) . " : continuing...\n" if ( @warnings );
+
+	    unless ($count % 1000) {
+	    	print STDERR "$count\r"
+	    }
 
         }
     };
