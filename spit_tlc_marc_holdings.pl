@@ -11,19 +11,24 @@ binmode(STDOUT, ':utf8');
 binmode(STDIN, ':utf8');
 
 print join("\t",
-    "bib id",
-    "library",
-    "barcode",
-    "current location",
-    "home location",
-    "call number",
-    "item type",
-    "acq date",
-    "price",
-    "circulate flag",
-    "total charges",
-    "cat1",
-    "cat2"
+	"bib id",
+	"collection code",
+	"prefix",
+	"call number",
+	"cutter number",
+	"barcode",
+	"serial year",
+	"volume number",
+	"part subdivision 1",
+	"part subdivision 2",
+	"part subdivision 3",
+	"part subdivision 4",
+	"copy number",
+	"accession number",
+	"price",
+	"condition",
+	"magnetic media",
+	"checkin-in/check-out note"
 ) . "\n";
 
 foreach my $argnum ( 0 .. $#ARGV ) {
