@@ -26,7 +26,6 @@ foreach $argnum ( 3 .. $#ARGV ) {
 
     my $record = 1;
 	while ( $record ) {
-        eval {
             $count++;
             $record = $batch->next();
 
@@ -158,8 +157,6 @@ foreach $argnum ( 3 .. $#ARGV ) {
                 print STDERR "\n";
 
             }
-        }
-        print STDERR "Trapped exception for MARC::Batch->next on record $count: $@\n" if ($@);
 	}
     print STDERR "Processed $count records\n";
 }
