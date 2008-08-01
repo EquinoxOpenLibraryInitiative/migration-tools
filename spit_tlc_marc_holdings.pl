@@ -50,26 +50,28 @@ foreach my $argnum ( 0 .. $#ARGV ) {
         my $my_903a = $record->field('903')->subfield('a'); # target bib id's here
         my @tags = $record->field('949');
         foreach my $tag ( @tags ) {
-            print join("\t",
-                $my_903a, # bib id
-                $tag->subfield('a') || '', # collection code
-                $tag->subfield('b') || '', # prefix
-                $tag->subfield('c') || '', # call number
-                $tag->subfield('d') || '', # cutter number
-                $tag->subfield('g') || '', # barcode
-                $tag->subfield('h') || '', # serial year
-                $tag->subfield('i') || '', # volume number
-                $tag->subfield('j') || '', # part subdivision 1
-                $tag->subfield('k') || '', # part subdivision 2
-                $tag->subfield('l') || '', # part subdivision 3
-                $tag->subfield('m') || '', # part subdivision 4
-                $tag->subfield('n') || '', # copy number
-                $tag->subfield('o') || '', # accession number
-                $tag->subfield('p') || '', # price
-                $tag->subfield('q') || '', # condition
-                $tag->subfield('5') || '', # magnetic media 
-                $tag->subfield('7') || '' # checkin-in/check-out note
-            ) . "\n";
+			if ($tag->subfield('g')) {
+					print join("\t",
+						$my_903a, # bib id
+						$tag->subfield('a') || '', # collection code
+						$tag->subfield('b') || '', # prefix
+						$tag->subfield('c') || '', # call number
+						$tag->subfield('d') || '', # cutter number
+						$tag->subfield('g') || '', # barcode
+						$tag->subfield('h') || '', # serial year
+						$tag->subfield('i') || '', # volume number
+						$tag->subfield('j') || '', # part subdivision 1
+						$tag->subfield('k') || '', # part subdivision 2
+						$tag->subfield('l') || '', # part subdivision 3
+						$tag->subfield('m') || '', # part subdivision 4
+						$tag->subfield('n') || '', # copy number
+						$tag->subfield('o') || '', # accession number
+						$tag->subfield('p') || '', # price
+						$tag->subfield('q') || '', # condition
+						$tag->subfield('5') || '', # magnetic media 
+						$tag->subfield('7') || '' # checkin-in/check-out note
+					) . "\n";
+			}
         }
 
 	}
