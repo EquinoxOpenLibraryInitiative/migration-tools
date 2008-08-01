@@ -21,11 +21,15 @@ my $id_tag = $ARGV[2]; my $id_subfield = $ARGV[3];
 binmode(STDOUT, ':utf8');
 binmode(STDIN, ':utf8');
 
+my $M;
+
 foreach $argnum ( 4 .. $#ARGV ) {
 
 	print STDERR "Processing " . $ARGV[$argnum] . "\n";
 
-	my $batch = MARC::Batch->new('XML',$ARGV[$argnum]);
+    open $M, '<:utf8', $ARGV[$argnum];
+
+	my $batch = MARC::Batch->new('XML',$M);
 	$batch->strict_off();
 	$batch->warnings_off();
 

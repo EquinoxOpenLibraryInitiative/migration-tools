@@ -20,7 +20,10 @@ foreach my $argnum ( 0 .. 0 ) {
 
 	print STDERR "Processing " . $ARGV[$argnum] . "\n";
 
-	my $batch = MARC::Batch->new('XML',$ARGV[$argnum]);
+    my $M;
+    open $M, '<:utf8', $ARGV[$argnum];
+    my $batch = MARC::Batch->new('XML',$M);
+
 	$batch->strict_off();
 	$batch->warnings_off();
 
