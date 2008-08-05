@@ -9,7 +9,7 @@ use MARC::Field;
 use Unicode::Normalize;
 
 my $count = 0;
-my $which = shift;
+my $runtype = shift;
 my $id_tag = shift;
 my $id_subfield = shift;
 
@@ -26,10 +26,8 @@ for my $file (@ARGV) {
     $batch->strict_off();
     $batch->warnings_off();
 
-    my $record = 1;
-    while ( $record ) {
+    while ( my $record = $batch->next ) {
         $count++;
-        $record = $batch->next();
 
         my $id = $record->field($id_tag);
         if (!$id) {
@@ -47,6 +45,7 @@ for my $file (@ARGV) {
         $my_008 = $my_008->as_string() if ($my_008);
         my $date1 = substr($my_008,7,4) if ($my_008);
         my $date2 = substr($my_008,11,4) if ($my_008);
+
         my $item_form;
         if ( $record_type =~ /[gkroef]/ ) { # MAP, VIS
             $item_form = substr($my_008,29,1) if ($my_008);
@@ -78,9 +77,11 @@ for my $file (@ARGV) {
         }
 
         my $issn = $record->field('022');
-        if ( $issn ) { $issn = $issn->subfield('a'); }
+        $issn = $issn->subfield('a') if $issn;
+
         my $lccn = $record->field('010');
-        if ( $lccn ) { $lccn = $lccn->subfield('a'); }
+        $lccn = $lccn->subfield('a') if $lccn;
+
         my $author;
         if ($record->field('100'))
           { $author = $record->field('100')->subfield('a'); }
@@ -90,10 +91,13 @@ for my $file (@ARGV) {
             $author = $record->field('111')->subfield('a')
               if ($record->field('111'));
         }
+
         my $desc = $record->field('300');
         if ( $desc ) { $desc = $desc->subfield('a'); }
+
         my $pages;
         if (defined $desc and $desc =~ /(\d+)/) { $pages = $1; }
+
         my $my_260 = $record->field('260');
         my $publisher = $my_260->subfield('b') if ( $my_260 );
         my $pubyear = $my_260->subfield('c') if ( $my_260 );
@@ -103,6 +107,7 @@ for my $file (@ARGV) {
             else
               { $pubyear = ''; }
         }
+
         my $edition = $record->field('250');
         if ( $edition ) { $edition = $edition->subfield('a'); }
 
@@ -135,7 +140,7 @@ for my $file (@ARGV) {
         # The same thing goes for some other fields.
         if ($item_form && ($date1 =~ /\d\d\d\d/)
             && $record_type && $bib_lvl && $title) {
-            if ($which eq "primary") {
+            if ($runtype eq "primary") {
                 print STDOUT
                   join("\t",$id,$item_form,$date1,$record_type,$bib_lvl,$title)
                     ,"\n";
