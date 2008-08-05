@@ -8,7 +8,7 @@ use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 use MARC::Field;
 use Unicode::Normalize;
 
-my $count = 0; 
+my $count = 0;
 my $which = shift;
 my $id_tag = shift;
 my $id_subfield = shift;
@@ -84,15 +84,11 @@ for my $file (@ARGV) {
         my $author;
         if ($record->field('100'))
           { $author = $record->field('100')->subfield('a'); }
-        if (! $author ) {
-            if ($record->field('110')) {
-                $author = $record->field('110')->subfield('a');
-            }
-        }
-        if (! $author ) {
-            if ($record->field('111')) {
-                $author = $record->field('111')->subfield('a');
-            }
+        unless ( $author ) {
+            $author = $record->field('110')->subfield('a')
+              if ($record->field('110'));
+            $author = $record->field('111')->subfield('a')
+              if ($record->field('111'));
         }
         my $desc = $record->field('300');
         if ( $desc ) { $desc = $desc->subfield('a'); }
@@ -149,20 +145,20 @@ for my $file (@ARGV) {
                     foreach my $isbn ( @isbns ) {
                         print STDOUT
                           join("\t", $id, "case a", $item_form, $date1,
-                               $record_type, $bib_lvl, $title,$isbn,$pages)
+                               $record_type, $bib_lvl, $title, $isbn, $pages)
                             ,"\n";
                     }
                 }
                 # case b : edition
                 if ($edition) {
                     print STDOUT
-                      join("\t", $id, "case b", $item_form, $date1, 
+                      join("\t", $id, "case b", $item_form, $date1,
                            $record_type, $bib_lvl, $title,$edition), "\n";
                 }
                 # case c : issn
                 if ($issn) {
                     print STDOUT join("\t", $id, "case c", $item_form, $date1,
-                                      $record_type, $bib_lvl, $title,$issn)
+                                      $record_type, $bib_lvl, $title, $issn)
                       ,"\n"; 
                 }
                 # case d : lccn
