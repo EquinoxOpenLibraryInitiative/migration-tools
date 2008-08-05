@@ -258,9 +258,9 @@
 1185986	case a	 	1997	a	m	the terminal man	0345419014	268
 1185986	case d	 	1997	a	m	the terminal man	97093310
 1185986	case e	 	1997	a	m	the terminal man	crichton	ballatine	1997	268
-1185987	case a	 	1996	a	m	the terminal man	0345419014	268
-1185987	case d	 	1996	a	m	the terminal man	97093310
-1185987	case e	 	1996	a	m	the terminal man	crichton	ballatine	1998	268
+1185987	case a	 	1996	i	m	the terminal man	0345419014	268
+1185987	case d	 	1996	i	m	the terminal man	97093310
+1185987	case e	 	1996	i	m	the terminal man	crichton	ballatine	1998	268
 1185988	case a	 	1997	a	m	rudyard kipling in vermont	1884592058	198
 1185988	case a	 	1997	a	m	rudyard kipling in vermont	188459204X	198
 1185988	case d	 	1997	a	m	rudyard kipling in vermont	   97018692
@@ -616,8 +616,8 @@
 1186146	case a	 	1998	a	m	first field guide: wildflowers	0590054864	159
 1186146	case d	 	1998	a	m	first field guide: wildflowers	97017992/AC
 1186146	case e	 	1998	a	m	first field guide: wildflowers	hood	scholastic	1998	159
-4457618	case a	 	1996	a	m	kelly the hero	1555118461	1
-4457618	case a	 	1996	a	m	kelly the hero	9781555118464	1
+4457618	case a	 	1996	g	m	kelly the hero	1555118461	1
+4457618	case a	 	1996	g	m	kelly the hero	9781555118464	1
 118614	case a	d	1984	a	m	these thousand hills	0896215768	480
 118614	case d	d	1984	a	m	these thousand hills	   84016202 //r95
 118614	case e	d	1984	a	m	these thousand hills	guthrie	thorndike	1984	480
@@ -1073,7 +1073,7 @@
 1186378	case a	 	1999	a	m	amelia earhart	0684860058	320
 1186378	case d	 	1999	a	m	amelia earhart	   99035861
 1186378	case e	 	1999	a	m	amelia earhart	long	simon	1999	320
-4715533	case b	 	2005	a	m	sentimental reflections summer edition 2005	Summer Edition, 2005.
+4715533	case b	 	2005	g	m	sentimental reflections summer edition 2005	Summer Edition, 2005.
 1186381	case a	 	1999	a	m	she said yes	0874869870	140
 1186381	case a	 	1999	a	m	she said yes	0849916453	140
 1186381	case b	 	1999	a	m	she said yes	1st Plough Pub. House ed.
@@ -1227,7 +1227,7 @@
 1186440	case a	 	1998	a	m	three gothic novels	1883011574	914
 1186440	case d	 	1998	a	m	three gothic novels	   97046701
 1186440	case e	 	1998	a	m	three gothic novels	brown	library	1998	914
-4583424	case a	 	1996	a	m	happy gilmore	0783219105	1
+4583424	case a	 	1996	g	m	happy gilmore	0783219105	1
 118644	case a	 	1984	a	m	the boy scouts	0828111731	256
 118644	case d	 	1984	a	m	the boy scouts	   84016748
 118644	case e	 	1984	a	m	the boy scouts	peterson	american	1984	256
@@ -1342,9 +1342,9 @@
 1186521	case e	 	1999	a	m	the total guide to a healthy heart	baum	kensington	1999	301
 1186525	case d	 	1963	a	m	greece	   63014137 //r883
 1186525	case e	 	1963	a	m	greece	eliot	time	1963	160
-4438230	case a	 	2005	a	m	as time goes by	1419815644	11
-4438230	case a	 	2005	a	m	as time goes by	9781419815645	11
-4438230	case a	 	2005	a	m	as time goes by	00794051236227	11
+4438230	case a	 	2005	g	m	as time goes by	1419815644	11
+4438230	case a	 	2005	g	m	as time goes by	9781419815645	11
+4438230	case a	 	2005	g	m	as time goes by	00794051236227	11
 1186528	case a	 	1999	a	m	the hungry years	0805016759	587
 1186528	case a	 	1999	a	m	the hungry years	0805009175	587
 1186528	case b	 	1999	a	m	the hungry years	1st ed.
@@ -2509,8 +2509,8 @@
 1187617	case a	 	1996	a	m	a student's guide to scandinavian american genealogy	0897749782	168
 1187617	case d	 	1996	a	m	a student's guide to scandinavian american genealogy	   95043086
 1187617	case e	 	1996	a	m	a student's guide to scandinavian american genealogy	paddock	oryx	1996	168
-1187618	case a	 	1997	a	m	atlas of threatened cultures	0817247556	1
-1187618	case d	 	1997	a	m	atlas of threatened cultures	   96027628 /MAPS/r982
+1187618	case a	 	1997	e	m	atlas of threatened cultures	0817247556	1
+1187618	case d	 	1997	e	m	atlas of threatened cultures	   96027628 /MAPS/r982
 1187619	case a	 	1996	a	m	the bharunda bird	1575720132	24
 1187619	case d	 	1996	a	m	the bharunda bird	   95038241 /AC
 1187619	case e	 	1996	a	m	the bharunda bird	candappa	rigby	1996	24
