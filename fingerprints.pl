@@ -1,20 +1,18 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-
 use open ':utf8';
+
+use Getopt::Long;
 use MARC::Batch;
 use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 use MARC::Field;
 use Unicode::Normalize;
 
+my $conf  = {}; # configuration hashref
+my $marc  = {}; # MARC record hashref
 my $count = 0;
-my $runtype = shift;
-my $id_tag = shift;
-my $id_subfield = shift;
-
-binmode(STDOUT, ':utf8');
-binmode(STDIN, ':utf8');
+initialyze($conf);
 
 for my $file (@ARGV) {
 
@@ -29,13 +27,13 @@ for my $file (@ARGV) {
     while ( my $record = $batch->next ) {
         $count++;
 
-        my $id = $record->field($id_tag);
-        if (!$id) {
-            print STDERR "ERROR: This record is missing a $id_tag field.\n"
-              . $record->as_formatted() . "\n=====\n";
+        my $id = $record->field($conf->{tag});
+        unless ($id) {
+            print STDERR "ERROR: This record is missing a", $conf->{tag},
+              "field.\n", $record->as_formatted(), "\n=====\n";
             next;
         }
-        $id = $id->as_string($id_subfield);
+        $id = $id->as_string($conf->{subfield});
 
         my $leader = $record->leader();
         my $record_type = substr($leader,6,1);
@@ -140,7 +138,7 @@ for my $file (@ARGV) {
         # The same thing goes for some other fields.
         if ($item_form && ($date1 =~ /\d\d\d\d/)
             && $record_type && $bib_lvl && $title) {
-            if ($runtype eq "primary") {
+            if ($conf->{runtype} eq "primary") {
                 print STDOUT
                   join("\t",$id,$item_form,$date1,$record_type,$bib_lvl,$title)
                     ,"\n";
@@ -190,4 +188,54 @@ for my $file (@ARGV) {
         }
     }
     print STDERR "Processed $count records\n";
+}
+
+=head2 initialyze
+
+Performs boring script initialization. Handles argument parsing,
+mostly.
+
+=cut
+
+sub initialyze {
+    my ($c) = @_;
+    my @missing = ();
+
+    # set mode on existing filehandles
+    binmode(STDOUT, ':utf8');
+    binmode(STDIN, ':utf8');
+
+    my $rc = GetOptions( $c,
+                         'runtype|r=s',
+                         'tag|t=s',
+                         'subfield|s=s',
+                       );
+    show_help() unless $rc;
+    my @keys = keys %{$c};
+    show_help() unless (@ARGV and @keys);
+
+    for my $key ('runtype', 'tag', 'subfield') {
+        push @missing, $key unless $c->{$key}
+    }
+    if (@missing) {
+        print "Required option: ", join(', ', @missing), " missing!\n";
+        show_help();
+    }
+}
+
+=head2 show_help
+
+=cut
+
+sub show_help {
+print <<HELP;
+Usage is: fingerprinter [REQUIRED ARGS] [OPTIONS] <filelist>
+Req'd Arguments
+  --runtype=(primary|full) -r  Do 'primary' or 'full' fingerprinting
+  --tag=N                  -t  Which tag to use
+  --subfield=X             -s  Which subfield to use
+Options
+  None yet...
+HELP
+exit 1;
 }
