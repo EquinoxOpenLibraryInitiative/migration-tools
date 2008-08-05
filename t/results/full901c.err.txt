@@ -1,0 +1,54 @@
+Processing /home/sboyette/tmp2/pines.xmlea
+Record 1185941 did not make the cut: Missing valid date1. 
+Record 1185942 did not make the cut: Missing valid date1. 
+Record 1185943 did not make the cut: Missing valid date1. 
+Record 1185944 did not make the cut: Missing valid date1. 
+Record 1185965 did not make the cut: Missing valid date1. 
+Record 1186042 did not make the cut: Missing valid date1. 
+Record 1186159 did not make the cut: Missing valid date1. 
+Record 1186160 did not make the cut: Missing valid date1. 
+Record 1186165 did not make the cut: Missing valid date1. 
+Record 1186169 did not make the cut: Missing valid date1. 
+Record 1186176 did not make the cut: Missing item_form. 
+Record 1186212 did not make the cut: Missing valid date1. 
+Record 1186217 did not make the cut: Missing valid date1. 
+Record 1186223 did not make the cut: Missing valid date1. 
+Record 1186250 did not make the cut: Missing valid date1. 
+Record 1186252 did not make the cut: Missing valid date1. 
+Record 1186254 did not make the cut: Missing valid date1. 
+Record 1186258 did not make the cut: Missing valid date1. 
+Record 1186259 did not make the cut: Missing valid date1. 
+Record 1186263 did not make the cut: Missing item_form. 
+Record 1186292 did not make the cut: Missing valid date1. 
+Record 1186335 did not make the cut: Missing valid date1. 
+Record 1186346 did not make the cut: Missing valid date1. 
+Record 1186405 did not make the cut: Missing valid date1. 
+Record 1186410 did not make the cut: Missing valid date1. 
+Record 1186413 did not make the cut: Missing valid date1. 
+Record 1186419 did not make the cut: Missing valid date1. 
+Record 1186423 did not make the cut: Missing valid date1. 
+Record 1186435 did not make the cut: Missing valid date1. 
+Record 1186487 did not make the cut: Missing valid date1. 
+Record 1186495 did not make the cut: Missing valid date1. 
+Record 1186496 did not make the cut: Missing valid date1. 
+Record 1186497 did not make the cut: Missing valid date1. 
+Record 1186500 did not make the cut: Missing valid date1. 
+Record 1186502 did not make the cut: Missing valid date1. 
+Record 1186522 did not make the cut: Missing valid date1. 
+Record 1186539 did not make the cut: Missing valid date1. 
+Record 1186610 did not make the cut: Missing valid date1. 
+Record 1186613 did not make the cut: Missing valid date1. 
+Record 1186614 did not make the cut: Missing valid date1. 
+Record 1186618 did not make the cut: Missing valid date1. 
+Record 1186620 did not make the cut: Missing valid date1. 
+Record 1186622 did not make the cut: Missing valid date1. 
+Record 1186685 did not make the cut: Missing valid date1. 
+Record 1186883 did not make the cut: Missing valid date1. 
+Record 1187116 did not make the cut: Missing valid date1. 
+Record 4583434 did not make the cut: Missing valid date1. 
+Record 1187122 did not make the cut: Missing valid date1. 
+Record 1187220 did not make the cut: Missing valid date1. 
+Record 1187243 did not make the cut: Missing valid date1. 
+Record 1187318 did not make the cut: Missing item_form. 
+Record 1187346 did not make the cut: Missing valid date1. 
+Can't call method "field" on an undefined value at ./fingerprints.pl line 32, <$M> line 1001.
