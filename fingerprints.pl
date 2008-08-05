@@ -1,4 +1,7 @@
 #!/usr/bin/perl
+use strict;
+use warnings;
+
 use open ':utf8';
 use MARC::Batch;
 use MARC::File::XML ( BinaryEncoding => 'utf-8' );
@@ -6,19 +9,18 @@ use MARC::Field;
 use Unicode::Normalize;
 
 my $count = 0; 
-my $which = $ARGV[0];
-my $id_tag = $ARGV[1]; my $id_subfield = $ARGV[2];
+my $which = shift;
+my $id_tag = shift;
+my $id_subfield = shift;
 
 binmode(STDOUT, ':utf8');
 binmode(STDIN, ':utf8');
 
-my $M;
+for my $file (@ARGV) {
 
-foreach $argnum ( 3 .. $#ARGV ) {
+    print STDERR "Processing $file\n";
 
-    print STDERR "Processing " . $ARGV[$argnum] . "\n";
-
-    open $M, '<:utf8', $ARGV[$argnum];
+    open my $M, '<:utf8', $file;
 
     my $batch = MARC::Batch->new('XML',$M);
     $batch->strict_off();
@@ -36,8 +38,6 @@ foreach $argnum ( 3 .. $#ARGV ) {
             next;
         }
         $id = $id->as_string($id_subfield);
-        print STDERR "WARNINGS: Record id " . $id . " : " .
-          join(":",@warnings) . " : continuing...\n" if ( @warnings );
 
         my $leader = $record->leader();
         my $record_type = substr($leader,6,1);
@@ -97,7 +97,7 @@ foreach $argnum ( 3 .. $#ARGV ) {
         my $desc = $record->field('300');
         if ( $desc ) { $desc = $desc->subfield('a'); }
         my $pages;
-        if ($desc =~ /(\d+)/) { $pages = $1; }
+        if (defined $desc and $desc =~ /(\d+)/) { $pages = $1; }
         my $my_260 = $record->field('260');
         my $publisher = $my_260->subfield('b') if ( $my_260 );
         my $pubyear = $my_260->subfield('c') if ( $my_260 );
@@ -111,7 +111,7 @@ foreach $argnum ( 3 .. $#ARGV ) {
         if ( $edition ) { $edition = $edition->subfield('a'); }
 
         # NORMALIZE
-        if ($record_type == ' ') { $record_type = 'a'; }
+        $record_type = 'a' if ($record_type eq ' ');
         if ($title) {
             $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go;
             $title = lc($title);
