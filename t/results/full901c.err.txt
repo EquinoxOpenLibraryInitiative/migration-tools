@@ -51,4 +51,4 @@ Record 1187220 did not make the cut: Missing valid date1.
 Record 1187243 did not make the cut: Missing valid date1. 
 Record 1187318 did not make the cut: Missing item_form. 
 Record 1187346 did not make the cut: Missing valid date1. 
-Can't call method "field" on an undefined value at ./fingerprints.pl line 34, <$M> line 1001.
+Processed 1000 records
