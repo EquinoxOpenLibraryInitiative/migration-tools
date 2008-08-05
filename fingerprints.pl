@@ -53,8 +53,8 @@ for my $file (@ARGV) {
             $item_form = substr($my_008,23,1) if ($my_008);
         }
 
-        my $title = $record->field('245'); 
-        if ( $title ) { $title = $title->subfield('a'); }
+        my $title = $record->field('245');
+        $title = $title->subfield('a') if $title;
 
         my @isbns = ();
         my @isbns_020;
@@ -93,14 +93,14 @@ for my $file (@ARGV) {
         }
 
         my $desc = $record->field('300');
-        if ( $desc ) { $desc = $desc->subfield('a'); }
+        $desc = $desc->subfield('a') if $desc;
 
         my $pages;
-        if (defined $desc and $desc =~ /(\d+)/) { $pages = $1; }
+        $pages = $1 if (defined $desc and $desc =~ /(\d+)/);
 
         my $my_260 = $record->field('260');
-        my $publisher = $my_260->subfield('b') if ( $my_260 );
-        my $pubyear = $my_260->subfield('c') if ( $my_260 );
+        my $publisher = $my_260->subfield('b') if $my_260;
+        my $pubyear = $my_260->subfield('c') if $my_260;
         if ( $pubyear ) {
             if ( $pubyear =~ /(\d\d\d\d)/ )
               { $pubyear = $1; }
@@ -109,7 +109,7 @@ for my $file (@ARGV) {
         }
 
         my $edition = $record->field('250');
-        if ( $edition ) { $edition = $edition->subfield('a'); }
+        $edition = $edition->subfield('a') if $edition;
 
         # NORMALIZE
         $record_type = 'a' if ($record_type eq ' ');
