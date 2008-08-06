@@ -190,6 +190,9 @@ for my $file (@ARGV) {
     print STDERR "Processed $count records\n";
 }
 
+
+
+
 =head2 initialyze
 
 Performs boring script initialization. Handles argument parsing,
@@ -209,6 +212,7 @@ sub initialyze {
                          'runtype|r=s',
                          'tag|t=s',
                          'subfield|s=s',
+                         'help|h',
                        );
     show_help() unless $rc;
     my @keys = keys %{$c};
@@ -221,9 +225,12 @@ sub initialyze {
         print "Required option: ", join(', ', @missing), " missing!\n";
         show_help();
     }
+    show_help() if ($c->{help});
 }
 
 =head2 show_help
+
+Display usage message when things go wrong
 
 =cut
 
