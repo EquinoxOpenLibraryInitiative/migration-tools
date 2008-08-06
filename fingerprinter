@@ -10,187 +10,219 @@ use MARC::Field;
 use Unicode::Normalize;
 
 my $conf  = {}; # configuration hashref
-my $marc  = {}; # MARC record hashref
 my $count = 0;
+$| = 1;
+
 initialyze($conf);
 
+open OF, '>', $conf->{output};
+binmode(OF, ':utf8');
+open XF, '>', $conf->{exception};
+binmode(XF, ':utf8');
+
 for my $file (@ARGV) {
+    print XF "Processing $file\n";
+    open my $records, '<:utf8', $file;
 
-    print STDERR "Processing $file\n";
-
-    open my $M, '<:utf8', $file;
-
-    my $batch = MARC::Batch->new('XML',$M);
+    my $batch = MARC::Batch->new('XML', $records);
     $batch->strict_off();
     $batch->warnings_off();
 
     while ( my $record = $batch->next ) {
-        $count++;
+        $count++; progress_ticker();
 
         my $id = $record->field($conf->{tag});
         unless ($id) {
-            print STDERR "ERROR: This record is missing a", $conf->{tag},
-              "field.\n", $record->as_formatted(), "\n=====\n";
+            print XF "ERROR: Record $count in $file is missing a",
+              $conf->{tag}, "field.\n", $record->as_formatted(), "\n=====\n";
             next;
         }
-        $id = $id->as_string($conf->{subfield});
 
-        my $leader = $record->leader();
-        my $record_type = substr($leader,6,1);
-        my $bib_lvl = substr($leader,7,1);
+        my $marc = populate_marc($record, $id);
+        $marc    = normalize_marc($marc);
 
-        my $my_008 = $record->field('008');
-        $my_008 = $my_008->as_string() if ($my_008);
-        my $date1 = substr($my_008,7,4) if ($my_008);
-        my $date2 = substr($my_008,11,4) if ($my_008);
-
-        my $item_form;
-        if ( $record_type =~ /[gkroef]/ ) { # MAP, VIS
-            $item_form = substr($my_008,29,1) if ($my_008);
-        } else {
-            $item_form = substr($my_008,23,1) if ($my_008);
+        unless ($marc->{item_form} and ($marc->{date1} =~ /\d{4}/) and
+                $marc->{record_type} and $marc->{bib_lvl} and $marc->{title}) {
+            print XF "Record ", $marc->{id}, " did not make the cut: ";
+            print XF "Missing item_form. " unless ($marc->{item_form});
+            print XF "Missing valid date1. "
+              unless (defined $marc->{date1} and $marc->{date1} =~ /\d{4}/);
+            print XF "Missing record_type. " unless ($marc->{record_type});
+            print XF "Missing bib_lvl. " unless ($marc->{bib_lvl});
+            print XF "Missing title. " unless ($marc->{title});
+            print XF "\n";
+            next;
         }
 
-        my $title = $record->field('245');
-        $title = $title->subfield('a') if $title;
+        dump_fingerprints($marc);
+    }
+}
+print "\nProcessed $count records\n" unless $conf->{quiet};
 
-        my @isbns = ();
-        my @isbns_020;
-        if ($record->field('020')) { @isbns_020 = $record->field('020'); }
-        foreach my $f ( @isbns_020 ) {
-            if ($f->subfield('a')) {
-                if ( $f->subfield('a')=~/(\S+)/ ) {
-                    push @isbns, $1;
-                }
-            }
-        }
-        my @isbns_024;
-        if ($record->field('024')) { @isbns_024 = $record->field('024'); }
-        foreach my $f ( @isbns_024 ) {
-            if ($f->subfield('a')) {
-                if ( $f->subfield('a')=~/(\S+)/ ) {
-                    push @isbns, $1;
-                }
-            }
-        }
 
-        my $issn = $record->field('022');
-        $issn = $issn->subfield('a') if $issn;
 
-        my $lccn = $record->field('010');
-        $lccn = $lccn->subfield('a') if $lccn;
+=head2 populate_marc
 
-        my $author;
-        if ($record->field('100'))
-          { $author = $record->field('100')->subfield('a'); }
-        unless ( $author ) {
-            $author = $record->field('110')->subfield('a')
-              if ($record->field('110'));
-            $author = $record->field('111')->subfield('a')
-              if ($record->field('111'));
-        }
+Constructs a hash containing the relevant MARC data for a record and
+returns a reference to it.
 
-        my $desc = $record->field('300');
-        $desc = $desc->subfield('a') if $desc;
+=cut
 
-        my $pages;
-        $pages = $1 if (defined $desc and $desc =~ /(\d+)/);
+sub populate_marc {
+    my ($record, $id) = @_;
+    my %marc = (); $marc{isbns} = [];
 
-        my $my_260 = $record->field('260');
-        my $publisher = $my_260->subfield('b') if $my_260;
-        my $pubyear = $my_260->subfield('c') if $my_260;
-        if ( $pubyear ) {
-            if ( $pubyear =~ /(\d\d\d\d)/ )
-              { $pubyear = $1; }
-            else
-              { $pubyear = ''; }
-        }
+    # id, stringified
+    $marc{id} = $id->as_string($conf->{subfield});
 
-        my $edition = $record->field('250');
-        $edition = $edition->subfield('a') if $edition;
+    # record_type, bib_lvl
+    $marc{record_type} = substr($record->leader, 6, 1);
+    $marc{bib_lvl}     = substr($record->leader, 7, 1);
 
-        # NORMALIZE
-        $record_type = 'a' if ($record_type eq ' ');
-        if ($title) {
-            $title = NFD($title); $title =~ s/[\x{80}-\x{ffff}]//go;
-            $title = lc($title);
-            $title =~ s/\W+$//go;
-        }
-        if ($author) {
-            $author = NFD($author); $author =~ s/[\x{80}-\x{ffff}]//go;
-            $author = lc($author);
-            $author =~ s/\W+$//go;
-            if ($author =~ /^(\w+)/) {
-                $author = $1;
-            }
-        }
-        if ($publisher) {
-            $publisher = NFD($publisher); $publisher =~ s/[\x{80}-\x{ffff}]//go;
-            $publisher = lc($publisher);
-            $publisher =~ s/\W+$//go;
-            if ($publisher =~ /^(\w+)/) {
-                $publisher = $1;
-            }
-        }
+    # date1, date2
+    my $my_008 = $record->field('008');
+    $my_008 = $my_008->as_string() if ($my_008);
+    $marc{date1} = substr($my_008,7,4) if ($my_008);
+    $marc{date2} = substr($my_008,11,4) if ($my_008); # UNUSED
 
-        # SPIT OUT FINGERPRINTS FROM THE "LOIS ALGORITHM"
-        # If we're not getting good matches, we may want to change this.
-        # The same thing goes for some other fields.
-        if ($item_form && ($date1 =~ /\d\d\d\d/)
-            && $record_type && $bib_lvl && $title) {
-            if ($conf->{runtype} eq "primary") {
-                print STDOUT
-                  join("\t",$id,$item_form,$date1,$record_type,$bib_lvl,$title)
-                    ,"\n";
-            } else {
-                # case a : isbn and pages
-                if (scalar(@isbns)>0 && $pages) {
-                    foreach my $isbn ( @isbns ) {
-                        print STDOUT
-                          join("\t", $id, "case a", $item_form, $date1,
-                               $record_type, $bib_lvl, $title, $isbn, $pages)
-                            ,"\n";
-                    }
-                }
-                # case b : edition
-                if ($edition) {
-                    print STDOUT
-                      join("\t", $id, "case b", $item_form, $date1,
-                           $record_type, $bib_lvl, $title,$edition), "\n";
-                }
-                # case c : issn
-                if ($issn) {
-                    print STDOUT join("\t", $id, "case c", $item_form, $date1,
-                                      $record_type, $bib_lvl, $title, $issn)
-                      ,"\n"; 
-                }
-                # case d : lccn
-                if ($lccn) {
-                    print STDOUT join("\t", $id, "case d", $item_form, $date1,
-                                      $record_type, $bib_lvl, $title, $lccn)
-                      ,"\n";
-                }
-                # case e : author, publisher, pubyear, pages
-                if ($author && $publisher && $pubyear && $pages) {
-                    print STDOUT join("\t", $id, "case e", $item_form, $date1,
-                                      $record_type, $bib_lvl, $title, $author,
-                                      $publisher, $pubyear, $pages), "\n";
-                }
-            }
-        } else {
-            print STDERR "Record " . $id . " did not make the cut: ";
-            print STDERR "Missing item_form. " unless ($item_form);
-            print STDERR "Missing valid date1. " unless ($date1 =~ /\d\d\d\d/);
-            print STDERR "Missing record_type. " unless ($record_type);
-            print STDERR "Missing bib_lvl. " unless ($bib_lvl);
-            print STDERR "Missing title. " unless ($title);
-            print STDERR "\n";
+    # item_form
+    if ( $marc{record_type} =~ /[gkroef]/ ) { # MAP, VIS
+        $marc{item_form} = substr($my_008,29,1) if ($my_008);
+    } else {
+        $marc{item_form} = substr($my_008,23,1) if ($my_008);
+    }
+
+    # isbns
+    my @isbns = $record->field('020') if $record->field('020');
+    push @isbns, $record->field('024') if $record->field('024');
+    for my $f ( @isbns ) {
+        push @{ $marc{isbns} }, $1 if ( defined $f->subfield('a') and
+                                        $f->subfield('a')=~/(\S+)/ );
+    }
+
+    # author
+    for my $rec_field (100, 110, 111) {
+        if ($record->field($rec_field)) {
+            $marc{author} = $record->field($rec_field)->subfield('a');
+            last;
         }
     }
-    print STDERR "Processed $count records\n";
+
+    # issn, lccn, title, desc, pages, pub, pubyear, edition
+    $marc{lccn} = $record->field('010')->subfield('a') if $record->field('010');
+    $marc{issn} = $record->field('022')->subfield('a') if $record->field('022');
+    $marc{desc} = $record->field('300')->subfield('a') if $record->field('300');
+    $marc{pages} = $1 if (defined $marc{desc} and $marc{desc} =~ /(\d+)/);
+    $marc{title} = $record->field('245')->subfield('a')
+      if defined $record->field('245');
+    $marc{edition} = $record->field('250')->subfield('a')
+      if $record->field('250');
+    if ($record->field('260')) {
+        $marc{publisher} = $record->field('260')->subfield('b');
+        $marc{pubyear} = $record->field('260')->subfield('c');
+        $marc{pubyear} =
+          (defined $marc{pubyear} and $marc{pubyear} =~ /(\d{4})/) ? $1 : '';
+    }
+    return \%marc;
 }
 
 
+
+=head2 normalize_marc
+
+Gently massages your data.
+
+=cut
+
+sub normalize_marc {
+    my ($marc) = @_;
+
+    $marc->{record_type }= 'a' if ($marc->{record_type} eq ' ');
+    if ($marc->{title}) {
+        $marc->{title} = NFD($marc->{title});
+        $marc->{title} =~ s/[\x{80}-\x{ffff}]//go;
+        $marc->{title} = lc($marc->{title});
+        $marc->{title} =~ s/\W+$//go;
+    }
+    if ($marc->{author}) {
+        $marc->{author} = NFD($marc->{author});
+        $marc->{author} =~ s/[\x{80}-\x{ffff}]//go;
+        $marc->{author} = lc($marc->{author});
+        $marc->{author} =~ s/\W+$//go;
+        if ($marc->{author} =~ /^(\w+)/) {
+            $marc->{author} = $1;
+        }
+    }
+    if ($marc->{publisher}) {
+        $marc->{publisher} = NFD($marc->{publisher});
+        $marc->{publisher} =~ s/[\x{80}-\x{ffff}]//go;
+        $marc->{publisher} = lc($marc->{publisher});
+        $marc->{publisher} =~ s/\W+$//go;
+        if ($marc->{publisher} =~ /^(\w+)/) {
+            $marc->{publisher} = $1;
+        }
+    }
+    return $marc;
+}
+
+
+
+=head2 dump_fingerprints
+
+=cut
+
+sub dump_fingerprints {
+    my ($marc) = @_;
+
+    if ($conf->{runtype} eq "primary") {
+        print OF join("\t",$marc->{id}, $marc->{item_form},
+                          $marc->{date1}, $marc->{record_type},
+                          $marc->{bib_lvl}, $marc->{title}), "\n";
+    } else {
+        if ((scalar @{ $marc->{isbns} } > 0) && $marc->{pages}) {
+            # case a : isbn and pages
+            foreach my $isbn ( @{ $marc->{isbns}} ) {
+                print OF join("\t", $marc->{id}, "case a",
+                                  $marc->{item_form}, $marc->{date1},
+                                  $marc->{record_type},
+                                  $marc->{bib_lvl}, $marc->{title},
+                                  $isbn, $marc->{pages}), "\n";
+            }
+        }
+
+        if ($marc->{edition}) { # case b : edition
+            print OF join("\t", $marc->{id}, "case b",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type}, $marc->{bib_lvl},
+                              $marc->{title}, $marc->{edition}), "\n";
+        }
+
+        if ($marc->{issn}) { # case c : issn
+            print OF join("\t", $marc->{id}, "case c",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type}, $marc->{bib_lvl},
+                              $marc->{title}, $marc->{issn}), "\n";
+        }
+
+        if ($marc->{lccn}) { # case d : lccn
+            print OF join("\t", $marc->{id}, "case d",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type}, $marc->{bib_lvl},
+                              $marc->{title}, $marc->{lccn}) ,"\n";
+        }
+
+        # case e : author, publisher, pubyear, pages
+        if ($marc->{author} and $marc->{publisher} and $marc->{pubyear}
+            and $marc->{pages}) {
+            print OF join("\t", $marc->{id}, "case e",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type}, $marc->{bib_lvl},
+                              $marc->{title}, $marc->{author},
+                              $marc->{publisher}, $marc->{pubyear},
+                              $marc->{pages}), "\n";
+        }
+    }
+}
 
 
 =head2 initialyze
@@ -205,27 +237,46 @@ sub initialyze {
     my @missing = ();
 
     # set mode on existing filehandles
-    binmode(STDOUT, ':utf8');
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
+                         'exception|x=s',
+                         'output|o=s',
                          'runtype|r=s',
-                         'tag|t=s',
                          'subfield|s=s',
+                         'tag|t=s',
+                         'quiet|q',
                          'help|h',
                        );
     show_help() unless $rc;
+
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
-
-    for my $key ('runtype', 'tag', 'subfield') {
+    for my $key ('runtype', 'tag', 'subfield', 'output', 'exception') {
         push @missing, $key unless $c->{$key}
     }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
         show_help();
     }
+
     show_help() if ($c->{help});
+}
+
+
+=head2 progress_ticker
+
+=cut
+
+sub progress_ticker {
+    return if $conf->{quiet};
+
+    if ($count % 100 == 0) {
+        print '|';
+        print " $count \n" unless ($count % 1400);
+    } elsif ($count % 20 == 0) {
+        print '.';
+    }
 }
 
 =head2 show_help
@@ -241,8 +292,10 @@ Req'd Arguments
   --runtype=(primary|full) -r  Do 'primary' or 'full' fingerprinting
   --tag=N                  -t  Which tag to use
   --subfield=X             -s  Which subfield to use
+  --output=<file>          -o  Output filename
+  --exceptions=<file>      -x  Exception report filename
 Options
-  None yet...
+  --quiet  -q  Don't write status messages to STDOUT
 HELP
 exit 1;
 }
