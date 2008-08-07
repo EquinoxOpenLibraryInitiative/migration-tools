@@ -40,11 +40,8 @@ for my $file (@ARGV) {
 
         my $marc = populate_marc($record, $id);
         $marc    = normalize_marc($marc);
-        unless ($marc->{item_form} and ($marc->{date1} =~ /\d{4}/) and
-                $marc->{record_type} and $marc->{bib_lvl} and $marc->{title}) {
-            dump_exception($marc);
-            next;
-        }
+        unless (marc_isvalid($marc))
+          { dump_exception($marc); next; }
         dump_fingerprints($marc);
     }
 }
@@ -156,6 +153,21 @@ sub normalize_marc {
     return $marc;
 }
 
+
+
+=head2 marc_isvalid
+
+Checks MARC record to see if neccessary fingerprinting data is
+available
+
+=cut
+
+sub marc_isvalid {
+    my ($marc) = @_;
+    return 1 if ($marc->{item_form} and ($marc->{date1} =~ /\d{4}/) and
+                 $marc->{record_type} and $marc->{bib_lvl} and $marc->{title});
+    return 0;
+}
 
 
 =head2 dump_fingerprints
