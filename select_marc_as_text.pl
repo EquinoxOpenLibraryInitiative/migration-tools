@@ -5,7 +5,9 @@ use MARC::Record;
 use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 use MARC::Field;
 
-my $record_id_file = $ARGV[0];
+my $inverse = $ARGV[0] eq "inverse";
+
+my $record_id_file = $ARGV[1];
 my %record_ids;
 
 open FILE, $record_id_file;
@@ -14,14 +16,14 @@ while (my $record_id = <FILE>) {
 }
 close FILE;
 
-my $id_tag = $ARGV[1]; my $id_subfield = $ARGV[2];
+my $id_tag = $ARGV[2]; my $id_subfield = $ARGV[3];
 
 binmode(STDOUT, ':utf8');
 binmode(STDIN, ':utf8');
 
 my $M;
 
-foreach $argnum ( 3 .. $#ARGV ) {
+foreach $argnum ( 4 .. $#ARGV ) {
 
 	print STDERR "Processing " . $ARGV[$argnum] . "\n";
 
@@ -44,7 +46,10 @@ foreach $argnum ( 3 .. $#ARGV ) {
 		}
 		$id = $id->as_string($id_subfield);
 
-        if (defined $record_ids{ $id }) {
+        if ( 
+                ( ! $inverse && defined $record_ids{ $id } ) ||
+                ( $inverse && ! defined $record_ids{ $id } )
+            ) {
             open FILE, ">$id.txt";
             binmode(FILE, ':utf8');
             print FILE $record->as_formatted();
