@@ -40,20 +40,11 @@ for my $file (@ARGV) {
 
         my $marc = populate_marc($record, $id);
         $marc    = normalize_marc($marc);
-
         unless ($marc->{item_form} and ($marc->{date1} =~ /\d{4}/) and
                 $marc->{record_type} and $marc->{bib_lvl} and $marc->{title}) {
-            print XF "Record ", $marc->{id}, " did not make the cut: ";
-            print XF "Missing item_form. " unless ($marc->{item_form});
-            print XF "Missing valid date1. "
-              unless (defined $marc->{date1} and $marc->{date1} =~ /\d{4}/);
-            print XF "Missing record_type. " unless ($marc->{record_type});
-            print XF "Missing bib_lvl. " unless ($marc->{bib_lvl});
-            print XF "Missing title. " unless ($marc->{title});
-            print XF "\n";
+            dump_exception($marc);
             next;
         }
-
         dump_fingerprints($marc);
     }
 }
@@ -222,6 +213,26 @@ sub dump_fingerprints {
                               $marc->{pages}), "\n";
         }
     }
+}
+
+
+
+=head2 dump_exception
+
+Write line of exception report
+
+=cut
+
+sub dump_exception {
+    my ($marc) = @_;
+    print XF "Record ", $marc->{id}, " did not make the cut: ";
+    print XF "Missing item_form. " unless ($marc->{item_form});
+    print XF "Missing valid date1. "
+      unless (defined $marc->{date1} and $marc->{date1} =~ /\d{4}/);
+    print XF "Missing record_type. " unless ($marc->{record_type});
+    print XF "Missing bib_lvl. " unless ($marc->{bib_lvl});
+    print XF "Missing title. " unless ($marc->{title});
+    print XF "\n";
 }
 
 
