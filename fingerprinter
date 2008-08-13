@@ -70,6 +70,8 @@ sub populate_marc {
     # date1, date2
     my $my_008 = $record->field('008');
     $my_008 = $my_008->as_string() if ($my_008);
+    unless (length $my_008 == 40)
+      { print XF ">> Bad 008 field length in rec. $id\n"; return $marc }
     $marc{date1} = substr($my_008,7,4) if ($my_008);
     $marc{date2} = substr($my_008,11,4) if ($my_008); # UNUSED
 
@@ -239,8 +241,9 @@ sub dump_exception {
     my ($marc) = @_;
     print XF "Record ", $marc->{id}, " did not make the cut: ";
     print XF "Missing item_form. " unless ($marc->{item_form});
-    print XF "Missing valid date1. "
-      unless (defined $marc->{date1} and $marc->{date1} =~ /\d{4}/);
+    print XF "Missing date1. " unless (defined $marc->{date1});
+    print XF "Invalid date1: ", $marc->{date1}
+      unless ($marc->{date1} =~ /\d{4}/);
     print XF "Missing record_type. " unless ($marc->{record_type});
     print XF "Missing bib_lvl. " unless ($marc->{bib_lvl});
     print XF "Missing title. " unless ($marc->{title});
