@@ -11,7 +11,7 @@ while (<IN>) {
     { $seenrec = 1 if /^<record/ }
   print OUT unless $seenrec;
   if (m|^</collection|) {
-    while (<IN>) {
+    while (<IN>)
       { last if /^\n$/ }
   }
   s/\n// unless m|^</record|;
