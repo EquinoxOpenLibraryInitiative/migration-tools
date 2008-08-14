@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+open IN, '<', 'incoming.renumbered.mrc.xml';
+open OUT,'>', 'incoming.renumbered.1per.xml';
+
+$seenrec  = 0;
+$stripcol = 0;
+
+while (<IN>) {
+  unless ($seenrec)
+    { $seenrec = 1 if /^<record/ }
+  print OUT unless $seenrec;
+  if (m|^</collection|) {
+    while (<IN>) {
+      { last if /^\n$/ }
+  }
+  s/\n// unless m|^</record|;
+  print OUT;
+}
