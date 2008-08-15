@@ -38,8 +38,8 @@ SELECT SETVAL('metabib.metarecord_source_map_id_seq', 1);
 INSERT INTO biblio.record_entry SELECT * FROM dummy_bib;
 INSERT INTO asset.call_number SELECT * FROM dummy_cn;
 
-\i incumbent.IMPORT.sql.again
-\i incoming.sql.again
+\i incumbent.sql
+\i incoming.sql
 
 CREATE INDEX metabib_title_field_entry_index_vector_idx ON metabib.title_field_entry USING GIST (index_vector);
 CREATE INDEX metabib_author_field_entry_index_vector_idx ON metabib.author_field_entry USING GIST (index_vector);
