@@ -28,7 +28,18 @@ my @base_elements = (
     "middle_name",
     "suffix_name",
     "note",
-    "comment"
+    "comment",
+    "staff",
+    "webcatpref",
+    "user_category1",
+    "user_category2",
+    "user_category3",
+    "dept",
+    "guardian",
+    "user_claims_ret",
+    #"user_environment",
+    #"user_library",
+    "user_department"
 );
 
 my @addr_elements = (
@@ -37,10 +48,14 @@ my @addr_elements = (
     "std_city",
     "std_state",
     "std_zip",
+    "phone",
     "dayphone",
     "homephone",
     "workphone",
-    "email"
+    "email",
+    "location",
+    "usefor",
+    "care_of"
 );
 
 print STDOUT join("\t", @base_elements);
