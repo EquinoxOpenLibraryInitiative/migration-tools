@@ -11,6 +11,7 @@ use Unicode::Normalize;
 
 my $conf  = {}; # configuration hashref
 my $count = 0;
+my $start = time;
 $| = 1;
 
 initialize($conf);
@@ -102,7 +103,9 @@ sub populate_marc {
         }
     }
 
-    
+    # "Accompanying material" (300e)
+    $marc{accomp} = $record->field('300')->subfield('e')
+      if (defined $record->field('300')->subfield('e'));
 
     # issn, lccn, title, desc, pages, pub, pubyear, edition
     $marc{lccn} = $record->field('010')->subfield('a') if $record->field('010');
@@ -222,7 +225,14 @@ sub dump_fingerprints {
                               $marc->{title}, $marc->{lccn}) ,"\n";
         }
 
-        # case e : author, publisher, pubyear, pages
+        if ($marc->{accomp}) { # case e : accomp
+            print OF join("\t", $marc->{id}, "case d",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type}, $marc->{bib_lvl},
+                              $marc->{title}, $marc->{accomp}) ,"\n";
+        }
+
+        # case z : author, publisher, pubyear, pages
         if ($marc->{author} and $marc->{publisher} and $marc->{pubyear}
             and $marc->{pages}) {
             print OF join("\t", $marc->{id}, "case e",
@@ -306,13 +316,8 @@ sub initialize {
 
 sub progress_ticker {
     return if $conf->{quiet};
-
-    if ($count % 100 == 0) {
-        print '|';
-        print " $count \n" unless ($count % 1400);
-    } elsif ($count % 20 == 0) {
-        print '.';
-    }
+    printf("> %d (%d/s)\r", $count, ((time - $start) / $count))
+      if ($count % 100 == 0);
 }
 
 =head2 show_help
