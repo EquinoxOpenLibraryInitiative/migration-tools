@@ -263,7 +263,7 @@ sub dump_exception {
     print XF "Missing item_form. " unless ($marc->{item_form});
     print XF "Missing date1. " unless (defined $marc->{date1});
     print XF "Invalid date1: ", $marc->{date1}
-      unless ($marc->{date1} =~ /\d{4}/);
+      unless (defined $marc->{date1} and $marc->{date1} =~ /\d{4}/);
     print XF "Missing record_type. " unless ($marc->{record_type});
     print XF "Missing bib_lvl. " unless ($marc->{bib_lvl});
     print XF "Missing title. " unless ($marc->{title});
@@ -316,7 +316,7 @@ sub initialize {
 
 sub progress_ticker {
     return if $conf->{quiet};
-    printf("> %d (%d/s)\r", $count, ((time - $start) / $count))
+    printf("> %d (%d/s)\r", $count, ($count / (time - $start)))
       if ($count % 100 == 0);
 }
 
