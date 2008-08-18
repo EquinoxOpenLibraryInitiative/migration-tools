@@ -62,6 +62,7 @@ print STDOUT join("\t", @base_elements);
 foreach my $addr ( 1..3 ) {
     print STDOUT "\t" . join("\t", @addr_elements);
 }
+print STDOUT "\tinactive_barcode1\tinactive_barcode2";
 print STDOUT "\n";
 
 for my $patron ( $doc->documentElement->childNodes ) {
@@ -106,6 +107,24 @@ for my $patron ( $doc->documentElement->childNodes ) {
             foreach ( @addr_elements ) { print STDOUT "\t"; }
         }
     }
+
+    my $inactive_barcode1 = '';
+    my $inactive_barcode2 = '';
+    for my $i_bc ( $patron->findnodes( "barcode" ) ) {
+        my $active = $i_bc->getAttribute('active');
+        if ($active eq "0") {
+            if (! $inactive_barcode1 ) {
+                $inactive_barcode1 = $i_bc->textContent;
+            } else {
+                if (! $inactive_barcode2 ) {
+                    $inactive_barcode2 = $i_bc->textContent;
+                } else {
+                    warn "Extra barcode (" . $i_bc->textContent . ") for user with id = " . $bc . "\n";
+                }
+            }
+        }
+    }
+    print STDOUT "$inactive_barcode1\t$inactive_barcode2"
 
     print STDOUT "\n";
 	$count++;
