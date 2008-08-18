@@ -13,7 +13,7 @@ my $conf  = {}; # configuration hashref
 my $count = 0;
 $| = 1;
 
-initialyze($conf);
+initialize($conf);
 
 open OF, '>', $conf->{output};
 binmode(OF, ':utf8');
@@ -23,13 +23,17 @@ binmode(XF, ':utf8');
 for my $file (@ARGV) {
     print XF "Processing $file\n";
     open my $records, '<:utf8', $file;
+    my $batch = undef; my $record = undef;
 
-    my $batch = MARC::Batch->new('XML', $records);
+    $batch = MARC::Batch->new('XML', $records);
     $batch->strict_off();
     $batch->warnings_off();
 
-    while ( my $record = $batch->next ) {
+    while ( eval { $record = $batch->next } ) {
+        my $marc = undef;
         $count++; progress_ticker();
+        unless ( defined $record )
+          { dump_exception($marc); next; }
 
         my $id = $record->field($conf->{tag});
         unless ($id) {
@@ -38,8 +42,8 @@ for my $file (@ARGV) {
             next;
         }
 
-        my $marc = populate_marc($record, $id);
-        $marc    = normalize_marc($marc);
+        $marc = populate_marc($record, $id);
+        $marc = normalize_marc($marc);
         unless (marc_isvalid($marc))
           { dump_exception($marc); next; }
         dump_fingerprints($marc);
@@ -71,7 +75,7 @@ sub populate_marc {
     my $my_008 = $record->field('008');
     $my_008 = $my_008->as_string() if ($my_008);
     unless (length $my_008 == 40)
-      { print XF ">> Bad 008 field length in rec. $id\n"; return $marc }
+      { print XF ">> Bad 008 field length in rec. $id\n"; return \%marc }
     $marc{date1} = substr($my_008,7,4) if ($my_008);
     $marc{date2} = substr($my_008,11,4) if ($my_008); # UNUSED
 
@@ -97,6 +101,8 @@ sub populate_marc {
             last;
         }
     }
+
+    
 
     # issn, lccn, title, desc, pages, pub, pubyear, edition
     $marc{lccn} = $record->field('010')->subfield('a') if $record->field('010');
@@ -239,6 +245,10 @@ Write line of exception report
 
 sub dump_exception {
     my ($marc) = @_;
+    unless (defined $marc) {
+        print XF "Undefined record at line $count; likely bad XML\n";
+        return;
+    }
     print XF "Record ", $marc->{id}, " did not make the cut: ";
     print XF "Missing item_form. " unless ($marc->{item_form});
     print XF "Missing date1. " unless (defined $marc->{date1});
@@ -251,14 +261,14 @@ sub dump_exception {
 }
 
 
-=head2 initialyze
+=head2 initialize
 
 Performs boring script initialization. Handles argument parsing,
 mostly.
 
 =cut
 
-sub initialyze {
+sub initialize {
     my ($c) = @_;
     my @missing = ();
 
