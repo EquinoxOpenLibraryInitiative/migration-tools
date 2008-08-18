@@ -75,7 +75,7 @@ sub populate_marc {
     # date1, date2
     my $my_008 = $record->field('008');
     $my_008 = $my_008->as_string() if ($my_008);
-    unless (length $my_008 == 40)
+    unless (defined $my_008 and length $my_008 == 40)
       { print XF ">> Bad 008 field length in rec. $id\n"; return \%marc }
     $marc{date1} = substr($my_008,7,4) if ($my_008);
     $marc{date2} = substr($my_008,11,4) if ($my_008); # UNUSED
