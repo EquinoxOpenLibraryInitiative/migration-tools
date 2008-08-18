@@ -124,7 +124,7 @@ for my $patron ( $doc->documentElement->childNodes ) {
             }
         }
     }
-    print STDOUT "$inactive_barcode1\t$inactive_barcode2"
+    print STDOUT "$inactive_barcode1\t$inactive_barcode2";
 
     print STDOUT "\n";
 	$count++;
