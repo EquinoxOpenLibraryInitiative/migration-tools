@@ -105,7 +105,7 @@ sub populate_marc {
 
     # "Accompanying material" (300e)
     $marc{accomp} = $record->field('300')->subfield('e')
-      if (defined $record->field('300')->subfield('e'));
+      if $record->field('300');
 
     # issn, lccn, title, desc, pages, pub, pubyear, edition
     $marc{lccn} = $record->field('010')->subfield('a') if $record->field('010');
