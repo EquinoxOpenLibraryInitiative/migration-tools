@@ -110,7 +110,8 @@ for my $patron ( $doc->documentElement->childNodes ) {
 
     my $inactive_barcode1 = '';
     my $inactive_barcode2 = '';
-    for my $i_bc ( $patron->findnodes( "barcode" ) ) {
+    my @barcodes = $patron->findnodes( "barcodes" );
+    for my $i_bc ( $barcodes[0]->findnodes( "barcode" ) ) {
         my $active = $i_bc->getAttribute('active');
         if ($active eq "0") {
             if (! $inactive_barcode1 ) {
