@@ -62,7 +62,7 @@ print STDOUT join("\t", @base_elements);
 foreach my $addr ( 1..3 ) {
     print STDOUT "\t" . join("\t", @addr_elements);
 }
-print STDOUT "\tinactive_barcode1\tinactive_barcode2";
+print STDOUT "\tuserid_active\tinactive_barcode1\tinactive_barcode2";
 print STDOUT "\n";
 
 for my $patron ( $doc->documentElement->childNodes ) {
