@@ -113,7 +113,7 @@ sub populate_marc {
     $marc{desc} = $record->field('300')->subfield('a') if $record->field('300');
     $marc{pages} = $1 if (defined $marc{desc} and $marc{desc} =~ /(\d+)/);
     $marc{title} = $record->field('245')->subfield('a')
-      if defined $record->field('245');
+      if $record->field('245');
     $marc{edition} = $record->field('250')->subfield('a')
       if $record->field('250');
     if ($record->field('260')) {
