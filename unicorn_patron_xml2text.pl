@@ -110,10 +110,14 @@ for my $patron ( $doc->documentElement->childNodes ) {
 
     my $inactive_barcode1 = '';
     my $inactive_barcode2 = '';
+    my $userid_active = 't';
     my @barcodes = $patron->findnodes( "barcodes" );
     for my $i_bc ( $barcodes[0]->findnodes( "barcode" ) ) {
         my $active = $i_bc->getAttribute('active');
-        if ($active eq "0") {
+        if ($active eq "0" && $i_bc->textContent eq $bc) {
+            $userid_active = 'f';
+        }
+        if ($active eq "0" && $i_bc->textContent ne $bc) {
             if (! $inactive_barcode1 ) {
                 $inactive_barcode1 = $i_bc->textContent;
             } else {
@@ -125,7 +129,7 @@ for my $patron ( $doc->documentElement->childNodes ) {
             }
         }
     }
-    print STDOUT "$inactive_barcode1\t$inactive_barcode2";
+    print STDOUT "$userid_active\t$inactive_barcode1\t$inactive_barcode2";
 
     print STDOUT "\n";
 	$count++;
