@@ -68,7 +68,7 @@ print STDOUT "\n";
 for my $patron ( $doc->documentElement->childNodes ) {
 	next if ($patron->nodeType == 3);
 
-	my $bc = $patron->findvalue( 'user_id' );
+	my $bc = $patron->findvalue( 'user_id' ); $bc =~ s/^\s+//; $bc =~ s/\s+$//;
 	if (exists($s_map{$bc})) {
 		$count++;
 		warn "\n!!! already saw barcode $bc, skipping\n";
@@ -85,7 +85,7 @@ for my $patron ( $doc->documentElement->childNodes ) {
 	}
 
     foreach my $e ( @base_elements ) {
-        my $v = $patron->findvalue( $e );
+        my $v = $patron->findvalue( $e ); $v =~ s/^\s+//; $v =~ s/\s+$//;
         if ( $v && ( $e eq 'birthdate' || $e eq 'user_priv_granted' || $e eq 'user_priv_expires' ) ) { $v = parse_date($v); }
         print STDOUT ( $v ? $v : '' ) . "\t";
     }
@@ -100,7 +100,7 @@ for my $patron ( $doc->documentElement->childNodes ) {
     foreach my $t ( 1..3 ) {
         if ($addresses{$t}) {
             foreach my $e ( @addr_elements ) {
-                my $v = $addresses{$t}->findvalue( $e );
+                my $v = $addresses{$t}->findvalue( $e ); $v =~ s/^\s+//; $v =~ s/\s+$//;
                 print STDOUT ( $v ? $v : '' ) . "\t";
             }
         } else {
@@ -120,9 +120,13 @@ for my $patron ( $doc->documentElement->childNodes ) {
         if ($active eq "0" && $i_bc->textContent ne $bc) {
             if (! $inactive_barcode1 ) {
                 $inactive_barcode1 = $i_bc->textContent;
+                $inactive_barcode1 =~ s/^\s+//;
+                $inactive_barcode1 =~ s/\s+$//;
             } else {
                 if (! $inactive_barcode2 ) {
                     $inactive_barcode2 = $i_bc->textContent;
+                    $inactive_barcode2 =~ s/^\s+//;
+                    $inactive_barcode2 =~ s/\s+$//;
                 } else {
                     warn "Extra barcode (" . $i_bc->textContent . ") for user with id = " . $bc . "\n";
                 }
