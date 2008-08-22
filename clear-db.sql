@@ -14,11 +14,14 @@ CREATE TEMP TABLE backup_card AS SELECT * FROM actor.card WHERE usr = 1;
 UPDATE backup_usr SET card = NULL;
 
 DROP INDEX metabib.metabib_full_rec_index_vector_idx;
+DROP INDEX metabib.metabib_full_value_idx;
 DROP INDEX metabib.metabib_title_field_entry_index_vector_idx;
 DROP INDEX metabib.metabib_author_field_entry_index_vector_idx;
 DROP INDEX metabib.metabib_subject_field_entry_index_vector_idx;
 DROP INDEX metabib.metabib_keyword_field_entry_index_vector_idx;
 DROP INDEX metabib.metabib_series_field_entry_index_vector_idx;
+DROP INDEX metabib.metabib_full_rec_tag_subfield_idx;
+
 
 TRUNCATE biblio.record_entry CASCADE;
 TRUNCATE metabib.full_rec;
@@ -29,6 +32,7 @@ TRUNCATE metabib.subject_field_entry;
 TRUNCATE metabib.keyword_field_entry;
 TRUNCATE metabib.series_field_entry;
 TRUNCATE auditor.biblio_record_entry_history;
+TRUNCATE asset.copy_location CASCADE;
 
 TRUNCATE actor.usr CASCADE;
 TRUNCATE actor.card CASCADE;
@@ -85,6 +89,7 @@ UPDATE actor.usr SET card = actor.card.id FROM actor.card WHERE actor.usr.id = a
 \i incoming.sql
 
 */
+\i IN.sql
 
 CREATE INDEX metabib_title_field_entry_index_vector_idx ON metabib.title_field_entry USING GIST (index_vector);
 CREATE INDEX metabib_author_field_entry_index_vector_idx ON metabib.author_field_entry USING GIST (index_vector);
