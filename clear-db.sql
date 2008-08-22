@@ -100,6 +100,8 @@ CREATE INDEX metabib_full_rec_index_vector_idx ON metabib.full_rec USING GIST (i
 CREATE INDEX metabib_full_rec_tag_subfield_idx ON metabib.full_rec (tag,subfield);
 CREATE INDEX metabib_full_value_idx ON metabib.full_rec (value);
 
+/*  Run the AFTER committing ...
+
 ALTER TABLE metabib.metarecord_source_map DROP CONSTRAINT metabib_metarecord_source_map_metarecord_fkey;
 
 TRUNCATE metabib.metarecord;
@@ -122,8 +124,14 @@ ALTER TABLE metabib.metarecord_source_map
 	ADD CONSTRAINT metabib_metarecord_source_map_metarecord_fkey
 		FOREIGN KEY (metarecord) REFERENCES metabib.metarecord (id) DEFERRABLE INITIALLY DEFERRED;
 
+*/
+
+
+/* And this too, if it's production
+
 SELECT reporter.enable_materialized_simple_record_trigger();
 
+*/
 
 -- COMMIT;
 -- VACUUM FULL;
