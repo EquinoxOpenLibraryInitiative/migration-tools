@@ -9,7 +9,7 @@ CREATE TEMP TABLE dummy_cn AS SELECT * FROM asset.call_number WHERE id = -1;
 
 CREATE TEMP TABLE backup_loc AS SELECT * FROM asset.copy_location WHERE id = 1;
 CREATE TEMP TABLE backup_usr AS SELECT * FROM actor.usr WHERE id = 1;
-CREATE TEMP TABLE backup_card AS SELECT * FROM actor.card WHERE usr = 1;
+CREATE TEMP TABLE backup_card AS SELECT * FROM actor.card WHERE usr IN (SELECT id FROM backup_usr);
 
 UPDATE backup_usr SET card = NULL;
 
