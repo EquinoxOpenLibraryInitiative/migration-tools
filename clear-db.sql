@@ -81,6 +81,8 @@ INSERT INTO asset.copy_location SELECT * FROM backup_loc;
 INSERT INTO actor.usr SELECT * FROM backup_usr;
 INSERT INTO actor.card SELECT * FROM backup_card;
 UPDATE actor.usr SET card = actor.card.id FROM actor.card WHERE actor.usr.id = actor.card.usr;
+SELECT SETVAL('actor.usr_id_seq', (SELECT MAX(id)+1 FROM actor.usr));
+SELECT SETVAL('actor.card_id_seq', (SELECT MAX(id)+1 FROM actor.card));
 
 -- Put any scripts that reload bibs/items/etc here.  Example included.
 /*  
