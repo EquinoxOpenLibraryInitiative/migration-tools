@@ -7,7 +7,8 @@ contain holdings. It may contain XML or MARC errors that you have to
 sanitize before your tools will work.  This is one way to translate
 MARC-8 MARC21 to UTF-8 MARCXML:
 
-  yaz-marcdump -f MARC-8 -t UTF-8 -o marcxml incoming.mrc > incoming.mrc.xml
+  yaz-marcdump -f MARC-8 -t UTF-8 -o marcxml \
+    incoming.marc > incoming.marc.xml
 
 If you need to trim the bibs to a subset based on the presence of a
 certain value in a specific tag/subfield (for example, if you have the
@@ -16,25 +17,26 @@ belonging to a specific migrating library, you might filter based on
 their holding tags)
 
   trim_marc_based_on_tag_subfield_value.pl 999 m BRANCH_CODE \
-    incoming.mrc.xml > incoming.filtered.mrc.xml
+    incoming.marc.xml > incoming.filtered.marc.xml
 
 Embed potential native record ids into the incumbent records
 
-  set_record_ids.pl 100000 903 a incoming.mrc.xml > incoming.renumbered.mrc.xml
+  renumber_marc -rf 100000 -t 903 -s a -o incoming.renumbered.marc.xml \
+    incoming.marc.xml
 
 Get primary fingerprints for incoming data and get a bib dump of
 matching records from the incumbent system
 
   fingerprinter -r primary -t 903 -s a -o incoming.primary.fp \
-    -x incoming.primary.fp_err incoming.renumbered.mrc.xml
+    -x incoming.primary.ex incoming.renumbered.mrc.xml
 
 Edit the query_for_primary_matching_incumbent_record.pl script to
 point to the correct Evergreen database and table holding the
 incumbent primary fingerprints (FIXME add in how to create such a
 table).
 
-  query_for_primary_matching_incumbent_record.pl incoming.primary.fp | \
-    sort | uniq > primary_matching_incumbent.record_ids
+  query_for_primary_matching_incumbent_record.pl incoming.primary.fp \
+    | sort | uniq > primary_matching_incumbent.record_ids
 
 In a postgres shell, you create a temporary table to hold these id's:
 
@@ -55,22 +57,22 @@ do:
 Now to turn that dump into a MARCXML file with record numbers and TCN
 embedded in tag 901, do:
 
-  marc_add_ids -f id -f tcn_source -f tcn_value -f marc < \
-    matching_incumbent_records.dump » matching_incumbent_records.mrc.xml
+  marc_add_ids -f id -f tcn_source -f tcn_value -f marc \
+    < matching_incumbent_records.dump > matching_incumbent_records.marc.xml
 
 It's possible that this file may need to be itself sanitized some.
 This will transform code=""" into code="&x0022;", for example:
 
-  cat matching_incumbent_records.mrc.xml | \
-    sed 's/code=\"\"\"/code=\"\&#x0022;\"/' > \
-    matching_incumbent_records.escaped.mrc.xml
+  cat matching_incumbent_records.marc.xml | \
+    sed 's/code=\"\"\"/code=\"\&#x0022;\"/' \
+    > matching_incumbent_records.escaped.mrc.xml
 
 Get full fingerprints for both datasets and match them.
 
-  fingerprinter -r full -t 901 -s c -o incumbent.fp -x incumbent.fp_err \
-    matching_incumbent_records.mrc.xml
-  fingerprinter -r full -t 903 -s a -o incoming.fp -x incoming.fp_err \
-    incoming.renumbered.mrc.xml
+  fingerprinter -r full -t 901 -s c -o incumbent.fp -x incumbent.ex \
+    matching_incumbent_records.marc.xml
+  fingerprinter -r full -t 903 -s a -o incoming.fp -x incoming.ex \
+    incoming.renumbered.marc.xml
 
 The script below will produce matched groupings, and can optionally
 take a 4th and 5th parameter providing scoring information for
@@ -92,9 +94,9 @@ Import these matches and records into the legacy dedup interface for viewing:
 
 Now to tar up the specific MARC records involved for the dedup interface:
 
-  cat match.groupings | cut -d^ -f3 » incumbent.record_ids
-  cat match.groupings | cut -d^ -f5 | cut -d, -f2- | sed 's/,/\n/g' > \ 
-    incoming.record_ids
+  cat match.groupings | cut -d^ -f3 > incumbent.record_ids
+  cat match.groupings | cut -d^ -f5 | cut -d, -f2- | sed 's/,/\n/g' \
+    > incoming.record_ids
   mkdir dataset ; cd dataset
   select_marc.pl ../incumbent.record_ids 901 c \
     ../matching_incumbent_records.mrc.xml
