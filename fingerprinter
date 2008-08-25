@@ -5,8 +5,6 @@ use open ':utf8';
 
 use Getopt::Long;
 use MARC::Batch;
-use MARC::File::XML ( BinaryEncoding => 'utf-8' );
-use MARC::Field;
 use Unicode::Normalize;
 
 my $conf  = {}; # configuration hashref
@@ -300,9 +298,8 @@ sub initialize {
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
-    for my $key ('runtype', 'tag', 'subfield', 'output', 'exception') {
-        push @missing, $key unless $c->{$key}
-    }
+    for my $key ('runtype', 'tag', 'subfield', 'output', 'exception')
+      { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
         show_help();
