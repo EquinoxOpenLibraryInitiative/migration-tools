@@ -57,6 +57,8 @@ sub initialize {
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
+                         'incoming',
+                         'incumbent',
                          'output|o=s',
                          'renumber-from|rf=i',
                          'subfield|s=s',
@@ -64,6 +66,18 @@ sub initialize {
                          'help|h',
                        );
     show_help() unless $rc;
+    show_help() if ($c->{help});
+
+    # set defaults if told to do so
+    if ($c->{incoming}) {
+        $c->{tag} = 903;
+        $c->{subfield} = 'a';
+        $c->{output} = 'incoming.renumbered.marc.xml';
+    } elsif ($c->{incumbent}) {
+        $c->{tag} = 901;
+        $c->{subfield} = 'c';
+        $c->{output} = 'incumbent.renumbered.marc.xml';
+    }
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
@@ -74,7 +88,6 @@ sub initialize {
         show_help();
     }
 
-    show_help() if ($c->{help});
 }
 
 
@@ -92,6 +105,13 @@ Req'd Arguments
   --tag=N                  -t  Which tag to use
   --subfield=X             -s  Which subfield to use
   --output=<file>          -o  Output filename
+
+Options
+  --incoming     Set -t, -s, -o to incoming defaults
+  --incumbent    Set -t, -s, -o to incumbent defaults
+
+  Example: '$0 --incoming' is equivalent to
+           '$0 -t 903 -s a -o incoming.renumbered.marc.xml'
 
 Any number of input files may be specified; one output file will result.
 HELP
