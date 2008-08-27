@@ -285,6 +285,19 @@ sub initialize {
     # set mode on existing filehandles
     binmode(STDIN, ':utf8');
 
+    # set defaults if told to do so
+    if ($c->{incoming}) {
+        $c->{tag} = 903;
+        $c->{subfield} = 'a';
+        $c->{output} = 'incoming.fp';
+        $c->{exception} = 'incoming.ex';
+    } elsif ($c->{incumbent}) {
+        $c->{tag} = 901;
+        $c->{subfield} = 'c';
+        $c->{output} = 'incumbent.fp';
+        $c->{exception} = 'incumbent.ex';
+    }
+
     my $rc = GetOptions( $c,
                          'incoming',
                          'incumbent',
@@ -298,19 +311,6 @@ sub initialize {
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
-
-    # set defaults if told to do so
-    if ($c->{incoming}) {
-        $c->{tag} = 903;
-        $c->{subfield} = 'a';
-        $c->{output} = 'incoming.fp';
-        $c->{exception} = 'incoming.ex';
-    } elsif ($c->{incumbent}) {
-        $c->{tag} = 901;
-        $c->{subfield} = 'c';
-        $c->{output} = 'incumbent.fp';
-        $c->{exception} = 'incumbent.ex';
-    }
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
@@ -352,8 +352,8 @@ Options
   --incoming     Set -r to 'full'; -t, -s, -o, -x to incoming defaults
   --incumbent    Set -r to 'full'; -t, -s, -o, -x to incumbent defaults
 
-                 Example: '$0 --incoming' is equivalent to
-                          '$0 -r full -t 903 -s a -o incoming.fp -x incoming.ex'
+  Example: '$0 --incoming' is equivalent to
+           '$0 -r full -t 903 -s a -o incoming.fp -x incoming.ex'
 
   --quiet    -q  Don't write status messages to STDOUT
 HELP
