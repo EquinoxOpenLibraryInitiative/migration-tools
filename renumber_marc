@@ -12,8 +12,10 @@ my $count = 0;
 my $conf  = {}; # configuration hashref
 initialize($conf);
 
-binmode(STDOUT, ':utf8');
 binmode(STDIN, ':utf8');
+
+open RENUMBER, '>', $conf->{output};
+binmode(RENUMBER, ':utf8');
 
 foreach my $input ( @ARGV ) {
     print STDERR "Processing $input, starting record id at ",
@@ -35,7 +37,7 @@ foreach my $input ( @ARGV ) {
                                              ' ',
                                              $conf->{subfield} => $new_id );
         $record->append_fields($new_id_field);
-        print $record->as_xml;
+        print RENUMBER $record->as_xml;
     }
     print STDERR "Processed $count records.  Last record id at ",
       ($conf->{'renumber-from'} + $count - 1), "\n";
