@@ -5,7 +5,7 @@ use warnings;
 use MARC::Batch;
 use Getopt::Long;
 #use MARC::Record;
-#use MARC::File::XML ( BinaryEncoding => 'utf-8' );
+use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 #use MARC::Field;
 
 my $count = 0;
