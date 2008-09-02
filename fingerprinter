@@ -285,19 +285,6 @@ sub initialize {
     # set mode on existing filehandles
     binmode(STDIN, ':utf8');
 
-    # set defaults if told to do so
-    if ($c->{incoming}) {
-        $c->{tag} = 903;
-        $c->{subfield} = 'a';
-        $c->{output} = 'incoming.fp';
-        $c->{exception} = 'incoming.ex';
-    } elsif ($c->{incumbent}) {
-        $c->{tag} = 901;
-        $c->{subfield} = 'c';
-        $c->{output} = 'incumbent.fp';
-        $c->{exception} = 'incumbent.ex';
-    }
-
     my $rc = GetOptions( $c,
                          'incoming',
                          'incumbent',
@@ -311,6 +298,19 @@ sub initialize {
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
+
+    # set defaults if told to do so
+    if ($c->{incoming}) {
+        $c->{tag} = 903 unless defined $c->{tag};
+        $c->{subfield} = 'a' unless defined $c->{subfield};
+        $c->{output} = 'incoming.fp' unless defined $c->{output};
+        $c->{exception} = 'incoming.ex' unless defined $c->{exception};
+    } elsif ($c->{incumbent}) {
+        $c->{tag} = 901 unless defined $c->{tag};
+        $c->{subfield} = 'c' unless defined $c->{subfield};
+        $c->{output} = 'incumbent.fp' unless defined $c->{output};
+        $c->{exception} = 'incumbent.ex' unless defined $c->{exception};
+    }
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
