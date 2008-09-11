@@ -10,7 +10,6 @@ use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 
 my $conf  = {}; # configuration hashref
 my $count = 0;
-my $failcount = 0;
 my $start = time;
 $| = 1;
 
@@ -30,9 +29,7 @@ for my $file (@ARGV) {
     $batch->strict_off();
     $batch->warnings_off();
 
-    while ( eval { $record = $batch->next } ) {
-        if ($@)
-          { print XF "MARC::Batch error $@"; $failcount++; next }
+    while ( $record = $batch->next ) {
         $count++; progress_ticker();
         my $marc = undef;
         unless ( defined $record )
@@ -53,12 +50,7 @@ for my $file (@ARGV) {
     }
 }
 
-unless ($conf->{quiet}) {
-    print "\nSuccessfully processed:\t$count\n";
-    print "Failed to process:\t$failcount\n";
-    print "Total: ", ($count + $failcount), "\n";
-}
-
+print "\nSuccessfully processed:\t$count\n" unless $conf->{quiet};
 
 =head2 populate_marc
 
