@@ -22,10 +22,11 @@ binmode(XF, ':utf8');
 
 for my $file (@ARGV) {
     print XF "Processing $file\n";
-    open my $records, '<:utf8', $file;
+    #open my $records, '<:utf8', $file; # This hack dosn't play nice with the use MARC::File::XML ( BinaryEncoding => 'utf-8' ); hack
     my $batch = undef; my $record = undef;
 
-    $batch = MARC::Batch->new('XML', $records);
+    #$batch = MARC::Batch->new('XML', $records); # The other part of the hack
+    $batch = MARC::Batch->new('XML', $file);
     $batch->strict_off();
     $batch->warnings_off();
 
