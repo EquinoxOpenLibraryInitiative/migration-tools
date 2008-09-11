@@ -30,6 +30,8 @@ for my $file (@ARGV) {
     $batch->warnings_off();
 
     while ( eval { $record = $batch->next } ) {
+        if ($@)
+          { print XF "MARC::Batch error $@"; next }
         my $marc = undef;
         $count++; progress_ticker();
         unless ( defined $record )
