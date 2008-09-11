@@ -6,6 +6,7 @@ use open ':utf8';
 use Getopt::Long;
 use MARC::Batch;
 use Unicode::Normalize;
+use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 
 my $conf  = {}; # configuration hashref
 my $count = 0;
