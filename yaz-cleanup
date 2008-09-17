@@ -8,7 +8,7 @@ $line1 = <MARC>;
 while ($line2 = <MARC>) {
     if ($line1 =~ m/<datafield tag="..." ind1=" " ind2=" ">/) {
         if ($line2 =~ m|</datafield>|) {
-            $line1 = $line2;
+            $line1 = <MARC>>;
             next;
         }
     }
