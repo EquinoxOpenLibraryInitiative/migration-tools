@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+open MARC, '<', 'incoming.marc.xml';
+open NUMARC, '>', 'incoming.clean.marc.xml';
+
+$line1 = <MARC>;
+
+while ($line2 = <MARC>) {
+    if ($line1 =~ m/<datafield tag="..." ind1=" " ind2=" ">/) {
+        if ($line2 =~ m|</datafield>|) {
+            $line1 = $line2;
+            next;
+        }
+    }
+    $line1 =~ s/tag="  /tag="00/g;
+    $line1 =~ s/tag=" /tag="0/g;
+    $line1 =~ s/tag="-/tag="0/g;
+    $line1 =~ s/tag="(\d\d) /tag="0$1/g;
+    print NUMARC $line1;
+    $line1 = $line2;
+}
+print NUMARC $line1;

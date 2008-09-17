@@ -30,42 +30,42 @@ matching records from the incumbent system
   fingerprinter -r primary -t 903 -s a -o incoming.primary.fp \
     -x incoming.primary.ex incoming.renumbered.mrc.xml
 
-Edit the query_for_primary_matching_incumbent_record.pl script to
-point to the correct Evergreen database and table holding the
-incumbent primary fingerprints (FIXME add in how to create such a
-table).
-
-  query_for_primary_matching_incumbent_record.pl incoming.primary.fp \
-    | sort | uniq > primary_matching_incumbent.record_ids
-
-In a postgres shell, you create a temporary table to hold these id's:
-
-  CREATE TABLE primary_matching_incumbent_records_for_incoming_library
-         (id BIGINT);
-  COPY primary_matching_incumbent_records_for_incoming_library
-       FROM 'primary_matching_incumbent.record_ids';
-
-To dump the matching incumbent records to a file, in a postgres shell
-do:
-
-  matching_incumbent_records.dump SELECT b.id, b.tcn_source, b.tcn_value,
-    regexp_replace(b.marc,E'\n','','g')
-    FROM biblio.record_entry AS b
-    JOIN primary_matching_incumbent_records_for_incoming_library
-    AS c using ( id );
-
-Now to turn that dump into a MARCXML file with record numbers and TCN
-embedded in tag 901, do:
-
-  marc_add_ids -f id -f tcn_source -f tcn_value -f marc \
-    < matching_incumbent_records.dump > matching_incumbent_records.marc.xml
-
-It's possible that this file may need to be itself sanitized some.
-This will transform code=""" into code="&x0022;", for example:
-
-  cat matching_incumbent_records.marc.xml | \
-    sed 's/code=\"\"\"/code=\"\&#x0022;\"/' \
-    > matching_incumbent_records.escaped.mrc.xml
+#Edit the query_for_primary_matching_incumbent_record.pl script to
+#point to the correct Evergreen database and table holding the
+#incumbent primary fingerprints (FIXME add in how to create such a
+#table).
+#
+#  query_for_primary_matching_incumbent_record.pl incoming.primary.fp \
+#    | sort | uniq > primary_matching_incumbent.record_ids
+#
+#In a postgres shell, you create a temporary table to hold these id's:
+#
+#  CREATE TABLE primary_matching_incumbent_records_for_incoming_library
+#         (id BIGINT);
+#  COPY primary_matching_incumbent_records_for_incoming_library
+#       FROM 'primary_matching_incumbent.record_ids';
+#
+#To dump the matching incumbent records to a file, in a postgres shell
+#do:
+#
+#  matching_incumbent_records.dump SELECT b.id, b.tcn_source, b.tcn_value,
+#    regexp_replace(b.marc,E'\n','','g')
+#    FROM biblio.record_entry AS b
+#    JOIN primary_matching_incumbent_records_for_incoming_library
+#    AS c using ( id );
+#
+#Now to turn that dump into a MARCXML file with record numbers and TCN
+#embedded in tag 901, do:
+#
+#  marc_add_ids -f id -f tcn_source -f tcn_value -f marc \
+#    < matching_incumbent_records.dump > matching_incumbent_records.marc.xml
+#
+#It's possible that this file may need to be itself sanitized some.
+#This will transform code=""" into code="&x0022;", for example:
+#
+#  cat matching_incumbent_records.marc.xml | \
+#    sed 's/code=\"\"\"/code=\"\&#x0022;\"/' \
+#    > matching_incumbent_records.escaped.mrc.xml
 
 Get full fingerprints for both datasets and match them.
 
@@ -97,24 +97,33 @@ Now to tar up the specific MARC records involved for the dedup interface:
   cat match.groupings | cut -d^ -f3 > incumbent.record_ids
   cat match.groupings | cut -d^ -f5 | cut -d, -f2- | sed 's/,/\n/g' \
     > incoming.record_ids
-  mkdir dataset ; cd dataset
-  select_marc.pl ../incumbent.record_ids 901 c \
-    ../matching_incumbent_records.mrc.xml
-  select_marc.pl ../incoming.record_ids 903 a \
-    ../incoming.renumbered.mrc.xml
-  cd .. 
-  tar cvf dataset.tar dataset
 
-In a mysql shell for the database used with the dedup interface:
+#  mkdir dataset ; cd dataset
+#  select_marc.pl ../incumbent.record_ids 901 c \
+#    ../matching_incumbent_records.mrc.xml
+#  select_marc.pl ../incoming.record_ids 903 a \
+#    ../incoming.renumbered.mrc.xml
+#  cd .. 
+#  tar cvf dataset.tar dataset
+#
+#In a mysql shell for the database used with the dedup interface:
+#
+#  LOAD DATA LOCAL INFILE 'match.groupings' INTO TABLE record_group
+#    FIELDS TERMINATED BY '^' 
+#    ( status, dataset, best_record,records,original_records );
+#
+#Create a pretty printed text dump of the non-matching incoming records:
+#
+#  dump_inverse_select_marc.pl incoming.record_ids 903 a \
+#    incoming.renumbered.mrc.xml > non_matching_incoming.mrc.txt 2> \
+#    non_matching_incoming.mrc.txt.err
 
-  LOAD DATA LOCAL INFILE 'match.groupings' INTO TABLE record_group
-    FIELDS TERMINATED BY '^' 
-    ( status, dataset, best_record,records,original_records );
+marc2bre.pl --idfield=903 --dontuse=live_tcns.txt -f
+quitman_non_matching_incoming.mrc.xml -f
+catoosa_non_matching_incoming.mrc.xml --marctype=XML > some.bre
 
-Create a pretty printed text dump of the non-matching incoming records:
+direct_ingest.pl < some.bre > some.ingest
 
-  dump_inverse_select_marc.pl incoming.record_ids 903 a \
-    incoming.renumbered.mrc.xml > non_matching_incoming.mrc.txt 2> \
-    non_matching_incoming.mrc.txt.err
-
-
+perl pg_loader.pl -or bre -or mrd -or mfr -or mtfe -or mafe -or msfe
+-or mkfe -or msefe -a mrd -a mfr -a mtfe -a mafe -a msfe -a mkfe -a
+msefe < ~/gutenberg.ingest > ~/gutenberg.sql
