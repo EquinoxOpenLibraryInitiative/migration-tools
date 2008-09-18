@@ -332,7 +332,7 @@ sub initialize {
 
 sub progress_ticker {
     return if $conf->{quiet};
-    printf("> %d (%d/s)\r", $count, ($count / (time - $start + 1)))
+    printf("\r> %d (%d/s)", $count, ($count / (time - $start + 1)))
       if ($count % 100 == 0);
 }
 
