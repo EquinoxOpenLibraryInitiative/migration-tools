@@ -1,21 +1,48 @@
 #!/usr/bin/perl
 
+use strict;
+use warnings;
+
+my $skip = shift || 0;
+my $count = 0;
+$| = 1;
+
 open MARC, '<', 'incoming.marc.xml';
 open NUMARC, '>', 'incoming.clean.marc.xml';
 
-$line1 = <MARC>;
+until ($count == ($skip - 1)) {
+    my $t = <MARC>;
+    print NUMARC $t;
+    $count++;
+    printf("\rSpinning on to record %s (%2.2f%%)", $skip, ($count / $skip *100))
+      unless ($count % 1000);
+}
+print "\nScrubbing resumes...\n" if $skip;
 
-while ($line2 = <MARC>) {
+my $line1 = <MARC>;
+
+while (my $line2 = <MARC>) {
+    $count++;
+    # catch empty datafield elements
     if ($line1 =~ m/<datafield tag="..." ind1="." ind2=".">/) {
         if ($line2 =~ m|</datafield>|) {
             $line1 = <MARC>;
+            $count++;
             next;
         }
     }
+
+    # clean up tags with spaces in them
     $line1 =~ s/tag="  /tag="00/g;
     $line1 =~ s/tag=" /tag="0/g;
     $line1 =~ s/tag="-/tag="0/g;
     $line1 =~ s/tag="(\d\d) /tag="0$1/g;
+
+    # subfields can't be non-alphanumeric
+    die "Junk in subfield at line $count: $line1"
+      if $line1 =~ /<subfield code="[^[:alnum:]]"/;
+
+    # everything looks ok
     print NUMARC $line1;
     $line1 = $line2;
 }
