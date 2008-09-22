@@ -10,7 +10,6 @@ $| = 1;
 
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
-print $OUT "Interactive MARC Stream Editor starting up\n";
 
 my $count = 0;
 my $reccount = 0;
