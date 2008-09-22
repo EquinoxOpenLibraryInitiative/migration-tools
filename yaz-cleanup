@@ -10,7 +10,7 @@ $| = 1;
 
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
-print $OUT "\nInteractive MARC Stream Editor starting up...\n";
+print $OUT "Interactive MARC Stream Editor starting up\n";
 
 my $count = 0;
 my $reccount = 0;
@@ -54,7 +54,7 @@ while (my $line = getline()) {
     if ($line =~ m|</datafield>|) {
         if ($record[-2] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
             pop @record; pop @record;
-            print $OUT "Empty datafield scrubbed at line $count\n";
+            print $OUT "\rEmpty datafield scrubbed at line $count\n";
             next;
         }
     }
@@ -62,7 +62,7 @@ while (my $line = getline()) {
     # clean misplaced dollarsigns
     if ($line =~ m|<subfield code="\$">c?\d+\.\d{2}|) {
         $line =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
-        print $OUT "Dollar sign in subfield code corrected at line $count\n";
+        print $OUT "\rDollar sign in subfield code corrected at line $count\n";
     }
 
     # clean up tags with spaces in them
@@ -90,7 +90,7 @@ Handles the Term::ReadLine loop
 
 sub edit {
     my ($msg, $line_in) = @_;
-    print $OUT "\n".$msg, " at line $count:\n";
+    print $OUT "\r".$msg, " at line $count:\n";
     print_context();
     while (1) {
         my $line = $term->readline('yaz-cleanup>');
