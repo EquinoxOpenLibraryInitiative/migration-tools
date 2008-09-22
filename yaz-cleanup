@@ -147,9 +147,9 @@ sub update_context {
 #-----------------------------------------------------------------------------------
 
 sub print_context {
-    print $OUT "\n", join('   ','',@context[0..2]);
-    print $OUT '==>', $context[3];
-    print $OUT '   ', $context[4],"\n";
+    print $OUT "\n", join('    |','',@context[0..2]);
+    print $OUT '==> |', $context[3];
+    print $OUT '    |', $context[4],"\n";
     return 0;
 }
 
@@ -184,12 +184,12 @@ sub dump_record {
 sub help {
 print $OUT <<HELP;
 
-Type a replacement for the selected line, or enter a command.
+Type a replacement for the indicated line, or enter a command.
 
 Commands: c  Show line context
           k  Kill this line (remove from record)
-          o  Show original line (problem before edits)
-          t  Commit changes and finish editing
+          o  Show original line
+          t  Commit changes and resume stream edit
           x  Write this record to the exception file instead of output
           q  Quit
 
