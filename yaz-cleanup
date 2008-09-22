@@ -98,8 +98,11 @@ sub edit {
             my $term = $commands{$line}->($line_in);
             last if $term;
         } else {
-            push @record, $record[-1] if ($context[3] eq " [LINE KILLED\n]");
-            $record[-2] = "$line\n";
+            if ($context[3] eq " [LINE KILLED\n]") {
+                push @record, "$line\n"
+            } else {
+                $record[-1] = "$line\n";
+            }
             $context[3] = "$line\n";
             print_context();
         }
@@ -162,9 +165,7 @@ sub show_original {
 sub commit_edit { return 1 }
 
 sub kill_line {
-    my $tmp = pop @record;
     pop @record;
-    push @record, $tmp;
     $context[3] = " [LINE KILLED]\n";
     print_context();
     return 0;
