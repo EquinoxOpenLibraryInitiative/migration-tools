@@ -99,7 +99,7 @@ sub edit {
             my $term = $commands{$line}->($line_in);
             last if $term;
         } else {
-            if ($context[3] eq " [LINE KILLED\n]") {
+            if ($context[3] eq " [LINE KILLED]\n") {
                 push @record, "$line\n"
             } else {
                 $record[-1] = "$line\n";
