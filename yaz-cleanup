@@ -173,11 +173,12 @@ sub kill_line {
 }
 
 sub dump_record {
-    my $line = <MARC>;
+    my $line = <MARC>; $count++;
+    update_context();
     until ($line =~ m|</record>|) {
         push @record, $line;
-        $line = <MARC>;
-        update_context;
+        $line = <MARC>; $count++;
+        update_context();
     }
     push @record, $line;
     write_record($EXMARC);
