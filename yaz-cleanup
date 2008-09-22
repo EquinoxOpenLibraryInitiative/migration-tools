@@ -6,103 +6,195 @@ use warnings;
 use Getopt::Long;
 use Term::ReadLine;
 
+$| = 1;
+
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
+print $OUT "\nInteractive MARC Stream Editor starting up...\n";
 
 my $count = 0;
+my $reccount = 0;
 my $line = '';
 
-my @record = ();
-my @context= ();
-
-my %commands = ( '?' => \&help,
-                 h   => \&help,
-                 c   => \&print_context,
-                 d   => \&dump_record,
-                 q   => \&quit,
-               );
-
+my @record = (); # current record storage
+my @context= (); # last 5 lines of file
 
 open MARC, '<', 'incoming.marc.xml';
-open NUMARC, '>', 'incoming.clean.marc.xml';
+open my $NUMARC, '>', 'incoming.clean.marc.xml';
+print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
+open my $EXMARC, '>', 'incoming.exceptions.marc.xml';
+open MARC2, '<', 'incoming.marc.xml';
+<MARC2>;
 
-my $line1 = getline();
+# this is the dispatch table which drives command selection in
+# edit(), below
+my %commands = ( c => \&print_context,
+                 k => \&kill_line,
+                 o => \&show_original,
+                 t => \&commit_edit,
+                 x => \&dump_record,
+                 q => \&quit,
+                 '?' => \&help,
+                 h   => \&help,
+                 help => \&help,
+               );
 
-while (my $line2 = getline()) {
+my @spinner = qw(- / | \\);
+my $sidx = 0;
+
+while (my $line = getline()) {
+    unless ($count % 2000) {
+        print "\rWorking... ", $spinner[$sidx];
+        $sidx++;
+        $sidx = 0 if ($sidx > $#spinner);
+    }
+    update_context();
+
     # catch empty datafield elements
-    if ($line1 =~ m/<datafield tag="..." ind1="." ind2=".">/) {
-        if ($line2 =~ m|</datafield>|) {
-            print "Empty datafield scrubbed at line $count\n";
-            $line1 = getline();
+    if ($line =~ m|</datafield>|) {
+        if ($record[-2] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
+            pop @record; pop @record;
+            print $OUT "Empty datafield scrubbed at line $count\n";
             next;
         }
     }
 
     # clean misplaced dollarsigns
-    if ($line1 =~ m|<subfield code="\$">c?\d+\.\d{2}|) {
-        $line1 =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
-        print "Dollar sign in subfield code corrected at line $count\n";
+    if ($line =~ m|<subfield code="\$">c?\d+\.\d{2}|) {
+        $line =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
+        print $OUT "Dollar sign in subfield code corrected at line $count\n";
     }
 
     # clean up tags with spaces in them
-    $line1 =~ s/tag="  /tag="00/g;
-    $line1 =~ s/tag=" /tag="0/g;
-    $line1 =~ s/tag="-/tag="0/g;
-    $line1 =~ s/tag="(\d\d) /tag="0$1/g;
+    $line =~ s/tag="  /tag="00/g;
+    $line =~ s/tag=" /tag="0/g;
+    $line =~ s/tag="-/tag="0/g;
+    $line =~ s/tag="(\d\d) /tag="0$1/g;
 
     # naked ampersands
-    edit("Looks like naked ampersand", $line1)
-      if ($line1 =~ /&/ && $line1 !~ /&\w{1,7};/);
+    if ($line =~ /&/ && $line !~ /&\w{1,7};/)
+      { edit("Looks like naked ampersand", $line); next }
 
     # subfields can't be non-alphanumeric
-    die "Junk in subfield at line $count: $line1"
-      if $line1 =~ /<subfield code="[^[:alnum:]]"/;
+      if ($line =~ /<subfield code="[^[:alnum:]]"/)
+        { edit("Junk in subfield", $line); next }
 
-    # everything looks ok
-    print NUMARC $line1;
-    $line1 = $line2;
 }
-print NUMARC $line1;
+print $NUMARC "</xml>\n";
+
+=head2 edit
+
+Handles the Term::ReadLine loop
+
+=cut
 
 sub edit {
     my ($msg, $line_in) = @_;
     print $OUT "\n".$msg, " at line $count:\n";
-    print $OUT "\t$line_in\n";
+    print_context();
     while (1) {
         my $line = $term->readline('yaz-cleanup>');
-        $commands{$line}->();
+        if (defined $commands{$line}) {
+            my $term = $commands{$line}->($line_in);
+            last if $term;
+        } else {
+            push @record, $record[-1] if ($context[3] eq " [LINE KILLED\n]");
+            $record[-2] = "$line\n";
+            $context[3] = "$line\n";
+            print_context();
+        }
     }
 }
 
-sub print_context {
-    print $OUT "\n", join('   ','',@context[0..2]);
-    print $OUT '==>', $context[3];
-    print $OUT '   ', $context[4],"\n";
-}
+=head2 getline
+
+Reads from the incoming MARC file; returns lines into the driver
+loop. Batches records for output, and maintains the context listing.
+
+=cut
 
 sub getline {
     my $l = <MARC>;
     $count++;
     if (defined $l) {
-        if ($l =~ /<record>/)
-          { @record = ($l) }
-        else
-          { push @record, $l }
-        push @context, $l;
-        shift @context if (@context > 5);
+        if ($l =~ /<record>/) {
+            @record = ($l);
+            $reccount++;
+        } elsif ($l =~ m|</record>|) {
+            write_record($NUMARC) if $reccount;
+        } else {
+            push @record, $l;
+        }
     }
     return $l;
+}
+
+sub write_record {
+    my ($FH) = @_;
+    print $FH '<collection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd" xmlns="http://www.loc.gov/MARC21/slim">',"\n";
+    print $FH @record;
+    print $FH "</collection>\n";
+}
+
+sub update_context {
+    my $line2 = <MARC2>;
+    push @context, $line2;
+    shift @context if (@context > 5);
+}
+
+#-----------------------------------------------------------------------------------
+# command routines
+#-----------------------------------------------------------------------------------
+
+sub print_context {
+    print $OUT "\n", join('   ','',@context[0..2]);
+    print $OUT '==>', $context[3];
+    print $OUT '   ', $context[4],"\n";
+    return 0;
+}
+
+sub show_original {
+    my ($line_in) = @_;
+    print $OUT "\n$line_in\n";
+    return 0;
+}
+
+sub commit_edit { return 1 }
+
+sub kill_line {
+    my $tmp = pop @record;
+    pop @record;
+    push @record, $tmp;
+    $context[3] = " [LINE KILLED]\n";
+    print_context();
+    return 0;
+}
+
+sub dump_record {
+    my $line = <MARC>;
+    until ($line =~ m|</record>|) {
+        push @record, $line;
+        $line = <MARC>;
+        update_context;
+    }
+    push @record, $line;
+    write_record($EXMARC);
 }
 
 sub help {
 print $OUT <<HELP;
 
-Enter a replacement for this line, a blank line to dump this line, or a command.
+Type a replacement for the selected line, or enter a command.
+
 Commands: c  Show line context
-          d  Dump this record (redirect to exceptions file)
+          k  Kill this line (remove from record)
+          o  Show original line (problem before edits)
+          t  Commit changes and finish editing
+          x  Write this record to the exception file instead of output
           q  Quit
 
 HELP
+return 0;
 }
 
 sub quit { exit }
