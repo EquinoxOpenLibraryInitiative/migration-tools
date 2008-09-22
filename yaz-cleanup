@@ -23,6 +23,7 @@ open MARC, '<', 'incoming.marc.xml';
 open my $NUMARC, '>', 'incoming.clean.marc.xml';
 print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 open my $EXMARC, '>', 'incoming.exceptions.marc.xml';
+print $EXMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 open MARC2, '<', 'incoming.marc.xml';
 <MARC2>;
 
@@ -81,6 +82,7 @@ while (my $line = getline()) {
 
 }
 print $NUMARC "</xml>\n";
+print $EXMARC "</xml>\n";
 
 =head2 edit
 
