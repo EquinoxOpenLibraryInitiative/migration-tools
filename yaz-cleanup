@@ -162,8 +162,8 @@ sub update_linecontext {
 #-----------------------------------------------------------------------------------
 
 sub print_context {
-    print "\n    Tag: ",$reccontext{tag}, " Ind1: '",
-      $reccontext{ind1},"' Ind2: '", $reccontext{ind2}, "'";
+    print "\n    Tag: ",$reccontext{tag}, " Ind1:'",
+      $reccontext{ind1},"' Ind2:'", $reccontext{ind2}, "'";
     print_linecontext();
     return 0;
 }
