@@ -50,7 +50,7 @@ my $sidx = 0;
 while (my $line = getline()) {
     unless ($count % 2000) {
         print "\rWorking... ", $spinner[$sidx];
-        $sidx = $sidx > $#spinner ? 0 : $sidx++;
+        $sidx = ($sidx == $#spinner) ? 0 : $sidx + 1;
     }
     update_linecontext();
 
@@ -90,7 +90,6 @@ while (my $line = getline()) {
     if ($line =~ /<subfield code="(.+?)"/) {
         my $match = $1;
         if ($match =~ /\P{IsAlnum}/) {
-            print $OUT "\n$match\n";
             edit("Junk in subfield", $line);
             next;
         }
