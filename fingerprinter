@@ -9,7 +9,7 @@ use Unicode::Normalize;
 use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 
 my $conf  = {}; # configuration hashref
-my $count = 0;
+my $count = 0; my $scount = 0;
 my $start = time;
 $| = 1;
 
@@ -48,6 +48,7 @@ for my $file (@ARGV) {
         unless (marc_isvalid($marc))
           { dump_exception($marc); next; }
         dump_fingerprints($marc);
+        $scount++; progress_ticker();
     }
 }
 
@@ -332,8 +333,9 @@ sub initialize {
 
 sub progress_ticker {
     return if $conf->{quiet};
-    printf("\r> %d (%d/s)", $count, ($count / (time - $start + 1)))
-      if ($count % 100 == 0);
+    printf("\r> %d recs seen; %d processed", $count, $scount);
+    printf(" (%d/s)", ($count / (time - $start + 1)))
+      if ($count % 500 == 0);
 }
 
 =head2 show_help
