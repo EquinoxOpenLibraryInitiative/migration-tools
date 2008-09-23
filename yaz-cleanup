@@ -33,6 +33,7 @@ my %commands = ( c => \&print_context,
                  C => \&print_linecontext,
                  k => \&kill_line,
                  o => \&show_original,
+                 m => \&merge_lines,
                  t => \&commit_edit,
                  x => \&dump_record,
                  q => \&quit,
@@ -103,7 +104,7 @@ sub edit {
     print_context();
     while (1) {
         my $line = $term->readline('yaz-cleanup>');
-        if (length $line == 1)
+        if (length $line < 2)
           { next unless (defined $commands{$line}) }
         if (defined $commands{$line}) {
             my $term = $commands{$line}->($line_in);
@@ -162,7 +163,7 @@ sub update_linecontext {
 #-----------------------------------------------------------------------------------
 
 sub print_context {
-    print "\n    Tag: ",$reccontext{tag}, " Ind1:'",
+    print "\n Tag:",$reccontext{tag}, " Ind1:'",
       $reccontext{ind1},"' Ind2:'", $reccontext{ind2}, "'";
     print_linecontext();
     return 0;
@@ -178,6 +179,20 @@ sub print_linecontext {
 sub show_original {
     my ($line_in) = @_;
     print $OUT "\n$line_in\n";
+    return 0;
+}
+
+sub merge_lines {
+    my $last = pop @record;
+    $last =~ s/^\s+//;
+    $record[-1] =~ s/\n//;
+    $record[-1] = join('', $record[-1], $last);
+    my @temp = ("\n");
+    push @temp, @linecontext[0..1];
+    $temp[3] = $record[-1];
+    $temp[4] = $linecontext[4];
+    @linecontext = @temp;
+    print_linecontext();
     return 0;
 }
 
@@ -210,7 +225,7 @@ Type a replacement for the indicated line, or enter a command.
 
 Commands: c  Show record context ('C' for brief context)
           k  Kill this line (remove from record)
-          m  Merge indicated line with previous line [NOT IMPLEMENTED]
+          m  Merge indicated line with previous line
           o  Show original line
           t  Commit changes and resume stream edit
           x  Write this record to the exception file instead of output
