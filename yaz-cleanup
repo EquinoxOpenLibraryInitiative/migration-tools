@@ -137,6 +137,7 @@ sub getline {
             %reccontext = ();
             $reccount++;
         } elsif ($l =~ m|</record>|) {
+            push @record, $l;
             write_record($NUMARC) if $reccount;
         } else {
             push @record, $l;
