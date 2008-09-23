@@ -16,7 +16,8 @@ my $reccount = 0;
 my $line = '';
 
 my @record = (); # current record storage
-my @context= (); # last 5 lines of file
+my %reccontext = ();
+my @linecontext= (); # last 5 lines of file
 
 open MARC, '<', 'incoming.marc.xml';
 open my $NUMARC, '>', 'incoming.clean.marc.xml';
@@ -29,6 +30,7 @@ open MARC2, '<', 'incoming.marc.xml';
 # this is the dispatch table which drives command selection in
 # edit(), below
 my %commands = ( c => \&print_context,
+                 C => \&print_linecontext,
                  k => \&kill_line,
                  o => \&show_original,
                  t => \&commit_edit,
@@ -45,10 +47,9 @@ my $sidx = 0;
 while (my $line = getline()) {
     unless ($count % 2000) {
         print "\rWorking... ", $spinner[$sidx];
-        $sidx++;
-        $sidx = 0 if ($sidx > $#spinner);
+        $sidx = $sidx > $#spinner ? 0 : $sidx++;
     }
-    update_context();
+    update_linecontext();
 
     # catch empty datafield elements
     if ($line =~ m|</datafield>|) {
@@ -70,6 +71,13 @@ while (my $line = getline()) {
     $line =~ s/tag=" /tag="0/g;
     $line =~ s/tag="-/tag="0/g;
     $line =~ s/tag="(\d\d) /tag="0$1/g;
+
+    # stow tag data if we're looking at it
+    if ($line =~ m/<datafield tag="(\d{3})" ind1="(.)" ind2="(.)">/) {
+        $reccontext{tag}  = $1;
+        $reccontext{ind1} = $2;
+        $reccontext{ind2} = $3;
+    }
 
     # naked ampersands
     if ($line =~ /&/ && $line !~ /&\w{1,7};/)
@@ -95,17 +103,19 @@ sub edit {
     print_context();
     while (1) {
         my $line = $term->readline('yaz-cleanup>');
+        if (length $line == 1)
+          { next unless (defined $commands{$line}) }
         if (defined $commands{$line}) {
             my $term = $commands{$line}->($line_in);
             last if $term;
         } else {
-            if ($context[3] eq " [LINE KILLED]\n") {
+            if ($linecontext[3] eq " [LINE KILLED]\n") {
                 push @record, "$line\n"
             } else {
                 $record[-1] = "$line\n";
             }
-            $context[3] = "$line\n";
-            print_context();
+            $linecontext[3] = "$line\n";
+            print_linecontext();
         }
     }
 }
@@ -113,7 +123,7 @@ sub edit {
 =head2 getline
 
 Reads from the incoming MARC file; returns lines into the driver
-loop. Batches records for output, and maintains the context listing.
+loop. Batches records for output, and maintains the linecontext listing.
 
 =cut
 
@@ -123,6 +133,7 @@ sub getline {
     if (defined $l) {
         if ($l =~ /<record>/) {
             @record = ($l);
+            %reccontext = ();
             $reccount++;
         } elsif ($l =~ m|</record>|) {
             write_record($NUMARC) if $reccount;
@@ -140,10 +151,10 @@ sub write_record {
     print $FH "</collection>\n";
 }
 
-sub update_context {
+sub update_linecontext {
     my $line2 = <MARC2>;
-    push @context, $line2;
-    shift @context if (@context > 5);
+    push @linecontext, $line2;
+    shift @linecontext if (@linecontext > 5);
 }
 
 #-----------------------------------------------------------------------------------
@@ -151,9 +162,16 @@ sub update_context {
 #-----------------------------------------------------------------------------------
 
 sub print_context {
-    print $OUT "\n", join('    |','',@context[0..2]);
-    print $OUT '==> |', $context[3];
-    print $OUT '    |', $context[4],"\n";
+    print "\n    Tag: ",$reccontext{tag}, " Ind1: '",
+      $reccontext{ind1},"' Ind2: '", $reccontext{ind2}, "'";
+    print_linecontext();
+    return 0;
+}
+
+sub print_linecontext {
+    print $OUT "\n", join('    |','',@linecontext[0..2]);
+    print $OUT '==> |', $linecontext[3];
+    print $OUT '    |', $linecontext[4],"\n";
     return 0;
 }
 
@@ -163,34 +181,36 @@ sub show_original {
     return 0;
 }
 
-sub commit_edit { return 1 }
-
 sub kill_line {
     pop @record;
-    $context[3] = " [LINE KILLED]\n";
-    print_context();
+    $linecontext[3] = " [LINE KILLED]\n";
+    print_linecontext();
     return 0;
 }
 
 sub dump_record {
     my $line = <MARC>; $count++;
-    update_context();
+    update_linecontext();
     until ($line =~ m|</record>|) {
         push @record, $line;
         $line = <MARC>; $count++;
-        update_context();
+        update_linecontext();
     }
     push @record, $line;
     write_record($EXMARC);
+    return 1;
 }
+
+sub commit_edit { return 1 }
 
 sub help {
 print $OUT <<HELP;
 
 Type a replacement for the indicated line, or enter a command.
 
-Commands: c  Show line context
+Commands: c  Show record context ('C' for brief context)
           k  Kill this line (remove from record)
+          m  Merge indicated line with previous line [NOT IMPLEMENTED]
           o  Show original line
           t  Commit changes and resume stream edit
           x  Write this record to the exception file instead of output
