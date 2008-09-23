@@ -84,13 +84,13 @@ while (my $line = getline()) {
 
     # naked ampersands
     if ($line =~ /&/ && $line !~ /&\w+?;/)
-      { edit("Looks like naked ampersand", $line); next }
+      { edit("Naked ampersand", $line); next }
 
     # subfields can't be non-alphanumeric
     if ($line =~ /<subfield code="(.+?)"/) {
         my $match = $1;
         if ($match =~ /\P{IsAlnum}/) {
-            edit("Junk in subfield", $line);
+            edit("Junk in subfield code", $line);
             next;
         }
     }
@@ -110,7 +110,7 @@ sub edit {
     print $OUT "\r".$msg, " at line $count:\n";
     print_context();
     while (1) {
-        my $line = $term->readline('yaz-cleanup>');
+        my $line = $term->readline('marc-cleanup>');
         if (length $line < 2)
           { next unless (defined $commands{$line}) }
         if (defined $commands{$line}) {
