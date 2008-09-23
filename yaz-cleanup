@@ -19,12 +19,14 @@ my @record = (); # current record storage
 my %reccontext = ();
 my @linecontext= (); # last 5 lines of file
 
-open MARC, '<', 'incoming.marc.xml';
+my $input = shift || 'incoming.marc.xml';
+
+open MARC, '<', $input;
 open my $NUMARC, '>', 'incoming.clean.marc.xml';
 print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 open my $EXMARC, '>', 'incoming.exceptions.marc.xml';
 print $EXMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
-open MARC2, '<', 'incoming.marc.xml';
+open MARC2, '<', $input;
 <MARC2>;
 
 # this is the dispatch table which drives command selection in
@@ -81,12 +83,18 @@ while (my $line = getline()) {
     }
 
     # naked ampersands
-    if ($line =~ /&/ && $line !~ /&\w{1,7};/)
+    if ($line =~ /&/ && $line !~ /&\w+?;/)
       { edit("Looks like naked ampersand", $line); next }
 
     # subfields can't be non-alphanumeric
-      if ($line =~ /<subfield code="[^[:alnum:]]"/)
-        { edit("Junk in subfield", $line); next }
+    if ($line =~ /<subfield code="(.+?)"/) {
+        my $match = $1;
+        if ($match =~ /\P{IsAlnum}/) {
+            print $OUT "\n$match\n";
+            edit("Junk in subfield", $line);
+            next;
+        }
+    }
 
 }
 print $NUMARC "</xml>\n";
