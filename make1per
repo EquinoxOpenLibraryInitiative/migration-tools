@@ -1,7 +1,10 @@
 #!/usr/bin/perl
 
-open IN, '<', 'incoming.renumbered.mrc.xml';
-open OUT,'>', 'incoming.renumbered.1per.xml';
+my $infile = $ARGV[0] || 'incoming.renumbered.mrc.xml';
+my $outfile = $ARGV[1] || $infile . '.1per.xml';
+
+open IN, '<', $infile;
+open OUT,'>', $outfile;
 
 $seenrec  = 0;
 $stripcol = 0;
