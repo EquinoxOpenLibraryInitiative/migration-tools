@@ -108,6 +108,7 @@ while (my $line = getline()) {
 }
 print $NUMARC "</xml>\n";
 print $EXMARC "</xml>\n";
+print $OUT "\nDone\n"
 
 =head2 edit
 
