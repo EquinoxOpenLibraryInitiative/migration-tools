@@ -36,7 +36,7 @@ my $count = 0;
 my $icount = 0;
 my $scount = 0;
 while (<$M>) {
-    /tag="901" ind1=" " ind2=" "><subfield code="a">(\d+)</;
+    /tag="901" ind1=" " ind2=" ">.*?<subfield code="c">(\d+)</;
     if ( $id{$1} ) {
         print $I $_;
         $icount++;
