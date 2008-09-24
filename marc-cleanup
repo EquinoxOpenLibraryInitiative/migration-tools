@@ -76,7 +76,7 @@ while (my $line = getline()) {
     $line =~ s/tag="(\d\d) /tag="0$1/g;
 
     # stow tag data if we're looking at it
-    if ($line =~ m/<datafield tag="(\d{3})" ind1="(.)" ind2="(.)">/) {
+    if ($line =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
         $reccontext{tag}  = $1;
         $reccontext{ind1} = $2;
         $reccontext{ind2} = $3;
@@ -85,6 +85,15 @@ while (my $line = getline()) {
     # naked ampersands
     if ($line =~ /&/ && $line !~ /&\w+?;/)
       { edit("Naked ampersand", $line); next }
+
+    # tags must be numeric
+    if ($line =~ /<datafield tag="(.+?)"/) {
+        my $match = $1;
+        if ($match =~ /\D/) {
+            edit("Non-numerics in tag", $line);
+            next;
+        }
+    }
 
     # subfields can't be non-alphanumeric
     if ($line =~ /<subfield code="(.+?)"/) {
