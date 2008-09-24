@@ -118,7 +118,7 @@ Handles the Term::ReadLine loop
 
 sub edit {
     my ($msg, $line_in) = @_;
-    print $OUT "\r".$msg, " at line $count:\n";
+    print $OUT "\r".$msg, " at line $count (record $reccount)\n";
     print_context();
 
     while (1) {
