@@ -291,6 +291,7 @@ sub initialize {
                          'incoming',
                          'incumbent',
                          'exception|x=s',
+                         'marctype|m=s',
                          'output|o=s',
                          'runtype|r=s',
                          'subfield|s=s',
@@ -305,12 +306,14 @@ sub initialize {
     if ($c->{incoming}) {
         $c->{tag} = 903 unless defined $c->{tag};
         $c->{subfield} = 'a' unless defined $c->{subfield};
+        $c->{marctype} = 'XML' unless defined $c->{marctype};
         $c->{output} = 'incoming.fp' unless defined $c->{output};
         $c->{exception} = 'incoming.ex' unless defined $c->{exception};
         $c->{runtype} = 'full' unless defined $c->{runtype};
     } elsif ($c->{incumbent}) {
         $c->{tag} = 901 unless defined $c->{tag};
         $c->{subfield} = 'c' unless defined $c->{subfield};
+        $c->{marctype} = 'XML' unless defined $c->{marctype};
         $c->{output} = 'incumbent.fp' unless defined $c->{output};
         $c->{exception} = 'incumbent.ex' unless defined $c->{exception};
         $c->{runtype} = 'full' unless defined $c->{runtype};
