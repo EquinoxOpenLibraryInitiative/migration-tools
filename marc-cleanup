@@ -108,7 +108,7 @@ while (my $line = getline()) {
 }
 print $NUMARC "</xml>\n";
 print $EXMARC "</xml>\n";
-print $OUT "\nDone\n"
+print $OUT "\nDone\n";
 
 =head2 edit
 
@@ -170,7 +170,7 @@ sub getline {
 
 sub write_record {
     my ($FH) = @_;
-    print $FH '<collection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd" xmlns="http://www.loc.gov/MARC21/slim">',"\n";
+    print $FH '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
     print $FH @record;
     print $FH "</collection>\n";
 }
@@ -186,8 +186,13 @@ sub update_linecontext {
 #-----------------------------------------------------------------------------------
 
 sub substitute {
-    my ($line_in, $from, $to) = @_;
-    $from = join("\\", '', split(//,$from));
+    my ($line_in, $ofrom, $to) = @_;
+    my $from = '';
+    for my $char (split(//,$ofrom)) {
+        $char = "\\" . $char if ($char =~ /\W/);
+        $from = join('', $from, $char);
+    }
+    print $OUT "\n$from\n";
     $record[-1] =~ s/$from/$to/;
     $linecontext[3] = $record[-1];
     print_linecontext();
