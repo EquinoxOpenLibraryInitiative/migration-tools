@@ -36,6 +36,7 @@ my %commands = ( c => \&print_context,
                  k => \&kill_line,
                  o => \&show_original,
                  m => \&merge_lines,
+                 s => \&substitute,
                  t => \&commit_edit,
                  x => \&dump_record,
                  q => \&quit,
@@ -118,12 +119,16 @@ sub edit {
     my ($msg, $line_in) = @_;
     print $OUT "\r".$msg, " at line $count:\n";
     print_context();
+
     while (1) {
         my $line = $term->readline('marc-cleanup>');
-        if (length $line < 2)
-          { next unless (defined $commands{$line}) }
-        if (defined $commands{$line}) {
-            my $term = $commands{$line}->($line_in);
+        my @chunks = split /\s+/, $line;
+
+        if (length $chunks[0] == 1)
+          { next unless (defined $commands{$chunks[0]}) }
+
+        if (defined $commands{$chunks[0]}) {
+            my $term = $commands{$chunks[0]}->($line_in, @chunks[1..$#chunks]);
             last if $term;
         } else {
             if ($linecontext[3] eq " [LINE KILLED]\n") {
@@ -179,23 +184,12 @@ sub update_linecontext {
 # command routines
 #-----------------------------------------------------------------------------------
 
-sub print_context {
-    print "\n Tag:",$reccontext{tag}, " Ind1:'",
-      $reccontext{ind1},"' Ind2:'", $reccontext{ind2}, "'";
+sub substitute {
+    my ($line_in, $from, $to) = @_;
+    $from = join("\\", '', split(//,$from));
+    $record[-1] =~ s/$from/$to/;
+    $linecontext[3] = $record[-1];
     print_linecontext();
-    return 0;
-}
-
-sub print_linecontext {
-    print $OUT "\n", join('    |','',@linecontext[0..2]);
-    print $OUT '==> |', $linecontext[3];
-    print $OUT '    |', $linecontext[4],"\n";
-    return 0;
-}
-
-sub show_original {
-    my ($line_in) = @_;
-    print $OUT "\n$line_in\n";
     return 0;
 }
 
@@ -235,15 +229,36 @@ sub dump_record {
 
 sub commit_edit { return 1 }
 
+sub print_context {
+    print "\n Tag:",$reccontext{tag}, " Ind1:'",
+      $reccontext{ind1},"' Ind2:'", $reccontext{ind2}, "'";
+    print_linecontext();
+    return 0;
+}
+
+sub print_linecontext {
+    print $OUT "\n", join('    |','',@linecontext[0..2]);
+    print $OUT '==> |', $linecontext[3];
+    print $OUT '    |', $linecontext[4],"\n";
+    return 0;
+}
+
+sub show_original {
+    my ($line_in) = @_;
+    print $OUT "\n$line_in\n";
+    return 0;
+}
+
 sub help {
 print $OUT <<HELP;
 
 Type a replacement for the indicated line, or enter a command.
 
 Commands: c  Show record context ('C' for brief context)
-          k  Kill this line (remove from record)
+          k  Kill indicated line (remove from record)
           m  Merge indicated line with previous line
           o  Show original line
+          s  Substitute ARG1 for ARG2 in indicated line
           t  Commit changes and resume stream edit
           x  Write this record to the exception file instead of output
           q  Quit
