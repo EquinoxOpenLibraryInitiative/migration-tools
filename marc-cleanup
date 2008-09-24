@@ -192,7 +192,6 @@ sub substitute {
         $char = "\\" . $char if ($char =~ /\W/);
         $from = join('', $from, $char);
     }
-    print $OUT "\n$from\n";
     $record[-1] =~ s/$from/$to/;
     $linecontext[3] = $record[-1];
     print_linecontext();
