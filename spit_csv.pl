@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use MARC::Batch;
 use MARC::File::XML ( BinaryEncoding => 'utf-8' );
-use MARC::Field;
+#use MARC::Field;
 use Unicode::Normalize;
 
 
@@ -20,9 +20,10 @@ foreach my $argnum ( 0 .. 0 ) {
 
 	print STDERR "Processing " . $ARGV[$argnum] . "\n";
 
-    my $M;
-    open $M, '<:utf8', $ARGV[$argnum];
-    my $batch = MARC::Batch->new('XML',$M);
+    #my $M;
+    #open $M, '<:utf8', $ARGV[$argnum];
+    #my $batch = MARC::Batch->new('XML',$M);
+    my $batch = MARC::Batch->new('XML',$ARGV[$argnum]);
 
 	$batch->strict_off();
 	$batch->warnings_off();
