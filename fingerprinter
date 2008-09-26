@@ -26,7 +26,7 @@ for my $file (@ARGV) {
     my $batch = undef; my $record = undef;
 
     #$batch = MARC::Batch->new('XML', $records); # The other part of the hack
-    $batch = MARC::Batch->new('XML', $file);
+    $batch = MARC::Batch->new($conf->{marctype}, $file);
     $batch->strict_off();
     $batch->warnings_off();
 
