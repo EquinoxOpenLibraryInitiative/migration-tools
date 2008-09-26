@@ -171,6 +171,8 @@ sub getline {
 sub write_record {
     my ($FH) = @_;
     print $FH '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
+    print $FH '<!-- ', $reccontext{explanation}, " -->\n"
+      if(defined $reccontext{explanation});
     print $FH @record;
     print $FH "</collection>\n";
 }
@@ -220,6 +222,8 @@ sub kill_line {
 }
 
 sub dump_record {
+    my ($line_in, @explanation) = @_;
+    $reccontext{explanation} = join(' ', @explanation);
     my $line = <MARC>; $count++;
     update_linecontext();
     until ($line =~ m|</record>|) {
