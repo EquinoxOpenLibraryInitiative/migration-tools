@@ -24,8 +24,11 @@ my $input = shift || 'incoming.marc.xml';
 open MARC, '<', $input;
 open my $NUMARC, '>', 'incoming.clean.marc.xml';
 print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
+print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
+
 open my $EXMARC, '>', 'incoming.exceptions.marc.xml';
 print $EXMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
+print $EXMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
 open MARC2, '<', $input;
 <MARC2>;
 
@@ -106,8 +109,8 @@ while (my $line = getline()) {
     }
 
 }
-print $NUMARC "</xml>\n";
-print $EXMARC "</xml>\n";
+print $NUMARC "</collection>\n";
+print $EXMARC "</collection>\n";
 print $OUT "\nDone.               \n";
 
 =head2 edit
@@ -170,11 +173,9 @@ sub getline {
 
 sub write_record {
     my ($FH) = @_;
-    print $FH '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
     print $FH '<!-- ', $reccontext{explanation}, " -->\n"
       if(defined $reccontext{explanation});
     print $FH @record;
-    print $FH "</collection>\n";
 }
 
 sub update_linecontext {
