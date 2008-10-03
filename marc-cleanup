@@ -13,6 +13,7 @@ my $OUT = $term->OUT || \*STDOUT;
 
 my $count = 0;
 my $reccount = 0;
+my $oreccount = 0;
 my $line = '';
 
 my @record = (); # current record storage
@@ -62,15 +63,26 @@ while (my $line = getline()) {
     if ($line =~ m|</datafield>|) {
         if ($record[-2] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
             pop @record; pop @record;
-            print $OUT "\rEmpty datafield scrubbed at line $count\n";
+            message("Empty datafield scrubbed");
             next;
+        }
+    }
+
+    # pad short leaders
+    if ($line =~ m|<leader>(.+?)</leader>|) {
+        my $leader = $1;
+        if (length $leader < 24) {
+            $leader .= ' ' x (20 - length($leader));
+            $leader .= "4500";
+            $line = "<leader>$leader</leader>\n";
+            message("Short leader padded");
         }
     }
 
     # clean misplaced dollarsigns
     if ($line =~ m|<subfield code="\$">c?\d+\.\d{2}|) {
         $line =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
-        print $OUT "\rDollar sign in subfield code corrected at line $count\n";
+        message("Dollar sign corrected");
     }
 
     # clean up tags with spaces in them
@@ -85,6 +97,9 @@ while (my $line = getline()) {
         $reccontext{ind1} = $2;
         $reccontext{ind2} = $3;
     }
+
+    # and stow line back in record
+    $record[-1] = $line;
 
     # naked ampersands
     if ($line =~ /&/ && $line !~ /&\w+?;/)
@@ -121,7 +136,7 @@ Handles the Term::ReadLine loop
 
 sub edit {
     my ($msg, $line_in) = @_;
-    print $OUT "\r".$msg, " at line $count (record $reccount)\n";
+    message($msg);
     print_context();
 
     while (1) {
@@ -173,6 +188,7 @@ sub getline {
 
 sub write_record {
     my ($FH) = @_;
+    $oreccount++ if ($FH eq $NUMARC);
     print $FH '<!-- ', $reccontext{explanation}, " -->\n"
       if(defined $reccontext{explanation});
     print $FH @record;
@@ -184,12 +200,31 @@ sub update_linecontext {
     shift @linecontext if (@linecontext > 5);
 }
 
+sub message {
+    my ($msg) = @_;
+    print $OUT "\r$msg at record $reccount/",$oreccount + 1,"\n";
+
+}
+
 #-----------------------------------------------------------------------------------
 # command routines
 #-----------------------------------------------------------------------------------
 
 sub substitute {
-    my ($line_in, $ofrom, $to) = @_;
+    my ($line_in, @chunks) = @_;
+    my $ofrom = shift @chunks;
+    if ($ofrom =~ /^'/ or !@chunks) {
+        until ($ofrom =~ /'$/)
+          { $ofrom .= join(' ','',shift @chunks) }
+        $ofrom =~ s/^'//; $ofrom =~ s/'$//;
+    }
+    my $to = shift @chunks;
+    if ($to =~ /^'/) {
+        until ($to =~ /'$/ or !@chunks)
+          { $to .= join(' ','',shift @chunks) }
+        $to =~ s/^'//; $to =~ s/'$//;
+    }
+
     my $from = '';
     for my $char (split(//,$ofrom)) {
         $char = "\\" . $char if ($char =~ /\W/);
