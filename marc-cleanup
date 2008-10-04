@@ -63,6 +63,8 @@ while (my $line = getline()) {
     }
     update_linecontext();
 
+    next if ($line =~ m|</record>|);
+
     # catch empty datafield elements
     if ($line =~ m|</datafield>|) {
         if ($record[-2] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
@@ -196,6 +198,27 @@ sub write_record {
     $oreccount++ if ($FH eq $NUMARC);
     print $FH '<!-- ', $recmeta{explanation}, " -->\n"
       if(defined $recmeta{explanation});
+
+    # LOOP OVER %trash KEYS GOES HERE TO EXCISE UNWANTED TAGS1
+    if (keys %trash) {
+        my @trimmed = ();
+        my $istrash = 0;
+        for my $line (@record) {
+            if ($istrash) {
+                $istrash = 0 if $line =~ m|</datafield|;
+                next;
+            }
+            if ($line =~ m/<datafield tag="(.{3})"/) {
+                my $tag = $1;
+                if ($trash{$tag} or $tag =~ /\D/) {
+                    $istrash = 1;
+                    next
+                }
+            }
+            push @trimmed, $line;
+        }
+        @record = @trimmed;
+    }
     print $FH @record;
 }
 
