@@ -15,10 +15,14 @@ my $count = 0;
 my $reccount = 0;
 my $oreccount = 0;
 my $line = '';
+my %trash = ();   # hash for tags to be dumped
 
-my @record = (); # current record storage
-my %reccontext = ();
-my @linecontext= (); # last 5 lines of file
+# read in trash tags file if it exists
+populate_trash() if (-e '.trashtags');
+
+my @record = ();  # current record storage
+my %recmeta = (); # metadata about current record
+my @context= ();  # last 5 lines of file
 
 my $input = shift || 'incoming.marc.xml';
 
@@ -93,9 +97,9 @@ while (my $line = getline()) {
 
     # stow tag data if we're looking at it
     if ($line =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
-        $reccontext{tag}  = $1;
-        $reccontext{ind1} = $2;
-        $reccontext{ind2} = $3;
+        $recmeta{tag}  = $1;
+        $recmeta{ind1} = $2;
+        $recmeta{ind2} = $3;
     }
 
     # and stow line back in record
@@ -136,6 +140,7 @@ Handles the Term::ReadLine loop
 
 sub edit {
     my ($msg, $line_in) = @_;
+    return if $trash{$recmeta{tag}};
     message($msg);
     print_context();
 
@@ -150,12 +155,12 @@ sub edit {
             my $term = $commands{$chunks[0]}->($line_in, @chunks[1..$#chunks]);
             last if $term;
         } else {
-            if ($linecontext[3] eq " [LINE KILLED]\n") {
+            if ($context[3] eq " [LINE KILLED]\n") {
                 push @record, "$line\n"
             } else {
                 $record[-1] = "$line\n";
             }
-            $linecontext[3] = "$line\n";
+            $context[3] = "$line\n";
             print_linecontext();
         }
     }
@@ -164,7 +169,7 @@ sub edit {
 =head2 getline
 
 Reads from the incoming MARC file; returns lines into the driver
-loop. Batches records for output, and maintains the linecontext listing.
+loop. Batches records for output, and maintains the context listing.
 
 =cut
 
@@ -174,7 +179,7 @@ sub getline {
     if (defined $l) {
         if ($l =~ /<record>/) {
             @record = ($l);
-            %reccontext = ();
+            %recmeta = ();
             $reccount++;
         } elsif ($l =~ m|</record>|) {
             push @record, $l;
@@ -189,15 +194,15 @@ sub getline {
 sub write_record {
     my ($FH) = @_;
     $oreccount++ if ($FH eq $NUMARC);
-    print $FH '<!-- ', $reccontext{explanation}, " -->\n"
-      if(defined $reccontext{explanation});
+    print $FH '<!-- ', $recmeta{explanation}, " -->\n"
+      if(defined $recmeta{explanation});
     print $FH @record;
 }
 
 sub update_linecontext {
     my $line2 = <MARC2>;
-    push @linecontext, $line2;
-    shift @linecontext if (@linecontext > 5);
+    push @context, $line2;
+    shift @context if (@context > 5);
 }
 
 sub message {
@@ -231,7 +236,7 @@ sub substitute {
         $from = join('', $from, $char);
     }
     $record[-1] =~ s/$from/$to/;
-    $linecontext[3] = $record[-1];
+    $context[3] = $record[-1];
     print_linecontext();
     return 0;
 }
@@ -242,24 +247,24 @@ sub merge_lines {
     $record[-1] =~ s/\n//;
     $record[-1] = join('', $record[-1], $last);
     my @temp = ("\n");
-    push @temp, @linecontext[0..1];
+    push @temp, @context[0..1];
     $temp[3] = $record[-1];
-    $temp[4] = $linecontext[4];
-    @linecontext = @temp;
+    $temp[4] = $context[4];
+    @context = @temp;
     print_linecontext();
     return 0;
 }
 
 sub kill_line {
     pop @record;
-    $linecontext[3] = " [LINE KILLED]\n";
+    $context[3] = " [LINE KILLED]\n";
     print_linecontext();
     return 0;
 }
 
 sub dump_record {
     my ($line_in, @explanation) = @_;
-    $reccontext{explanation} = join(' ', @explanation);
+    $recmeta{explanation} = join(' ', @explanation);
     my $line = <MARC>; $count++;
     update_linecontext();
     until ($line =~ m|</record>|) {
@@ -275,16 +280,16 @@ sub dump_record {
 sub commit_edit { return 1 }
 
 sub print_context {
-    print "\n Tag:",$reccontext{tag}, " Ind1:'",
-      $reccontext{ind1},"' Ind2:'", $reccontext{ind2}, "'";
+    print "\n Tag:",$recmeta{tag}, " Ind1:'",
+      $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'";
     print_linecontext();
     return 0;
 }
 
 sub print_linecontext {
-    print $OUT "\n", join('    |','',@linecontext[0..2]);
-    print $OUT '==> |', $linecontext[3];
-    print $OUT '    |', $linecontext[4],"\n";
+    print $OUT "\n", join('    |','',@context[0..2]);
+    print $OUT '==> |', $context[3];
+    print $OUT '    |', $context[4],"\n";
     return 0;
 }
 
@@ -313,3 +318,94 @@ return 0;
 }
 
 sub quit { exit }
+
+#-----------------------------------------------------------------------------------
+# populate_trash
+#-----------------------------------------------------------------------------------
+# defined a domain-specific language for specifying MARC tags to be dropped from
+# records during processing. it is line oriented, and is specified as follows:
+#
+# each line may specify any number of tags to be included, either singly (\d{1,3})
+# or as a range (\d{1,3}\.\.\d{1,3}
+#
+# if a single number is given, it must be between '000' and '999', inclusive.
+#
+# ranges obey the previous rule, and also the first number of the range must be less
+# than the second number
+#
+# finally, any single range in a line may be followed by the keyword 'except'. every
+# number or range after 'except' is excluded from the range specified. all these
+# numbers must actually be within the range.
+#
+# specifying a tag twice is an error, to help prevent typos
+
+sub populate_trash {
+    open TRASH, '<', '.trashtags';
+    while (<TRASH>) {
+        my $lastwasrange = 0;
+        my %lastrange = ( high => 0, low => 0);
+        my $except = 0;
+
+        my @chunks = split /\s+/;
+        while (my $chunk = shift @chunks) {
+
+            # single values
+            if ($chunk =~ /^\d{1,3}$/) {
+                trash_add($chunk, $except);
+                $lastwasrange = 0;
+                next;
+            }
+
+            # ranges
+            if ($chunk =~ /^\d{1,3}\.\.\d{1,3}$/) {
+                my ($low, $high) = trash_add_range($chunk, $except, \%lastrange);
+                $lastwasrange = 1;
+                %lastrange = (low => $low, high => $high)
+                  unless $except;
+                next;
+            }
+
+            # 'except'
+            if ($chunk eq 'except') {
+                die "Keyword 'except' can only follow a range (line $.)\n"
+                  unless $lastwasrange;
+                die "Keyword 'except' may only occur once per line (line $.)\n"
+                  if $except;
+                $except = 1;
+                next;
+            }
+
+            die "Unknown chunk $chunk in .trashtags file (line $.)\n";
+        }
+    }
+    print $OUT join ",", (sort keys %trash);
+    exit
+}
+
+sub trash_add_range {
+    my ($chunk, $except, $range) = @_;
+    my ($low,$high) = split /\.\./, $chunk;
+    die "Ranges must be 'low..high' ($low is greater than $high on line $.)\n"
+      if ($low > $high);
+    if ($except) {
+        die "Exception ranges must be within last addition range (line $.)\n"
+          if ($low < $range->{low} or $high > $range->{high});
+    }
+    for my $tag ($low..$high) {
+        trash_add($tag, $except)
+    }
+    return $low, $high;
+}
+
+sub trash_add {
+    my ($tag, $except) = @_;
+    die "Trash values must be valid tags (000-999)\n"
+      unless ($tag >= 0 and $tag <= 999);
+    if ($except) {
+        delete $trash{$tag};
+    } else {
+        die "Trash tag '$tag' specified twice (line $.)\n"
+          if $trash{$tag};
+        $trash{$tag} = 1;
+    }
+}
