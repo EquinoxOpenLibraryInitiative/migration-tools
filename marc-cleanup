@@ -184,7 +184,6 @@ sub getline {
             %recmeta = ();
             $reccount++;
         } elsif ($l =~ m|</record>|) {
-            push @record, $l;
             write_record($NUMARC) if $reccount;
         } else {
             push @record, $l;
@@ -199,7 +198,7 @@ sub write_record {
     print $FH '<!-- ', $recmeta{explanation}, " -->\n"
       if(defined $recmeta{explanation});
 
-    # LOOP OVER %trash KEYS GOES HERE TO EXCISE UNWANTED TAGS1
+    # LOOP OVER %trash TO EXCISE UNWANTED TAGS1
     if (keys %trash) {
         my @trimmed = ();
         my $istrash = 0;
@@ -220,6 +219,7 @@ sub write_record {
         @record = @trimmed;
     }
     print $FH @record;
+    print $FH '</record>\n';
 }
 
 sub update_linecontext {
