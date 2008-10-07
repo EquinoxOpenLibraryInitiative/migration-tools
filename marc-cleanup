@@ -230,16 +230,18 @@ sub write_record {
     }
 
     # add 903(?) with new record id
+    my $renumber = '';
     if ($conf->{'renumber-from'}) {
-        print $FH '<datafield tag="', $conf->{'renumber-tag'}, '">',
-          '<subfield code="', $conf->{'renumber-subfield'}, '">',
-          $conf->{'renumber-from'}, '</subfield></datafield>';
-        print $FH "\n" unless $conf->{oneperline};
+        $renumber = join('', '<datafield tag="', $conf->{'renumber-tag'}, '">',
+                         '<subfield code="', $conf->{'renumber-subfield'}, '">',
+                         $conf->{'renumber-from'}, '</subfield></datafield>');
+        $renumber .= "\n" unless $conf->{nocollapse};
+        push @record, $renumber;
         $conf->{'renumber-from'}++;
     }
 
     print $FH @record;
-    print $FH '</record>\n';
+    print $FH "</record>\n";
 }
 
 sub update_linecontext {
