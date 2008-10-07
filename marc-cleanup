@@ -11,7 +11,7 @@ $| = 1;
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
 
-my $conf = {}
+my $conf = {};
 
 my $count = 0;
 my $reccount = 0;
@@ -214,7 +214,7 @@ sub write_record {
             }
             if ($line =~ m/<datafield tag="(.{3})"/) {
                 my $tag = $1;
-                if ($trash{$tag} or ($conf->{autoscrub} and $tag =~ /\D/) {
+                if ($trash{$tag} or ($conf->{autoscrub} and $tag =~ /\D/)) {
                     $istrash = 1;
                     next
                 }
@@ -222,6 +222,11 @@ sub write_record {
             push @trimmed, $line;
         }
         @record = @trimmed;
+    }
+
+    # scrub newlines
+    unless ($conf->{nocollapse}) {
+        s/\n// for (@record);
     }
 
     # add 903(?) with new record id
@@ -418,7 +423,7 @@ sub populate_trash {
     }
 
     # remove original id sequence tag from trash hash if we know it
-    $trash_add($conf->{'original-tag'}, 1)
+    trash_add($conf->{'original-tag'}, 1)
       if ($conf->{'original-tag'} and $trash{$conf->{'original-tag'}});
 }
 
@@ -468,7 +473,7 @@ sub initialize {
 
     my $rc = GetOptions( $c,
                          'autoscrub|a',
-                         'exception|e=s',
+                         'exception|x=s',
                          'output|o=s',
                          'nocollapse|n',
                          'renumber-from|rf=i',
@@ -482,7 +487,7 @@ sub initialize {
     # defaults
     $c->{output} = 'incoming.cleaned.marc.xml' unless defined $c->{output};
     $c->{exception} = 'incoming.exception.marc.xml' unless defined $c->{exception};
-    $c->{'renumber-tag'} = 903 unless defined $c->{exception};
+    $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
@@ -496,5 +501,10 @@ sub initialize {
 
 sub show_help {
     print <<HELP;
+Usage is: $0 [OPTIONS] <filelist>
+Options
+  --output     -o  Cleaned MARCXML output filename (default: incoming.cleaned.marc.xml)
+  --exception  -x  Exception (dumped records) MARCXML filename (incoming.exception.marc.xml)
 HELP
+exit;
 }
