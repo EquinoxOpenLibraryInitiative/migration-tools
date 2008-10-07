@@ -224,10 +224,10 @@ sub write_record {
         @record = @trimmed;
     }
 
-    # add 903 with new record id
+    # add 903(?) with new record id
     if ($conf->{'renumber-from'}) {
-        print $FH '<datafield tag="903"><subfield code="a">', $conf->{'renumber-from'},
-          '</subfield></datafield>';
+        print $FH '<datafield tag="', $conf->{'renumber-tag'}, '"><subfield code="a">',
+          $conf->{'renumber-from'}, '</subfield></datafield>';
         print $FH "\n" unless $conf->{oneperline};
         $conf->{'renumber-from'}++;
     }
@@ -416,6 +416,10 @@ sub populate_trash {
             die "Unknown chunk $chunk in .trashtags file (line $.)\n";
         }
     }
+
+    # remove original id sequence tag from trash hash if we know it
+    $trash_add($conf->{'original-tag'}, 1)
+      if ($conf->{'original-tag'} and $trash{$conf->{'original-tag'}});
 }
 
 sub trash_add_range {
