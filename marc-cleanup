@@ -11,11 +11,16 @@ $| = 1;
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
 
+my $conf = {}
+
 my $count = 0;
 my $reccount = 0;
 my $oreccount = 0;
 my $line = '';
 my %trash = ();   # hash for tags to be dumped
+
+# initialization and setup
+initialize($conf);
 
 # read in trash tags file if it exists
 populate_trash() if (-e '.trashtags');
@@ -27,11 +32,11 @@ my @context= ();  # last 5 lines of file
 my $input = shift || 'incoming.marc.xml';
 
 open MARC, '<', $input;
-open my $NUMARC, '>', 'incoming.clean.marc.xml';
+open my $NUMARC, '>', $conf->{output};
 print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
 
-open my $EXMARC, '>', 'incoming.exceptions.marc.xml';
+open my $EXMARC, '>', $conf->{exception};
 print $EXMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 print $EXMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
 open MARC2, '<', $input;
@@ -209,7 +214,7 @@ sub write_record {
             }
             if ($line =~ m/<datafield tag="(.{3})"/) {
                 my $tag = $1;
-                if ($trash{$tag} or $tag =~ /\D/) {
+                if ($trash{$tag} or ($conf->{autoscrub} and $tag =~ /\D/) {
                     $istrash = 1;
                     next
                 }
@@ -218,6 +223,15 @@ sub write_record {
         }
         @record = @trimmed;
     }
+
+    # add 903 with new record id
+    if ($conf->{'renumber-from'}) {
+        print $FH '<datafield tag="903"><subfield code="a">', $conf->{'renumber-from'},
+          '</subfield></datafield>';
+        print $FH "\n" unless $conf->{oneperline};
+        $conf->{'renumber-from'}++;
+    }
+
     print $FH @record;
     print $FH '</record>\n';
 }
@@ -363,6 +377,7 @@ sub quit { exit }
 # specifying a tag twice is an error, to help prevent typos
 
 sub populate_trash {
+    print $OUT ">>> TRASHTAGS FILE FOUND. LOADING TAGS TO BE STRIPPED FROM OUTPUT...\n";
     open TRASH, '<', '.trashtags';
     while (<TRASH>) {
         my $lastwasrange = 0;
@@ -429,4 +444,53 @@ sub trash_add {
           if $trash{$tag};
         $trash{$tag} = 1;
     }
+}
+
+#-----------------------------------------------------------------------
+
+=head2 initialize
+
+Performs boring script initialization. Handles argument parsing,
+mostly.
+
+=cut
+
+sub initialize {
+    my ($c) = @_;
+    my @missing = ();
+
+    # set mode on existing filehandles
+    binmode(STDIN, ':utf8');
+
+    my $rc = GetOptions( $c,
+                         'autoscrub|a',
+                         'exception|e=s',
+                         'output|o=s',
+                         'nocollapse|n',
+                         'renumber-from|rf=i',
+                         'original-tag|ot=i',
+                         'renumber-tag|rt=i',
+                         'help|h',
+                       );
+    show_help() unless $rc;
+    show_help() if ($c->{help});
+
+    # defaults
+    $c->{output} = 'incoming.cleaned.marc.xml' unless defined $c->{output};
+    $c->{exception} = 'incoming.exception.marc.xml' unless defined $c->{exception};
+    $c->{'renumber-tag'} = 903 unless defined $c->{exception};
+
+    my @keys = keys %{$c};
+    show_help() unless (@ARGV and @keys);
+    #for my $key ('runtype', 'tag', 'subfield', 'output', 'exception')
+    #  { push @missing, $key unless $c->{$key} }
+    #if (@missing) {
+    #    print "Required option: ", join(', ', @missing), " missing!\n";
+    #    show_help();
+    #}
+}
+
+sub show_help {
+    print <<HELP;
+HELP
 }
