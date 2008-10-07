@@ -203,8 +203,8 @@ sub write_record {
     print $FH '<!-- ', $recmeta{explanation}, " -->\n"
       if(defined $recmeta{explanation});
 
-    # LOOP OVER %trash TO EXCISE UNWANTED TAGS1
-    if (keys %trash) {
+    # excise unwanted tags
+    if (keys %trash or $conf->{autoscrub}) {
         my @trimmed = ();
         my $istrash = 0;
         for my $line (@record) {
@@ -235,7 +235,7 @@ sub write_record {
         $renumber = join('', '<datafield tag="', $conf->{'renumber-tag'}, '">',
                          '<subfield code="', $conf->{'renumber-subfield'}, '">',
                          $conf->{'renumber-from'}, '</subfield></datafield>');
-        $renumber .= "\n" unless $conf->{nocollapse};
+        $renumber .= "\n" if $conf->{nocollapse};
         push @record, $renumber;
         $conf->{'renumber-from'}++;
     }
