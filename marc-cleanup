@@ -231,7 +231,8 @@ sub write_record {
 
     # add 903(?) with new record id
     if ($conf->{'renumber-from'}) {
-        print $FH '<datafield tag="', $conf->{'renumber-tag'}, '"><subfield code="a">',
+        print $FH '<datafield tag="', $conf->{'renumber-tag'}, '">',
+          '<subfield code="', $conf->{'renumber-subfield'}, '">',
           $conf->{'renumber-from'}, '</subfield></datafield>';
         print $FH "\n" unless $conf->{oneperline};
         $conf->{'renumber-from'}++;
@@ -479,6 +480,7 @@ sub initialize {
                          'renumber-from|rf=i',
                          'original-tag|ot=i',
                          'renumber-tag|rt=i',
+                         'renumber-subfield|rt=i',
                          'help|h',
                        );
     show_help() unless $rc;
@@ -488,6 +490,7 @@ sub initialize {
     $c->{output} = 'incoming.cleaned.marc.xml' unless defined $c->{output};
     $c->{exception} = 'incoming.exception.marc.xml' unless defined $c->{exception};
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
+    $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
