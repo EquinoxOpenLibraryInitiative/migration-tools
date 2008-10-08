@@ -111,6 +111,7 @@ while (my $line = getline()) {
 
     # automatable subfield maladies
     $line =~ s/code=" ">c/code="c">/;
+    $line =~ s/code=" ">\$/code="c"$>/;
 
     # and stow line back in record
     $record[-1] = $line;
