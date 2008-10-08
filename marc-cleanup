@@ -31,12 +31,12 @@ my @context= ();  # last 5 lines of file
 
 my $input = shift || 'incoming.marc.xml';
 
-open MARC, '<', $input;
-open my $NUMARC, '>', $conf->{output};
+open MARC, '<:utf8', $input;
+open my $NUMARC, '>:utf8', $conf->{output};
 print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
 
-open my $EXMARC, '>', $conf->{exception};
+open my $EXMARC, '>:utf8', $conf->{exception};
 print $EXMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 print $EXMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
 open MARC2, '<', $input;
@@ -108,6 +108,9 @@ while (my $line = getline()) {
         $recmeta{ind1} = $2;
         $recmeta{ind2} = $3;
     }
+
+    # automatable subfield maladies
+    $line =~ s/code=" ">c/code="c">/;
 
     # and stow line back in record
     $record[-1] = $line;
@@ -232,7 +235,8 @@ sub write_record {
     # add 903(?) with new record id
     my $renumber = '';
     if ($conf->{'renumber-from'}) {
-        $renumber = join('', '<datafield tag="', $conf->{'renumber-tag'}, '">',
+        $renumber = join('', '<datafield tag="', $conf->{'renumber-tag'},
+                         '" ind1=" " ind2=" ">',
                          '<subfield code="', $conf->{'renumber-subfield'}, '">',
                          $conf->{'renumber-from'}, '</subfield></datafield>');
         $renumber .= "\n" if $conf->{nocollapse};
