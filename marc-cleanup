@@ -129,7 +129,7 @@ while (my $line = getline()) {
     }
 
     # subfields can't be non-alphanumeric
-    if ($line =~ /<subfield code="(.+?)"/) {
+    if ($line =~ /<subfield code="(.*?)"/) {
         my $match = $1;
         if ($match =~ /\P{IsAlnum}/) {
             edit("Junk in subfield code", $line);
