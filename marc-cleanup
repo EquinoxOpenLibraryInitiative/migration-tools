@@ -23,7 +23,7 @@ my %trash = ();   # hash for tags to be dumped
 initialize($conf);
 
 # read in trash tags file if it exists
-populate_trash() if (-e '.trashtags');
+populate_trash() if ($conf->{trash});
 
 my @record = ();  # current record storage
 my %recmeta = (); # metadata about current record
@@ -132,8 +132,8 @@ while (my $line = getline()) {
     # subfields can't be non-alphanumeric
     if ($line =~ /<subfield code="(.*?)"/) {
         my $match = $1;
-        if ($match =~ /\P{IsAlnum}/) {
-            edit("Junk in subfield code", $line);
+        if ($match =~ /\P{IsAlnum}/ or $match eq '') {
+            edit("Junk in subfield code/Null subfield code", $line);
             next;
         }
     }
@@ -390,8 +390,9 @@ sub quit { exit }
 # specifying a tag twice is an error, to help prevent typos
 
 sub populate_trash {
-    print $OUT ">>> TRASHTAGS FILE FOUND. LOADING TAGS TO BE STRIPPED FROM OUTPUT...\n";
-    open TRASH, '<', '.trashtags';
+    print $OUT ">>> TRASHTAGS FILE FOUND. LOADING TAGS TO BE STRIPPED FROM OUTPUT\n";
+    open TRASH, '<', $conf->{trash}
+      or die "Can't open trash tags file!\n";
     while (<TRASH>) {
         my $lastwasrange = 0;
         my %lastrange = ( high => 0, low => 0);
@@ -488,6 +489,7 @@ sub initialize {
                          'original-tag|ot=i',
                          'renumber-tag|rt=i',
                          'renumber-subfield|rt=i',
+                         'trash|t=s',
                          'help|h',
                        );
     show_help() unless $rc;
