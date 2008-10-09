@@ -108,7 +108,7 @@ for my $patron ( $doc->documentElement->childNodes ) {
             foreach my $e ( @addr_elements ) {
                 my $v;
                 if ($e eq "known_bad") {
-                    $v = $addresses{$t}->getAttribute( $e ); $v =~ s/^\s+//; $v =~ s/\s+$//;
+                    $v = $addresses{$t}->getAttribute( $e ); if ($v) { $v =~ s/^\s+//; $v =~ s/\s+$//; }
                 } else {
                     $v = $addresses{$t}->findvalue( $e ); $v =~ s/^\s+//; $v =~ s/\s+$//;
                 }
