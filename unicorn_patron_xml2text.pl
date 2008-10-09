@@ -34,8 +34,12 @@ my @base_elements = (
     "user_category1",
     "user_category2",
     "user_category3",
+    "user_category4",
     "dept",
     "guardian",
+    "aup",
+    "photo",
+    "notify_via",
     "user_claims_ret",
     #"user_environment",
     #"user_library",
@@ -52,10 +56,12 @@ my @addr_elements = (
     "dayphone",
     "homephone",
     "workphone",
+    "cellphone",
     "email",
     "location",
     "usefor",
-    "care_of"
+    "care_of",
+    "known_bad"
 );
 
 print STDOUT join("\t", @base_elements);
@@ -100,7 +106,12 @@ for my $patron ( $doc->documentElement->childNodes ) {
     foreach my $t ( 1..3 ) {
         if ($addresses{$t}) {
             foreach my $e ( @addr_elements ) {
-                my $v = $addresses{$t}->findvalue( $e ); $v =~ s/^\s+//; $v =~ s/\s+$//;
+                my $v;
+                if ($e eq "known_bad") {
+                    $v = $addresses{$t}->getAttribute( $e ); $v =~ s/^\s+//; $v =~ s/\s+$//;
+                } else {
+                    $v = $addresses{$t}->findvalue( $e ); $v =~ s/^\s+//; $v =~ s/\s+$//;
+                }
                 print STDOUT ( $v ? $v : '' ) . "\t";
             }
         } else {
