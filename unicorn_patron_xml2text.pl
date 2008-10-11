@@ -19,6 +19,7 @@ my @base_elements = (
     "user_pin",
     "user_profile",
     "user_status",
+    "user_library",
     "user_priv_granted",
     "user_priv_expires",
     "user_mailingaddr",
