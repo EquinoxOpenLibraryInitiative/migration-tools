@@ -38,12 +38,12 @@ my @base_elements = (
     "user_category4",
     "dept",
     "guardian",
+    "license",
     "aup",
     "photo",
     "notify_via",
     "user_claims_ret",
-    #"user_environment",
-    #"user_library",
+    "user_environment",
     "user_department"
 );
 
