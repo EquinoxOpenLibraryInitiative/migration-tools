@@ -43,7 +43,7 @@ while (my $line = <>) {
     if ($line =~ /\.CHRG_DATEDUE\..+\|a(.+)/) {
         $records{ $count }{'CHRG_DATEDUE'} = $1;
     }
-    if ($line =~ /\.CHRG_DATEDUE\..+\|a(.+)/) {
+    if ($line =~ /\.CHRG_DATE_CLMRET\..+\|a(.+)/) {
         $records{ $count }{'CHRG_DATE_CLMRET'} = $1;
     }
 }
