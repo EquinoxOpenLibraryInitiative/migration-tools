@@ -15,7 +15,7 @@ sub print_line {
     ) . "\n"; 
 }
 
-print "FORM\tUSER_ID\tITEM_ID\tCHRG_LIBRARY\tCHRG_DC\tCHRG_DATEDUE\nCHRG_DATE_CLMRET\n";
+print "FORM\tUSER_ID\tITEM_ID\tCHRG_LIBRARY\tCHRG_DC\tCHRG_DATEDUE\tCHRG_DATE_CLMRET\n";
 
 while (my $line = <>) {
     chomp $line; $line =~ s/[\r\n]//g;
