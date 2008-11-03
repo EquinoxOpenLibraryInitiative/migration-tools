@@ -11,23 +11,14 @@ $| = 1;
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
 
-my $conf = {};
-
-my $count = 0;
-my $reccount = 0;
-my $oreccount = 0;
-my $line = '';
-my %trash = ();   # hash for tags to be dumped
-
 # initialization and setup
+my $conf = {};
 initialize($conf);
-
-# read in trash tags file if it exists
 populate_trash() if ($conf->{trash});
 
-my @record = ();  # current record storage
+my @record  = (); # current record storage
 my %recmeta = (); # metadata about current record
-my @context= ();  # last 5 lines of file
+my $recptr  = 0;  # record index pointer
 
 my $input = shift || 'incoming.marc.xml';
 
@@ -37,10 +28,6 @@ print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
 
 open my $EXMARC, '>:utf8', $conf->{exception};
-print $EXMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
-print $EXMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
-open MARC2, '<', $input;
-<MARC2>;
 
 # this is the dispatch table which drives command selection in
 # edit(), below
@@ -61,87 +48,116 @@ my %commands = ( c => \&print_context,
 my @spinner = qw(- / | \\);
 my $sidx = 0;
 
-while (my $line = getline()) {
-    unless ($count % 2000) {
-        print "\rWorking... ", $spinner[$sidx];
-        $sidx = ($sidx == $#spinner) ? 0 : $sidx + 1;
-    }
-    update_linecontext();
+while ( buildrecord() ) {
+    print "\rWorking... ", $spinner[$sidx];
+    $sidx = ($sidx == $#spinner) ? 0 : $sidx + 1;
 
-    next if ($line =~ m|</record>|);
+    do_automated_cleanups();
 
-    # catch empty datafield elements
-    if ($line =~ m|</datafield>|) {
-        if ($record[-2] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
-            pop @record; pop @record;
-            message("Empty datafield scrubbed");
-            next;
+    $recptr = 0;
+    until ($recptr == $#record) {
+        # naked ampersands
+        if ($record[$recptr] =~ /&/ && $record[$recptr] !~ /&\w+?;/)
+          { edit("Naked ampersand"); $recptr= 0; next }
+
+        # tags must be numeric
+        if ($record[$recptr] =~ /<datafield tag="(.+?)"/) {
+            my $match = $1;
+            if ($match =~ /\D/) {
+                edit("Non-numerics in tag");
+                $recptr = 0;
+                next;
+            }
         }
-    }
 
-    # pad short leaders
-    if ($line =~ m|<leader>(.+?)</leader>|) {
-        my $leader = $1;
-        if (length $leader < 24) {
-            $leader .= ' ' x (20 - length($leader));
-            $leader .= "4500";
-            $line = "<leader>$leader</leader>\n";
-            message("Short leader padded");
+        # subfields can't be non-alphanumeric
+        if ($record[$recptr] =~ /<subfield code="(.*?)"/) {
+            my $match = $1;
+            if ($match =~ /\P{IsAlnum}/ or $match eq '') {
+                edit("Junk in subfield code/Null subfield code");
+                $recptr = 0;
+                next;
+            }
         }
+        $recptr++;
     }
 
-    # clean misplaced dollarsigns
-    if ($line =~ m|<subfield code="\$">c?\d+\.\d{2}|) {
-        $line =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
-        message("Dollar sign corrected");
-    }
-
-    # clean up tags with spaces in them
-    $line =~ s/tag="  /tag="00/g;
-    $line =~ s/tag=" /tag="0/g;
-    $line =~ s/tag="-/tag="0/g;
-    $line =~ s/tag="(\d\d) /tag="0$1/g;
-
-    # stow tag data if we're looking at it
-    if ($line =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
-        $recmeta{tag}  = $1;
-        $recmeta{ind1} = $2;
-        $recmeta{ind2} = $3;
-    }
-
-    # automatable subfield maladies
-    $line =~ s/code=" ">c/code="c">/;
-    $line =~ s/code=" ">\$/code="c"$>/;
-
-    # and stow line back in record
-    $record[-1] = $line;
-
-    # naked ampersands
-    if ($line =~ /&/ && $line !~ /&\w+?;/)
-      { edit("Naked ampersand", $line); next }
-
-    # tags must be numeric
-    if ($line =~ /<datafield tag="(.+?)"/) {
-        my $match = $1;
-        if ($match =~ /\D/) {
-            edit("Non-numerics in tag", $line);
-            next;
-        }
-    }
-
-    # subfields can't be non-alphanumeric
-    if ($line =~ /<subfield code="(.*?)"/) {
-        my $match = $1;
-        if ($match =~ /\P{IsAlnum}/ or $match eq '') {
-            edit("Junk in subfield code/Null subfield code", $line);
-            next;
-        }
-    }
-
+    write_record($NUMARC);
 }
 print $NUMARC "</collection>\n";
-print $EXMARC "</collection>\n";
 print $OUT "\nDone.               \n";
+
+
+#-----------------------------------------------------------------------------------
+# cleanup routines
+#-----------------------------------------------------------------------------------
+
+sub do_automated_cleanups {
+    $recptr = 0;
+    until ($recptr == $#record) {
+        # catch empty datafield elements
+        if ($record[$recptr] =~ m|</datafield>|) {
+            if ($record[$recptr + 1] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
+                my @a = @record[0, $recptr - 1];
+                my @b = @record[$recptr + 1, $#record];
+                @record = (@a, @b);
+                message("Empty datafield scrubbed");
+                $recptr = 0;
+                next;
+            }
+        }
+        # and quasi-empty subfields
+        if ($record[$recptr] =~ m|<subfield code="\s*">\s*</sub|) {
+            delete $record[$recptr];
+            message("Empty subfield scrubbed");
+            $recptr = 0;
+            next;
+        }
+        $recptr++;
+    }
+
+    # single-line fixes
+    for $recptr (0 .. $#record) {
+        # pad short leaders
+        if ($record[$recptr] =~ m|<leader>(.+?)</leader>|) {
+            my $leader = $1;
+            if (length $leader < 24) {
+                $leader .= ' ' x (20 - length($leader));
+                $leader .= "4500";
+                $record[$recptr] = "<leader>$leader</leader>\n";
+                message("Short leader padded");
+            }
+        }
+
+        # clean misplaced dollarsigns
+        if ($record[$recptr] =~ m|<subfield code="\$">c?\d+\.\d{2}|) {
+            $record[$recptr] =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
+            message("Dollar sign corrected");
+        }
+
+        # clean up tags with spaces in them
+        $record[$recptr] =~ s/tag="  /tag="00/g;
+        $record[$recptr] =~ s/tag=" /tag="0/g;
+        $record[$recptr] =~ s/tag="-/tag="0/g;
+        $record[$recptr] =~ s/tag="(\d\d) /tag="0$1/g;
+
+        # stow tag data if we're looking at it
+        if ($record[$recptr] =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
+            $recmeta{tag}  = $1;
+            $recmeta{ind1} = $2;
+            $recmeta{ind2} = $3;
+        }
+
+        # automatable subfield maladies
+        $record[$recptr] =~ s/code=" ">c/code="c">/;
+        $record[$recptr] =~ s/code=" ">\$/code="c"$>/;
+    }
+}
+
+#-----------------------------------------------------------------------------------
+# driver routines
+#-----------------------------------------------------------------------------------
+
 
 =head2 edit
 
@@ -150,8 +166,10 @@ Handles the Term::ReadLine loop
 =cut
 
 sub edit {
-    my ($msg, $line_in) = @_;
-    return if $trash{$recmeta{tag}};
+    my ($msg) = @_;
+    my $trash = $conf->{trash};
+
+    return if $trash->{ $recmeta{tag} };
     message($msg);
     print_context();
 
@@ -163,7 +181,7 @@ sub edit {
           { next unless (defined $commands{$chunks[0]}) }
 
         if (defined $commands{$chunks[0]}) {
-            my $term = $commands{$chunks[0]}->($line_in, @chunks[1..$#chunks]);
+            my $term = $commands{$chunks[0]}->(@chunks[1..$#chunks]);
             last if $term;
         } else {
             if ($context[3] eq " [LINE KILLED]\n") {
@@ -177,38 +195,38 @@ sub edit {
     }
 }
 
-=head2 getline
+=head2 buildrecord
 
-Reads from the incoming MARC file; returns lines into the driver
-loop. Batches records for output, and maintains the context listing.
+Constructs record arrays from the incoming MARC file and returns them
+to the driver loop.
 
 =cut
 
-sub getline {
+sub buildrecord {
     my $l = <MARC>;
-    $count++;
-    if (defined $l) {
-        if ($l =~ /<record>/) {
-            @record = ($l);
-            %recmeta = ();
-            $reccount++;
-        } elsif ($l =~ m|</record>|) {
-            write_record($NUMARC) if $reccount;
-        } else {
-            push @record, $l;
-        }
-    }
-    return $l;
+    return $l unless defined $l;
+
+    $l = <MARC> until ($l =~ /<record>/);
+    @record = ($l);
+    %recmeta = ();
+    $conf->{ricount}++;
+
+    until ($l =~ m|</record>|) 
+      { push @record, $l; $l = <MARC>; }
+    push @record, $l;
+    return 1;
 }
 
 sub write_record {
     my ($FH) = @_;
-    $oreccount++ if ($FH eq $NUMARC);
+    my $trash = $conf->{trash};
+
+    $conf->{rocount}++ if ($FH eq $NUMARC);
     print $FH '<!-- ', $recmeta{explanation}, " -->\n"
       if(defined $recmeta{explanation});
 
     # excise unwanted tags
-    if (keys %trash or $conf->{autoscrub}) {
+    if (keys %{$trash} or $conf->{autoscrub}) {
         my @trimmed = ();
         my $istrash = 0;
         for my $line (@record) {
@@ -218,7 +236,7 @@ sub write_record {
             }
             if ($line =~ m/<datafield tag="(.{3})"/) {
                 my $tag = $1;
-                if ($trash{$tag} or ($conf->{autoscrub} and $tag =~ /\D/)) {
+                if ($trash->{$tag} or ($conf->{autoscrub} and $tag =~ /\D/)) {
                     $istrash = 1;
                     next
                 }
@@ -249,15 +267,9 @@ sub write_record {
     print $FH "</record>\n";
 }
 
-sub update_linecontext {
-    my $line2 = <MARC2>;
-    push @context, $line2;
-    shift @context if (@context > 5);
-}
-
 sub message {
     my ($msg) = @_;
-    print $OUT "\r$msg at record $reccount/",$oreccount + 1,"\n";
+    print $OUT "\r$msg at ",$conf->{ricount},"/",$conf->{rocount} + 1,"\n";
 
 }
 
@@ -315,14 +327,6 @@ sub kill_line {
 sub dump_record {
     my ($line_in, @explanation) = @_;
     $recmeta{explanation} = join(' ', 'Tag', $recmeta{tag}, @explanation);
-    my $line = <MARC>; $count++;
-    update_linecontext();
-    until ($line =~ m|</record>|) {
-        push @record, $line;
-        $line = <MARC>; $count++;
-        update_linecontext();
-    }
-    push @record, $line;
     write_record($EXMARC);
     return 1;
 }
@@ -453,14 +457,17 @@ sub trash_add_range {
 
 sub trash_add {
     my ($tag, $except) = @_;
+    my $trash = $conf->{trash}
+
     die "Trash values must be valid tags (000-999)\n"
       unless ($tag >= 0 and $tag <= 999);
+
     if ($except) {
-        delete $trash{$tag};
+        delete $trash->{$tag};
     } else {
         die "Trash tag '$tag' specified twice (line $.)\n"
-          if $trash{$tag};
-        $trash{$tag} = 1;
+          if $trash->{$tag};
+        $trash->{$tag} = 1;
     }
 }
 
