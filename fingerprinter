@@ -80,6 +80,15 @@ sub populate_marc {
     $marc{date1} = substr($my_008,7,4) if ($my_008);
     $marc{date2} = substr($my_008,11,4) if ($my_008); # UNUSED
 
+    unless ($marc{date1} and $marc{date1} =~ /\d{4}/) {
+        my $my_260 = $record->field('260');
+        my $date1 = $my_260->subfield('c') if $my_260;
+        if (defined $date1 and $date1 =~ /\d{4}/) {
+            $marc{date1} = $date1;
+            print XF ">> using 260c as date1 on $id\n";
+        }
+    }
+
     # item_form
     if ( $marc{record_type} =~ /[gkroef]/ ) { # MAP, VIS
         $marc{item_form} = substr($my_008,29,1) if ($my_008);
