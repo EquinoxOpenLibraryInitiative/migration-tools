@@ -213,12 +213,21 @@ sub dump_fingerprints {
             }
         }
 
+
+=pod
+
+Looks like case b isn't a terribly good idea most of the time -- it
+will generate many spurious matches in series books in particular. So
+for now, simply turning it off.
+
         if ($marc->{edition}) { # case b : edition
             print OF join("\t", $marc->{id}, "case b",
                               $marc->{item_form}, $marc->{date1},
                               $marc->{record_type}, $marc->{bib_lvl},
                               $marc->{title}, $marc->{edition}), "\n";
         }
+
+=cut
 
         if ($marc->{issn}) { # case c : issn
             print OF join("\t", $marc->{id}, "case c",
