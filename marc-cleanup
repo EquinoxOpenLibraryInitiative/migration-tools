@@ -184,12 +184,7 @@ sub edit {
             my $term = $commands{$chunks[0]}->(@chunks[1..$#chunks]);
             last if $term;
         } else {
-            if ($context[3] eq " [LINE KILLED]\n") {
-                push @record, "$line\n"
-            } else {
-                $record[-1] = "$line\n";
-            }
-            $context[3] = "$line\n";
+            $record[$recptr] = "$line\n";
             print_linecontext();
         }
     }
@@ -297,29 +292,21 @@ sub substitute {
         $char = "\\" . $char if ($char =~ /\W/);
         $from = join('', $from, $char);
     }
-    $record[-1] =~ s/$from/$to/;
-    $context[3] = $record[-1];
+    $record[$recptr] =~ s/$from/$to/;
     print_linecontext();
     return 0;
 }
 
 sub merge_lines {
-    my $last = pop @record;
-    $last =~ s/^\s+//;
-    $record[-1] =~ s/\n//;
-    $record[-1] = join('', $record[-1], $last);
-    my @temp = ("\n");
-    push @temp, @context[0..1];
-    $temp[3] = $record[-1];
-    $temp[4] = $context[4];
-    @context = @temp;
+    $record[$recptr] =~ s/^\s*<subfield code=".*">//;
+    $record[$recptr - 1] =~ s|<subfield>\n||;
+    $record[$recptr - 1] = join('', $record[$recptr - 1], $record[$recptr]);
     print_linecontext();
     return 0;
 }
 
 sub kill_line {
-    pop @record;
-    $context[3] = " [LINE KILLED]\n";
+    delete $record[$recptr];
     print_linecontext();
     return 0;
 }
