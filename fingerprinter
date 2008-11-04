@@ -75,17 +75,20 @@ sub populate_marc {
     # date1, date2
     my $my_008 = $record->field('008');
     $my_008 = $my_008->as_string() if ($my_008);
-    unless (defined $my_008 and length $my_008 == 40)
-      { print XF ">> Bad 008 length in rec ",$marc{id},"\n"; return \%marc }
-    $marc{date1} = substr($my_008,7,4) if ($my_008);
-    $marc{date2} = substr($my_008,11,4) if ($my_008); # UNUSED
-
+    if (defined $my_008) {
+        unless (length $my_008 == 40) {
+            $my_008 = $my_008 . (' ' x (40 - length($my_008)));
+            print XF ">> Short 008 padded to ",length($my_008)," at rec $count\n";
+        }
+        $marc{date1} = substr($my_008,7,4) if ($my_008);
+        $marc{date2} = substr($my_008,11,4) if ($my_008); # UNUSED
+    }
     unless ($marc{date1} and $marc{date1} =~ /\d{4}/) {
         my $my_260 = $record->field('260');
         my $date1 = $my_260->subfield('c') if $my_260;
         if (defined $date1 and $date1 =~ /\d{4}/) {
             $marc{date1} = $date1;
-            print XF ">> using 260c as date1 on $id\n";
+            print XF ">> using 260c as date1 at rec $count\n";
         }
     }
 
