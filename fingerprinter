@@ -112,6 +112,17 @@ sub populate_marc {
         }
     }
 
+    # oclc
+    $marc{oclc} = [];
+    push @{ $marc{oclc} }, $record->field('001')->as_string()
+      if ($record->field('001') and $record->field('003') and
+          $record->field('003')->as_string() =~ /OCo{0,1}LC/);
+    for ($record->field('035')) {
+        my $oclc = $_->subfield('a');
+        push @{ $marc{oclc} }, $oclc
+          if (defined $oclc and $oclc =~ /\(OCoLC\)/ and $oclc =~/([0-9]+)/);
+    }
+
     # "Accompanying material" (300e)
     $marc{accomp} = $record->field('300')->subfield('e')
       if $record->field('300');
@@ -202,7 +213,7 @@ sub dump_fingerprints {
                           $marc->{date1}, $marc->{record_type},
                           $marc->{bib_lvl}, $marc->{title}), "\n";
     } else {
-        if ((scalar @{ $marc->{isbns} } > 0) && $marc->{pages}) {
+        if ((scalar @{ $marc->{isbns} } > 0) and $marc->{pages}) {
             # case a : isbn and pages
             foreach my $isbn ( @{ $marc->{isbns}} ) {
                 print OF join("\t", $marc->{id}, "case a",
@@ -244,16 +255,26 @@ for now, simply turning it off.
         }
 
         if ($marc->{accomp}) { # case e : accomp
-            print OF join("\t", $marc->{id}, "case d",
+            print OF join("\t", $marc->{id}, "case e",
                               $marc->{item_form}, $marc->{date1},
                               $marc->{record_type}, $marc->{bib_lvl},
                               $marc->{title}, $marc->{accomp}) ,"\n";
         }
 
+        # case o: oclc
+        if (scalar @{$marc->{oclc} }) {
+            for (@{$marc->{oclc} }) {
+                print OF join("\t", $marc->{id}, "case o",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type}, $marc->{bib_lvl},
+                              $marc->{title}, $_, "\n");
+            }
+        }
+
         # case z : author, publisher, pubyear, pages
         if ($marc->{author} and $marc->{publisher} and $marc->{pubyear}
             and $marc->{pages}) {
-            print OF join("\t", $marc->{id}, "case e",
+            print OF join("\t", $marc->{id}, "case z",
                               $marc->{item_form}, $marc->{date1},
                               $marc->{record_type}, $marc->{bib_lvl},
                               $marc->{title}, $marc->{author},
