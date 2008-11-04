@@ -299,7 +299,8 @@ sub substitute {
 }
 
 sub merge_lines {
-    $record[$recptr] =~ s/^\s*<subfield code=".*">//;
+    $record[$recptr] =~ s/^\s*<subfield code="(.*?)">//;
+    $record[$recptr] = join(' ', $1 , $record[$recptr]);
     $record[$recptr - 1] =~ s|<subfield>\n||;
     $record[$recptr - 1] = join('', $record[$recptr - 1], $record[$recptr]);
     print_linecontext();
@@ -329,9 +330,10 @@ sub print_context {
 }
 
 sub print_linecontext {
-    print $OUT "\n", join('    |','',@context[0..2]);
-    print $OUT '==> |', $context[3];
-    print $OUT '    |', $context[4],"\n";
+    my $low = ($recptr - 3 < 0) ? 0 : $recptr - 3;
+    print $OUT '     ', $record[$_], "\n" for ($low .. $recptr - 1);
+    print $OUT '==> |', $record[$recptr];
+    print $OUT '     ', $record[$recptr + 1], "\n";
     return 0;
 }
 
@@ -346,7 +348,7 @@ print $OUT <<HELP;
 
 Type a replacement for the indicated line, or enter a command.
 
-Commands: c  Show record context ('C' for brief context)
+Commands: c  Show record context again ('C' for brief context)
           k  Kill indicated line (remove from record)
           m  Merge indicated line with previous line
           o  Show original line
@@ -425,7 +427,7 @@ sub populate_trash {
 
     # remove original id sequence tag from trash hash if we know it
     trash_add($conf->{'original-tag'}, 1)
-      if ($conf->{'original-tag'} and $trash{$conf->{'original-tag'}});
+      if ($conf->{'original-tag'} and $conf->{trash}{ $conf->{'original-tag'} });
 }
 
 sub trash_add_range {
@@ -445,7 +447,7 @@ sub trash_add_range {
 
 sub trash_add {
     my ($tag, $except) = @_;
-    my $trash = $conf->{trash}
+    my $trash = $conf->{trash};
 
     die "Trash values must be valid tags (000-999)\n"
       unless ($tag >= 0 and $tag <= 999);
