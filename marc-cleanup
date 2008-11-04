@@ -264,7 +264,8 @@ sub write_record {
 
 sub message {
     my ($msg) = @_;
-    print $OUT "\r$msg at ",$conf->{ricount},"/",$conf->{rocount} + 1,"\n";
+    print $OUT "\r", ' ' x 72, "\n";
+    print $OUT "$msg at ",$conf->{ricount},"/",$conf->{rocount} + 1,"\n";
 
 }
 
@@ -321,7 +322,7 @@ sub dump_record {
 sub commit_edit { return 1 }
 
 sub print_context {
-    print "\n Tag:",$recmeta{tag}, " Ind1:'",
+    print " Tag:",$recmeta{tag}, " Ind1:'",
       $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'";
     print_linecontext();
     return 0;
