@@ -83,7 +83,6 @@ while ( buildrecord() ) {
         }
         $recptr++;
     }
-
     write_record($NUMARC);
 }
 print $NUMARC "</collection>\n";
@@ -328,10 +327,20 @@ sub substitute {
 }
 
 sub merge_lines {
+    # remove <subfield stuff; extract (probably wrong) subfield code
     $record[$recptr] =~ s/^\s*<subfield code="(.*?)">//;
+    # and move to front of line
     $record[$recptr] = join(' ', $1 , $record[$recptr]);
-    $record[$recptr - 1] =~ s|<subfield>\n||;
+    # tear off trailing subfield tag from preceeding line
+    $record[$recptr - 1] =~ s|</subfield>\n||;
+    # join current line onto preceeding line
     $record[$recptr - 1] = join('', $record[$recptr - 1], $record[$recptr]);
+    # erase current line
+    my @a = @record[0 .. $recptr - 1];
+    my @b = @record[$recptr + 1 .. $#record];
+    @record = (@a, @b);
+    # move recorde pointer to previous line
+    $recptr--;
     print_linecontext();
     return 0;
 }
