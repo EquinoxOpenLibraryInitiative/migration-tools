@@ -49,8 +49,10 @@ my @spinner = qw(- / | \\);
 my $sidx = 0;
 
 while ( buildrecord() ) {
-    print "\rWorking... ", $spinner[$sidx];
-    $sidx = ($sidx == $#spinner) ? 0 : $sidx + 1;
+    unless ($conf->{ricount} % 100) {
+        print "\rWorking... ", $spinner[$sidx];
+        $sidx = ($sidx == $#spinner) ? 0 : $sidx + 1;
+    }
 
     do_automated_cleanups();
 
@@ -96,10 +98,10 @@ sub do_automated_cleanups {
     $recptr = 0;
     until ($recptr == $#record) {
         # catch empty datafield elements
-        if ($record[$recptr] =~ m|</datafield>|) {
-            if ($record[$recptr + 1] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
-                my @a = @record[0, $recptr - 1];
-                my @b = @record[$recptr + 1, $#record];
+        if ($record[$recptr] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
+            if ($record[$recptr + 1] =~ m|</datafield>|) {
+                my @a = @record[0 .. $recptr - 1];
+                my @b = @record[$recptr + 2 .. $#record];
                 @record = (@a, @b);
                 message("Empty datafield scrubbed");
                 $recptr = 0;
@@ -107,11 +109,16 @@ sub do_automated_cleanups {
             }
         }
         # and quasi-empty subfields
-        if ($record[$recptr] =~ m|<subfield code="\s*">\s*</sub|) {
-            delete $record[$recptr];
-            message("Empty subfield scrubbed");
-            $recptr = 0;
-            next;
+        if ($record[$recptr] =~ m|<subfield code="(.*?)">(.*?)</sub|) {
+            my $code = $1; my $content = $2;
+            if ($code =~ /\W/ and ($content =~ /\s+/ or $content eq '')) {
+                my @a = @record[0 .. $recptr - 1];
+                my @b = @record[$recptr + 1 .. $#record];
+                @record = (@a, @b);
+                message("Empty subfield scrubbed");
+                $recptr = 0;
+                next;
+            }
         }
         $recptr++;
     }
@@ -126,6 +133,15 @@ sub do_automated_cleanups {
                 $leader .= "4500";
                 $record[$recptr] = "<leader>$leader</leader>\n";
                 message("Short leader padded");
+            }
+        }
+        if ($record[$recptr] =~ m|<controlfield tag="008">(.+?)</control|) {
+            #pad short 008
+            my $content = $1;
+            if (length $content < 40) {
+                $content .= ' ' x (40 - length($content));
+                $record[$recptr] = "<controlfield tag=\"008\">$content</controlfield>\n";
+                message("Short 008 padded");
             }
         }
 
@@ -167,10 +183,9 @@ Handles the Term::ReadLine loop
 
 sub edit {
     my ($msg) = @_;
-    my $trash = $conf->{trash};
 
-    return if $trash->{ $recmeta{tag} };
-    message($msg);
+    return if $conf->{trash}{ $recmeta{tag} };
+    message($msg, 1);
     print_context();
 
     while (1) {
@@ -198,10 +213,9 @@ to the driver loop.
 =cut
 
 sub buildrecord {
-    my $l = <MARC>;
+    my $l = '';
+    $l = <MARC> while (defined $l and $l !~ /<record>/);
     return $l unless defined $l;
-
-    $l = <MARC> until ($l =~ /<record>/);
     @record = ($l);
     %recmeta = ();
     $conf->{ricount}++;
@@ -262,10 +276,25 @@ sub write_record {
     print $FH "</record>\n";
 }
 
+sub print_context {
+    print "    Tag:",$recmeta{tag}, " Ind1:'",
+      $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'\n";
+    print_linecontext();
+    return 0;
+}
+
+sub print_linecontext {
+    my $low = ($recptr - 3 < 0) ? 0 : $recptr - 3;
+    print $OUT '    |', $record[$_] for ($low .. $recptr - 1);
+    print $OUT '==> |', $record[$recptr];
+    print $OUT '    |', $record[$recptr + 1], "\n";
+    return 0;
+}
+
 sub message {
-    my ($msg) = @_;
-    print $OUT "\r", ' ' x 72, "\n";
-    print $OUT "$msg at ",$conf->{ricount},"/",$conf->{rocount} + 1,"\n";
+    my ($msg, $new) = @_;
+    print $OUT "\r", ' ' x 72, "\n" if $new;
+    print $OUT "\r$msg at ",$conf->{ricount},"/",$conf->{rocount} + 1,"\n";
 
 }
 
@@ -308,7 +337,9 @@ sub merge_lines {
 }
 
 sub kill_line {
-    delete $record[$recptr];
+    my @a = @record[0 .. $recptr - 1];
+    my @b = @record[$recptr + 1 .. $#record];
+    @record = (@a, @b);
     print_linecontext();
     return 0;
 }
@@ -321,21 +352,6 @@ sub dump_record {
 }
 
 sub commit_edit { return 1 }
-
-sub print_context {
-    print " Tag:",$recmeta{tag}, " Ind1:'",
-      $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'";
-    print_linecontext();
-    return 0;
-}
-
-sub print_linecontext {
-    my $low = ($recptr - 3 < 0) ? 0 : $recptr - 3;
-    print $OUT '     ', $record[$_], "\n" for ($low .. $recptr - 1);
-    print $OUT '==> |', $record[$recptr];
-    print $OUT '     ', $record[$recptr + 1], "\n";
-    return 0;
-}
 
 sub show_original {
     my ($line_in) = @_;
