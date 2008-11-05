@@ -36,6 +36,8 @@ my %commands = ( c => \&print_context,
                  k => \&kill_line,
                  o => \&show_original,
                  m => \&merge_lines,
+                 n => \&next_line,
+                 p => \&prev_line,
                  s => \&substitute,
                  t => \&commit_edit,
                  x => \&dump_record,
@@ -339,9 +341,8 @@ sub merge_lines {
     my @a = @record[0 .. $recptr - 1];
     my @b = @record[$recptr + 1 .. $#record];
     @record = (@a, @b);
-    # move recorde pointer to previous line
-    $recptr--;
-    print_linecontext();
+    # move record pointer to previous line
+    prev_line();
     return 0;
 }
 
@@ -358,6 +359,18 @@ sub dump_record {
     $recmeta{explanation} = join(' ', 'Tag', $recmeta{tag}, @explanation);
     write_record($EXMARC);
     return 1;
+}
+
+sub next_line {
+    $recptr++;
+    print_linecontext();
+    return 0;
+}
+
+sub prev_line {
+    $recptr--;
+    print_linecontext();
+    return 0;
 }
 
 sub commit_edit { return 1 }
