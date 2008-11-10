@@ -6,8 +6,6 @@ use warnings;
 use Getopt::Long;
 use Term::ReadLine;
 
-$| = 1;
-
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
 
@@ -34,8 +32,10 @@ open my $EXMARC, '>:utf8', $conf->{exception};
 my %commands = ( c => \&print_context,
                  C => \&print_linecontext,
                  o => \&show_original,
+                 O => \&insert_original,
                  f => \&flip_lines,
                  k => \&kill_line,
+                 y => \&yank_line,
                  m => \&merge_lines,
                  n => \&next_line,
                  p => \&prev_line,
@@ -309,6 +309,7 @@ sub message {
 
 sub substitute {
     my ($line_in, @chunks) = @_;
+
     my $ofrom = shift @chunks;
     if ($ofrom =~ /^'/ or !@chunks) {
         until ($ofrom =~ /'$/)
@@ -327,12 +328,15 @@ sub substitute {
         $char = "\\" . $char if ($char =~ /\W/);
         $from = join('', $from, $char);
     }
+
+    $conf->{prevline} = $record[$recptr];
     $record[$recptr] =~ s/$from/$to/;
     print_linecontext();
     return 0;
 }
 
 sub merge_lines {
+    $conf->{prevline} = $record[$recptr];
     # remove <subfield stuff; extract (probably wrong) subfield code
     $record[$recptr] =~ s/^\s*<subfield code="(.*?)">//;
     # and move to front of line
@@ -351,11 +355,34 @@ sub merge_lines {
     return 0;
 }
 
+sub flip_line {
+    my $temp = $record[$recptr];
+    $record[$recptr] = $conf->{prevline};
+    $conf->{prevline} = $temp;
+    print_linecontext();
+    return 0;
+}
+
 sub kill_line {
+    $conf->{prevline} = $record[$recptr];
     my @a = @record[0 .. $recptr - 1];
     my @b = @record[$recptr + 1 .. $#record];
     @record = (@a, @b);
     print_linecontext();
+    return 0;
+}
+
+sub yank_line {
+    my @a = @record[0 .. $recptr - 1];
+    my @b = @record[$recptr .. $#record];
+    @record = (@a, $conf->{prevline}, @b);
+    print_linecontext();
+    return 0;
+}
+
+sub show_original {
+    my ($line_in) = @_;
+    print $OUT "\n", $conf->{origline}, "\n";
     return 0;
 }
 
@@ -375,12 +402,6 @@ sub next_line {
 sub prev_line {
     $recptr--;
     print_linecontext();
-    return 0;
-}
-
-sub show_original {
-    my ($line_in) = @_;
-    print $OUT "\n", $conf->{origline}, "\n";
     return 0;
 }
 
