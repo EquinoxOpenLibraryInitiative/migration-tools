@@ -113,7 +113,7 @@ by -idfile will be used as EXCLUSION data.
 That is, the given record ids will be treated as records which match
 incumbent records, are being compressed into existing data, and so
 WILL NOT be imported. The --output-import file will contain records
-whose ids DO NOT occur in --idfile; --output-shelve will contain the
+whose ids DO NOT occur in --idfile; --output-shelved will contain the
 records which DO occur.
 
 If '--mode=include' is specified, the reverse occurs.
