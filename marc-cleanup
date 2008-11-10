@@ -33,8 +33,9 @@ open my $EXMARC, '>:utf8', $conf->{exception};
 # edit(), below
 my %commands = ( c => \&print_context,
                  C => \&print_linecontext,
-                 k => \&kill_line,
                  o => \&show_original,
+                 f => \&flip_lines,
+                 k => \&kill_line,
                  m => \&merge_lines,
                  n => \&next_line,
                  p => \&prev_line,
@@ -188,6 +189,9 @@ sub edit {
     return if $conf->{trash}{ $recmeta{tag} };
     message($msg, 1);
     print_context();
+
+    # stow original problem line
+    $conf->{origline} = $record[$recptr];
 
     while (1) {
         my $line = $term->readline('marc-cleanup>');
@@ -343,6 +347,7 @@ sub merge_lines {
     @record = (@a, @b);
     # move record pointer to previous line
     prev_line();
+    print_linecontext();
     return 0;
 }
 
@@ -373,13 +378,13 @@ sub prev_line {
     return 0;
 }
 
-sub commit_edit { return 1 }
-
 sub show_original {
     my ($line_in) = @_;
-    print $OUT "\n$line_in\n";
+    print $OUT "\n", $conf->{origline}, "\n";
     return 0;
 }
+
+sub commit_edit { return 1 }
 
 sub help {
 print $OUT <<HELP;

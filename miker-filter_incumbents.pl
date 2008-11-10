@@ -3,13 +3,13 @@ use warnings;
 use strict;
 
 use Getopt::Long;
-#use Time::HiRes qw/time/;
-#use MARC::Record;
-#use MARC::File::XML ( BinaryEncoding => 'utf-8' );
+use Time::HiRes qw/time/;
+use MARC::Record;
+use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 
 # configuration hashref
 my $conf  = ();
-initialize($conf);
+#initialize($conf);
 
 my $idfile = shift;
 my $marcfile = shift;
@@ -26,7 +26,7 @@ while (<F>) {
 
 close F;
 
-my $M;
+my $M; my $I; my $S;
 open $M, '<:utf8', $marcfile;
 open $I, '>:utf8', $import;
 open $S, '>:utf8', $shelve;
