@@ -3,8 +3,6 @@ use warnings;
 use strict;
 
 use Getopt::Long;
-#use MARC::Record;
-#use MARC::File::XML ( BinaryEncoding => 'utf-8' );
 
 # configuration hashref
 my $conf  = {};
@@ -97,7 +95,6 @@ Display usage message when things go wrong
 
 sub show_help {
 print <<HELP;
-
 Usage is: $0 [ARGS]
 
   --mode=MODE           Runmode to use (exclude, include; usually exclude)
