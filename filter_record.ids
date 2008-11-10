@@ -20,16 +20,19 @@ while (<F>) {
 close F;
 
 my $M; my $I; my $S;
-open $M, '<:utf8', $conf->{marcfile};
-open $I, '>:utf8', $conf->{'output-import'};
-open $S, '>:utf8', $conf->{'output-shelve'};
+open $M, '<:utf8', $conf->{marcfile}
+  or die "Can't open marcfile '",$conf->{marcfile},"'\n";
+open $I, '>:utf8', $conf->{'output-import'}
+  or die "Can't open import file '",$conf->{'output-import'},"'\n";
+open $S, '>:utf8', $conf->{'output-shelved'}
+  or die "Can't open shelf file '",$conf->{'output-shelve'},"'\n";
 
 while (<$M>) {
     my $tag = $conf->{tag};
     my $sub = $conf->{subfield};
 
     /tag="$tag" ind1=" " ind2=" ">.*?<subfield code="$sub">(\d+)</;
-    if ($conf->{incoming}) {
+    if ($conf->{mode} eq "exclude") {
         print $S $_ if ($id{$1});
         print $I $_ unless ($id{$1});;
     } else {
@@ -58,39 +61,31 @@ sub initialize {
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
-                         'incoming',
-                         'incumbent',
+                         'mode=s',
+                         'include',
                          'tag|t=i',
                          'subfield|s=s',
                          'idfile|i=s',
                          'marcfile|m=s',
-                         'outputimport|oi=s',
-                         'outputshelved|os=s',
+                         'output-import|oi=s',
+                         'output-shelved|os=s',
                          'help|h',
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
 
-    $c->{'incoming-tag'}         = 903;
-    $c->{'incoming-subfield'}    = 'a';
-    $c->{'incumbent-tag'}         = 901;
-    $c->{'incumbent-subfield'}    = 'c';
     my @keys = keys %{$c};
-    unless ($c->{incoming} or $c->{incumbent}) {
-        print "One of --incoming or --incumbent is required.\n";
-        show_help();
-    }
-    if ($c->{incoming} and $c->{incumbent}) {
-        print "Only one of --incoming or --incumbent can be specified.\n";
-        show_help();
-    }
-    for my $key ('idfile', 'marcfile', 'output-import', 'output-shelved')
+    for my $key ('mode', 'idfile', 'marcfile', 'tag', 'subfield',
+                 'output-import', 'output-shelved')
       { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
         show_help();
     }
-
+    unless ($c->{mode} eq "include" or $c->{mode} eq "exclude") {
+        print "Unknown run mode '", $c->{mode}, "'\n";
+        show_help();
+    }
 }
 
 
@@ -103,35 +98,28 @@ Display usage message when things go wrong
 sub show_help {
 print <<HELP;
 
-The purpose of this utility is to split a MARCXML file in twain,
-producing a set of records which will imported into Evergreen, and a
-set of records which will not.
+Usage is: $0 [ARGS]
 
-Usage is: $0 [REQUIRED ARGS]
-Req'd Arguments
-  --incoming  \\___ One (and only one) of these two must
-  --incumbent /    be specified
-
-  If --incoming is specified, the record ids in the file specified by
-  --idfile will be used as EXCLUSION data. That is, the given record
-  ids will be treated as records which match incumbent records and are
-  being compressed into existing data, and so WILL NOT be
-  imported. The --output-import file will contain records whose ids DO
-  NOT occur in --idfile; --output-shelve will contain the records
-  which DO occur.
-
-  If --incumbent is specified, the reverse occurs.
-
+  --mode=MODE           Runmode to use (exclude, include; usually exclude)
   --idfile         -i   File of record ids to use as source for matchpoints
   --marcfile       -m   MARCXML source file
-  --output-import  -oi  Output MARCXML file for records to be imported
-  --output-shelve  -os  Output MARCXML file for records to be ignored
-
-Optional Arguments
-  --tag            -t   MARC tag to use as matchpoint (default 903 for incoming,
-                        901 for incumbent)
-  --subfield       -s   Subfield of tag to use (default 'c' for incoming, 'a'
+  --tag            -t   MARC tag to use as matchpoint (903 when matching
+                        incoming records, 901 when matching incumbents)
+  --subfield       -s   Subfield of tag to use ('a' for incoming, 'c'
                         for incumbent)
+  --output-import  -oi  Output MARCXML file for records to be imported
+  --output-shelved -os  Output MARCXML file for records to be ignored
+
+If '--mode=exclude' is specified, the record ids in the file specified
+by -idfile will be used as EXCLUSION data.
+
+That is, the given record ids will be treated as records which match
+incumbent records, are being compressed into existing data, and so
+WILL NOT be imported. The --output-import file will contain records
+whose ids DO NOT occur in --idfile; --output-shelve will contain the
+records which DO occur.
+
+If '--mode=include' is specified, the reverse occurs.
 HELP
 exit 1;
 }
