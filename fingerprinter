@@ -16,9 +16,7 @@ $| = 1;
 initialize($conf);
 
 open OF, '>', $conf->{output};
-binmode(OF, ':utf8');
 open XF, '>', $conf->{exception};
-binmode(XF, ':utf8');
 
 for my $file (@ARGV) {
     print XF "Processing $file\n";
