@@ -283,7 +283,7 @@ sub write_record {
                          $conf->{'renumber-subfield'}, '">',
                          $conf->{'renumber-from'}, "</subfield></datafield>\n");
         my @tmp = @record[0 .. $#record - 1];
-        my $last = @record[$#record];
+        my $last = $record[$#record];
         @record = (@tmp, $renumber, $last);
         $conf->{'renumber-from'}++;
     }
