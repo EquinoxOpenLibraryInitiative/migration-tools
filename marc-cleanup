@@ -30,21 +30,20 @@ open my $EXMARC, '>:utf8', $conf->{exception};
 # this is the dispatch table which drives command selection in
 # edit(), below
 my %commands = ( c => \&print_fullcontext,
-                 C => \&print_context,
-                 o => \&show_original,
-                 O => \&insert_original,
-                 f => \&flip_lines,
-                 k => \&kill_line,
-                 y => \&yank_line,
-                 m => \&merge_lines,
                  n => \&next_line,
                  p => \&prev_line,
+                 '<' => \&widen_window,
+                 '>' => \&narrow_window,
+                 d => \&display_lines,
+                 o => \&insert_original,
+                 k => \&kill_line,
+                 y => \&yank_line,
+                 f => \&flip_line,
+                 m => \&merge_lines,
                  s => \&substitute,
                  t => \&commit_edit,
                  x => \&dump_record,
                  q => \&quit,
-                 '<' => \&widen_window,
-                 '>' => \&narrow_window,
                  '?' => \&help,
                  h   => \&help,
                  help => \&help,
@@ -197,8 +196,14 @@ sub edit {
         my $line = $term->readline('marc-cleanup>');
         my @chunks = split /\s+/, $line;
 
-        if (length $chunks[0] == 1)
-          { next unless (defined $commands{$chunks[0]}) }
+        # lines with single-character first chunks are commands.
+        # make sure they exist.
+        if (length $chunks[0] == 1) {
+            unless (defined $commands{$chunks[0]}) {
+                print $OUT "No such command '", $chunks[0], "'\n";
+                next;
+            }
+        }
 
         if (defined $commands{$chunks[0]}) {
             my $term = $commands{$chunks[0]}->(@chunks[1..$#chunks]);
@@ -208,6 +213,7 @@ sub edit {
             print_context();
         }
     }
+    # set pointer to top on the way out
     $ptr = 0;
 }
 
@@ -362,6 +368,8 @@ sub merge_lines {
 }
 
 sub flip_line {
+    unless ($conf->{prevline})
+      { print $OUT "No previously edited line to flip\n"; return }
     my $temp = $record[$ptr];
     $record[$ptr] = $conf->{prevline};
     $conf->{prevline} = $temp;
@@ -370,7 +378,7 @@ sub flip_line {
 }
 
 sub kill_line {
-    $conf->{prevline} = $record[$ptr];
+    $conf->{killline} = $record[$ptr];
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr + 1 .. $#record];
     @record = (@a, @b);
@@ -379,16 +387,20 @@ sub kill_line {
 }
 
 sub yank_line {
+    unless ($conf->{killline})
+      { print $OUT "No killed line to yank\n"; return }
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr .. $#record];
-    @record = (@a, $conf->{prevline}, @b);
+    @record = (@a, $conf->{killline}, @b);
     print_context();
     return 0;
 }
 
-sub show_original {
-    my ($line_in) = @_;
-    print $OUT "\n", $conf->{origline}, "\n";
+sub display_lines {
+    print $OUT "\nCurrently stored lines --\n";
+    print $OUT "Current edit line:", $conf->{origline};
+    print $OUT "Current flip line:", $conf->{prevline} if $conf->{prevline};
+    print $OUT "Last killed line :", $conf->{killline} if $conf->{killline};
     return 0;
 }
 
@@ -432,7 +444,7 @@ print $OUT <<HELP;
 
 Type a replacement for the indicated line, or enter a command.
 
-Commands: c  Show record context again ('C' for brief context)
+Commands: c  Show full context again
           k  Kill indicated line (remove from record)
           m  Merge indicated line with previous line
           o  Show original line
