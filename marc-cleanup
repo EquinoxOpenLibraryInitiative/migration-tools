@@ -275,25 +275,24 @@ sub write_record {
         @record = @trimmed;
     }
 
-    # scrub newlines
-    unless ($conf->{nocollapse}) {
-        s/\n// for (@record);
-    }
-
     # add 903(?) with new record id
     my $renumber = '';
     if ($conf->{'renumber-from'}) {
-        $renumber = join('', '<datafield tag="', $conf->{'renumber-tag'},
-                         '" ind1=" " ind2=" ">',
-                         '<subfield code="', $conf->{'renumber-subfield'}, '">',
-                         $conf->{'renumber-from'}, '</subfield></datafield>');
-        $renumber .= "\n" if $conf->{nocollapse};
-        push @record, $renumber;
+        $renumber = join('', ' <datafield tag="', $conf->{'renumber-tag'},
+                         '" ind1=" " ind2=" "> <subfield code="',
+                         $conf->{'renumber-subfield'}, '">',
+                         $conf->{'renumber-from'}, "</subfield></datafield>\n");
+        my @tmp = @record[0 .. $#record - 1];
+        my $last = @record[$#record];
+        @record = (@tmp, $renumber, $last);
         $conf->{'renumber-from'}++;
     }
 
+    # scrub newlines
+    unless ($conf->{nocollapse})
+      { s/\n// for (@record) }
+
     print $FH @record;
-    print $FH "</record>\n";
 }
 
 sub print_fullcontext {
@@ -607,6 +606,12 @@ sub initialize {
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
     $c->{window} = 5;
+
+    # autotrash 901, 903 if strip-nines
+    if ($c->{'strip-nines'}) {
+        $c->{trash}{901} = 1;
+        $c->{trash}{903} = 1;
+    }
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
