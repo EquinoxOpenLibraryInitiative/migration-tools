@@ -29,8 +29,8 @@ open my $EXMARC, '>:utf8', $conf->{exception};
 
 # this is the dispatch table which drives command selection in
 # edit(), below
-my %commands = ( c => \&print_context,
-                 C => \&print_linecontext,
+my %commands = ( c => \&print_fullcontext,
+                 C => \&print_context,
                  o => \&show_original,
                  O => \&insert_original,
                  f => \&flip_lines,
@@ -43,6 +43,8 @@ my %commands = ( c => \&print_context,
                  t => \&commit_edit,
                  x => \&dump_record,
                  q => \&quit,
+                 '<' => \&widen_window,
+                 '>' => \&narrow_window,
                  '?' => \&help,
                  h   => \&help,
                  help => \&help,
@@ -185,8 +187,8 @@ sub edit {
     my ($msg) = @_;
 
     return if $conf->{trash}{ $recmeta{tag} };
-    message($msg, 1);
-    print_context();
+    $conf->{editmsg} = $msg;
+    print_fullcontext();
 
     # stow original problem line
     $conf->{origline} = $record[$ptr];
@@ -203,7 +205,7 @@ sub edit {
             last if $term;
         } else {
             $record[$ptr] = "$line\n";
-            print_linecontext();
+            print_context();
         }
     }
     $ptr = 0;
@@ -280,26 +282,31 @@ sub write_record {
     print $FH "</record>\n";
 }
 
-sub print_context {
-    print "    Tag:",$recmeta{tag}, " Ind1:'",
-      $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'\n";
-    print_linecontext();
+sub print_fullcontext {
+    print $OUT "\r", ' ' x 72, "\n";
+    print $OUT $conf->{editmsg},"\n";
+    print $OUT "\r    Tag:",$recmeta{tag}, " Ind1:'",
+      $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'";
+    print_context();
     return 0;
 }
 
-sub print_linecontext {
-    my $low = ($ptr - 3 < 0) ? 0 : $ptr - 3;
-    print $OUT '    |', $record[$_] for ($low .. $ptr - 1);
+sub print_context {
+    my $upper = int($conf->{window} / 2) + 1;
+    my $lower = int($conf->{window} / 2) - 1;
+    my $start = ($ptr - $upper < 0) ? 0 : $ptr - $upper;
+    my $stop  = ($ptr + $lower > $#record) ? $#record : $ptr + $lower;
+    print $OUT "\n";
+    print $OUT '    |', $record[$_] for ($start .. $ptr - 1);
     print $OUT '==> |', $record[$ptr];
-    print $OUT '    |', $record[$ptr + 1], "\n" unless ($ptr == $#record);
+    print $OUT '    |', $record[$_] for ($ptr + 1 .. $stop);
+    print $OUT "\n";
     return 0;
 }
 
 sub message {
-    my ($msg, $new) = @_;
-    print $OUT "\r", ' ' x 72, "\n" if $new;
+    my ($msg) = @_;
     print $OUT "\r$msg at ",$conf->{ricount},"/",$conf->{rocount} + 1,"\n";
-
 }
 
 #-----------------------------------------------------------------------------------
@@ -330,7 +337,7 @@ sub substitute {
 
     $conf->{prevline} = $record[$ptr];
     $record[$ptr] =~ s/$from/$to/;
-    print_linecontext();
+    print_context();
     return 0;
 }
 
@@ -350,7 +357,7 @@ sub merge_lines {
     @record = (@a, @b);
     # move record pointer to previous line
     prev_line();
-    print_linecontext();
+    print_context();
     return 0;
 }
 
@@ -358,7 +365,7 @@ sub flip_line {
     my $temp = $record[$ptr];
     $record[$ptr] = $conf->{prevline};
     $conf->{prevline} = $temp;
-    print_linecontext();
+    print_context();
     return 0;
 }
 
@@ -367,7 +374,7 @@ sub kill_line {
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr + 1 .. $#record];
     @record = (@a, @b);
-    print_linecontext();
+    print_context();
     return 0;
 }
 
@@ -375,7 +382,7 @@ sub yank_line {
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr .. $#record];
     @record = (@a, $conf->{prevline}, @b);
-    print_linecontext();
+    print_context();
     return 0;
 }
 
@@ -394,17 +401,31 @@ sub dump_record {
 
 sub next_line {
     $ptr++ unless ($ptr == $#record);;
-    print_linecontext();
+    print_context();
     return 0;
 }
 
 sub prev_line {
     $ptr-- unless ($ptr == 0);
-    print_linecontext();
+    print_context();
     return 0;
 }
 
 sub commit_edit { return 1 }
+
+sub widen_window {
+    if ($conf->{window} == 15)
+      { print $OUT "Window can't be bigger than 15 lines\n"; return }
+    $conf->{window} += 2;
+    print_context;
+}
+
+sub narrow_window {
+    if ($conf->{window} == 5)
+      { print $OUT "Window can't be smaller than 5 lines\n"; return }
+    $conf->{window} -= 2;
+    print_context;
+}
 
 sub help {
 print $OUT <<HELP;
@@ -560,6 +581,7 @@ sub initialize {
     $c->{exception} = 'incoming.exception.marc.xml' unless defined $c->{exception};
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
+    $c->{window} = 5;
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
