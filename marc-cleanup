@@ -73,6 +73,13 @@ while ( buildrecord() ) {
                 edit("Non-numerics in tag");
                 next;
             }
+            # test for existing 901/903 unless we're autocleaning them
+            unless ($conf->{'strip-nines'}) {
+                if ($match == 901 or $match == 903) {
+                    edit("Incoming 901/903 found in data");
+                    next;
+                }
+            }
         }
 
         # subfields can't be non-alphanumeric
@@ -83,6 +90,7 @@ while ( buildrecord() ) {
                 next;
             }
         }
+
         $ptr++;
     }
     write_record($NUMARC);
@@ -586,6 +594,7 @@ sub initialize {
                          'original-tag|ot=i',
                          'renumber-tag|rt=i',
                          'renumber-subfield|rt=i',
+                         'strip-nines',
                          'trash|t=s',
                          'help|h',
                        );
@@ -601,12 +610,6 @@ sub initialize {
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
-    #for my $key ('runtype', 'tag', 'subfield', 'output', 'exception')
-    #  { push @missing, $key unless $c->{$key} }
-    #if (@missing) {
-    #    print "Required option: ", join(', ', @missing), " missing!\n";
-    #    show_help();
-    #}
 }
 
 sub show_help {
