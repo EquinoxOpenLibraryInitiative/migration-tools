@@ -66,11 +66,11 @@ while ( buildrecord() ) {
         if ($record[$ptr] =~ /&/ && $record[$ptr] !~ /&\w+?;/)
           { edit("Naked ampersand"); $ptr= 0; next }
 
-        # tags must be numeric
         if ($record[$ptr] =~ /<datafield tag="(.+?)"/) {
             my $match = $1;
+            # tags must be numeric
             if ($match =~ /\D/) {
-                edit("Non-numerics in tag");
+                edit("Non-numerics in tag") unless $conf->{autoscrub};
                 next;
             }
             # test for existing 901/903 unless we're autocleaning them
@@ -533,8 +533,8 @@ sub populate_trash {
     }
 
     # remove original id sequence tag from trash hash if we know it
-    trash_add($conf->{'original-tag'}, 1)
-      if ($conf->{'original-tag'} and $conf->{trash}{ $conf->{'original-tag'} });
+    trash_add($conf->{'renumber-orig'}, 1)
+      if ($conf->{'renumber-orig'} and $conf->{trash}{ $conf->{'renumber-orig'} });
 }
 
 sub trash_add_range {
@@ -590,15 +590,17 @@ sub initialize {
                          'output|o=s',
                          'nocollapse|n',
                          'renumber-from|rf=i',
-                         'original-tag|ot=i',
+                         'renumber-orig|ro=i',
                          'renumber-tag|rt=i',
-                         'renumber-subfield|rt=i',
+                         'renumber-subfield|rs=i',
                          'strip-nines',
                          'trash|t=s',
+                         'trashhelp',
                          'help|h',
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
+    show_trashhelp() if ($c->{trashhelp});
 
     # defaults
     $c->{output} = 'incoming.cleaned.marc.xml' unless defined $c->{output};
@@ -619,10 +621,23 @@ sub initialize {
 
 sub show_help {
     print <<HELP;
-Usage is: $0 [OPTIONS] <filelist>
+Usage is: marc-cleanup [OPTIONS] <filelist>
 Options
-  --output     -o  Cleaned MARCXML output filename (default: incoming.cleaned.marc.xml)
-  --exception  -x  Exception (dumped records) MARCXML filename (incoming.exception.marc.xml)
+  --output     -o  Cleaned MARCXML output filename
+                   (default: incoming.cleaned.marc.xml)
+  --exception  -x  Exception (dumped records) MARCXML filename
+                   (incoming.exception.marc.xml)
+  --trash          File containing trash tag data (see --trashhelp)
+
+  --renumber-from=NUM -rf  Begin renumbering id sequence with this number
+  --renumber-tag      -rt  Tag to use in renumbering (default: 903)
+  --renumber-subfield -rs  Subfield code to use in renumbering (default: a)
+  --renumber-orig     -ro  Original id tag; will be kept in output even if 
+                           it appears in the trash file
+
+  --nocollapse -n  Don't compress records to one line on output
+  --autoscrub  -a  Automatically remove non-numeric tags in data
+  --strip-nines    Automatically remove any existing 901/903 tags in data
 HELP
 exit;
 }
