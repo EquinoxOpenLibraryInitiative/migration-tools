@@ -641,3 +641,35 @@ Options
 HELP
 exit;
 }
+
+sub show_trashhelp {
+    print <<HELP;
+The marc-cleanup trash tags file is a simple plaintext file. It is a
+line oriented format. There are three basic tokens:
+
+  * The tag
+  * The tag range
+  * The "except" clause
+
+Any number of tags and/or tag ranges can appear on a single line. A
+tag cannot appear twice in the file, either alone or as part of a
+range. This is to prevent errors in the trash tag listing. Items do
+not have to be sorted within a line. These following lines are valid:
+
+  850 852 870..879 886 890 896..899
+  214 696..699 012
+
+Ranges must be ordered internally. That is, "870..879" is valid while
+"879..870" is not.
+
+Finally, there can be only one "except" clause on a line. It is
+composed of the word "except" followed by one or more tags or
+ranges. Except clauses must follow a range, and all tags within the
+clause must be within the range which the clause follows.
+
+  900..997 except 935 950..959 987 994
+
+is a valid example.
+HELP
+exit;
+}
