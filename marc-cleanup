@@ -16,7 +16,7 @@ populate_trash() if ($conf->{trash});
 
 my @record  = (); # current record storage
 my %recmeta = (); # metadata about current record
-my $recptr  = 0;  # record index pointer
+my $ptr  = 0;  # record index pointer
 
 my $input = shift || 'incoming.marc.xml';
 
@@ -59,32 +59,32 @@ while ( buildrecord() ) {
 
     do_automated_cleanups();
 
-    $recptr = 0;
-    until ($recptr == $#record) {
+    $ptr = 0;
+    until ($ptr == $#record) {
         # naked ampersands
-        if ($record[$recptr] =~ /&/ && $record[$recptr] !~ /&\w+?;/)
-          { edit("Naked ampersand"); $recptr= 0; next }
+        if ($record[$ptr] =~ /&/ && $record[$ptr] !~ /&\w+?;/)
+          { edit("Naked ampersand"); $ptr= 0; next }
 
         # tags must be numeric
-        if ($record[$recptr] =~ /<datafield tag="(.+?)"/) {
+        if ($record[$ptr] =~ /<datafield tag="(.+?)"/) {
             my $match = $1;
             if ($match =~ /\D/) {
                 edit("Non-numerics in tag");
-                $recptr = 0;
+                $ptr = 0;
                 next;
             }
         }
 
         # subfields can't be non-alphanumeric
-        if ($record[$recptr] =~ /<subfield code="(.*?)"/) {
+        if ($record[$ptr] =~ /<subfield code="(.*?)"/) {
             my $match = $1;
             if ($match =~ /\P{IsAlnum}/ or $match eq '') {
                 edit("Junk in subfield code/Null subfield code");
-                $recptr = 0;
+                $ptr = 0;
                 next;
             }
         }
-        $recptr++;
+        $ptr++;
     }
     write_record($NUMARC);
 }
@@ -97,78 +97,78 @@ print $OUT "\nDone.               \n";
 #-----------------------------------------------------------------------------------
 
 sub do_automated_cleanups {
-    $recptr = 0;
-    until ($recptr == $#record) {
+    $ptr = 0;
+    until ($ptr == $#record) {
         # catch empty datafield elements
-        if ($record[$recptr] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
-            if ($record[$recptr + 1] =~ m|</datafield>|) {
-                my @a = @record[0 .. $recptr - 1];
-                my @b = @record[$recptr + 2 .. $#record];
+        if ($record[$ptr] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
+            if ($record[$ptr + 1] =~ m|</datafield>|) {
+                my @a = @record[0 .. $ptr - 1];
+                my @b = @record[$ptr + 2 .. $#record];
                 @record = (@a, @b);
                 message("Empty datafield scrubbed");
-                $recptr = 0;
+                $ptr = 0;
                 next;
             }
         }
         # and quasi-empty subfields
-        if ($record[$recptr] =~ m|<subfield code="(.*?)">(.*?)</sub|) {
+        if ($record[$ptr] =~ m|<subfield code="(.*?)">(.*?)</sub|) {
             my $code = $1; my $content = $2;
             if ($code =~ /\W/ and ($content =~ /\s+/ or $content eq '')) {
-                my @a = @record[0 .. $recptr - 1];
-                my @b = @record[$recptr + 1 .. $#record];
+                my @a = @record[0 .. $ptr - 1];
+                my @b = @record[$ptr + 1 .. $#record];
                 @record = (@a, @b);
                 message("Empty subfield scrubbed");
-                $recptr = 0;
+                $ptr = 0;
                 next;
             }
         }
-        $recptr++;
+        $ptr++;
     }
 
     # single-line fixes
-    for $recptr (0 .. $#record) {
+    for $ptr (0 .. $#record) {
         # pad short leaders
-        if ($record[$recptr] =~ m|<leader>(.+?)</leader>|) {
+        if ($record[$ptr] =~ m|<leader>(.+?)</leader>|) {
             my $leader = $1;
             if (length $leader < 24) {
                 $leader .= ' ' x (20 - length($leader));
                 $leader .= "4500";
-                $record[$recptr] = "<leader>$leader</leader>\n";
+                $record[$ptr] = "<leader>$leader</leader>\n";
                 message("Short leader padded");
             }
         }
-        if ($record[$recptr] =~ m|<controlfield tag="008">(.+?)</control|) {
+        if ($record[$ptr] =~ m|<controlfield tag="008">(.+?)</control|) {
             #pad short 008
             my $content = $1;
             if (length $content < 40) {
                 $content .= ' ' x (40 - length($content));
-                $record[$recptr] = "<controlfield tag=\"008\">$content</controlfield>\n";
+                $record[$ptr] = "<controlfield tag=\"008\">$content</controlfield>\n";
                 message("Short 008 padded");
             }
         }
 
         # clean misplaced dollarsigns
-        if ($record[$recptr] =~ m|<subfield code="\$">c?\d+\.\d{2}|) {
-            $record[$recptr] =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
+        if ($record[$ptr] =~ m|<subfield code="\$">c?\d+\.\d{2}|) {
+            $record[$ptr] =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
             message("Dollar sign corrected");
         }
 
         # clean up tags with spaces in them
-        $record[$recptr] =~ s/tag="  /tag="00/g;
-        $record[$recptr] =~ s/tag=" /tag="0/g;
-        $record[$recptr] =~ s/tag="-/tag="0/g;
-        $record[$recptr] =~ s/tag="(\d\d) /tag="0$1/g;
+        $record[$ptr] =~ s/tag="  /tag="00/g;
+        $record[$ptr] =~ s/tag=" /tag="0/g;
+        $record[$ptr] =~ s/tag="-/tag="0/g;
+        $record[$ptr] =~ s/tag="(\d\d) /tag="0$1/g;
 
         # stow tag data if we're looking at it
-        if ($record[$recptr] =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
+        if ($record[$ptr] =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
             $recmeta{tag}  = $1;
             $recmeta{ind1} = $2;
             $recmeta{ind2} = $3;
         }
 
         # automatable subfield maladies
-        $record[$recptr] =~ s/code=" ">c/code="c">/;
-        $record[$recptr] =~ s/code=" ">\$/code="c"$>/;
+        $record[$ptr] =~ s/code=" ">c/code="c">/;
+        $record[$ptr] =~ s/code=" ">\$/code="c"$>/;
     }
 }
 
@@ -191,7 +191,7 @@ sub edit {
     print_context();
 
     # stow original problem line
-    $conf->{origline} = $record[$recptr];
+    $conf->{origline} = $record[$ptr];
 
     while (1) {
         my $line = $term->readline('marc-cleanup>');
@@ -204,7 +204,7 @@ sub edit {
             my $term = $commands{$chunks[0]}->(@chunks[1..$#chunks]);
             last if $term;
         } else {
-            $record[$recptr] = "$line\n";
+            $record[$ptr] = "$line\n";
             print_linecontext();
         }
     }
@@ -289,10 +289,10 @@ sub print_context {
 }
 
 sub print_linecontext {
-    my $low = ($recptr - 3 < 0) ? 0 : $recptr - 3;
-    print $OUT '    |', $record[$_] for ($low .. $recptr - 1);
-    print $OUT '==> |', $record[$recptr];
-    print $OUT '    |', $record[$recptr + 1], "\n";
+    my $low = ($ptr - 3 < 0) ? 0 : $ptr - 3;
+    print $OUT '    |', $record[$_] for ($low .. $ptr - 1);
+    print $OUT '==> |', $record[$ptr];
+    print $OUT '    |', $record[$ptr + 1], "\n";
     return 0;
 }
 
@@ -329,25 +329,25 @@ sub substitute {
         $from = join('', $from, $char);
     }
 
-    $conf->{prevline} = $record[$recptr];
-    $record[$recptr] =~ s/$from/$to/;
+    $conf->{prevline} = $record[$ptr];
+    $record[$ptr] =~ s/$from/$to/;
     print_linecontext();
     return 0;
 }
 
 sub merge_lines {
-    $conf->{prevline} = $record[$recptr];
+    $conf->{prevline} = $record[$ptr];
     # remove <subfield stuff; extract (probably wrong) subfield code
-    $record[$recptr] =~ s/^\s*<subfield code="(.*?)">//;
+    $record[$ptr] =~ s/^\s*<subfield code="(.*?)">//;
     # and move to front of line
-    $record[$recptr] = join(' ', $1 , $record[$recptr]);
+    $record[$ptr] = join(' ', $1 , $record[$ptr]);
     # tear off trailing subfield tag from preceeding line
-    $record[$recptr - 1] =~ s|</subfield>\n||;
+    $record[$ptr - 1] =~ s|</subfield>\n||;
     # join current line onto preceeding line
-    $record[$recptr - 1] = join('', $record[$recptr - 1], $record[$recptr]);
+    $record[$ptr - 1] = join('', $record[$ptr - 1], $record[$ptr]);
     # erase current line
-    my @a = @record[0 .. $recptr - 1];
-    my @b = @record[$recptr + 1 .. $#record];
+    my @a = @record[0 .. $ptr - 1];
+    my @b = @record[$ptr + 1 .. $#record];
     @record = (@a, @b);
     # move record pointer to previous line
     prev_line();
@@ -356,25 +356,25 @@ sub merge_lines {
 }
 
 sub flip_line {
-    my $temp = $record[$recptr];
-    $record[$recptr] = $conf->{prevline};
+    my $temp = $record[$ptr];
+    $record[$ptr] = $conf->{prevline};
     $conf->{prevline} = $temp;
     print_linecontext();
     return 0;
 }
 
 sub kill_line {
-    $conf->{prevline} = $record[$recptr];
-    my @a = @record[0 .. $recptr - 1];
-    my @b = @record[$recptr + 1 .. $#record];
+    $conf->{prevline} = $record[$ptr];
+    my @a = @record[0 .. $ptr - 1];
+    my @b = @record[$ptr + 1 .. $#record];
     @record = (@a, @b);
     print_linecontext();
     return 0;
 }
 
 sub yank_line {
-    my @a = @record[0 .. $recptr - 1];
-    my @b = @record[$recptr .. $#record];
+    my @a = @record[0 .. $ptr - 1];
+    my @b = @record[$ptr .. $#record];
     @record = (@a, $conf->{prevline}, @b);
     print_linecontext();
     return 0;
@@ -394,13 +394,13 @@ sub dump_record {
 }
 
 sub next_line {
-    $recptr++;
+    $ptr++;
     print_linecontext();
     return 0;
 }
 
 sub prev_line {
-    $recptr--;
+    $ptr--;
     print_linecontext();
     return 0;
 }
