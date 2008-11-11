@@ -70,7 +70,6 @@ while ( buildrecord() ) {
             my $match = $1;
             if ($match =~ /\D/) {
                 edit("Non-numerics in tag");
-                $ptr = 0;
                 next;
             }
         }
@@ -80,7 +79,6 @@ while ( buildrecord() ) {
             my $match = $1;
             if ($match =~ /\P{IsAlnum}/ or $match eq '') {
                 edit("Junk in subfield code/Null subfield code");
-                $ptr = 0;
                 next;
             }
         }
@@ -208,6 +206,7 @@ sub edit {
             print_linecontext();
         }
     }
+    $ptr = 0;
 }
 
 =head2 buildrecord
@@ -292,7 +291,7 @@ sub print_linecontext {
     my $low = ($ptr - 3 < 0) ? 0 : $ptr - 3;
     print $OUT '    |', $record[$_] for ($low .. $ptr - 1);
     print $OUT '==> |', $record[$ptr];
-    print $OUT '    |', $record[$ptr + 1], "\n";
+    print $OUT '    |', $record[$ptr + 1], "\n" unless ($ptr == $#record);
     return 0;
 }
 
