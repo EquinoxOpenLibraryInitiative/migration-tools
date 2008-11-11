@@ -397,10 +397,10 @@ sub yank_line {
 }
 
 sub display_lines {
-    print $OUT "\nCurrently stored lines --\n";
-    print $OUT "Current edit line:", $conf->{origline};
+    print $OUT "\nOrig. edit line  :", $conf->{origline};
     print $OUT "Current flip line:", $conf->{prevline} if $conf->{prevline};
     print $OUT "Last killed line :", $conf->{killline} if $conf->{killline};
+    print $OUT "\n";
     return 0;
 }
 
@@ -441,17 +441,21 @@ sub narrow_window {
 
 sub help {
 print $OUT <<HELP;
-
 Type a replacement for the indicated line, or enter a command.
 
-Commands: c  Show full context again
-          k  Kill indicated line (remove from record)
-          m  Merge indicated line with previous line
-          o  Show original line
-          s  Substitute ARG1 for ARG2 in indicated line
-          t  Commit changes and resume stream edit
-          x  Write this record to the exception file instead of output
-          q  Quit
+DISPLAY COMMANDS             | LINE AUTO-EDIT COMMANDS
+<  Expand context window     | k  Kill current line
+>  Contract context window   | y  Yank last killed line
+p  Move pointer to prev line | m  Merge current line into preceding line
+n  Move pointer to next line | o  Insert original line
+c  Print line context        | f  Flip current line and last edited line
+d  Print current saved lines |
+-----------------------------+-------------------------------------------
+s  Subtitute; replace ARG1 in current line with ARG2. If either ARG
+   contains spaces, it must be single-quoted
+t  Commit changes and resume automated operations
+x  Dump record to exception file
+q  Quit
 
 HELP
 return 0;
