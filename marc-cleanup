@@ -394,13 +394,13 @@ sub dump_record {
 }
 
 sub next_line {
-    $ptr++;
+    $ptr++ unless ($ptr == $#record);;
     print_linecontext();
     return 0;
 }
 
 sub prev_line {
-    $ptr--;
+    $ptr-- unless ($ptr == 0);
     print_linecontext();
     return 0;
 }
