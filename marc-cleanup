@@ -15,7 +15,7 @@ initialize($conf);
 populate_trash() if ($conf->{trash});
 
 # set up files, since everything appears to be in order
-open MARC, '<:utf8', shift || 'incoming.marc.xml';
+open MARC, '<:utf8', (shift || 'incoming.marc.xml');
 open my $NUMARC, '>:utf8', $conf->{output};
 open my $EXMARC, '>:utf8', $conf->{exception};
 open my $OLD2NEW, '>', 'old2new.incoming.map'
@@ -214,7 +214,7 @@ sub edit {
     print_fullcontext();
 
     # stow original problem line
-    $conf->{origline} = $record[$ptr];
+    $recmeta{origline} = $record[$ptr];
 
     while (1) {
         my $line = $term->readline('marc-cleanup>');
@@ -233,6 +233,7 @@ sub edit {
             my $term = $commands{$chunks[0]}->(@chunks[1..$#chunks]);
             last if $term;
         } else {
+            $recmeta{prevline} = $record[$ptr];
             $record[$ptr] = "$line\n";
             print_context();
         }
@@ -370,14 +371,14 @@ sub substitute {
         $from = join('', $from, $char);
     }
 
-    $conf->{prevline} = $record[$ptr];
+    $recmeta{prevline} = $record[$ptr];
     $record[$ptr] =~ s/$from/$to/;
     print_context();
     return 0;
 }
 
 sub merge_lines {
-    $conf->{prevline} = $record[$ptr];
+    $recmeta{prevline} = $record[$ptr];
     # remove <subfield stuff; extract (probably wrong) subfield code
     $record[$ptr] =~ s/^\s*<subfield code="(.*?)">//;
     # and move to front of line
@@ -397,17 +398,17 @@ sub merge_lines {
 }
 
 sub flip_line {
-    unless ($conf->{prevline})
+    unless ($recmeta{prevline})
       { print $OUT "No previously edited line to flip\n"; return }
     my $temp = $record[$ptr];
-    $record[$ptr] = $conf->{prevline};
-    $conf->{prevline} = $temp;
+    $record[$ptr] = $recmeta{prevline};
+    $recmeta{prevline} = $temp;
     print_context();
     return 0;
 }
 
 sub kill_line {
-    $conf->{killline} = $record[$ptr];
+    $recmeta{killline} = $record[$ptr];
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr + 1 .. $#record];
     @record = (@a, @b);
@@ -416,7 +417,7 @@ sub kill_line {
 }
 
 sub yank_line {
-    unless ($conf->{killline})
+    unless ($recmeta{killline})
       { print $OUT "No killed line to yank\n"; return }
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr .. $#record];
@@ -426,9 +427,9 @@ sub yank_line {
 }
 
 sub display_lines {
-    print $OUT "\nOrig. edit line  :", $conf->{origline};
-    print $OUT "Current flip line:", $conf->{prevline} if $conf->{prevline};
-    print $OUT "Last killed line :", $conf->{killline} if $conf->{killline};
+    print $OUT "\nOrig. edit line  :", $recmeta{origline};
+    print $OUT "Current flip line:", $recmeta{prevline} if $recmeta{prevline};
+    print $OUT "Last killed line :", $recmeta{killline} if $recmeta{killline};
     print $OUT "\n";
     return 0;
 }
