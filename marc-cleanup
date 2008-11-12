@@ -616,6 +616,7 @@ sub initialize {
                          'renumber-subfield|rs=i',
                          'original-tag|ot=i',
                          'original-subfield|os=i',
+                         'script',
                          'strip-nines',
                          'trash|t=s',
                          'trashhelp',
@@ -664,6 +665,9 @@ Options
   --nocollapse -n  Don't compress records to one line on output
   --autoscrub  -a  Automatically remove non-numeric tags in data
   --strip-nines    Automatically remove any existing 901/903 tags in data
+
+  --script         Store human-initiated ops in scriptfile (.mcscript)
+                   Not yet implemented
 HELP
 exit;
 }
