@@ -14,18 +14,18 @@ my $conf = {};
 initialize($conf);
 populate_trash() if ($conf->{trash});
 
-my @record  = (); # current record storage
-my %recmeta = (); # metadata about current record
-my $ptr  = 0;  # record index pointer
-
-my $input = shift || 'incoming.marc.xml';
-
-open MARC, '<:utf8', $input;
+# set up files, since everything appears to be in order
+open MARC, '<:utf8', shift || 'incoming.marc.xml';
 open my $NUMARC, '>:utf8', $conf->{output};
+open my $EXMARC, '>:utf8', $conf->{exception};
+open my $OLD2NEW, '>', 'old2new.incoming.map'
+  if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
 print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
 
-open my $EXMARC, '>:utf8', $conf->{exception};
+my @record  = (); # current record storage
+my %recmeta = (); # metadata about current record
+my $ptr  = 0;  # record index pointer
 
 # this is the dispatch table which drives command selection in
 # edit(), below
@@ -59,6 +59,7 @@ while ( buildrecord() ) {
     }
 
     do_automated_cleanups();
+    stow_record_data();
 
     $ptr = 0;
     until ($ptr == $#record) {
@@ -166,23 +167,38 @@ sub do_automated_cleanups {
         $record[$ptr] =~ s/tag="-/tag="0/g;
         $record[$ptr] =~ s/tag="(\d\d) /tag="0$1/g;
 
-        # stow tag data if we're looking at it
-        if ($record[$ptr] =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
-            $recmeta{tag}  = $1;
-            $recmeta{ind1} = $2;
-            $recmeta{ind2} = $3;
-        }
-
         # automatable subfield maladies
         $record[$ptr] =~ s/code=" ">c/code="c">/;
         $record[$ptr] =~ s/code=" ">\$/code="c"$>/;
     }
 }
 
+sub stow_record_data {
+    # get tag data if we're looking at it
+    if ($record[$ptr] =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
+        $recmeta{tag}  = $1;
+        $recmeta{ind1} = $2;
+        $recmeta{ind2} = $3;
+
+        # and since we are looking at a tag, see if it's the original id
+        if ($conf->{'original-subfield'} and $1 == $conf->{'original-tag'}) {
+            my $line = $record[$ptr]; my $lptr = $ptr;
+            my $osub = $conf->{'original-subfield'};
+            $recmeta{oid} = 'NONE';
+
+            until ($line =~ m|</record>|) {
+                $lptr++;
+                $line = $record[$lptr];
+                $recmeta{oid} = $1
+                  if ($line =~ /<subfield code="$osub">(.+?)</);
+            }
+        }
+    }
+}
+
 #-----------------------------------------------------------------------------------
 # driver routines
 #-----------------------------------------------------------------------------------
-
 
 =head2 edit
 
@@ -278,10 +294,11 @@ sub write_record {
     # add 903(?) with new record id
     my $renumber = '';
     if ($conf->{'renumber-from'}) {
+        $recmeta{nid} = $conf->{'renumber=from'};
         $renumber = join('', ' <datafield tag="', $conf->{'renumber-tag'},
                          '" ind1=" " ind2=" "> <subfield code="',
-                         $conf->{'renumber-subfield'}, '">',
-                         $conf->{'renumber-from'}, "</subfield></datafield>\n");
+                         $conf->{'renumber-subfield'},
+                         '">', $recmeta{nid}, "</subfield></datafield>\n");
         my @tmp = @record[0 .. $#record - 1];
         my $last = $record[$#record];
         @record = (@tmp, $renumber, $last);
@@ -292,6 +309,11 @@ sub write_record {
     unless ($conf->{nocollapse})
       { s/\n// for (@record) }
 
+    # write to old->new map file if needed
+    print $OLD2NEW $recmeta{oid}, "\t", $recmeta{nid}, "\n"
+      if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
+
+    # and finally, actually write the record
     print $FH @record;
 }
 
@@ -533,8 +555,8 @@ sub populate_trash {
     }
 
     # remove original id sequence tag from trash hash if we know it
-    trash_add($conf->{'renumber-orig'}, 1)
-      if ($conf->{'renumber-orig'} and $conf->{trash}{ $conf->{'renumber-orig'} });
+    trash_add($conf->{'original-tag'}, 1)
+      if ($conf->{'original-tag'} and $conf->{trash}{ $conf->{'original-tag'} });
 }
 
 sub trash_add_range {
@@ -590,9 +612,10 @@ sub initialize {
                          'output|o=s',
                          'nocollapse|n',
                          'renumber-from|rf=i',
-                         'renumber-orig|ro=i',
                          'renumber-tag|rt=i',
                          'renumber-subfield|rs=i',
+                         'original-tag|ot=i',
+                         'original-subfield|os=i',
                          'strip-nines',
                          'trash|t=s',
                          'trashhelp',
@@ -603,8 +626,8 @@ sub initialize {
     show_trashhelp() if ($c->{trashhelp});
 
     # defaults
-    $c->{output} = 'incoming.cleaned.marc.xml' unless defined $c->{output};
-    $c->{exception} = 'incoming.exception.marc.xml' unless defined $c->{exception};
+    $c->{output} = 'cleaned.incoming.marc.xml' unless defined $c->{output};
+    $c->{exception} = 'cleaned.exceptions.marc.xml' unless defined $c->{exception};
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
     $c->{window} = 5;
@@ -624,16 +647,19 @@ sub show_help {
 Usage is: marc-cleanup [OPTIONS] <filelist>
 Options
   --output     -o  Cleaned MARCXML output filename
-                   (default: incoming.cleaned.marc.xml)
+                   (default: cleaned.incoming.marc.xml)
   --exception  -x  Exception (dumped records) MARCXML filename
-                   (incoming.exception.marc.xml)
+                   (cleaned.exceptions.marc.xml)
   --trash          File containing trash tag data (see --trashhelp)
 
   --renumber-from=NUM -rf  Begin renumbering id sequence with this number
   --renumber-tag      -rt  Tag to use in renumbering (default: 903)
   --renumber-subfield -rs  Subfield code to use in renumbering (default: a)
-  --renumber-orig     -ro  Original id tag; will be kept in output even if 
+  --original-tag      -ot  Original id tag; will be kept in output even if
                            it appears in the trash file
+  --original-subfield -os  Original id subfield code. If this is specified
+                           and renumbering is in effect, an old-to-new mapping
+                           file (old2new.incoming.map) will be generated.
 
   --nocollapse -n  Don't compress records to one line on output
   --autoscrub  -a  Automatically remove non-numeric tags in data
