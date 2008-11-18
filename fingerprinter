@@ -20,10 +20,8 @@ open XF, '>', $conf->{exception};
 
 for my $file (@ARGV) {
     print XF "Processing $file\n";
-    #open my $records, '<:utf8', $file; # This hack dosn't play nice with the use MARC::File::XML ( BinaryEncoding => 'utf-8' ); hack
     my $batch = undef; my $record = undef;
 
-    #$batch = MARC::Batch->new('XML', $records); # The other part of the hack
     $batch = MARC::Batch->new($conf->{marctype}, $file);
     $batch->strict_off();
     $batch->warnings_off();
@@ -41,10 +39,14 @@ for my $file (@ARGV) {
             next;
         }
 
+        # populate and normalize marc
         $marc = populate_marc($record, $id);
-        $marc = normalize_marc($marc);
+        normalize_marc($marc);
         unless (marc_isvalid($marc))
           { dump_exception($marc); next; }
+
+        # if everything looks good, score it and dump fingerprints
+        score_marc($marc, $record);
         dump_fingerprints($marc);
         $scount++; progress_ticker();
     }
@@ -202,100 +204,144 @@ sub marc_isvalid {
 }
 
 
+=head2 score_marc
+
+Assign a score to the record based on various criteria.
+
+Score is constructed by pushing elements onto a list. At the end of
+the routine, the list is flattened into a string via join();
+
+=cut
+
+sub score_marc {
+    my ($marc, $record) = @_;
+    my @score = [];
+    my $chunk;
+
+    # Is this an OCLC record?
+    if $record->field('008') {
+        $chunk = $record->field('008')->as_string();
+        push @score, ($chunk =~ /^o/i);
+    } else {
+        push @score, 0;
+    }
+
+    # does 040a contain "dlc"?
+    if $record->field('040') {
+        $chunk = $record->field('040')->subfield('a');
+        push @score, ($chunk =~ /dlc/i);
+    } else {
+        push @score, 0;
+    }
+
+    # number of 650 datafields
+    # zero-padded to 4 digits with printf
+    if $record->field('650') {
+        my @tags = $record->field('650');
+        push @score, printf("04%d", $#tags);
+    } else {
+        push @score, '0000';
+    }
+
+    # number of tags in total
+    # zero-padded to 4 digits with printf
+    my @tags = $record->fields;
+    push @score, printf("04%d", $#tags);
+
+    # encoding level
+    my $enc = substr($record->leader, 17, 1);
+    my %levels = ( ' ' => 9, 1 => 8, 2 => 7,  3  => 6,  4  => 5, 5 => 4,
+                   6   => 3, 7 => 2, 8 => 1, 'u' => 0, 'z' => 0 );
+    push @score, $levels{$enc};
+
+    # put score in marc hash
+    $marc->{score} = join('', @score);
+}
+
 =head2 dump_fingerprints
 
 =cut
 
 sub dump_fingerprints {
     my ($marc) = @_;
-    my $good_fp = 0;
 
-    if ($conf->{runtype} eq "primary") {
+    if ($conf->{fingerprints}{baseline}) {
         print OF join("\t",$marc->{id}, $marc->{item_form},
                           $marc->{date1}, $marc->{record_type},
                           $marc->{bib_lvl}, $marc->{title}), "\n";
-    } else {
+    }
+
+    if ($conf->{fingerprints}{oclc} and scalar @{$marc->{oclc} }) {
+        for (@{$marc->{oclc} }) {
+            print OF join("\t", $marc->{id}, "case o",
+                          $marc->{item_form}, $marc->{date1},
+                          $marc->{record_type}, $marc->{bib_lvl},
+                          $marc->{title}, $_, "\n");
+        }
+        $good_fp = 1;
+    }
+
+    if ($conf->{fingerprints}{isbn}) {
         if ((scalar @{ $marc->{isbns} } > 0) and $marc->{pages}) {
-            # case a : isbn and pages
             foreach my $isbn ( @{ $marc->{isbns}} ) {
                 print OF join("\t", $marc->{id}, "case a",
-                                  $marc->{item_form}, $marc->{date1},
-                                  $marc->{record_type},
-                                  $marc->{bib_lvl}, $marc->{title},
-                                  $isbn, $marc->{pages}), "\n";
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type},
+                              $marc->{bib_lvl}, $marc->{title},
+                              $isbn, $marc->{pages}), "\n";
             }
             $good_fp = 1;
         }
+    }
 
-=pod
+    if ($conf->{fingerprints}{edition} and $marc->{edition}) {
+        print OF join("\t", $marc->{id}, "case b",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{edition}), "\n";
+        $good_fp = 1;
+    }
 
-Looks like case b isn't a terribly good idea most of the time -- it
-will generate many spurious matches in series books in particular. So
-for now, simply turning it off.
+    if ($conf->{fingerprints}{issn} and $marc->{issn}) {
+        print OF join("\t", $marc->{id}, "case c",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{issn}), "\n";
+        $good_fp = 1;
+    }
 
-        if ($marc->{edition}) { # case b : edition
-            print OF join("\t", $marc->{id}, "case b",
-                              $marc->{item_form}, $marc->{date1},
-                              $marc->{record_type}, $marc->{bib_lvl},
-                              $marc->{title}, $marc->{edition}), "\n";
-            $good_fp = 1;
-        }
+    if ($conf->{fingerprints}{lccn} and $marc->{lccn}) {
+        print OF join("\t", $marc->{id}, "case d",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{lccn}) ,"\n";
+        $good_fp = 1;
+    }
 
-=cut
+    if ($conf->{fingerprints}{accomp} and $marc->{accomp}) {
+        print OF join("\t", $marc->{id}, "case e",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{accomp}) ,"\n";
+        $good_fp = 1;
+    }
 
-        if ($marc->{issn}) { # case c : issn
-            print OF join("\t", $marc->{id}, "case c",
-                              $marc->{item_form}, $marc->{date1},
-                              $marc->{record_type}, $marc->{bib_lvl},
-                              $marc->{title}, $marc->{issn}), "\n";
-            $good_fp = 1;
-        }
-
-        if ($marc->{lccn}) { # case d : lccn
-            print OF join("\t", $marc->{id}, "case d",
-                              $marc->{item_form}, $marc->{date1},
-                              $marc->{record_type}, $marc->{bib_lvl},
-                              $marc->{title}, $marc->{lccn}) ,"\n";
-            $good_fp = 1;
-        }
-
-        if ($marc->{accomp}) { # case e : accomp
-            print OF join("\t", $marc->{id}, "case e",
-                              $marc->{item_form}, $marc->{date1},
-                              $marc->{record_type}, $marc->{bib_lvl},
-                              $marc->{title}, $marc->{accomp}) ,"\n";
-            $good_fp = 1;
-        }
-
-        # case o: oclc
-        if (scalar @{$marc->{oclc} }) {
-            for (@{$marc->{oclc} }) {
-                print OF join("\t", $marc->{id}, "case o",
-                              $marc->{item_form}, $marc->{date1},
-                              $marc->{record_type}, $marc->{bib_lvl},
-                              $marc->{title}, $_, "\n");
-            }
-            $good_fp = 1;
-        }
-
-        # case z : author, publisher, pubyear, pages
-        if ($marc->{author} and $marc->{publisher} and $marc->{pubyear}
-            and $marc->{pages}) {
-            print OF join("\t", $marc->{id}, "case z",
-                              $marc->{item_form}, $marc->{date1},
-                              $marc->{record_type}, $marc->{bib_lvl},
-                              $marc->{title}, $marc->{author},
-                              $marc->{publisher}, $marc->{pubyear},
-                              $marc->{pages}), "\n";
-            $good_fp = 1;
-        }
+    if ($conf->{fingerprints}{authpub} and $marc->{author} and
+        $marc->{publisher} and $marc->{pubyear} and $marc->{pages}) {
+        print OF join("\t", $marc->{id}, "case z",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{author},
+                      $marc->{publisher}, $marc->{pubyear},
+                      $marc->{pages}), "\n";
+        $good_fp = 1;
+    }
 
         # case poo : nothing good; dump a primary and move on
-        unless ($good_fp) {
-            print OF join("\t", $marc->{id}, "case poo", $marc->{item_form},
-                          $marc->{date1}, $marc->{record_type},
-                          $marc->{bib_lvl}, $marc->{title}), "\n";
-        }
+    if ($conf->{fingerprints}{crap}) {
+        print OF join("\t", $marc->{id}, "case poo", $marc->{item_form},
+                      $marc->{date1}, $marc->{record_type},
+                      $marc->{bib_lvl}, $marc->{title}), "\n";
     }
 }
 
@@ -350,11 +396,31 @@ sub initialize {
                          'runtype|r=s',
                          'subfield|s=s',
                          'tag|t=s',
+                         'fingerprints=s',
+                         'scores=s',
                          'quiet|q',
                          'help|h',
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
+
+    # check fingerprints list for validity
+    if ($c->{fingerprints}) {
+        my %valid_fps = ( oclc => 1, isbn => 1, issn => 1, lccn => 1,
+                          edition => 1, accomp => 1, authpub => 1,
+                          baseline => 1, crap => 1,
+                        );
+        for (split /,/, $c->{fingerprints})
+          { die "Invalid fingerprint '$_'\n" unless $valid_fps{$_} }
+    }
+    # check scores list for validity
+    if ($c->{scores}) {
+        my %valid_scores = ( oclc => 1, dlc => 1, num_650 => 1,
+                             num_tags => 1, enc_lvl => 1,
+                           );
+        for (split /,/, $c->{scores})
+          { die "Invalid score mode '$_'\n" unless $valid_scores{$_} }
+    }
 
     # set defaults if told to do so
     if ($c->{incoming}) {
@@ -413,10 +479,14 @@ Req'd Arguments
 Options
   --incoming     Set -r to 'full'; -t, -s, -o, -x to incoming defaults
   --incumbent    Set -r to 'full'; -t, -s, -o, -x to incumbent defaults
+     Example: '$0 --incoming' is equivalent to
+              '$0 -r full -t 903 -s a -o incoming.fp -x incoming.ex'
 
-  Example: '$0 --incoming' is equivalent to
-           '$0 -r full -t 903 -s a -o incoming.fp -x incoming.ex'
-
+  --fingerprints=LIST  Fingerprints to generate, comma separated
+                       Default: oclc,isbn,edition,issn,lccn,accomp,authpub
+                       Others:  baseline,crap
+  --scores=LIST  Scores to calculate, comma separated
+                 Default: oclc,dlc,num_650,num_tags,enc_level
   --quiet    -q  Don't write status messages to STDOUT
 HELP
 exit 1;
