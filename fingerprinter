@@ -219,14 +219,8 @@ sub score_marc {
     my $chunk;
 
     # Is this an OCLC record?
-    if ($conf->{scores}{oclc}) {
-        if ($record->field('008')) {
-            $chunk = $record->field('008')->as_string();
-            push @score, ( $chunk =~ /^o/i ? 1 : 0 );
-        } else {
-            push @score, 0;
-        }
-    }
+    if ($conf->{scores}{oclc})
+      { push @score, ( defined $marc->{oclc}[0] ? 1 : 0 ) }
 
     # does 040a contain "dlc"?
     if ($conf->{scores}{dlc}) {
@@ -243,9 +237,9 @@ sub score_marc {
     if ($conf->{scores}{num_650}) {
         if ($record->field('650')) {
             my @tags = $record->field('650');
-            push @score, scalar @tags;
+            push @score, ( sprintf("%04d", scalar @tags) );
         } else {
-            push @score, 0;
+            push @score, '0000';
         }
     }
 
@@ -253,7 +247,7 @@ sub score_marc {
     # zero-padded to 4 digits with printf
     if ($conf->{scores}{num_tags}) {
         my @tags = $record->fields;
-        push @score, scalar @tags;
+        push @score, ( sprintf("%04d", scalar @tags) );
     }
 
     # encoding level
