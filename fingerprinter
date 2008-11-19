@@ -215,47 +215,62 @@ the routine, the list is flattened into a string via join();
 
 sub score_marc {
     my ($marc, $record) = @_;
-    my @score = [];
+    my @score = ();
     my $chunk;
 
     # Is this an OCLC record?
-    if $record->field('008') {
-        $chunk = $record->field('008')->as_string();
-        push @score, ($chunk =~ /^o/i);
-    } else {
-        push @score, 0;
+    if ($conf->{scores}{oclc}) {
+        if ($record->field('008')) {
+            $chunk = $record->field('008')->as_string();
+            push @score, ( $chunk =~ /^o/i ? 1 : 0 );
+        } else {
+            push @score, 0;
+        }
     }
 
     # does 040a contain "dlc"?
-    if $record->field('040') {
-        $chunk = $record->field('040')->subfield('a');
-        push @score, ($chunk =~ /dlc/i);
-    } else {
-        push @score, 0;
+    if ($conf->{scores}{dlc}) {
+        if ($record->field('040') and $record->field('040')->subfield('a')) {
+            $chunk = $record->field('040')->subfield('a');
+            push @score, ( $chunk =~ /dlc/i ? 1 : 0 );
+        } else {
+            push @score, 0;
+        }
     }
 
     # number of 650 datafields
     # zero-padded to 4 digits with printf
-    if $record->field('650') {
-        my @tags = $record->field('650');
-        push @score, printf("04%d", $#tags);
-    } else {
-        push @score, '0000';
+    if ($conf->{scores}{num_650}) {
+        if ($record->field('650')) {
+            my @tags = $record->field('650');
+            push @score, scalar @tags;
+        } else {
+            push @score, '0000';
+        }
     }
 
     # number of tags in total
     # zero-padded to 4 digits with printf
-    my @tags = $record->fields;
-    push @score, printf("04%d", $#tags);
+    if ($conf->{scores}{num_tags}) {
+        my @tags = $record->fields;
+        push @score, scalar @tags;
+    }
 
     # encoding level
-    my $enc = substr($record->leader, 17, 1);
-    my %levels = ( ' ' => 9, 1 => 8, 2 => 7,  3  => 6,  4  => 5, 5 => 4,
-                   6   => 3, 7 => 2, 8 => 1, 'u' => 0, 'z' => 0 );
-    push @score, $levels{$enc};
+    if ($conf->{scores}{enc_lvl}) {
+        my $enc = substr($record->leader, 17, 1);
+        my %levels = ( ' ' => 9, 1 => 8, 2 => 7,  3  => 6,  4  => 5, 5 => 4,
+                       6   => 3, 7 => 2, 8 => 1, 'u' => 0, 'z' => 0 );
+        if (defined $enc and $levels{$enc})
+          { push @score, $levels{$enc} }
+        else
+          { push @score, 0 }
+    }
 
     # put score in marc hash
-    $marc->{score} = join('', @score);
+    $marc->{score} = join('', '{oclc:', $score[0], ',dlc:', $score[1],
+                          ',num_650:', $score[2], ',num_tags:', $score[3],
+                          ',enc_lvl:', $score[4], '}');
 }
 
 =head2 dump_fingerprints
@@ -266,82 +281,68 @@ sub dump_fingerprints {
     my ($marc) = @_;
 
     if ($conf->{fingerprints}{baseline}) {
-        print OF join("\t",$marc->{id}, $marc->{item_form},
-                          $marc->{date1}, $marc->{record_type},
-                          $marc->{bib_lvl}, $marc->{title}), "\n";
+        print OF join("\t", $marc->{score}, $marc->{id}, 'baseline',
+                      $marc->{item_form}, $marc->{date1}, $marc->{record_type},
+                      $marc->{bib_lvl}, $marc->{title}), "\n";
     }
 
     if ($conf->{fingerprints}{oclc} and scalar @{$marc->{oclc} }) {
         for (@{$marc->{oclc} }) {
-            print OF join("\t", $marc->{id}, "case o",
+            print OF join("\t", $marc->{score}, $marc->{id}, "oclc",
                           $marc->{item_form}, $marc->{date1},
                           $marc->{record_type}, $marc->{bib_lvl},
                           $marc->{title}, $_, "\n");
         }
-        $good_fp = 1;
     }
 
     if ($conf->{fingerprints}{isbn}) {
         if ((scalar @{ $marc->{isbns} } > 0) and $marc->{pages}) {
             foreach my $isbn ( @{ $marc->{isbns}} ) {
-                print OF join("\t", $marc->{id}, "case a",
+                print OF join("\t", $marc->{score}, $marc->{id}, "isbn",
                               $marc->{item_form}, $marc->{date1},
                               $marc->{record_type},
                               $marc->{bib_lvl}, $marc->{title},
                               $isbn, $marc->{pages}), "\n";
             }
-            $good_fp = 1;
         }
     }
 
     if ($conf->{fingerprints}{edition} and $marc->{edition}) {
-        print OF join("\t", $marc->{id}, "case b",
+        print OF join("\t", $marc->{score}, $marc->{id}, "edition",
                       $marc->{item_form}, $marc->{date1},
                       $marc->{record_type}, $marc->{bib_lvl},
                       $marc->{title}, $marc->{edition}), "\n";
-        $good_fp = 1;
     }
 
     if ($conf->{fingerprints}{issn} and $marc->{issn}) {
-        print OF join("\t", $marc->{id}, "case c",
+        print OF join("\t", $marc->{score}, $marc->{id}, "issn",
                       $marc->{item_form}, $marc->{date1},
                       $marc->{record_type}, $marc->{bib_lvl},
                       $marc->{title}, $marc->{issn}), "\n";
-        $good_fp = 1;
     }
 
     if ($conf->{fingerprints}{lccn} and $marc->{lccn}) {
-        print OF join("\t", $marc->{id}, "case d",
+        print OF join("\t", $marc->{score}, $marc->{id}, "lccn",
                       $marc->{item_form}, $marc->{date1},
                       $marc->{record_type}, $marc->{bib_lvl},
                       $marc->{title}, $marc->{lccn}) ,"\n";
-        $good_fp = 1;
     }
 
     if ($conf->{fingerprints}{accomp} and $marc->{accomp}) {
-        print OF join("\t", $marc->{id}, "case e",
+        print OF join("\t", $marc->{score}, $marc->{id}, "accomp",
                       $marc->{item_form}, $marc->{date1},
                       $marc->{record_type}, $marc->{bib_lvl},
                       $marc->{title}, $marc->{accomp}) ,"\n";
-        $good_fp = 1;
     }
 
     if ($conf->{fingerprints}{authpub} and $marc->{author} and
         $marc->{publisher} and $marc->{pubyear} and $marc->{pages}) {
-        print OF join("\t", $marc->{id}, "case z",
+        print OF join("\t", $marc->{score}, $marc->{id}, "authpub",
                       $marc->{item_form}, $marc->{date1},
                       $marc->{record_type}, $marc->{bib_lvl},
                       $marc->{title}, $marc->{author},
                       $marc->{publisher}, $marc->{pubyear},
                       $marc->{pages}), "\n";
-        $good_fp = 1;
-    }
-
-        # case poo : nothing good; dump a primary and move on
-    if ($conf->{fingerprints}{crap}) {
-        print OF join("\t", $marc->{id}, "case poo", $marc->{item_form},
-                      $marc->{date1}, $marc->{record_type},
-                      $marc->{bib_lvl}, $marc->{title}), "\n";
     }
 }
 
@@ -406,20 +407,34 @@ sub initialize {
 
     # check fingerprints list for validity
     if ($c->{fingerprints}) {
+        my %fps = ();
         my %valid_fps = ( oclc => 1, isbn => 1, issn => 1, lccn => 1,
                           edition => 1, accomp => 1, authpub => 1,
                           baseline => 1, crap => 1,
                         );
-        for (split /,/, $c->{fingerprints})
-          { die "Invalid fingerprint '$_'\n" unless $valid_fps{$_} }
+        for (split /,/, $c->{fingerprints}) {
+            die "Invalid fingerprint '$_'\n" unless $valid_fps{$_};
+            $fps{$_} = 1;
+        }
+        $c->{fingerprints} = \%fps
+    } else {
+        $c->{fingerprints} = {oclc => 1, isbn => 1, edition => 1, issn => 1,
+                              lccn => 1, accomp => 1, authpub => 1};
     }
     # check scores list for validity
     if ($c->{scores}) {
+        my %scores = ();
         my %valid_scores = ( oclc => 1, dlc => 1, num_650 => 1,
                              num_tags => 1, enc_lvl => 1,
                            );
-        for (split /,/, $c->{scores})
-          { die "Invalid score mode '$_'\n" unless $valid_scores{$_} }
+        for (split /,/, $c->{scores}) {
+            die "Invalid score mode '$_'\n" unless $valid_scores{$_};
+            $scores{$_} = 1;
+        }
+        $c->{scores} = \%scores;
+    } else {
+        $c->{scores} = {oclc => 1, dlc => 1, num_650 => 1,
+                        num_tags => 1, enc_lvl => 1};
     }
 
     # set defaults if told to do so
@@ -429,19 +444,17 @@ sub initialize {
         $c->{marctype} = 'XML' unless defined $c->{marctype};
         $c->{output} = 'incoming.fp' unless defined $c->{output};
         $c->{exception} = 'incoming.ex' unless defined $c->{exception};
-        $c->{runtype} = 'full' unless defined $c->{runtype};
     } elsif ($c->{incumbent}) {
         $c->{tag} = 901 unless defined $c->{tag};
         $c->{subfield} = 'c' unless defined $c->{subfield};
         $c->{marctype} = 'XML' unless defined $c->{marctype};
         $c->{output} = 'incumbent.fp' unless defined $c->{output};
         $c->{exception} = 'incumbent.ex' unless defined $c->{exception};
-        $c->{runtype} = 'full' unless defined $c->{runtype};
     }
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
-    for my $key ('runtype', 'tag', 'subfield', 'output', 'exception')
+    for my $key ('tag', 'subfield', 'output', 'exception')
       { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
@@ -471,20 +484,17 @@ sub show_help {
 print <<HELP;
 Usage is: $0 [REQUIRED ARGS] [OPTIONS] <filelist>
 Req'd Arguments
-  --runtype=(primary|full) -r  Do 'primary' or 'full' fingerprinting
   --tag=N                  -t  Which tag to use
   --subfield=X             -s  Which subfield to use
   --output=<file>          -o  Output filename
   --exceptions=<file>      -x  Exception report filename
 Options
-  --incoming     Set -r to 'full'; -t, -s, -o, -x to incoming defaults
-  --incumbent    Set -r to 'full'; -t, -s, -o, -x to incumbent defaults
-     Example: '$0 --incoming' is equivalent to
-              '$0 -r full -t 903 -s a -o incoming.fp -x incoming.ex'
+  --incoming   '-t 903 -s a -o incoming.fp -x incoming.ex'
+  --incumbent  '-t 901 -s c -o incumbent.fp -x incumbent.ex'
 
   --fingerprints=LIST  Fingerprints to generate, comma separated
                        Default: oclc,isbn,edition,issn,lccn,accomp,authpub
-                       Others:  baseline,crap
+                       Others:  baseline
   --scores=LIST  Scores to calculate, comma separated
                  Default: oclc,dlc,num_650,num_tags,enc_level
   --quiet    -q  Don't write status messages to STDOUT
