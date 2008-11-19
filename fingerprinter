@@ -245,7 +245,7 @@ sub score_marc {
             my @tags = $record->field('650');
             push @score, scalar @tags;
         } else {
-            push @score, '0000';
+            push @score, 0;
         }
     }
 
