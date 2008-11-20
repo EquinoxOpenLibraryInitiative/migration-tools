@@ -262,9 +262,11 @@ sub score_marc {
     }
 
     # put score in marc hash
-    $marc->{score} = join('', '{oclc:', $score[0], ',dlc:', $score[1],
-                          ',num_650:', $score[2], ',num_tags:', $score[3],
-                          ',enc_lvl:', $score[4], '}');
+    my $json = join('', '{oclc:', $score[0], ',dlc:', $score[1],
+                    ',num_650:', $score[2], ',num_tags:', $score[3],
+                    ',enc_lvl:', $score[4], '}');
+    my $compact = join('', @score);
+    $marc->{score} = "$compact\t$json";
 }
 
 =head2 dump_fingerprints
