@@ -48,7 +48,7 @@ sub rank_fingerprint {
     my $sha1 = $fp->{sha1};
     my $id   = $fp->{id};
     my $islead = $recs{$id}{lead};
-    unless (defined $islead and $islead != 0) {
+    unless (defined $islead and $islead) {
         # only process records which haven't already been set as a sub
         unless ($fps{$sha1}) {
             # haven't seen this fp before. create a new hashref with the current
@@ -62,8 +62,6 @@ sub rank_fingerprint {
             push @{ $fps{$sha1}{recs} }, $id;
             # and set this record as lead if it scores higher than current lead
             if ($fp->{compact} > $fps{$sha1}{lead}{score}) {
-                # $recs{ $fps{$sha1}{lead}{id} }{$sha1}{lead} = 0;
-                # $recs{ $id }{$sha1}{lead} = 1;
                 $recs{ $fps{$sha1}{lead}{id} }{lead} = 0;
                 $recs{ $id }{lead} = 1;
                 $fps{$sha1}{lead}{id}    = $id;
