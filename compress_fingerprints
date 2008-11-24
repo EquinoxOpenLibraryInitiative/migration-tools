@@ -1,0 +1,109 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use open ':utf8';
+
+use Digest::SHA1 qw(sha1_base64);
+use Getopt::Long;
+
+my $conf  = {}; # configuration hashref
+initialize($conf);
+
+my %fps  = (); # records matching each fingerprint (and the lead)
+my %recs = (); # fingerprints belonging to each record
+
+open FP, '<', $ARGV[0];
+while (<FP>) {
+    my @fields = split "\t", $_;
+    my $fp = populate_fingerprint(@fields);
+    rank_fingerprint($fp);
+}
+dump_records();
+
+
+
+sub populate_fingerprint {
+    my @fields = @_;
+    my %fp = ();
+
+    # populate fp hash
+    $fp{compact} = shift @fields;
+    $fp{json}    = shift @fields;
+    $fp{id}      = shift @fields;
+    $fp{sha1}    = sha1_base64( join('', @fields) );
+
+    # populate records hash
+    $recs{ $fp{id} }{ $fp{sha1} } = { exist => 1 };
+
+    return \%fp;
+}
+
+
+sub rank_fingerprint {
+    my ($fp) = @_;
+
+    my $sha1 = $fp->{sha1};
+    my $id   = $fp->{id};
+    unless ($fps{$sha1}) {
+        # haven't seen this fp before. create a new hashref with the current
+        # record as lead
+        $fps{$sha1} = { lead => { id    => $id,
+                                  score => $fp->{compact} },
+                        recs => [ $id ] };
+        $recs{$id}{$sha1}{lead} = 1;
+    } else {
+        # have seen this fp. push record id onto matchlist
+        push @{ $fps{$sha1}{recs} }, $id;
+        # and set this record as lead if it scores higher than current lead
+        if ($fp->{compact} > $fps{$sha1}{lead}{score}) {
+            $recs{ $fps{$sha1}{lead}{id} }{$sha1}{lead} = 0;
+            $recs{ $id }{$sha1}{lead} = 1;
+            $fps{$sha1}{lead}{id}    = $id;
+            $fps{$sha1}{lead}{score} = $fp->{compact};
+        }
+    }
+}
+
+
+sub dump_fingerprints {
+    open OUT, '>', $conf->{output}
+      or die "Can't open ", $conf->{output}, "$!\n";
+    for my $id (keys %recs) {
+        for my $sha1 ( keys %{$recs{$id}} ) {
+            next unless $recs{$id}{$sha1}{lead};
+            for my $subid ( @{$fps{$sha1}{recs}} )
+              { print OUT "$id\t$subid\n" }
+        }
+    }
+}
+
+sub initialize {
+    my ($c) = @_;
+    my @missing = ();
+
+    # set mode on existing filehandles
+    binmode(STDIN, ':utf8');
+
+    my $rc = GetOptions( $c,
+                         'output|o=s',
+                         'help|h',
+                       );
+    show_help() unless $rc;
+    show_help() if ($c->{help});
+
+    my @keys = keys %{$c};
+    show_help() unless (@ARGV and @keys);
+    for my $key ('output')
+      { push @missing, $key unless $c->{$key} }
+    if (@missing) {
+        print "Required option: ", join(', ', @missing), " missing!\n";
+        show_help();
+    }
+}
+
+sub show_help {
+    print <<HELP;
+Usage is: compress_fingerprints -o OUTPUTFILE INPUTFILE
+HELP
+exit;
+}
