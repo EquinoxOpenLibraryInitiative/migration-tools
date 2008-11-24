@@ -208,8 +208,9 @@ sub marc_isvalid {
 
 Assign a score to the record based on various criteria.
 
-Score is constructed by pushing elements onto a list. At the end of
-the routine, the list is flattened into a string via join();
+Score is constructed by pushing elements onto a list, via a dispatch
+table.  This allows order of fingerprints in the output file to be
+varied.
 
 =cut
 
