@@ -216,90 +216,34 @@ the routine, the list is flattened into a string via join();
 sub score_marc {
     my ($marc, $record) = @_;
     my @score = ();
-    my $chunk;
+    my $json = '{';
 
-    # Is this an OCLC record?
-    if ($conf->{scores}{oclc})
-      { push @score, ( defined $marc->{oclc}[0] ? 1 : 0 ) }
-
-    # does 040a contain "dlc"?
-    if ($conf->{scores}{dlc}) {
-        if ($record->field('040') and $record->field('040')->subfield('a')) {
-            $chunk = $record->field('040')->subfield('a');
-            push @score, ( $chunk =~ /dlc/i ? 1 : 0 );
-        } else {
-            push @score, 0;
-        }
-    }
-
-    # number of 650 datafields
-    # zero-padded to 4 digits with printf
-    if ($conf->{scores}{num_650}) {
-        if ($record->field('650')) {
-            my @tags = $record->field('650');
-            push @score, ( sprintf("%04d", scalar @tags) );
-        } else {
-            push @score, '0000';
-        }
-    }
-
-    # number of tags in total
-    # zero-padded to 4 digits with printf
-    if ($conf->{scores}{num_tags}) {
-        my @tags = $record->fields;
-        push @score, ( sprintf("%04d", scalar @tags) );
-    }
-
-    # encoding level
-    if ($conf->{scores}{enc_lvl}) {
-        my $enc = substr($record->leader, 17, 1);
-        my %levels = ( ' ' => 9, 1 => 8, 2 => 7,  3  => 6,  4  => 5, 5 => 4,
-                       6   => 3, 7 => 2, 8 => 1, 'u' => 0, 'z' => 0 );
-        if (defined $enc and $levels{$enc})
-          { push @score, $levels{$enc} }
-        else
-          { push @score, 0 }
-    }
-
-    # put score in marc hash
-    my $json = join('', '{oclc:', $score[0], ',dlc:', $score[1],
-                    ',num_650:', $score[2], ',num_tags:', $score[3],
-                    ',enc_lvl:', $score[4], '}');
-    my $compact = join('', @score);
-    $marc->{score} = "$compact\t$json";
-}
-
-
-=head2 dyn_score_marc
-
-Assign a score to the record based on various criteria.
-
-Score is constructed by pushing elements onto a list. At the end of
-the routine, the list is flattened into a string via join();
-
-=cut
-
-my %dyn_scores_code = (
-    oclc    => sub { return $_[0]->{oclc}[0] ? 1 : 0 },
-    dlc     => sub { return scalar($_[1]->subfield( '040', 'a')) =~ /dlc/io ? 1 : 0 },
-    num_650 => sub { return sprintf( '%04d', scalar( $_[1]->field('650') ) ) },
-    num_tags=> sub { return sprintf( '%04d', scalar( $_[1]->fields ) ) },
-    enc_lvl => sub {
-        my $enc = substr($_[1]->leader, 17, 1) || 'u';
+    my %scores_code = (
+      oclc    => sub { return $marc->{oclc}[0] ? 1 : 0 },
+      dlc     => sub {
+          if ($record->field('040') and $record->field('040')->subfield('a'))
+            { return scalar($record->subfield( '040', 'a')) =~ /dlc/io ? 1 : 0 }
+          else { return 0 }
+      },
+      num_650 => sub {
+          if ($record->field('650')) {
+              # can't say "scalar $record->field('650')"; MARC::Record
+              # behaves differently in list/scalar contexts
+              my @tags = $record->field('650');
+              return sprintf("%04d", scalar @tags)
+          } else { return '0000' }
+      },
+      num_tags=> sub { return sprintf( '%04d', scalar( $record->fields ) ) },
+      enc_lvl => sub {
+        my $enc = substr($record->leader, 17, 1) || 'u';
         my %levels = ( ' ' => 9, 1 => 8, 2 => 7,  3  => 6,  4  => 5, 5 => 4,
                        6   => 3, 7 => 2, 8 => 1, 'u' => 0, 'z' => 0 );
         return $levels{$enc} || 0;
-    }
-);
- 
-
-sub dyn_score_marc {
-    my ($marc, $record) = @_;
-    my @score = ();
-    my $json = '{';
+      }
+      );
 
     for ( @{ $conf->{dyn_scores} } ) {
-        push @score, $dyn_scores_code{$_}->($marc, $record);
+        push @score, $scores_code{$_}->($marc, $record);
         $json .= $_ . ':' . $score[-1] . ',';
     }
     chop($json); # get rid of the trailing comma
@@ -458,6 +402,7 @@ sub initialize {
         $c->{fingerprints} = {oclc => 1, isbn => 1, edition => 1, issn => 1,
                               lccn => 1, accomp => 1, authpub => 1};
     }
+
     # check scores list for validity
     if ($c->{scores}) {
         my %scores = ();
