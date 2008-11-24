@@ -30,10 +30,13 @@ sub populate_fingerprint {
     $fp{compact} = shift @fields;
     $fp{json}    = shift @fields;
     $fp{id}      = shift @fields;
-    $fp{sha1}    = sha1_base64( join('', @fields) );
+
+    my $stripped = join('', @fields);
+    $stripped   =~ s/[^A-Za-z0-9]//g;
+    $fp{sha1}    = sha1_base64($stripped);
 
     # populate records hash
-    $recs{ $fp{id} }{ $fp{sha1} } = { exist => 1 };
+    $recs{ $fp{id} }{ $fp{sha1} } = {};
 
     return \%fp;
 }
@@ -44,35 +47,46 @@ sub rank_fingerprint {
 
     my $sha1 = $fp->{sha1};
     my $id   = $fp->{id};
-    unless ($fps{$sha1}) {
-        # haven't seen this fp before. create a new hashref with the current
-        # record as lead
-        $fps{$sha1} = { lead => { id    => $id,
-                                  score => $fp->{compact} },
-                        recs => [ $id ] };
-        $recs{$id}{$sha1}{lead} = 1;
-    } else {
-        # have seen this fp. push record id onto matchlist
-        push @{ $fps{$sha1}{recs} }, $id;
-        # and set this record as lead if it scores higher than current lead
-        if ($fp->{compact} > $fps{$sha1}{lead}{score}) {
-            $recs{ $fps{$sha1}{lead}{id} }{$sha1}{lead} = 0;
-            $recs{ $id }{$sha1}{lead} = 1;
-            $fps{$sha1}{lead}{id}    = $id;
-            $fps{$sha1}{lead}{score} = $fp->{compact};
+    my $islead = $recs{$id}{lead};
+    unless (defined $islead and $islead != 0) {
+        # only process records which haven't already been set as a sub
+        unless ($fps{$sha1}) {
+            # haven't seen this fp before. create a new hashref with the current
+            # record as lead
+            $fps{$sha1} = { lead => { id    => $id,
+                                      score => $fp->{compact} },
+                            recs => [ $id ] };
+            $recs{$id}{$sha1}{lead} = 1;
+        } else {
+            # have seen this fp. push record id onto matchlist
+            push @{ $fps{$sha1}{recs} }, $id;
+            # and set this record as lead if it scores higher than current lead
+            if ($fp->{compact} > $fps{$sha1}{lead}{score}) {
+                # $recs{ $fps{$sha1}{lead}{id} }{$sha1}{lead} = 0;
+                # $recs{ $id }{$sha1}{lead} = 1;
+                $recs{ $fps{$sha1}{lead}{id} }{lead} = 0;
+                $recs{ $id }{lead} = 1;
+                $fps{$sha1}{lead}{id}    = $id;
+                $fps{$sha1}{lead}{score} = $fp->{compact};
+            }
         }
     }
 }
 
 
-sub dump_fingerprints {
+sub dump_records {
+    my %used = ();
     open OUT, '>', $conf->{output}
       or die "Can't open ", $conf->{output}, "$!\n";
     for my $id (keys %recs) {
+        next unless $recs{$id}{lead};
         for my $sha1 ( keys %{$recs{$id}} ) {
-            next unless $recs{$id}{$sha1}{lead};
-            for my $subid ( @{$fps{$sha1}{recs}} )
-              { print OUT "$id\t$subid\n" }
+            for my $subid ( @{$fps{$sha1}{recs}} ) {
+                next if ($id == $subid);
+                next if defined $used{$subid};
+                $used{$subid} = 1;
+                print OUT "$id\t$subid\n";
+            }
         }
     }
 }
