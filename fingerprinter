@@ -269,6 +269,47 @@ sub score_marc {
     $marc->{score} = "$compact\t$json";
 }
 
+
+=head2 dyn_score_marc
+
+Assign a score to the record based on various criteria.
+
+Score is constructed by pushing elements onto a list. At the end of
+the routine, the list is flattened into a string via join();
+
+=cut
+
+my %dyn_scores_code = (
+    oclc    => sub { return $_[0]->{oclc}[0] ? 1 : 0 },
+    dlc     => sub { return scalar($_[1]->subfield( '040', 'a')) =~ /dlc/io ? 1 : 0 },
+    num_650 => sub { return sprintf( '%04d', scalar( $_[1]->field('650') ) ) },
+    num_tags=> sub { return sprintf( '%04d', scalar( $_[1]->fields ) ) },
+    enc_lvl => sub {
+        my $enc = substr($_[1]->leader, 17, 1) || 'u';
+        my %levels = ( ' ' => 9, 1 => 8, 2 => 7,  3  => 6,  4  => 5, 5 => 4,
+                       6   => 3, 7 => 2, 8 => 1, 'u' => 0, 'z' => 0 );
+        return $levels{$enc} || 0;
+    }
+);
+ 
+
+sub dyn_score_marc {
+    my ($marc, $record) = @_;
+    my @score = ();
+    my $json = '{';
+
+    for ( @{ $conf->{dyn_scores} } ) {
+        push @score, $dyn_scores_code{$_}->($marc, $record);
+        $json .= $_ . ':' . $score[-1] . ',';
+    }
+    chop($json); # get rid of the trailing comma
+
+    $json .= '}';
+
+    my $compact = join('', @score);
+    $marc->{score} = "$compact\t$json";
+}
+
 =head2 dump_fingerprints
 
 =cut
@@ -427,10 +468,12 @@ sub initialize {
             die "Invalid score mode '$_'\n" unless $valid_scores{$_};
             $scores{$_} = 1;
         }
+        $c->{dyn_scores} = [split /,/, $c->{scores}];
         $c->{scores} = \%scores;
     } else {
         $c->{scores} = {oclc => 1, dlc => 1, num_650 => 1,
                         num_tags => 1, enc_lvl => 1};
+        $c->{dyn_scores} = [ qw/oclc dlc num_650 num_tags enc_lvl/ ];
     }
 
     # set defaults if told to do so
