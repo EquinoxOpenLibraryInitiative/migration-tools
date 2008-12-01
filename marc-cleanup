@@ -61,7 +61,6 @@ while ( buildrecord() ) {
     }
 
     do_automated_cleanups();
-    stow_record_data();
 
     $ptr = 0;
     until ($ptr == $#record) {
@@ -109,6 +108,9 @@ print $OUT "\nDone.               \n";
 sub do_automated_cleanups {
     $ptr = 0;
     until ($ptr == $#record) {
+        # get datafield/tag data if we have it
+        stow_record_data();
+
         # catch empty datafield elements
         if ($record[$ptr] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
             if ($record[$ptr + 1] =~ m|</datafield>|) {
