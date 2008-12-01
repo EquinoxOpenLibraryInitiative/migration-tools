@@ -354,11 +354,11 @@ sub message {
 #-----------------------------------------------------------------------------------
 
 sub substitute {
-    my ($line_in, @chunks) = @_;
+    my (@chunks) = @_;
 
     my $ofrom = shift @chunks;
-    if ($ofrom =~ /^'/ or !@chunks) {
-        until ($ofrom =~ /'$/)
+    if ($ofrom =~ /^'/) {
+        until ($ofrom =~ /'$/ or !@chunks)
           { $ofrom .= join(' ','',shift @chunks) }
         $ofrom =~ s/^'//; $ofrom =~ s/'$//;
     }
@@ -439,7 +439,7 @@ sub display_lines {
 }
 
 sub dump_record {
-    my ($line_in, @explanation) = @_;
+    my (@explanation) = @_;
     $recmeta{explanation} = join(' ', 'Tag', $recmeta{tag}, @explanation);
     write_record($EXMARC);
     return 1;
