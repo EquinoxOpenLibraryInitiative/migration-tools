@@ -9,10 +9,12 @@ use Term::ReadLine;
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
 
+$| = 1;
+
 # initialization and setup
 my $conf = {};
 initialize($conf);
-populate_trash() if ($conf->{trash});
+populate_trash() if ($conf->{trashfile});
 
 # set up files, since everything appears to be in order
 open MARC, '<:utf8', (shift || 'incoming.marc.xml');
@@ -295,7 +297,7 @@ sub write_record {
     # add 903(?) with new record id
     my $renumber = '';
     if ($conf->{'renumber-from'}) {
-        $recmeta{nid} = $conf->{'renumber=from'};
+        $recmeta{nid} = $conf->{'renumber-from'};
         $renumber = join('', ' <datafield tag="', $conf->{'renumber-tag'},
                          '" ind1=" " ind2=" "> <subfield code="',
                          $conf->{'renumber-subfield'},
@@ -315,7 +317,7 @@ sub write_record {
       if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
 
     # and finally, actually write the record
-    print $FH @record;
+    print $FH @record,"\n";
 }
 
 sub print_fullcontext {
@@ -515,7 +517,7 @@ sub quit { exit }
 
 sub populate_trash {
     print $OUT ">>> TRASHTAGS FILE FOUND. LOADING TAGS TO BE STRIPPED FROM OUTPUT\n";
-    open TRASH, '<', $conf->{trash}
+    open TRASH, '<', $conf->{trashfile}
       or die "Can't open trash tags file!\n";
     while (<TRASH>) {
         my $lastwasrange = 0;
@@ -619,7 +621,7 @@ sub initialize {
                          'original-subfield|os=i',
                          'script',
                          'strip-nines',
-                         'trash|t=s',
+                         'trashfile|t=s',
                          'trashhelp',
                          'help|h',
                        );
@@ -628,8 +630,8 @@ sub initialize {
     show_trashhelp() if ($c->{trashhelp});
 
     # defaults
-    $c->{output} = 'cleaned.incoming.marc.xml' unless defined $c->{output};
-    $c->{exception} = 'cleaned.exceptions.marc.xml' unless defined $c->{exception};
+    $c->{output} = 'cleaned.marc.xml' unless defined $c->{output};
+    $c->{exception} = 'exceptions.marc.xml' unless defined $c->{exception};
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
     $c->{window} = 5;
@@ -649,12 +651,12 @@ sub show_help {
 Usage is: marc-cleanup [OPTIONS] <filelist>
 Options
   --output     -o  Cleaned MARCXML output filename
-                   (default: cleaned.incoming.marc.xml)
+                   (default: cleaned.marc.xml)
   --exception  -x  Exception (dumped records) MARCXML filename
-                   (cleaned.exceptions.marc.xml)
-  --trash          File containing trash tag data (see --trashhelp)
+                   (exceptions.marc.xml)
+  --trashfile  -t  File containing trash tag data (see --trashhelp)
 
-  --renumber-from=NUM -rf  Begin renumbering id sequence with this number
+  --renumber-from     -rf  Begin renumbering id sequence with this number
   --renumber-tag      -rt  Tag to use in renumbering (default: 903)
   --renumber-subfield -rs  Subfield code to use in renumbering (default: a)
   --original-tag      -ot  Original id tag; will be kept in output even if
