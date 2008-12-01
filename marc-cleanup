@@ -17,9 +17,9 @@ initialize($conf);
 populate_trash() if ($conf->{trashfile});
 
 # set up files, since everything appears to be in order
+my $EXMARC = '';
 open MARC, '<:utf8', (shift || 'incoming.marc.xml');
 open my $NUMARC, '>:utf8', $conf->{output};
-open my $EXMARC, '>:utf8', $conf->{exception};
 open my $OLD2NEW, '>', 'old2new.incoming.map'
   if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
 print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
@@ -270,6 +270,12 @@ sub buildrecord {
 sub write_record {
     my ($FH) = @_;
     my $trash = $conf->{trash};
+
+    # uninitialized $EXMARC
+    if ($FH eq '') {
+        open $EXMARC, '>:utf8', $conf->{exception};
+        $FH = $EXMARC;
+    }
 
     $conf->{rocount}++ if ($FH eq $NUMARC);
     print $FH '<!-- ', $recmeta{explanation}, " -->\n"
