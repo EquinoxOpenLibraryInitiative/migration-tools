@@ -15,6 +15,8 @@ my %match;
 my %candidate_match;
 my %score;
 
+
+# create HOL of incumbent{fingerprint}[ids]
 open FILE, $match_to;
 while (my $line = <FILE>) {
     chomp $line;
@@ -26,6 +28,7 @@ while (my $line = <FILE>) {
 }
 close FILE;
 
+# do the same for incoming
 open FILE, $match_these;
 while (my $line = <FILE>) {
     chomp $line;
@@ -37,6 +40,7 @@ while (my $line = <FILE>) {
 }
 close FILE;
 
+# scoring file stuffs, which i have never used
 foreach my $file ( $match_to_score, $match_from_score ) {
     open FILE, $file;
     while (my $line = <FILE>) {
@@ -50,13 +54,18 @@ foreach my $file ( $match_to_score, $match_from_score ) {
     close FILE;
 }
 
+
 open RECORD_IDS, ">match.record_ids";
 foreach my $fp ( keys %incoming ) {
-
-    if (defined $pines{ $fp }) { # match!
+    # for each incoming fingerprint,
+    if (defined $pines{ $fp }) {
+        # if there is a matching incumbent fingerprint
         foreach my $id ( @{ $incoming{ $fp } } ) {
+            # print all incoming record ids
             print RECORD_IDS "$id\n";
             if ( ! defined $candidate_match{ $id } )
+              # and create a mapping of incoming ids to fingerprints
+              # (used for scoring)
               { $candidate_match{ $id } = []; }
             push @{ $candidate_match{ $id } }, $fp;
         }
@@ -64,8 +73,11 @@ foreach my $fp ( keys %incoming ) {
 }
 close RECORD_IDS;
 
+
+# scoring section, which i have never used
 foreach my $id ( keys %candidate_match ) {
     my $subtitle;
+    # if score{id} exists set subtitle to the sc
     if (defined $score{ $id })
       { $subtitle = $score{ $id }[1]; }
 
@@ -99,7 +111,11 @@ foreach my $id ( keys %candidate_match ) {
             }
         }
     }
+
+    # this will silently fail, as the filehandle has been closed, but strict
+    # is not enabled
     print RECORD_IDS "$best_pines_id\n";
+
     if (! defined $match{ $best_pines_id } )
       { $match{ $best_pines_id } = [ $best_pines_id ]; }
     push @{ $match{ $best_pines_id } }, $id;
