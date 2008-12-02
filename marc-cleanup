@@ -20,7 +20,7 @@ populate_trash() if ($conf->{trashfile});
 my $EXMARC = '';
 open MARC, '<:utf8', (shift || 'incoming.marc.xml');
 open my $NUMARC, '>:utf8', $conf->{output};
-open my $OLD2NEW, '>', 'old2new.incoming.map'
+open my $OLD2NEW, '>', 'old2new.map'
   if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
 print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
 print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
@@ -671,7 +671,7 @@ Options
                            it appears in the trash file
   --original-subfield -os  Original id subfield code. If this is specified
                            and renumbering is in effect, an old-to-new mapping
-                           file (old2new.incoming.map) will be generated.
+                           file (old2new.map) will be generated.
 
   --nocollapse -n  Don't compress records to one line on output
   --autoscrub  -a  Automatically remove non-numeric tags in data
