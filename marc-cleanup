@@ -321,8 +321,14 @@ sub write_record {
       { s/\n// for (@record) }
 
     # write to old->new map file if needed
-    print $OLD2NEW $recmeta{oid}, "\t", $recmeta{nid}, "\n"
-      if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
+    if ($conf->{'renumber-from'} and $conf->{'original-subfield'}) {
+        unless (defined $recmeta{oid}) {
+            my $msg = join(' ', "No old id num found");
+            dump_record($msg);
+        } else {
+            print $OLD2NEW $recmeta{oid}, "\t", $recmeta{nid}, "\n"
+        }
+    }
 
     # and finally, actually write the record
     print $FH @record,"\n";
@@ -333,6 +339,7 @@ sub print_fullcontext {
     print $OUT $conf->{editmsg},"\n";
     print $OUT "\r    Tag:",$recmeta{tag}, " Ind1:'",
       $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'";
+    print $OUT " @ ", $conf->{ricount}, "/", $conf->{rocount} + 1,"\n";
     print_context();
     return 0;
 }
