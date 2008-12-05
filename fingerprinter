@@ -371,12 +371,10 @@ sub initialize {
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
-                         'incoming',
-                         'incumbent',
                          'exception|x=s',
-                         'marctype|m=s',
                          'output|o=s',
-                         'runtype|r=s',
+                         'prefix|p=s',
+                         'marctype|m=s',
                          'subfield|s=s',
                          'tag|t=s',
                          'fingerprints=s',
@@ -422,19 +420,13 @@ sub initialize {
         $c->{dyn_scores} = [ qw/oclc dlc num_650 num_tags enc_lvl/ ];
     }
 
-    # set defaults if told to do so
-    if ($c->{incoming}) {
-        $c->{tag} = 903 unless defined $c->{tag};
-        $c->{subfield} = 'a' unless defined $c->{subfield};
-        $c->{marctype} = 'XML' unless defined $c->{marctype};
-        $c->{output} = 'incoming.fp' unless defined $c->{output};
-        $c->{exception} = 'incoming.ex' unless defined $c->{exception};
-    } elsif ($c->{incumbent}) {
-        $c->{tag} = 901 unless defined $c->{tag};
-        $c->{subfield} = 'c' unless defined $c->{subfield};
-        $c->{marctype} = 'XML' unless defined $c->{marctype};
-        $c->{output} = 'incumbent.fp' unless defined $c->{output};
-        $c->{exception} = 'incumbent.ex' unless defined $c->{exception};
+    # set defaults
+    $c->{tag} = 903 unless defined $c->{tag};
+    $c->{subfield} = 'a' unless defined $c->{subfield};
+    $c->{marctype} = 'XML' unless defined $c->{marctype};
+    if ($c->{prefix}) {
+        $c->{output} = join('.',$c->{prefix},'fp');
+        $c->{exception} = join('.',$c->{prefix},'fp','ex');
     }
 
     my @keys = keys %{$c};
@@ -469,20 +461,24 @@ sub show_help {
 print <<HELP;
 Usage is: $0 [REQUIRED ARGS] [OPTIONS] <filelist>
 Req'd Arguments
-  --tag=N                  -t  Which tag to use
-  --subfield=X             -s  Which subfield to use
-  --output=<file>          -o  Output filename
-  --exceptions=<file>      -x  Exception report filename
+  --output=<FILE>      -o  Output filename
+  --exceptions=<FILE>  -x  Exception report filename
+       or
+  --prefix=<PREFIX>>   -p  Shared prefix for output/exception files. Will
+                           produce PREFIX.fp and PREFIX.fp.ex
 Options
-  --incoming   '-t 903 -s a -o incoming.fp -x incoming.ex'
-  --incumbent  '-t 901 -s c -o incumbent.fp -x incumbent.ex'
+  --tag=N       -t  Which tag to use (default 903)
+  --subfield=X  -s  Which subfield to use (default 'a')
+  --quiet       -q  Don't write status messages to STDOUT
 
   --fingerprints=LIST  Fingerprints to generate, comma separated
                        Default: oclc,isbn,edition,issn,lccn,accomp,authpub
                        Others:  baseline
+
   --scores=LIST  Scores to calculate, comma separated
                  Default: oclc,dlc,num_650,num_tags,enc_level
-  --quiet    -q  Don't write status messages to STDOUT
+
+  --marctype=TYPE Defaults to 'XML'
 HELP
 exit 1;
 }
