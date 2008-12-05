@@ -273,6 +273,7 @@ sub write_record {
 
     # uninitialized $EXMARC
     if ($FH eq '') {
+        $EXMARC = undef;
         open $EXMARC, '>:utf8', $conf->{exception};
         $FH = $EXMARC;
     }
@@ -439,6 +440,12 @@ sub yank_line {
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr .. $#record];
     @record = (@a, $conf->{killline}, @b);
+    print_context();
+    return 0;
+}
+
+sub insert_original {
+    $record[$ptr] = $recmeta{origline};
     print_context();
     return 0;
 }
