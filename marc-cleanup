@@ -22,8 +22,8 @@ open MARC, '<:utf8', (shift || 'incoming.marc.xml');
 open my $NUMARC, '>:utf8', $conf->{output};
 open my $OLD2NEW, '>', 'old2new.map'
   if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
-print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
-print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
+#print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
+#print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
 
 my @record  = (); # current record storage
 my %recmeta = (); # metadata about current record
@@ -97,7 +97,7 @@ while ( buildrecord() ) {
     }
     write_record($NUMARC);
 }
-print $NUMARC "</collection>\n";
+#print $NUMARC "</collection>\n";
 print $OUT "\nDone.               \n";
 
 
