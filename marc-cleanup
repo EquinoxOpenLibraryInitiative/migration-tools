@@ -635,6 +635,7 @@ sub initialize {
                          'autoscrub|a',
                          'exception|x=s',
                          'output|o=s',
+                         'prefix|p=s',
                          'nocollapse|n',
                          'renumber-from|rf=i',
                          'renumber-tag|rt=i',
@@ -652,8 +653,10 @@ sub initialize {
     show_trashhelp() if ($c->{trashhelp});
 
     # defaults
-    $c->{output} = 'cleaned.marc.xml' unless defined $c->{output};
-    $c->{exception} = 'exceptions.marc.xml' unless defined $c->{exception};
+    if ($c->{prefix}) {
+        $c->{output} = join('.',$c->{prefix},'marc','xml');
+        $c->{exception} = join('.',$c->{prefix},'ex','xml');
+    }
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
     $c->{window} = 5;
@@ -673,9 +676,11 @@ sub show_help {
 Usage is: marc-cleanup [OPTIONS] <filelist>
 Options
   --output     -o  Cleaned MARCXML output filename
-                   (default: cleaned.marc.xml)
   --exception  -x  Exception (dumped records) MARCXML filename
-                   (exceptions.marc.xml)
+       or
+  --prefix=<PREFIX>>   -p  Shared prefix for output/exception files. Will
+                           produce PREFIX.marc.xml and PREFIX.ex.xml
+
   --trashfile  -t  File containing trash tag data (see --trashhelp)
 
   --renumber-from     -rf  Begin renumbering id sequence with this number
