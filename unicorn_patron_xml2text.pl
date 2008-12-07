@@ -29,6 +29,7 @@ my @base_elements = (
     "middle_name",
     "suffix_name",
     "note",
+    "note1",
     "comment",
     "staff",
     "webcatpref",
@@ -44,7 +45,8 @@ my @base_elements = (
     "notify_via",
     "user_claims_ret",
     "user_environment",
-    "user_department"
+    "user_department",
+    "ums_id"
 );
 
 my @addr_elements = (
