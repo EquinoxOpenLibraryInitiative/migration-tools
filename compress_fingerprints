@@ -11,6 +11,7 @@ initialize($conf);
 
 my %fps  = (); # records matching each fingerprint (and the lead)
 my %recs = (); # fingerprints belonging to each record
+my $lastscore = 0; # previous fingerprint's score
 
 open FP, '<', $ARGV[0] or die "Can't open input file: $!\n";
 
@@ -39,6 +40,13 @@ sub populate_fingerprint {
     my $stripped = join('', @fields);
     $stripped   =~ s/[^A-Za-z0-9]//g;
     $fp{sha1}    = sha1_base64($stripped);
+
+    # make sure file is sorted properly
+    if ($lastscore and $fp{compact} > $lastscore) {
+        print "Input file is sorted improperly or unsorted.\n";
+        die "Sort descending (sort -ru) and rerun this script.\n";
+    }
+    $lastscore = $fp{compact};
 
     # populate records hash
     $recs{ $fp{id} }{ $fp{sha1} } = {};
@@ -80,7 +88,9 @@ sub rank_fingerprint {
 
 =head2 dump_records
 
-Writes out a 2-column file of lead and subordinate records.
+Writes out a 2-column file of lead and subordinate records. If
+posttest is enabled, a scan is also done to ensure that no recordid
+appears as both a subordinate and lead.
 
 =cut
 
