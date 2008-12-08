@@ -15,7 +15,7 @@ my %recs = (); # fingerprints belonging to each record
 open FP, '<', $ARGV[0] or die "Can't open input file: $!\n";
 
 my $count = 0;
-my $total = `wc -l $ARGV[0]'`;
+my $total = `wc -l $ARGV[0]`;
 
 print "Loading and ranking fingerprints\n";
 while (<FP>) {
