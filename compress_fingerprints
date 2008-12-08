@@ -16,7 +16,7 @@ open FP, '<', $ARGV[0] or die "Can't open input file: $!\n";
 
 my $count = 0;
 my $i = 0;
-my $total = `wc -l $ARGV[0]`;
+my ($total) = split /s+/, `wc -l $ARGV[0]`;
 $| = 1;
 
 print "Loading and ranking fingerprints\n";
