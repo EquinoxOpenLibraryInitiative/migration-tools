@@ -24,7 +24,7 @@ while (<FP>) {
     rank_fingerprint($fp);
 }
 print "$total fingerprints processed\n";
-print "$count records set as leads\n"'
+print "$count records set as leads\n";
 print "Writing matchset to disk\n";
 dump_records();
 
