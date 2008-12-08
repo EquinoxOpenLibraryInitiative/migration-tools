@@ -23,7 +23,9 @@ while (<FP>) {
     my $fp = populate_fingerprint(@fields);
     rank_fingerprint($fp);
 }
-print "Writing results ($count lead records) to disk\n";
+print "$total fingerprints processed\n";
+print "$count records set as leads\n"'
+print "Writing matchset to disk\n";
 dump_records();
 
 
@@ -64,7 +66,7 @@ sub rank_fingerprint {
             $fps{$sha1} = { lead => { id    => $id,
                                       score => $fp->{compact} },
                             recs => [ $id ] };
-            $recs{$id}{$sha1}{lead} = 1;
+            $recs{$id}{lead} = 1;
             $count++;
         } else {
             # have seen this fp. push record id onto matchlist
