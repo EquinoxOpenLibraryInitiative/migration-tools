@@ -12,25 +12,32 @@ initialize($conf);
 my %fps  = (); # records matching each fingerprint (and the lead)
 my %recs = (); # fingerprints belonging to each record
 
-open FP, '<', $ARGV[0];
+open FP, '<', $ARGV[0] or die "Can't open input file: $!\n";
+
+my $count = 0;
+my $total = `wc -l $ARGV[0]'`;
+
+print "Loading and ranking fingerprints\n";
 while (<FP>) {
     my @fields = split "\t", $_;
     my $fp = populate_fingerprint(@fields);
     rank_fingerprint($fp);
 }
+print "Writing results ($count lead records) to disk\n";
 dump_records();
 
 
 
 sub populate_fingerprint {
     my @fields = @_;
-    my %fp = ();
+    my %fp = (); # zero fingerprint hash each time thru
 
-    # populate fp hash
+    # populate fp hash -- first the simple data
     $fp{compact} = shift @fields;
     $fp{json}    = shift @fields;
     $fp{id}      = shift @fields;
-
+    # then smash everything else together, remove non-Roman characters, and
+    # generate a SHA1 hash to represent it
     my $stripped = join('', @fields);
     $stripped   =~ s/[^A-Za-z0-9]//g;
     $fp{sha1}    = sha1_base64($stripped);
@@ -48,8 +55,9 @@ sub rank_fingerprint {
     my $sha1 = $fp->{sha1};
     my $id   = $fp->{id};
     my $islead = $recs{$id}{lead};
+
+    # only process records which haven't already been set as a sub
     unless (defined $islead and $islead) {
-        # only process records which haven't already been set as a sub
         unless ($fps{$sha1}) {
             # haven't seen this fp before. create a new hashref with the current
             # record as lead
@@ -57,13 +65,14 @@ sub rank_fingerprint {
                                       score => $fp->{compact} },
                             recs => [ $id ] };
             $recs{$id}{$sha1}{lead} = 1;
+            $count++;
         } else {
             # have seen this fp. push record id onto matchlist
             push @{ $fps{$sha1}{recs} }, $id;
-            # and set this record as lead if it scores higher than current lead
             if ($fp->{compact} > $fps{$sha1}{lead}{score}) {
-                $recs{ $fps{$sha1}{lead}{id} }{lead} = 0;
-                $recs{ $id }{lead} = 1;
+                # and set this record as lead if it scores higher than current lead
+                $recs{ $fps{$sha1}{lead}{id} }{lead} = 0; # unset current
+                $recs{ $id }{lead} = 1;                   # set new as lead
                 $fps{$sha1}{lead}{id}    = $id;
                 $fps{$sha1}{lead}{score} = $fp->{compact};
             }
@@ -71,6 +80,12 @@ sub rank_fingerprint {
     }
 }
 
+
+=head2 dump_records
+
+Writes out a 2-column file of lead and subordinate records.
+
+=cut
 
 sub dump_records {
     my %used = ();
