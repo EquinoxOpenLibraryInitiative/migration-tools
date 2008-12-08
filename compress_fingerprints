@@ -41,11 +41,13 @@ sub populate_fingerprint {
     $fp{sha1}    = sha1_base64($stripped);
 
     # make sure file is sorted properly
-    #if ($lastscore and $fp{compact} > $lastscore) {
-    #    print "Input file is sorted improperly or unsorted.\n";
-    #    die "Sort descending (sort -ru) and rerun this script.\n";
-    #}
-    #$lastscore = $fp{compact};
+    # actually, the input can be sorted *either* way and produce identical
+    # results, but a descending sort produces lower runtime
+    if ($lastscore and $fp{compact} > $lastscore) {
+        print "Input file is sorted improperly or unsorted.\n";
+        die "Sort descending (sort -ru) and rerun this script.\n";
+    }
+    $lastscore = $fp{compact};
 
     # populate records hash
     $recs{ $fp{id} }{ $fp{sha1} } = {};
