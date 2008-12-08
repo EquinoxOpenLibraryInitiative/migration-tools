@@ -20,7 +20,6 @@ while (<FP>) {
     my @fields = split "\t", $_;
     my $fp = populate_fingerprint(@fields);
     rank_fingerprint($fp);
-    print "\r", ( int($i / $total) ), "% complete" unless ($i % 1000);
 }
 print "Writing matchset to disk\n";
 dump_records();
