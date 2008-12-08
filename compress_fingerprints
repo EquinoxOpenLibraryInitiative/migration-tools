@@ -15,13 +15,17 @@ my %recs = (); # fingerprints belonging to each record
 open FP, '<', $ARGV[0] or die "Can't open input file: $!\n";
 
 my $count = 0;
+my $i = 0;
 my $total = `wc -l $ARGV[0]`;
+$| = 1;
 
 print "Loading and ranking fingerprints\n";
 while (<FP>) {
     my @fields = split "\t", $_;
     my $fp = populate_fingerprint(@fields);
     rank_fingerprint($fp);
+    $i++;
+    print "\r", ( int($i / $total) ), "% complete" unless ($i % 1000);
 }
 print "$total fingerprints processed\n";
 print "$count records set as leads\n";
