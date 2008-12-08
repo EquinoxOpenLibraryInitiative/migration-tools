@@ -87,9 +87,7 @@ sub rank_fingerprint {
 
 =head2 dump_records
 
-Writes out a 2-column file of lead and subordinate records. If
-posttest is enabled, a scan is also done to ensure that no recordid
-appears as both a subordinate and lead.
+Writes out a 2-column file of lead and subordinate records.
 
 =cut
 
@@ -98,6 +96,8 @@ sub dump_records {
     open OUT, '>', $conf->{output}
       or die "Can't open ", $conf->{output}, "$!\n";
     for my $id (keys %recs) {
+        next if defined $used{$id};
+        $used{$id} = 1;
         next unless $recs{$id}{lead};
         for my $sha1 ( keys %{$recs{$id}} ) {
             for my $subid ( @{$fps{$sha1}{recs}} ) {
