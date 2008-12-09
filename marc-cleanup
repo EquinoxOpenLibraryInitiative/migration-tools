@@ -17,13 +17,14 @@ initialize($conf);
 populate_trash() if ($conf->{trashfile});
 
 # set up files, since everything appears to be in order
-my $EXMARC = '';
-open MARC, '<:utf8', (shift || 'incoming.marc.xml');
-open my $NUMARC, '>:utf8', $conf->{output};
+open MARC, '<:utf8', (shift || 'incoming.marc.xml')
+  or die "Can't open input file $!\n";
+open my $NUMARC, '>:utf8', $conf->{output}
+  or die "Can't open output file $!\n";
 open my $OLD2NEW, '>', 'old2new.map'
   if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
-#print $NUMARC '<?xml version="1.0" encoding="UTF-8"?>',"\n";
-#print $NUMARC '<collection xmlns="http://www.loc.gov/MARC21/slim">',"\n";
+my $EXMARC = 'EX';
+
 
 my @record  = (); # current record storage
 my %recmeta = (); # metadata about current record
@@ -112,7 +113,7 @@ sub do_automated_cleanups {
         stow_record_data();
 
         # catch empty datafield elements
-        if ($record[$ptr] =~ m/<datafield tag="..." ind1="." ind2=".">/) {
+        if ($record[$ptr] =~ m/<datafield tag="..."/) {
             if ($record[$ptr + 1] =~ m|</datafield>|) {
                 my @a = @record[0 .. $ptr - 1];
                 my @b = @record[$ptr + 2 .. $#record];
@@ -179,10 +180,15 @@ sub do_automated_cleanups {
 
 sub stow_record_data {
     # get tag data if we're looking at it
-    if ($record[$ptr] =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)">/) {
+    if ($record[$ptr] =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)"/) {
         $recmeta{tag}  = $1;
-        $recmeta{ind1} = $2;
-        $recmeta{ind2} = $3;
+        $recmeta{ind1} = $2 || '';
+        $recmeta{ind2} = $3 || '';
+        
+        unless (defined $recmeta{tag}) {
+            message("Autokill record: no detectable tag");
+            dump_record("No detectable tag") ;
+        }
 
         # and since we are looking at a tag, see if it's the original id
         if ($conf->{'original-subfield'} and $1 == $conf->{'original-tag'}) {
@@ -271,10 +277,10 @@ sub write_record {
     my ($FH) = @_;
     my $trash = $conf->{trash};
 
-    # uninitialized $EXMARC
-    if ($FH eq '') {
+    if ($FH eq 'EX') {
         $EXMARC = undef;
-        open $EXMARC, '>:utf8', $conf->{exception};
+        open $EXMARC, '>:utf8', $conf->{exception}
+          or die "Can't open exception file $!\n";
         $FH = $EXMARC;
     }
 
@@ -331,8 +337,13 @@ sub write_record {
         }
     }
 
-    # and finally, actually write the record
+    # actually write the record
     print $FH @record,"\n";
+
+    # if we were dumping to exception file, nuke the record and set ptr
+    # to terminate processing loop
+    @record = ('a');
+    $ptr = 0;
 }
 
 sub print_fullcontext {
@@ -460,6 +471,7 @@ sub display_lines {
 
 sub dump_record {
     my (@explanation) = @_;
+    print $OUT @explanation;
     $recmeta{explanation} = join(' ', 'Tag', $recmeta{tag}, @explanation);
     write_record($EXMARC);
     return 1;
