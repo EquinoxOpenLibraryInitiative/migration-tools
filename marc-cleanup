@@ -263,7 +263,7 @@ sub buildrecord {
     my $l = '';
     $l = <MARC> while (defined $l and $l !~ /<record>/);
     return $l unless defined $l;
-    @record = ($l);
+    @record = ();
     %recmeta = ();
     $conf->{ricount}++;
 
@@ -323,8 +323,8 @@ sub write_record {
         $conf->{'renumber-from'}++;
     }
 
-    # scrub newlines
-    unless ($conf->{nocollapse})
+    # scrub newlines (unless told not to or writing exception record)
+    unless ($conf->{nocollapse} or $FH eq $EXMARC)
       { s/\n// for (@record) }
 
     # write to old->new map file if needed
