@@ -95,7 +95,7 @@ Writes out a 2-column file of lead and subordinate records.
 =cut
 
 sub dump_records {
-#    my %used = ();
+    my %used = ();
     open OUT, '>', $conf->{output}
       or die "Can't open ", $conf->{output}, "$!\n";
     for my $id (keys %recs) {
@@ -104,8 +104,8 @@ sub dump_records {
         for my $sha1 ( keys %{$recs{$id}} ) {
             for my $subid ( @{$fps{$sha1}{recs}} ) {
                 next if ($id == $subid);
-#                next if defined $used{$subid};
-#                $used{$subid} = 1;
+                next if defined $used{$subid};
+                $used{$subid} = 1;
                 print OUT "$id\t$subid\n";
             }
         }
