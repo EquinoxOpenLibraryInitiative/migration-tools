@@ -41,8 +41,6 @@ sub populate_fingerprint {
     $fp{sha1}    = sha1_base64($stripped);
 
     # make sure file is sorted properly
-    # actually, the input can be sorted *either* way and produce identical
-    # results, but a descending sort produces lower runtime
     if ($lastscore and $fp{compact} > $lastscore) {
         print "Input file is sorted improperly or unsorted.\n";
         die "Sort descending (sort -ru) and rerun this script.\n";
@@ -81,6 +79,9 @@ sub rank_fingerprint {
                 $recs{ $id }{lead} = 1;                   # set new as lead
                 $fps{$sha1}{lead}{id}    = $id;
                 $fps{$sha1}{lead}{score} = $fp->{compact};
+            } else {
+                # otherwise, mark it as a sub so it never gets processed again
+                $recs{$id}{lead} = 0;                
             }
         }
     }
@@ -94,18 +95,17 @@ Writes out a 2-column file of lead and subordinate records.
 =cut
 
 sub dump_records {
-    my %used = ();
+#    my %used = ();
     open OUT, '>', $conf->{output}
       or die "Can't open ", $conf->{output}, "$!\n";
     for my $id (keys %recs) {
-        #next if defined $used{$id};
-        $used{$id} = 1;
+#        $used{$id} = 1;
         next unless $recs{$id}{lead};
         for my $sha1 ( keys %{$recs{$id}} ) {
             for my $subid ( @{$fps{$sha1}{recs}} ) {
                 next if ($id == $subid);
-                next if defined $used{$subid};
-                $used{$subid} = 1;
+#                next if defined $used{$subid};
+#                $used{$subid} = 1;
                 print OUT "$id\t$subid\n";
             }
         }
