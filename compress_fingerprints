@@ -85,7 +85,6 @@ sub dump_records {
     open OUT, '>', $conf->{output}
       or die "Can't open ", $conf->{output}, "$!\n";
     for my $rec (@recs) {
-        print $rec,"\n";
         print OUT $rec->{id}, "\t$_\n"
           for ( @{ $fps{ $rec->{sha1} } } );
     }
