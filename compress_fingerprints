@@ -99,8 +99,8 @@ sub dump_records {
     open OUT, '>', $conf->{output}
       or die "Can't open ", $conf->{output}, "$!\n";
     for my $id (keys %recs) {
-#        $used{$id} = 1;
         next unless $recs{$id}{lead};
+        $used{$id} = 1;
         for my $sha1 ( keys %{$recs{$id}} ) {
             for my $subid ( @{$fps{$sha1}{recs}} ) {
                 next if ($id == $subid);
