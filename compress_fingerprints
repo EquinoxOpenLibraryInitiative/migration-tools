@@ -59,10 +59,9 @@ sub rank_fingerprint {
 
     my $sha1 = $fp->{sha1};
     my $id   = $fp->{id};
-    my $islead = $recs{$id}{lead};
 
-    # only process records which haven't already been set as a sub
-    unless (defined $islead and $islead) {
+    # only process records which haven't already been seen
+    unless (defined $recs{$id}{lead}) {
         unless ($fps{$sha1}) {
             # haven't seen this fp before. create a new hashref with the current
             # record as lead
