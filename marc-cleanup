@@ -180,10 +180,14 @@ sub do_automated_cleanups {
 
 sub stow_record_data {
     # get tag data if we're looking at it
-    if ($record[$ptr] =~ m/<datafield tag="(.{3})" ind1="(.)" ind2="(.)"/) {
-        $recmeta{tag}  = $1;
-        $recmeta{ind1} = $2 || '';
-        $recmeta{ind2} = $3 || '';
+    
+    if ($record[$ptr] =~ m/<datafield tag="(.{3})"/) {
+        $recmeta{tag} = '';
+        $recmeta{tag} = $1;
+        $record[$ptr] =~ m/ind1="(.)"/;
+        $recmeta{ind1} = $1 || '';
+        $record[$ptr] =~ m/ind2="(.)"/;
+        $recmeta{ind2} = $1 || '';
         
         unless (defined $recmeta{tag}) {
             message("Autokill record: no detectable tag");
@@ -191,7 +195,8 @@ sub stow_record_data {
         }
 
         # and since we are looking at a tag, see if it's the original id
-        if ($conf->{'original-subfield'} and $1 == $conf->{'original-tag'}) {
+        if ($conf->{'original-subfield'} and
+            $recmeta{tag} == $conf->{'original-tag'}) {
             my $line = $record[$ptr]; my $lptr = $ptr;
             my $osub = $conf->{'original-subfield'};
             $recmeta{oid} = 'NONE';
@@ -351,7 +356,7 @@ sub print_fullcontext {
     print $OUT $conf->{editmsg},"\n";
     print $OUT "\r    Tag:",$recmeta{tag}, " Ind1:'",
       $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'";
-    print $OUT " @ ", $conf->{ricount}, "/", $conf->{rocount} + 1,"\n";
+    print $OUT " @ ", $conf->{ricount}, "/", $conf->{rocount} + 1;
     print_context();
     return 0;
 }
@@ -667,7 +672,7 @@ sub initialize {
     # defaults
     if ($c->{prefix}) {
         $c->{output} = join('.',$c->{prefix},'marc','xml');
-        $c->{exception} = join('.',$c->{prefix},'ex','xml');
+        $c->{exception} = join('.',$c->{prefix},'marc','ex');
     }
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
