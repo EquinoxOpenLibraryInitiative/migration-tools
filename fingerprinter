@@ -65,9 +65,6 @@ sub populate_marc {
     my ($record, $id) = @_;
     my %marc = (); $marc{isbns} = [];
 
-    # reset misc score
-    $conf->{misc_score} = 999;
-
     # id, stringified
     $marc{id} = $id->as_string($conf->{subfield});
 
@@ -77,29 +74,30 @@ sub populate_marc {
 
     # date1, date2
     my $my_008 = $record->field('008');
-    $my_008 = $my_008->as_string() if ($my_008);
-    if (defined $my_008) {
-        unless (length $my_008 == 40) {
-            $my_008 = $my_008 . (' ' x (40 - length($my_008)));
-            print XF ">> Short 008 padded to ",length($my_008)," at rec $count\n";
+    $marc{tag008} = $my_008->as_string();# if ($my_008);
+    if (defined $marc{tag008}) {
+        unless (length $marc{tag008} == 40) {
+            $marc{tag008} = $marc{tag008} . ('|' x (40 - length($marc{tag008})));
+            print XF ">> Short 008 padded to ",length($marc{tag008})," at rec $count\n";
         }
-        $marc{date1} = substr($my_008,7,4) if ($my_008);
-        $marc{date2} = substr($my_008,11,4) if ($my_008); # UNUSED
+        $marc{date1} = substr($marc{tag008},7,4) if ($marc{tag008});
+        $marc{date2} = substr($marc{tag008},11,4) if ($marc{tag008}); # UNUSED
     }
     unless ($marc{date1} and $marc{date1} =~ /\d{4}/) {
         my $my_260 = $record->field('260');
         my $date1 = $my_260->subfield('c') if $my_260;
         if (defined $date1 and $date1 =~ /\d{4}/) {
             $marc{date1} = $date1;
+            $marc{fudgedate} = 1;
             print XF ">> using 260c as date1 at rec $count\n";
         }
     }
 
     # item_form
     if ( $marc{record_type} =~ /[gkroef]/ ) { # MAP, VIS
-        $marc{item_form} = substr($my_008,29,1) if ($my_008);
+        $marc{item_form} = substr($marc{tag008},29,1) if ($marc{tag008});
     } else {
-        $marc{item_form} = substr($my_008,23,1) if ($my_008);
+        $marc{item_form} = substr($marc{tag008},23,1) if ($marc{tag008});
     }
 
     # isbns
@@ -129,9 +127,11 @@ sub populate_marc {
           if (defined $oclc and $oclc =~ /\(OCoLC\)/ and $oclc =~/([0-9]+)/);
     }
 
-    # "Accompanying material" (300e)
-    $marc{accomp} = $record->field('300')->subfield('e')
-      if $record->field('300');
+    # "Accompanying material" and check for "copy" (300)
+    if ($record->field('300')) {
+        $marc{accomp} = $record->field('300')->subfield('e');
+        $marc{tag300a} = $record->field('300')->subfield('a');
+    }
 
     # issn, lccn, title, desc, pages, pub, pubyear, edition
     $marc{lccn} = $record->field('010')->subfield('a') if $record->field('010');
@@ -222,6 +222,24 @@ sub score_marc {
     my @score = ();
     my $json = '{';
 
+    #----------------------------------
+    # static criteria scoring
+    #----------------------------------
+    $marc->{misc_score} = 999;
+    # -1 if 008 has been padded, -2 if it doesn't exist
+    if ($marc->{tag008})
+      { $marc->{misc_score}-- if ($marc->{tag008} =~ /\|$/) }
+    else
+      { $marc->{misc_score} -= 2 }
+    # -1 if date has been pulled from 260
+    $marc->{misc_score}-- if $marc->{fudgedate};
+    # -1 if this is a copy record
+    $marc->{misc_score}--
+      if (defined $marc->{tag300a} and $marc->{tag300a} =~ /copy/i);
+
+    #----------------------------------
+    # dynamic calculated scoring
+    #----------------------------------
     my %scores_code = (
       oclc    => sub { return $marc->{oclc}[0] ? 1 : 0 },
       dlc     => sub {
@@ -243,19 +261,19 @@ sub score_marc {
         my %levels = ( ' ' => 9, 1 => 8, 2 => 7,  3  => 6,  4  => 5, 5 => 4,
                        6   => 3, 7 => 2, 8 => 1, 'u' => 0, 'z' => 0 );
         return $levels{$enc} || 0;
-      }
-      );
+    }
+                      );
 
+    #----------------------------------
+    # assemble and store scores
+    #----------------------------------
     for ( @{ $conf->{dyn_scores} } ) {
         push @score, $scores_code{$_}->($marc, $record);
         $json .= $_ . ':' . $score[-1] . ',';
     }
+    $json .= 'misc:' . $marc->{misc_score} . '}';
 
-    # add misc score
-    $json .= 'misc:' . $conf->{misc_score};
-    $json .= '}';
-
-    my $compact = join('', @score, $conf->{misc_score});
+    my $compact = join('', $marc->{misc_score}, @score);
     $marc->{score} = "$compact\t$json";
 }
 
