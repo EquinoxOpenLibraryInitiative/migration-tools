@@ -65,6 +65,9 @@ sub populate_marc {
     my ($record, $id) = @_;
     my %marc = (); $marc{isbns} = [];
 
+    # reset misc score
+    $conf->{misc_score} = 999;
+
     # id, stringified
     $marc{id} = $id->as_string($conf->{subfield});
 
@@ -247,11 +250,12 @@ sub score_marc {
         push @score, $scores_code{$_}->($marc, $record);
         $json .= $_ . ':' . $score[-1] . ',';
     }
-    chop($json); # get rid of the trailing comma
 
+    # add misc score
+    $json .= 'misc:' . $conf->{misc_score};
     $json .= '}';
 
-    my $compact = join('', @score);
+    my $compact = join('', @score, $conf->{misc_score});
     $marc->{score} = "$compact\t$json";
 }
 
