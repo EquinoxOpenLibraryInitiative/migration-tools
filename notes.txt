@@ -1,5 +1,0 @@
-# One-linerize an XML (so that it can be split with 'split -l', for example)
-perl -e 'my $line="";while(<>){chomp;$line.=$_;if($_ eq "</record>"){$line=~s/>\s+</></go;print("$line\n");$line="";}}'
-# test 234
-# Fix attribute values of \" that fall inside of \"'s.
-for i in a b c; do sed 's/"""/" "/g' < pines-marca$i > pines-marca$i.xml; done
