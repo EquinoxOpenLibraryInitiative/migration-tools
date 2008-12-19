@@ -181,13 +181,12 @@ sub do_automated_cleanups {
 sub stow_record_data {
     # get tag data if we're looking at it
     
-    if ($record[$ptr] =~ m/<datafield tag="(.{3})"/) {
-        $recmeta{tag} = '';
-        $recmeta{tag} = $1;
-        $record[$ptr] =~ m/ind1="(.)"/;
-        $recmeta{ind1} = $1 || '';
-        $record[$ptr] =~ m/ind2="(.)"/;
-        $recmeta{ind2} = $1 || '';
+    if ($record[$ptr] =~ m/<datafield tag="(?<TAG>.{3})"/) {
+        $recmeta{tag} = $+{TAG};
+        $record[$ptr] =~ m/ind1="(?<IND1>.)"/;
+        $recmeta{ind1} = $+{IND1} || '';
+        $record[$ptr] =~ m/ind2="(?<IND2>.)"/;
+        $recmeta{ind2} = $+{IND2} || '';
         
         unless (defined $recmeta{tag}) {
             message("Autokill record: no detectable tag");
@@ -204,7 +203,7 @@ sub stow_record_data {
             until ($line =~ m|</record>|) {
                 $lptr++;
                 $line = $record[$lptr];
-                $recmeta{oid} = $1
+                $recmeta{oid} = $+{TAG}
                   if ($line =~ /<subfield code="$osub">(.+?)</);
             }
         }
