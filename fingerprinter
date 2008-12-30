@@ -364,16 +364,16 @@ sub dump_exception {
         print XF "Undefined record at line $count; likely bad XML\n";
         return;
     }
-    print XF "Record ", $marc->{id}, " did not make the cut: ";
-    print XF "Missing item_form. " unless ($marc->{item_form});
+    print XF "Record ", $marc->{id}, " excluded: ";
+    print XF "missing item_form; " unless ($marc->{item_form});
     unless (defined $marc->{date1})
-      { print XF "Missing date1. " }
+      { print XF "missing date1; " }
     else
-      { print XF "Invalid date1: ", $marc->{date1}, " "
+      { print XF "invalid date1: '", $marc->{date1}, "'; "
           unless ($marc->{date1} =~ /\d{4}/); }
-    print XF "Missing record_type. " unless ($marc->{record_type});
-    print XF "Missing bib_lvl. " unless ($marc->{bib_lvl});
-    print XF "Missing title. " unless ($marc->{title});
+    print XF "missing record_type; " unless ($marc->{record_type});
+    print XF "missing bib_lvl; " unless ($marc->{bib_lvl});
+    print XF "missing title " unless ($marc->{title});
     print XF "\n";
 }
 
