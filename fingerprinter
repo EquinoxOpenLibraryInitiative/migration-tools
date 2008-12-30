@@ -74,7 +74,7 @@ sub populate_marc {
 
     # date1, date2
     my $my_008 = $record->field('008');
-    $marc{tag008} = $my_008->as_string();# if ($my_008);
+    $marc{tag008} = $my_008->as_string() if ($my_008);
     if (defined $marc{tag008}) {
         unless (length $marc{tag008} == 40) {
             $marc{tag008} = $marc{tag008} . ('|' x (40 - length($marc{tag008})));
