@@ -670,7 +670,7 @@ sub initialize {
 
     # defaults
     if ($c->{prefix}) {
-        $c->{output} = join('.',$c->{prefix},'marc','xml');
+        $c->{output} = join('.',$c->{prefix},'clean','marc','xml');
         $c->{exception} = join('.',$c->{prefix},'marc','ex');
     }
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
