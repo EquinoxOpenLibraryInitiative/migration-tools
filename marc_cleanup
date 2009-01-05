@@ -695,7 +695,7 @@ Options
   --exception  -x  Exception (dumped records) MARCXML filename
        or
   --prefix=<PREFIX>>   -p  Shared prefix for output/exception files. Will
-                           produce PREFIX.marc.xml and PREFIX.ex.xml
+                           produce PREFIX.clean.marc.xml and PREFIX.ex.xml
 
   --trashfile  -t  File containing trash tag data (see --trashhelp)
 
