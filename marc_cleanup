@@ -174,7 +174,7 @@ sub do_automated_cleanups {
 
         # automatable subfield maladies
         $record[$ptr] =~ s/code=" ">c/code="c">/;
-        $record[$ptr] =~ s/code=" ">\$/code="c"$>/;
+        $record[$ptr] =~ s/code=" ">\$/code="c">$/;
     }
 }
 
@@ -697,8 +697,6 @@ Options
   --prefix=<PREFIX>>   -p  Shared prefix for output/exception files. Will
                            produce PREFIX.clean.marc.xml and PREFIX.ex.xml
 
-  --trashfile  -t  File containing trash tag data (see --trashhelp)
-
   --renumber-from     -rf  Begin renumbering id sequence with this number
   --renumber-tag      -rt  Tag to use in renumbering (default: 903)
   --renumber-subfield -rs  Subfield code to use in renumbering (default: a)
@@ -708,9 +706,11 @@ Options
                            and renumbering is in effect, an old-to-new mapping
                            file (old2new.map) will be generated.
 
-  --nocollapse -n  Don't compress records to one line on output
   --autoscrub  -a  Automatically remove non-numeric tags in data
+  --nocollapse -n  Don't compress records to one line on output
   --strip-nines    Automatically remove any existing 901/903 tags in data
+  --trashfile  -t  File containing trash tag data (see --trashhelp)
+
 
   --script         Store human-initiated ops in scriptfile (.mcscript)
                    Not yet implemented
