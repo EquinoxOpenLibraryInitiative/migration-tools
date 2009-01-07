@@ -42,9 +42,9 @@ sub populate_fingerprint {
     $fp{sha1}    = sha1_base64($stripped);
 
     # make sure file is sorted properly
-    if ($lastscore and $fp{compact} > $lastscore) {
+    if ($lastscore and ($fp{compact} > $lastscore)) {
         print "Input file is sorted improperly or unsorted.\n";
-        die "Sort descending (sort -ru) and rerun this script.\n";
+        die "Sort descending (sort -r) and rerun this script.\n";
     }
     $lastscore = $fp{compact};
 
