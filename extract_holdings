@@ -6,7 +6,7 @@ use XML::Twig;
 use YAML;
 use JSON;
 
-my $marcxml = shift;
+my $marcxml = shift || help();
 
 open HOLDINGS, '>', "holdings";
 open X, '>', "holdings.x";
@@ -86,4 +86,12 @@ sub print_reports {
     }
     print HOLDINGS join("\t", $holdings->{id}, $copy->{copyid},
                         $copy->{b}, $copy->{p}, $copy->{h}, $copy->{9}), "\n";
+}
+
+
+sub help {
+    print <<HELP;
+Usage is: extract_holdings MARCXML_FILE
+HELP
+    exit;
 }
