@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use open ':utf8';
+
+use Getopt::Long;
+
+my $conf  = {}; # configuration hashref
+initialize($conf);
+
+open FP, '<', shift or die "Can't open input file: $!\n";
+
+while (<FP>) {
+
+}
+
+sub initialize {
+    my ($c) = @_;
+    my @missing = ();
+
+    # set mode on existing filehandles
+    binmode(STDIN, ':utf8');
+
+    my $rc = GetOptions( $c,
+                         'prefix|p=s',
+                         'help|h',
+                       );
+    show_help() unless $rc;
+    show_help() if ($c->{help});
+
+    my @keys = keys %{$c};
+    show_help() unless (@ARGV and @keys);
+    for my $key ('prefix')
+      { push @missing, $key unless $c->{$key} }
+    if (@missing) {
+        print "Required option: ", join(', ', @missing), " missing!\n";
+        show_help();
+    }
+}
+
+sub show_help {
+    print <<HELP;
+Usage is: compress_fingerprints -p PREFIX INPUTFILE
+HELP
+exit;
+}
