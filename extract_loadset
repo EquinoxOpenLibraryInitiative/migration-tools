@@ -11,7 +11,8 @@ initialize($conf);
 open FP, '<', shift or die "Can't open input file: $!\n";
 
 while (<FP>) {
-
+    my ($lead,$sub) = split /\t/;
+    print $sub if $sub > 6999999)
 }
 
 sub initialize {
@@ -22,7 +23,8 @@ sub initialize {
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
-                         'prefix|p=s',
+                         'filter|f=i'
+                         'output|o=s',
                          'help|h',
                        );
     show_help() unless $rc;
@@ -30,7 +32,7 @@ sub initialize {
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
-    for my $key ('prefix')
+    for my $key ('output', 'filter')
       { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
@@ -40,7 +42,10 @@ sub initialize {
 
 sub show_help {
     print <<HELP;
-Usage is: compress_fingerprints -p PREFIX INPUTFILE
+Usage is: extract_loadset [ARGS] INPUTFILE
+
+  --filter  -f  Record ID lower bound for 
+  --output  -o
 HELP
 exit;
 }
