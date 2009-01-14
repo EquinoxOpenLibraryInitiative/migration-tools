@@ -13,8 +13,10 @@ open X, '>', "holdings.x";
 open Z, '>', "holdings.z";
 open ALL852, '>', "holdings.all852";
 
+$| = 1;
 my $holdings = {};
 my $copyid = 0;
+my $count = 0;
 my %all852 = ( x => {}, z => {} ); # hash of all subfields in all 852s
 
 my $t = XML::Twig->new( twig_handlers => { record => \&record } );
@@ -34,6 +36,7 @@ sub record {
     for my $copy (@{$holdings->{copies}})
       { print_reports($copy) }
     $r->purge;
+    $count++; print "\r$count";
 }
 
 sub process_datafields {
