@@ -25,7 +25,7 @@ open my $NUMARC, '>:utf8', $conf->{output}
 open my $OLD2NEW, '>', 'old2new.map'
   if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
 my $EXMARC = 'EX';
-
+print $NUMARC "<collection>\n";
 
 my @record  = (); # current record storage
 my %recmeta = (); # metadata about current record
@@ -103,7 +103,7 @@ while ( buildrecord() ) {
     }
     write_record($NUMARC);
 }
-#print $NUMARC "</collection>\n";
+print $NUMARC "</collection>\n";
 print $OUT "\nDone.               \n";
 
 

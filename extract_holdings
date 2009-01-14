@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use XML::Twig;
+use YAML;
+use JSON;
+
+my $marcxml = shift;
+
+open HOLDINGS, '>', "holdings";
+open X, '>', "holdings.x";
+open Z, '>', "holdings.z";
+open ALL852, '>', "holdings.all852";
+
+my $holdings = {};
+my $copyid = 0;
+my %all852 = ( x => {}, z => {} ); # hash of all subfields in all 852s
+
+my $t = XML::Twig->new( twig_handlers => { record => \&record } );
+$t->parsefile($marcxml);
+#print ALL852 to_json(\%all852);
+print ALL852 Dump(%all852);
+
+sub record {
+    my($t, $r)= @_;
+    $holdings = { copies => [] };
+
+    my @dfields = $r->children('datafield');
+    for my $d (@dfields) {
+        process_datafields($d) 
+    }
+
+    for my $copy (@{$holdings->{copies}})
+      { print_reports($copy) }
+    $r->purge;
+}
+
+sub process_datafields {
+    my ($d) = @_;
+    # get 903
+    if ($d->{'att'}->{'tag'} == 903) {
+        my $s = $d->first_child('subfield');
+        $holdings->{id} = $s->text;;
+    }
+
+    # and holdings data
+    if ($d->{'att'}->{'tag'} == 852) {
+        push @{$holdings->{copies}}, { x =>[], z => [] };
+        $holdings->{copies}[-1]{copyid} = $copyid;
+        my @subs = $d->children('subfield');
+        for my $s (@subs) 
+          { process_subs($s) }
+        $copyid++;
+    }
+}
+
+sub process_subs {
+    my ($s) = @_;
+    my $copy = $holdings->{copies}[-1];
+
+    my $code = $s->{'att'}->{'code'};
+    my $value = $s->text;
+
+    if ($code eq 'x' or $code eq 'z') {
+        push @{$copy->{$code}}, $value;
+        my ($k,$v) = split /:/, $value;
+        $all852{$code}{$k} = $v;
+    } else {        
+        $copy->{$code} = $value;
+        $all852{$code} = $value;
+    }
+}
+
+sub print_reports {
+    my ($copy) = @_;
+    my $note = 0;
+    for (@{$copy->{x}}) {
+        print X join("\t", $holdings->{id}, $copy->{copyid}, $note, $_), "\n";
+        $note++;
+    }
+    $note = 0;
+    for (@{$copy->{z}}) {
+        print Z join("\t", $holdings->{id}, $copy->{copyid}, $note, $_), "\n";
+        $note++;
+    }
+    print HOLDINGS join("\t", $holdings->{id}, $copy->{copyid},
+                        $copy->{b}, $copy->{p}, $copy->{h}, $copy->{9}), "\n";
+}
