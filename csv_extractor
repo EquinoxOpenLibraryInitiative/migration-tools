@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+
+# TODO
+# 
+# * add getopt support
+# * use tag generator to expand list of wanted fields?
+
+use strict;
+use warnings;
+
+use Text::CSV;
+
+my $csv = Text::CSV->new({escape_char => "+", allow_loose_quotes => 1});
+
+open CSV, '<', shift or die "Can't open file $!\n";
+
+while (<CSV>) {
+    $csv->parse($_);
+    my @chunks = $csv->fields;
+    my @out = ();
+    for (@ARGV)
+      { push @out, $chunks[$_]}
+    print join("\t", @out), "\n";
+}
