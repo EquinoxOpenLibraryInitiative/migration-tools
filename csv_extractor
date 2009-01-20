@@ -5,6 +5,8 @@
 # * add getopt support
 # * use tag generator to expand list of wanted fields?
 
+# csv-extractor FILENAME FIELD_LIST
+
 use strict;
 use warnings;
 
