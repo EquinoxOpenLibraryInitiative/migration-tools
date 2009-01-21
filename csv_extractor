@@ -4,6 +4,8 @@
 # 
 # * add getopt support
 # * use tag generator to expand list of wanted fields?
+# * insertion of constant-value fields
+# * field mapping ("some text" -> 4)?
 
 # csv-extractor FILENAME FIELD_LIST
 
