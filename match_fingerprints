@@ -14,8 +14,7 @@ my @recs = (); # fingerprints belonging to each record
 my %seen = (); # records we've already seen
 my $lastscore = 0; # previous fingerprint's score
 
-my %leads = (); # error-checking hashes
-my %subs  = ();
+my %subs  = (); # error-checking hashe
 
 open FP, '<', $ARGV[0] or die "Can't open input file: $!\n";
 
@@ -92,9 +91,6 @@ sub dump_records {
             # check for dupes and die if they exist
             die "Collision: dupe sub record $_\n" if $subs{$_};
             $subs{$_} = 1;
-            die "Collision: dupe lead record ", $rec->{id}, "\n"
-              if $leads{ $rec->{id} };
-            $leads{ $rec->{id} } = 1;
             die "Collision: lead in sub list ", $rec->{id}, "\n"
               if $subs{ $rec->{id} };
 
