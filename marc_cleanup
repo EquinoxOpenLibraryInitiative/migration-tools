@@ -62,7 +62,8 @@ while ( buildrecord() ) {
         $sidx = ($sidx == $#spinner) ? 0 : $sidx + 1;
     }
 
-    do_automated_cleanups();
+    my $rc = do_automated_cleanups();
+    next if $rc;
 
     $ptr = 0;
     until ($ptr == $#record) {
@@ -115,7 +116,8 @@ sub do_automated_cleanups {
     $ptr = 0;
     until ($ptr == $#record) {
         # get datafield/tag data if we have it
-        stow_record_data();
+        my $rc = stow_record_data();
+        return $rc if $rc;
 
         # catch empty datafield elements
         if ($record[$ptr] =~ m/<datafield tag="..."/) {
@@ -181,38 +183,44 @@ sub do_automated_cleanups {
         $record[$ptr] =~ s/code=" ">c/code="c">/;
         $record[$ptr] =~ s/code=" ">\$/code="c">\$/;
     }
+    return 0;
 }
 
 sub stow_record_data {
     # get tag data if we're looking at it
-    
     if ($record[$ptr] =~ m/<datafield tag="(?<TAG>.{3})"/) {
         $recmeta{tag} = $+{TAG};
         $record[$ptr] =~ m/ind1="(?<IND1>.)"/;
         $recmeta{ind1} = $+{IND1} || '';
         $record[$ptr] =~ m/ind2="(?<IND2>.)"/;
         $recmeta{ind2} = $+{IND2} || '';
-        
+
         unless (defined $recmeta{tag}) {
             message("Autokill record: no detectable tag");
             dump_record("No detectable tag") ;
+            return 1;
         }
 
         # and since we are looking at a tag, see if it's the original id
-        if ($conf->{'original-subfield'} and
-            $recmeta{tag} == $conf->{'original-tag'}) {
+        if ($conf->{'original-subfield'} and $recmeta{tag} == $conf->{'original-tag'}) {
             my $line = $record[$ptr]; my $lptr = $ptr;
             my $osub = $conf->{'original-subfield'};
             $recmeta{oid} = 'NONE';
 
             until ($line =~ m|</record>|) {
+                if ($line =~ /<subfield code="$osub">(.+?)</)
+                  { $recmeta{oid} = $1 }
                 $lptr++;
                 $line = $record[$lptr];
-                $recmeta{oid} = $+{TAG}
-                  if ($line =~ /<subfield code="$osub">(.+?)</);
+            }
+            unless (defined $recmeta{oid}) {
+                message("Autokill record: no oldid when old2new mapping requested");
+                dump_record("No old id found");
+                return 1;
             }
         }
     }
+    return 0;
 }
 
 #-----------------------------------------------------------------------------------
@@ -338,12 +346,7 @@ sub write_record {
 
     # write to old->new map file if needed
     if ($conf->{'renumber-from'} and $conf->{'original-subfield'}) {
-        unless (defined $recmeta{oid}) {
-            my $msg = join(' ', "No old id num found");
-            dump_record($msg);
-        } else {
-            print $OLD2NEW $recmeta{oid}, "\t", $recmeta{nid}, "\n"
-        }
+        print $OLD2NEW $recmeta{oid}, "\t", $recmeta{nid}, "\n"
     }
 
     # actually write the record
