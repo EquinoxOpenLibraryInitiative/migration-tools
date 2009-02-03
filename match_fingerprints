@@ -14,6 +14,9 @@ my @recs = (); # fingerprints belonging to each record
 my %seen = (); # records we've already seen
 my $lastscore = 0; # previous fingerprint's score
 
+my %leads = (); # error-checking hashes
+my %subs  = ();
+
 open FP, '<', $ARGV[0] or die "Can't open input file: $!\n";
 
 print "Loading and ranking fingerprints\n";
@@ -85,8 +88,19 @@ sub dump_records {
     open OUT, '>', $conf->{output}
       or die "Can't open ", $conf->{output}, "$!\n";
     for my $rec (@recs) {
-        print OUT $rec->{id}, "\t$_\n"
-          for ( @{ $fps{ $rec->{sha1} } } );
+        for ( @{ $fps{ $rec->{sha1} } } ) {
+            # check for dupes and die if they exist
+            die "Collision: dupe sub record $_\n" if $subs{$_};
+            $subs{$_} = 1;
+            die "Collision: dupe lead record ", $rec->{id}, "\n"
+              if $leads{ $rec->{id} };
+            $leads{ $rec->{id} } = 1;
+            die "Collision: lead in sub list ", $rec->{id}, "\n"
+              if $subs{ $rec->{id} };
+
+            # still here? output.
+            print OUT $rec->{id}, "\t$_\n"
+        }
     }
 }
 
