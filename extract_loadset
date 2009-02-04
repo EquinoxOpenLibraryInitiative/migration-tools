@@ -8,12 +8,23 @@ use Getopt::Long;
 my $conf  = {}; # configuration hashref
 initialize($conf);
 
-open FP, '<', shift or die "Can't open input file: $!\n";
-
+# build exclusion hash
+open FP, '<', shift or die "Can't open matchset file: $!\n";
+my %exclude = ();
 while (<FP>) {
     my ($lead,$sub) = split /\t/;
-    print $sub if $sub > 6999999)
+    $exclude{$sub}  = 1 unless ($sub < $conf->{lowerbound});
 }
+close FP;
+
+# strip exclusions from marcxml file
+open MI, '<', $conf->{marc} or die "Can't open input file: $!\n";
+open MO, '>', $conf->{output} or die "Can't open output file: $!\n";
+while (<MI>) {
+    m/tag="$conf->{tag}",+?<subfield code="$conf->{subfield}">(\d+)</
+    print MO unless $exclude{$1};
+}
+
 
 sub initialize {
     my ($c) = @_;
@@ -23,16 +34,22 @@ sub initialize {
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
-                         'filter|f=i'
+                         'lowerbound|l=i'
+                         'input|i=s',
                          'output|o=s',
+                         'tag|t=i',
+                         'subfield|s=s',
                          'help|h',
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
 
+    $conf->{tag} = $conf->{tag} || 903;
+    $conf->{subfield} = $conf->{subfield} || 'a';
+
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
-    for my $key ('output', 'filter')
+    for my $key ('output', 'lowerbound', 'input')
       { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
@@ -42,10 +59,11 @@ sub initialize {
 
 sub show_help {
     print <<HELP;
-Usage is: extract_loadset [ARGS] INPUTFILE
+Usage is: extract_loadset -l BOUND -i MARC -o OUTPUT MATCHSET
 
-  --filter  -f  Record ID lower bound for 
-  --output  -o
+  --lowerbound  -l  Lowest record ID which will be included in the loadset
+  --input       -i  MARCXML input file
+  --output      -o  MARCXML output file
 HELP
 exit;
 }
