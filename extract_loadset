@@ -21,7 +21,7 @@ close FP;
 open MI, '<', $conf->{marc} or die "Can't open input file: $!\n";
 open MO, '>', $conf->{output} or die "Can't open output file: $!\n";
 while (<MI>) {
-    m/tag="$conf->{tag}",+?<subfield code="$conf->{subfield}">(\d+)</
+    m/tag="$conf->{tag}",+?<subfield code="$conf->{subfield}">(\d+)</;
     print MO unless $exclude{$1};
 }
 
@@ -34,7 +34,7 @@ sub initialize {
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
-                         'lowerbound|l=i'
+                         'lowerbound|l=i',
                          'input|i=s',
                          'output|o=s',
                          'tag|t=i',
@@ -59,11 +59,13 @@ sub initialize {
 
 sub show_help {
     print <<HELP;
-Usage is: extract_loadset -l BOUND -i MARC -o OUTPUT MATCHSET
+Usage is: extract_loadset -l BOUND -i INPUTXML -o OUTPUTXML MATCHSET
 
   --lowerbound  -l  Lowest record ID which will be included in the loadset
   --input       -i  MARCXML input file
   --output      -o  MARCXML output file
+  --tag         -t  MARC tag to use as identifier (default: 903)
+  --subfield    -s  Subfield of --tag argument (default: 'a')
 HELP
 exit;
 }
