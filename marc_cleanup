@@ -18,7 +18,8 @@ initialize($conf);
 populate_trash() if ($conf->{trashfile});
 
 # set up files, since everything appears to be in order
-open MARC, '<:utf8', (shift || 'incoming.marc.xml')
+my $marcfile = shift || 'incoming.marc.xml';
+open MARC, '<:utf8', $marcfile
   or die "Can't open input file $!\n";
 open my $NUMARC, '>:utf8', $conf->{output}
   or die "Can't open output file $!\n";
@@ -26,6 +27,10 @@ open my $OLD2NEW, '>', 'old2new.map'
   if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
 my $EXMARC = 'EX';
 print $NUMARC "<collection>\n";
+
+$conf->{totalrecs} = `grep -c '<record' $marcfile`;
+chomp $conf->{totalrecs};
+$conf->{percent}   = 0;
 
 my @record  = (); # current record storage
 my %recmeta = (); # metadata about current record
@@ -53,12 +58,13 @@ my %commands = ( c => \&print_fullcontext,
                  help => \&help,
                );
 
-my @spinner = qw(- / | \\);
+my @spinner = qw(- \\ | /);
 my $sidx = 0;
 
 while ( buildrecord() ) {
-    unless ($conf->{ricount} % 100) {
-        print "\rWorking... ", $spinner[$sidx];
+    unless ($conf->{ricount} % 50) {
+        $conf->{percent} = int(($conf->{ricount} / $conf->{totalrecs}) * 100);
+        print "\rWorking (",$conf->{percent},"%) ", $spinner[$sidx];
         $sidx = ($sidx == $#spinner) ? 0 : $sidx + 1;
     }
 
@@ -67,6 +73,10 @@ while ( buildrecord() ) {
 
     $ptr = 0;
     until ($ptr == $#record) {
+        # get datafield/tag data if we have it
+        my $rc = stow_record_data();
+        return $rc if $rc;
+
         # naked ampersands
         if ($record[$ptr] =~ /&/ && $record[$ptr] !~ /&\w+?;/)
           { edit("Naked ampersand"); $ptr= 0; next }
@@ -115,10 +125,6 @@ print $OUT "\nDone.               \n";
 sub do_automated_cleanups {
     $ptr = 0;
     until ($ptr == $#record) {
-        # get datafield/tag data if we have it
-        my $rc = stow_record_data();
-        return $rc if $rc;
-
         # catch empty datafield elements
         if ($record[$ptr] =~ m/<datafield tag="..."/) {
             if ($record[$ptr + 1] =~ m|</datafield>|) {
