@@ -3,40 +3,49 @@ use strict;
 use warnings;
 
 use XML::Twig;
-use YAML;
+use YAML::Tiny;
 use JSON;
 
 my $marcxml = shift || help();
+my $htag     = shift || help();
 
 open HOLDINGS, '>', "holdings";
 open X, '>', "holdings.x";
 open Z, '>', "holdings.z";
-open ALL852, '>', "holdings.all852";
+my $holdings = {};
+my %all852 = ( x => {}, z => {} ); # hash of all subfields in all 852s
+my $copyid = 0;
+
 
 $| = 1;
-my $holdings = {};
-my $copyid = 0;
 my $count = 0;
-my %all852 = ( x => {}, z => {} ); # hash of all subfields in all 852s
+my $total = `grep -c '<record' $marcxml`;
+my $percent = 0;
+my $prevper = -1;
 
+my $yaml = YAML::Tiny->new;
 my $t = XML::Twig->new( twig_handlers => { record => \&record } );
 $t->parsefile($marcxml);
-#print ALL852 to_json(\%all852);
-print ALL852 Dump(%all852);
+$yaml->[0] = \%all852;
+$yaml->write('holdings.sample');
+print "\n\n";
 
 sub record {
     my($t, $r)= @_;
     $holdings = { copies => [] };
 
     my @dfields = $r->children('datafield');
-    for my $d (@dfields) {
-        process_datafields($d) 
-    }
+    for my $d (@dfields) 
+      { process_datafields($d) }
 
     for my $copy (@{$holdings->{copies}})
       { print_reports($copy) }
     $r->purge;
-    $count++; print "\r$count";
+
+    $count++;
+    $percent = int(($count / $total) * 100);
+    print "\r$percent% done ($count)" if ($percent != $prevper);
+    $prevper = $percent;
 }
 
 sub process_datafields {
@@ -48,11 +57,11 @@ sub process_datafields {
     }
 
     # and holdings data
-    if ($d->{'att'}->{'tag'} == 852) {
+    if ($d->{'att'}->{'tag'} == $htag) {
         push @{$holdings->{copies}}, { x =>[], z => [] };
         $holdings->{copies}[-1]{copyid} = $copyid;
         my @subs = $d->children('subfield');
-        for my $s (@subs) 
+        for my $s (@subs)
           { process_subs($s) }
         $copyid++;
     }
@@ -69,13 +78,14 @@ sub process_subs {
         push @{$copy->{$code}}, $value;
         my ($k,$v) = split /:/, $value;
         $all852{$code}{$k} = $v;
-    } else {        
+    } else {
         $copy->{$code} = $value;
         $all852{$code} = $value;
     }
 }
 
 sub print_reports {
+    return unless defined $holdings->{id};
     my ($copy) = @_;
     my $note = 0;
     for (@{$copy->{x}}) {
@@ -87,6 +97,8 @@ sub print_reports {
         print Z join("\t", $holdings->{id}, $copy->{copyid}, $note, $_), "\n";
         $note++;
     }
+    for (qw( copyid b p h 9 ))
+      { $copy->{$_} = '' unless defined $copy->{$_} }
     print HOLDINGS join("\t", $holdings->{id}, $copy->{copyid},
                         $copy->{b}, $copy->{p}, $copy->{h}, $copy->{9}), "\n";
 }
@@ -94,7 +106,7 @@ sub print_reports {
 
 sub help {
     print <<HELP;
-Usage is: extract_holdings MARCXML_FILE
+Usage is: extract_holdings MARCXML_FILE HOLDINGS_TAG
 HELP
     exit;
 }
