@@ -225,7 +225,9 @@ sub score_marc {
     #----------------------------------
     # static criteria scoring
     #----------------------------------
-    $marc->{misc_score} = 999;
+    $marc->{misc_score} = 999999999999;
+    # subtract record id if we want older records to win
+    $marc->{misc_score} -= $marc->{id} unless ($conf->{newwins});
     # -1 if 008 has been padded, -2 if it doesn't exist
     if ($marc->{tag008})
       { $marc->{misc_score}-- if ($marc->{tag008} =~ /\|$/) }
@@ -401,6 +403,7 @@ sub initialize {
                          'tag|t=s',
                          'fingerprints=s',
                          'scores=s',
+                         'newwins',
                          'quiet|q',
                          'help|h',
                        );
@@ -499,6 +502,7 @@ Options
 
   --scores=LIST  Scores to calculate, comma separated
                  Default: oclc,dlc,num_650,num_tags,enc_level
+  --newwins      New record IDs score higher (default is old wins)
 
   --marctype=TYPE Defaults to 'XML'
 HELP
