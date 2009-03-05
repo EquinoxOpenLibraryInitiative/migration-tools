@@ -228,6 +228,15 @@ sub score_marc {
     $marc->{misc_score} = 999999999999;
     # subtract record id if we want older records to win
     $marc->{misc_score} -= $marc->{id} unless ($conf->{newwins});
+    # handle arbitrary adjustments
+    if ($conf->{'arbitrarily-decrease-score-above'}) {
+        $marc->{misc_score} -= $conf->{'arbitrarily-decrease-score-by'}
+          if ($marc->{id} >= $conf->{'arbitrarily-decrease-score-above'});
+    }
+    if ($conf->{'arbitrarily-decrease-score-below'}) {
+        $marc->{misc_score} -= $conf->{'arbitrarily-decrease-score-by'}
+          if ($marc->{id} <= $conf->{'arbitrarily-decrease-score-below'});
+    }
     # -1 if 008 has been padded, -2 if it doesn't exist
     if ($marc->{tag008})
       { $marc->{misc_score}-- if ($marc->{tag008} =~ /\|$/) }
@@ -403,6 +412,9 @@ sub initialize {
                          'tag|t=s',
                          'fingerprints=s',
                          'scores=s',
+                         'arbitrarily-decrease-score-above=i',
+                         'arbitrarily-decrease-score-below=i',
+                         'arbitrarily-decrease-score-by=i',
                          'newwins',
                          'quiet|q',
                          'help|h',
@@ -449,6 +461,8 @@ sub initialize {
     $c->{tag} = 903 unless defined $c->{tag};
     $c->{subfield} = 'a' unless defined $c->{subfield};
     $c->{marctype} = 'XML' unless defined $c->{marctype};
+    $c->{'arbitrarily-decrease-score-by'} = 0
+      unless defined $c->{'arbitrarily-decrease-score-by'};
     if ($c->{prefix}) {
         $c->{output} = join('.',$c->{prefix},'fp');
         $c->{exception} = join('.',$c->{prefix},'fp','ex');
