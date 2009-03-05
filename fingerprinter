@@ -517,6 +517,12 @@ Options
   --scores=LIST  Scores to calculate, comma separated
                  Default: oclc,dlc,num_650,num_tags,enc_level
   --newwins      New record IDs score higher (default is old wins)
+  --arbitrarily-decrease-score-above
+  --arbitrarily-decrease-score-below
+  --arbitrarily-decrease-score-by
+      Modify fingerprint scoring of records whose EG id is above or below a
+      given value, inclusive (so 5 is <= 5 or >= 5). -by gives the amount by
+      which to adjust the score.
 
   --marctype=TYPE Defaults to 'XML'
 HELP
