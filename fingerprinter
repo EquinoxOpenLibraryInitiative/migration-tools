@@ -240,15 +240,16 @@ sub score_marc {
       if (defined $marc->{tag300a} and $marc->{tag300a} =~ /copy/i);
 
     # subtract record id if we want older records to win
-    $marc->{age_score} -= $marc->{id} unless ($conf->{newwins});
+    #$marc->{age_score} -= $marc->{id} unless ($conf->{newwins});
     # handle arbitrary adjustments
-    if ($conf->{'arbitrarily-decrease-score-above'}) {
-        $marc->{age_score} -= $conf->{'arbitrarily-decrease-score-by'}
-          if ($marc->{id} >= $conf->{'arbitrarily-decrease-score-above'});
+    $marc->{age_score} = 1;
+    if ($conf->{'arbitrarily-lose-above'}) {
+        $marc->{age_score} = 0
+          if ($marc->{id} >= $conf->{'arbitrarily-lose-above'});
     }
-    if ($conf->{'arbitrarily-decrease-score-below'}) {
-        $marc->{age_score} -= $conf->{'arbitrarily-decrease-score-by'}
-          if ($marc->{id} <= $conf->{'arbitrarily-decrease-score-below'});
+    if ($conf->{'arbitrarily-lose-below'}) {
+        $marc->{age_score} = 0
+          if ($marc->{id} <= $conf->{'arbitrarily-lose-below'});
     }
 
     #----------------------------------
@@ -287,7 +288,7 @@ sub score_marc {
     }
     $json .= 'misc:' . $marc->{misc_score} . '}';
 
-    my $compact = join('', $marc->{misc_score}, @score, $marc->{age_score});
+    my $compact = join('-', $marc->{age_score}, $marc->{misc_score}, @score);
     $marc->{score} = "$compact\t$json";
 }
 
@@ -415,9 +416,8 @@ sub initialize {
                          'tag|t=s',
                          'fingerprints=s',
                          'scores=s',
-                         'arbitrarily-decrease-score-above=i',
-                         'arbitrarily-decrease-score-below=i',
-                         'arbitrarily-decrease-score-by=i',
+                         'arbitrarily-lose-above=i',
+                         'arbitrarily-lose-below=i',
                          'newwins',
                          'quiet|q',
                          'help|h',
@@ -464,8 +464,6 @@ sub initialize {
     $c->{tag} = 903 unless defined $c->{tag};
     $c->{subfield} = 'a' unless defined $c->{subfield};
     $c->{marctype} = 'XML' unless defined $c->{marctype};
-    $c->{'arbitrarily-decrease-score-by'} = 0
-      unless defined $c->{'arbitrarily-decrease-score-by'};
     if ($c->{prefix}) {
         $c->{output} = join('.',$c->{prefix},'fp');
         $c->{exception} = join('.',$c->{prefix},'fp','ex');
@@ -520,12 +518,11 @@ Options
   --scores=LIST  Scores to calculate, comma separated
                  Default: oclc,dlc,num_650,num_tags,enc_level
   --newwins      New record IDs score higher (default is old wins)
-  --arbitrarily-decrease-score-above
-  --arbitrarily-decrease-score-below
+  --arbitrarily-lose-above
+  --arbitrarily-lose-below
   --arbitrarily-decrease-score-by
       Modify fingerprint scoring of records whose EG id is above or below a
-      given value, inclusive (so 5 is <= 5 or >= 5). -by gives the amount by
-      which to adjust the score.
+      given value, inclusive (so 5 is <= 5 or >= 5) such that they lose.
 
   --marctype=TYPE Defaults to 'XML'
 HELP
