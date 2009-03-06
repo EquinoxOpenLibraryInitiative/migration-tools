@@ -225,18 +225,9 @@ sub score_marc {
     #----------------------------------
     # static criteria scoring
     #----------------------------------
-    $marc->{misc_score} = 999999999999;
-    # subtract record id if we want older records to win
-    $marc->{misc_score} -= $marc->{id} unless ($conf->{newwins});
-    # handle arbitrary adjustments
-    if ($conf->{'arbitrarily-decrease-score-above'}) {
-        $marc->{misc_score} -= $conf->{'arbitrarily-decrease-score-by'}
-          if ($marc->{id} >= $conf->{'arbitrarily-decrease-score-above'});
-    }
-    if ($conf->{'arbitrarily-decrease-score-below'}) {
-        $marc->{misc_score} -= $conf->{'arbitrarily-decrease-score-by'}
-          if ($marc->{id} <= $conf->{'arbitrarily-decrease-score-below'});
-    }
+    $marc->{misc_score} = 999;
+    $marc->{age_score}  = 999999999999;
+
     # -1 if 008 has been padded, -2 if it doesn't exist
     if ($marc->{tag008})
       { $marc->{misc_score}-- if ($marc->{tag008} =~ /\|$/) }
@@ -247,6 +238,18 @@ sub score_marc {
     # -1 if this is a copy record
     $marc->{misc_score}--
       if (defined $marc->{tag300a} and $marc->{tag300a} =~ /copy/i);
+
+    # subtract record id if we want older records to win
+    $marc->{age_score} -= $marc->{id} unless ($conf->{newwins});
+    # handle arbitrary adjustments
+    if ($conf->{'arbitrarily-decrease-score-above'}) {
+        $marc->{age_score} -= $conf->{'arbitrarily-decrease-score-by'}
+          if ($marc->{id} >= $conf->{'arbitrarily-decrease-score-above'});
+    }
+    if ($conf->{'arbitrarily-decrease-score-below'}) {
+        $marc->{age_score} -= $conf->{'arbitrarily-decrease-score-by'}
+          if ($marc->{id} <= $conf->{'arbitrarily-decrease-score-below'});
+    }
 
     #----------------------------------
     # dynamic calculated scoring
@@ -284,7 +287,7 @@ sub score_marc {
     }
     $json .= 'misc:' . $marc->{misc_score} . '}';
 
-    my $compact = join('', $marc->{misc_score}, @score);
+    my $compact = join('', $marc->{misc_score}, @score, $marc->{age_score});
     $marc->{score} = "$compact\t$json";
 }
 
