@@ -288,7 +288,7 @@ sub score_marc {
     }
     $json .= 'misc:' . $marc->{misc_score} . '}';
 
-    my $compact = join('-', $marc->{age_score}, $marc->{misc_score}, @score);
+    my $compact = join('', $marc->{age_score}, $marc->{misc_score}, @score);
     $marc->{score} = "$compact\t$json";
 }
 
