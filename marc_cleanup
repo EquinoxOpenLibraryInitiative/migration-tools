@@ -7,6 +7,7 @@ use warnings;
 use Getopt::Long;
 use Term::ReadLine;
 
+binmode STDOUT, ":utf8";
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
 
@@ -89,7 +90,7 @@ while ( buildrecord() ) {
                 next;
             }
             # test for existing 901/903 unless we're autocleaning them
-            unless ($conf->{'strip-nines'}) {
+            unless ($conf->{'strip9'} or $conf->{'no-strip9'}) {
                 if ($match == 901 or $match == 903) {
                     edit("Incoming 901/903 found in data");
                     next;
@@ -673,7 +674,8 @@ sub initialize {
                          'original-tag|ot=i',
                          'original-subfield|os=s',
                          'script',
-                         'strip-nines',
+                         'strip9',
+                         'no-strip9',
                          'trashfile|t=s',
                          'trashhelp',
                          'help|h',
@@ -691,7 +693,7 @@ sub initialize {
     $c->{window} = 5;
 
     # autotrash 901, 903 if strip-nines
-    if ($c->{'strip-nines'}) {
+    if ($c->{'strip9'}) {
         $c->{trash}{901} = 1;
         $c->{trash}{903} = 1;
     }
@@ -721,7 +723,7 @@ Options
 
   --autoscrub  -a  Automatically remove non-numeric tags in data
   --nocollapse -n  Don't compress records to one line on output
-  --strip-nines    Automatically remove any existing 901/903 tags in data
+  --strip9         Automatically remove any existing 901/903 tags in data (reversible)
   --trashfile  -t  File containing trash tag data (see --trashhelp)
 
 
