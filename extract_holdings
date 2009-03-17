@@ -4,16 +4,17 @@ use warnings;
 
 use XML::Twig;
 use YAML::Tiny;
-use JSON;
+use Getopt::Long;
 
-my $marcxml = shift || help();
-my $htag     = shift || help();
 
-open HOLDINGS, '>', "holdings";
-open X, '>', "holdings.x";
-open Z, '>', "holdings.z";
+my $conf = initialize();
+my $marcxml = shift;
+
+open HOLDINGS, '>', $conf->{output};
+open X, '>', $conf->{pubnotesfile};
+open Z, '>', $conf->{privnotesfile};
 my $holdings = {};
-my %all852 = ( x => {}, z => {} ); # hash of all subfields in all 852s
+my %sample = ( x => {}, z => {} ); # hash of all subfields in all 852s
 my $copyid = 0;
 
 
@@ -26,7 +27,7 @@ my $prevper = -1;
 my $yaml = YAML::Tiny->new;
 my $t = XML::Twig->new( twig_handlers => { record => \&record } );
 $t->parsefile($marcxml);
-$yaml->[0] = \%all852;
+$yaml->[0] = \%sample;
 $yaml->write('holdings.sample');
 print "\n\n";
 
@@ -57,7 +58,7 @@ sub process_datafields {
     }
 
     # and holdings data
-    if ($d->{'att'}->{'tag'} == $htag) {
+    if ($d->{'att'}->{'tag'} == $conf->{tag}) {
         push @{$holdings->{copies}}, { x =>[], z => [] };
         $holdings->{copies}[-1]{copyid} = $copyid;
         my @subs = $d->children('subfield');
@@ -74,13 +75,13 @@ sub process_subs {
     my $code = $s->{'att'}->{'code'};
     my $value = $s->text;
 
-    if ($code eq 'x' or $code eq 'z') {
+    if ($code eq $conf->{pubnotes} or $code eq $conf->{privnotes}) {
         push @{$copy->{$code}}, $value;
         my ($k,$v) = split /:/, $value;
-        $all852{$code}{$k} = $v;
+        $sample{$code}{$k} = $v;
     } else {
         $copy->{$code} = $value;
-        $all852{$code} = $value;
+        $sample{$code} = $value;
     }
 }
 
@@ -97,14 +98,75 @@ sub print_reports {
         print Z join("\t", $holdings->{id}, $copy->{copyid}, $note, $_), "\n";
         $note++;
     }
-    for (qw( copyid b p h 9 ))
-      { $copy->{$_} = '' unless defined $copy->{$_} }
-    print HOLDINGS join("\t", $holdings->{id}, $copy->{copyid},
-                        $copy->{b}, $copy->{p}, $copy->{h}, $copy->{9}), "\n";
+    my @fields = ();
+    for ( @{$conf->{fields}} )
+      { $copy->{$_} = '' unless defined $copy->{$_}; push @fields, $copy->{$_} }
+    print HOLDINGS join("\t", $holdings->{id}, $copy->{copyid}, @fields), "\n";
 }
 
 
-sub help {
+#------------------------------------------------
+
+
+sub initialize {
+    my $c = {};
+    my @missing = ();
+
+    # set mode on existing filehandles
+    binmode(STDIN, ':utf8');
+
+    my $rc = GetOptions( $c,
+                         'fields|f=s',
+                         'output|o=s',
+                         'prefix|p=s',
+                         'pubnotes|pub=i',
+                         'pubnotesfile=s',
+                         'privnotes|priv=s',
+                         'privnotesfile=s',
+                         'tag|t=i',
+                         'help|h',
+                       );
+    show_help() unless $rc;
+    show_help() if ($c->{help});
+
+    # set defaults
+    $c->{prefix} = (defined $c->{prefix}) ? ($c->{prefix} . '.') : '';
+    $c->{tag} = $c->{tag} || '852';
+    $c->{output} =
+      $c->{output} || join('', $c->{prefix}, "holdings.pg");
+    $c->{pubnotes} = $c->{pubnotes} || 'x';
+    $c->{pubnotesfile} =
+      $c->{pubnotesfile} || join('', $c->{prefix}, "holdings.pubnote.pg");
+    $c->{privnotes} = $c->{privnotes} || 'z';
+    $c->{privnotesfile} =
+      $c->{privnotesfile} || join('', $c->{prefix}, "holdings.privnote.pg");
+
+    my @keys = keys %{$c};
+    show_help() unless (@ARGV and @keys);
+    for my $key ('fields', 'tag')
+      { push @missing, $key unless $c->{$key} }
+    if (@missing) {
+        print "Required option: ", join(', ', @missing), " missing!\n";
+        show_help();
+    }
+
+    # explode and validate fields string
+    process_fields($c);
+    return $c;
+}
+
+sub process_fields {
+    my ($c) = @_;
+    my @holdings_fields = split /,/, $c->{fields};
+    for (@holdings_fields) { 
+        die "Field names must be alphanumeric!\n" if /\W/;
+        die "Field names must be single characters!\n"
+          if /\w{2,}/;
+    }
+    $c->{fields} = \@holdings_fields;
+}
+
+sub show_help {
     print <<HELP;
 Usage is: extract_holdings MARCXML_FILE HOLDINGS_TAG
 HELP

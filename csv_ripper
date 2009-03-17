@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # TODO
-# 
+#
 # * add getopt support
 # * use tag generator to expand list of wanted fields?
 # * insertion of constant-value fields
@@ -14,7 +14,7 @@ use warnings;
 
 use Text::CSV;
 
-my $csv = Text::CSV->new({escape_char => "+", allow_loose_quotes => 1});
+my $csv = Text::CSV->new();
 
 open CSV, '<', shift or die "Can't open file $!\n";
 
