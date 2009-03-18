@@ -1,6 +1,6 @@
 #!perl -T
 
-use Test::More tests => 25;
+use Test::More tests => 33;
 use Equinox::Migration::SimpleTagList;
 
 # baseline object creation
@@ -42,3 +42,13 @@ is ($stl->has(988), 1);
 is ($stl->has(655), 0, 'exception');
 is ($stl->has(987), 0, 'exception');
 is ($stl->has(400), 0, 'not in input set');
+
+$stl = Equinox::Migration::SimpleTagList->new( file => "./t/corpus/stl-1.txt");
+is ($stl->has(258), 1);
+is ($stl->has(259), 0, 'exception');
+is ($stl->has(274), 1);
+is ($stl->has(275), 0, 'exception');
+is ($stl->has(286), 1);
+is ($stl->has(285), 0, 'exception');
+is ($stl->has(305), 1);
+is ($stl->has(304), 0, 'exception');

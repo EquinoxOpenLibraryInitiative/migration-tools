@@ -112,7 +112,6 @@ sub generate {
         $self->{conf}{lastwasrange} = 0;
         $self->{conf}{range}{high}  = 0;
         $self->{conf}{range}{low}   = 0;
-        $self->{conf}{except} = 0;
 
         my @chunks = split /\s+/;
         while (my $chunk = shift @chunks) {
@@ -120,12 +119,14 @@ sub generate {
             # single values
             if ($chunk =~ /^\d{1,3}$/) {
                 $self->add_tag($chunk);
+                $self->{conf}{except} = 0;
                 next;
             }
 
             # ranges
             if ($chunk =~ /^\d{1,3}\.\.\d{1,3}$/) {
                 $self->add_range($chunk);
+                $self->{conf}{except} = 0;
                 next;
             }
 
@@ -133,8 +134,6 @@ sub generate {
             if ($chunk eq 'except') {
                 die "Keyword 'except' can only follow a range (line $.)\n"
                   unless $self->{conf}{lastwasrange};
-                die "Keyword 'except' may only occur once per line (line $.)\n"
-                  if $self->{conf}{except};
                 $self->{conf}{except} = 1;
                 next;
             }
@@ -158,7 +157,7 @@ sub add_range {
       if ($low > $high);
     if ($self->{conf}{except}) {
         die "Exception ranges must be within last addition range ($low..$high)\n"
-          if ($low < $self->{range}{low} or $high > $self->{range}{high});
+          if ($low < $self->{conf}{range}{low} or $high > $self->{conf}{range}{high});
     }
     for my $tag ($low..$high) {
         $self->add_tag($tag)
@@ -183,13 +182,13 @@ sub add_tag {
       unless ($tag >= 0 and $tag <= 999);
 
     if ($self->{conf}{except}) {
-        $self->remove_tag($tag)
+        $self->remove_tag($tag);
     } else {
         die "Tag '$tag' specified twice\n"
           if $self->{tags}{$tag};
         $self->{tags}{$tag} = 1;
+        $self->{conf}{lastwasrange} = 0;
     }
-    $self->{conf}{lastwasrange} = 0;
 }
 
 =head2 remove_tag
@@ -209,14 +208,6 @@ sub remove_tag {
 
 Shawn Boyette, C<< <sboyette at esilibrary.com> >>
 
-=head1 TODO
-
-=over
-
-=item * Remove single-except rule?
-
-=back
-
 =head1 BUGS
 
 Please report any bugs or feature requests to the above email address.
@@ -230,7 +221,7 @@ You can find documentation for this module with the perldoc command.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009 Shawn Boyette, all rights reserved.
+Copyright 2009 Equinox, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
