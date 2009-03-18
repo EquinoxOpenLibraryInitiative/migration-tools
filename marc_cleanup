@@ -6,6 +6,7 @@ use warnings;
 
 use Getopt::Long;
 use Term::ReadLine;
+use Equinox::Migration::SimpleTagList;
 
 binmode STDOUT, ":utf8";
 my $term = new Term::ReadLine 'yaz-cleanup';
@@ -16,7 +17,6 @@ $| = 1;
 # initialization and setup
 my $conf = {};
 initialize($conf);
-populate_trash() if ($conf->{trashfile});
 
 # set up files, since everything appears to be in order
 my $marcfile = shift || 'incoming.marc.xml';
@@ -243,7 +243,7 @@ Handles the Term::ReadLine loop
 sub edit {
     my ($msg) = @_;
 
-    return if $conf->{trash}{ $recmeta{tag} };
+    return if $conf->{trash}->has( $recmeta{tag} );
     $conf->{editmsg} = $msg;
     print_fullcontext();
 
@@ -291,7 +291,7 @@ sub buildrecord {
     %recmeta = ();
     $conf->{ricount}++;
 
-    until ($l =~ m|</record>|) 
+    until ($l =~ m|</record>|)
       { push @record, $l; $l = <MARC>; }
     push @record, $l;
     return 1;
@@ -313,7 +313,7 @@ sub write_record {
       if(defined $recmeta{explanation});
 
     # excise unwanted tags
-    if (keys %{$trash} or $conf->{autoscrub}) {
+    if (defined $trash or $conf->{autoscrub}) {
         my @trimmed = ();
         my $istrash = 0;
         for my $line (@record) {
@@ -323,7 +323,7 @@ sub write_record {
             }
             if ($line =~ m/<datafield tag="(.{3})"/) {
                 my $tag = $1;
-                if ($trash->{$tag} or ($conf->{autoscrub} and $tag =~ /\D/)) {
+                if ($trash->has($tag) or ($conf->{autoscrub} and $tag =~ /\D/)) {
                     $istrash = 1;
                     next
                 }
@@ -548,104 +548,6 @@ return 0;
 
 sub quit { exit }
 
-#-----------------------------------------------------------------------------------
-# populate_trash
-#-----------------------------------------------------------------------------------
-# defined a domain-specific language for specifying MARC tags to be dropped from
-# records during processing. it is line oriented, and is specified as follows:
-#
-# each line may specify any number of tags to be included, either singly (\d{1,3})
-# or as a range (\d{1,3}\.\.\d{1,3}
-#
-# if a single number is given, it must be between '000' and '999', inclusive.
-#
-# ranges obey the previous rule, and also the first number of the range must be less
-# than the second number
-#
-# finally, any single range in a line may be followed by the keyword 'except'. every
-# number or range after 'except' is excluded from the range specified. all these
-# numbers must actually be within the range.
-#
-# specifying a tag twice is an error, to help prevent typos
-
-sub populate_trash {
-    print $OUT ">>> TRASHTAGS FILE FOUND. LOADING TAGS TO BE STRIPPED FROM OUTPUT\n";
-    open TRASH, '<', $conf->{trashfile}
-      or die "Can't open trash tags file!\n";
-    while (<TRASH>) {
-        my $lastwasrange = 0;
-        my %lastrange = ( high => 0, low => 0);
-        my $except = 0;
-
-        my @chunks = split /\s+/;
-        while (my $chunk = shift @chunks) {
-
-            # single values
-            if ($chunk =~ /^\d{1,3}$/) {
-                trash_add($chunk, $except);
-                $lastwasrange = 0;
-                next;
-            }
-
-            # ranges
-            if ($chunk =~ /^\d{1,3}\.\.\d{1,3}$/) {
-                my ($low, $high) = trash_add_range($chunk, $except, \%lastrange);
-                $lastwasrange = 1;
-                %lastrange = (low => $low, high => $high)
-                  unless $except;
-                next;
-            }
-
-            # 'except'
-            if ($chunk eq 'except') {
-                die "Keyword 'except' can only follow a range (line $.)\n"
-                  unless $lastwasrange;
-                die "Keyword 'except' may only occur once per line (line $.)\n"
-                  if $except;
-                $except = 1;
-                next;
-            }
-
-            die "Unknown chunk $chunk in .trashtags file (line $.)\n";
-        }
-    }
-
-    # remove original id sequence tag from trash hash if we know it
-    trash_add($conf->{'original-tag'}, 1)
-      if ($conf->{'original-tag'} and $conf->{trash}{ $conf->{'original-tag'} });
-}
-
-sub trash_add_range {
-    my ($chunk, $except, $range) = @_;
-    my ($low,$high) = split /\.\./, $chunk;
-    die "Ranges must be 'low..high' ($low is greater than $high on line $.)\n"
-      if ($low > $high);
-    if ($except) {
-        die "Exception ranges must be within last addition range (line $.)\n"
-          if ($low < $range->{low} or $high > $range->{high});
-    }
-    for my $tag ($low..$high) {
-        trash_add($tag, $except)
-    }
-    return $low, $high;
-}
-
-sub trash_add {
-    my ($tag, $except) = @_;
-    my $trash = $conf->{trash};
-
-    die "Trash values must be valid tags (000-999)\n"
-      unless ($tag >= 0 and $tag <= 999);
-
-    if ($except) {
-        delete $trash->{$tag};
-    } else {
-        die "Trash tag '$tag' specified twice (line $.)\n"
-          if $trash->{$tag};
-        $trash->{$tag} = 1;
-    }
-}
-
 #-----------------------------------------------------------------------
 
 =head2 initialize
@@ -692,10 +594,19 @@ sub initialize {
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
     $c->{window} = 5;
 
+    if ($c->{trashfile}) {
+        $c->{trash} = Equinox::Migration::SimpleTagList->new($conf->{trashfile})
+    } else {
+        $c->{trash} = Equinox::Migration::SimpleTagList->new;
+    }
+    # remove original id sequence tag from trash hash if we know it
+    $c->{trash}->remove_tag($c->{'original-tag'})
+      if ( $c->{'original-tag'} and $c->{trash}->has($c->{'original-tag'}) );
+
     # autotrash 901, 903 if strip-nines
     if ($c->{'strip9'}) {
-        $c->{trash}{901} = 1;
-        $c->{trash}{903} = 1;
+        $c->{trash}->add_tag(901);
+        $c->{trash}->add_tag(903);
     }
 
     my @keys = keys %{$c};
@@ -723,7 +634,8 @@ Options
 
   --autoscrub  -a  Automatically remove non-numeric tags in data
   --nocollapse -n  Don't compress records to one line on output
-  --strip9         Automatically remove any existing 901/903 tags in data (reversible)
+  --strip9         Automatically remove any existing 901/903 tags in data
+  --no-strip9      Don't complain about 901/903 tags in data
   --trashfile  -t  File containing trash tag data (see --trashhelp)
 
 
@@ -735,32 +647,11 @@ exit;
 
 sub show_trashhelp {
     print <<HELP;
-The marc-cleanup trash tags file is a simple plaintext file. It is a
-line oriented format. There are three basic tokens:
+See
 
-  * The tag
-  * The tag range
-  * The "except" clause
+http://intra.lan.hq.esilibrary.com/dokuwiki/doku.php?id=migration:tag_files
 
-Any number of tags and/or tag ranges can appear on a single line. A
-tag cannot appear twice in the file, either alone or as part of a
-range. This is to prevent errors in the trash tag listing. Items do
-not have to be sorted within a line. These following lines are valid:
-
-  850 852 870..879 886 890 896..899
-  214 696..699 012
-
-Ranges must be ordered internally. That is, "870..879" is valid while
-"879..870" is not.
-
-Finally, there can be only one "except" clause on a line. It is
-composed of the word "except" followed by one or more tags or
-ranges. Except clauses must follow a range, and all tags within the
-clause must be within the range which the clause follows.
-
-  900..997 except 935 950..959 987 994
-
-is a valid example.
+for tag file syntax information.
 HELP
 exit;
 }
