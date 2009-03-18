@@ -18,9 +18,8 @@ our $VERSION = '1.000';
 
 =head1 SYNOPSIS
 
-Using a file as input, E::M::STL generates a set of MARC tags
-(three-digit, zero-padded integers) and provides several access
-mechanisms to that list.
+Using a file as input, E::M::STL generates a set of MARC datafield
+tags and provides several access mechanisms to that set.
 
     use Equinox::Migration::SimpleTagList;
     
@@ -41,26 +40,31 @@ or
 
 =head2 new
 
-Takes one argument, C<file>, which is mandatory. Returns a E::M::STL
-object.
+Takes one argument, optional argument, C<file>. If this is speficied,
+the tag list will be populated as per that file on instantiation.
+
+Returns a E::M::STL object.
 
 =cut
 
 sub new {
-    my ($class,%args) = @_;
+    my ($class, %args) = @_;
 
     my $self = bless { conf => { except => 0,
-                                 range => { high => 0, low => 0 },
+                                 range  => { high => 0, low => 0 },
+                                 lastwasrange => 0,
                                },
                        tags => {} }, $class;
 
-    if (-r $args{file}) {
-        $self->{conf}{file} = $args{file}
-    } else {
-        die "Can't open tags file: $!\n";
+    if ($args{file}) {
+        if (-r $args{file}) {
+            $self->{conf}{file} = $args{file};
+            $self->generate;
+        } else {
+            die "Can't open tags file: $!\n";
+        }
     }
 
-    $self->generate;
     return $self;
 }
 
@@ -71,9 +75,17 @@ sub new {
 Passed a data field tag, returns 1 if that tag is in the list and 0 if
 it is not.
 
+When specifying tags under 100, they must be quoted if you wish to
+include the leading zeroes
+
+    $stl->has('011'); # is equivalent to
+    $stl->has(11);
+
+or Perl will think you're passing a (possibly malformed) octal value.
+
 =cut
 
-sub has { my ($self, $t) = @_; return (defined $self->{tags}{$t}) ? 1 : 0 }
+sub has { my ($self, $t) = @_; $t =~ s/^0+//; return (defined $self->{tags}{$t}) ? 1 : 0 }
 
 =head2 as_hashref
 
@@ -85,20 +97,21 @@ sub as_hashref { my ($self) = @_; return $self->{tags} }
 
 =head2 as_hashref
 
-Returns a listref of the entire, assembled tag list.
+Returns a listref of the entire, assembled tag list (sorted
+numerically by tag).
 
 =cut
 
-sub as_listref { my ($self) = @_; return \(keys %{$self->{tags}}) }
+sub as_listref { my ($self) = @_; return [ sort {$a <=> $b} keys %{$self->{tags}} ] }
 
 sub generate {
     my ($self) = @_;
 
     open TAGFILE, '<', $self->{conf}{file};
     while (<TAGFILE>) {
-        my $lastwasrange = 0;
-        $self->{conf}{range}{high} = 0;
-        $self->{conf}{range}{low}  = 0;
+        $self->{conf}{lastwasrange} = 0;
+        $self->{conf}{range}{high}  = 0;
+        $self->{conf}{range}{low}   = 0;
         $self->{conf}{except} = 0;
 
         my @chunks = split /\s+/;
@@ -107,28 +120,22 @@ sub generate {
             # single values
             if ($chunk =~ /^\d{1,3}$/) {
                 $self->add_tag($chunk);
-                $lastwasrange = 0;
                 next;
             }
 
             # ranges
             if ($chunk =~ /^\d{1,3}\.\.\d{1,3}$/) {
-                my ($low, $high) = $self->add_range($chunk);
-                $lastwasrange = 1;
-                unless ($self->{conf}{except}) {
-                    $self->{conf}{range}{high} = $high;
-                    $self->{conf}{range}{low}  = $low;
-                }
+                $self->add_range($chunk);
                 next;
             }
 
             # 'except'
             if ($chunk eq 'except') {
                 die "Keyword 'except' can only follow a range (line $.)\n"
-                  unless $lastwasrange;
+                  unless $self->{conf}{lastwasrange};
                 die "Keyword 'except' may only occur once per line (line $.)\n"
                   if $self->{conf}{except};
-                $$self->{conf}{except} = 1;
+                $self->{conf}{except} = 1;
                 next;
             }
 
@@ -144,16 +151,24 @@ sub generate {
 sub add_range {
     my ($self, $chunk) = @_;
     my ($low,$high) = split /\.\./, $chunk;
-    die "Ranges must be 'low..high' ($low is greater than $high on line $.)\n"
+    $low =~ s/^0+//;
+    $high =~ s/^0+//;
+
+    die "Ranges must be 'low..high' ($low is greater than $high)\n"
       if ($low > $high);
     if ($self->{conf}{except}) {
-        die "Exception ranges must be within last addition range (line $.)\n"
+        die "Exception ranges must be within last addition range ($low..$high)\n"
           if ($low < $self->{range}{low} or $high > $self->{range}{high});
     }
     for my $tag ($low..$high) {
         $self->add_tag($tag)
     }
-    return $low, $high;
+
+    unless ($self->{conf}{except}) {
+        $self->{conf}{range}{high} = $high;
+        $self->{conf}{range}{low}  = $low;
+    }
+    $self->{conf}{lastwasrange} = 1;
 }
 
 =head2 add_tag
@@ -162,19 +177,33 @@ sub add_range {
 
 sub add_tag {
     my ($self, $tag) = @_;
+    $tag =~ s/^0+//;
 
-    die "Values must be valid tags (000-999)\n"
+    die "Values must be valid tags (0-999)\n"
       unless ($tag >= 0 and $tag <= 999);
 
     if ($self->{conf}{except}) {
-        delete $self->{tags}{$tag};
+        $self->remove_tag($tag)
     } else {
-        die "Trash tag '$tag' specified twice (line $.)\n"
+        die "Tag '$tag' specified twice\n"
           if $self->{tags}{$tag};
         $self->{tags}{$tag} = 1;
     }
+    $self->{conf}{lastwasrange} = 0;
 }
 
+=head2 remove_tag
+
+=cut
+
+sub remove_tag {
+    my ($self, $tag) = @_;
+    $tag =~ s/^0+//;
+
+    die "Tag '$tag' isn't in the list\n"
+      unless $self->{tags}{$tag};
+    delete $self->{tags}{$tag};
+}
 
 =head1 AUTHOR
 
