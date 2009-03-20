@@ -22,8 +22,13 @@ INSERT INTO migration_tools.config (key,value) VALUES ( 'production_tables', 'as
 CREATE OR REPLACE FUNCTION migration_tools.production_tables (TEXT) RETURNS TEXT[] AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
+        output  RECORD;
     BEGIN
-        EXECUTE 'SELECT string_to_array(value,'','') FROM ' || migration_schema || '.config WHERE key = ''production_tables'';';
+        FOR output IN
+            EXECUTE 'SELECT string_to_array(value,'','') AS tables FROM ' || migration_schema || '.config WHERE key = ''production_tables'';'
+        LOOP
+            RETURN output.tables;
+        END;
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
