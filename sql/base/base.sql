@@ -148,3 +148,15 @@ CREATE OR REPLACE FUNCTION migration_tools.address_parse_out_citystatezip (TEXT)
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.rebarcode (o TEXT, t BIGINT) RETURNS TEXT AS $$
+    DECLARE
+        n TEXT := o;
+    BEGIN
+        IF o ~ E'^\\d+$' THEN
+            n = o::INT + t;
+        END IF;
+
+        RETURN n;
+    END;
+$$ LANGUAGE PLPGSQL STRICT IMMUTABLE;
+
