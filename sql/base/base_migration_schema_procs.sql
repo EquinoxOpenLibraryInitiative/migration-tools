@@ -19,18 +19,22 @@ CREATE TABLE migration_tools.config (
 
 INSERT INTO migration_tools.config (key,value) VALUES ( 'production_tables', 'asset.call_number,asset.copy_location,asset.copy,asset.stat_cat,asset.stat_cat_entry,asset.stat_cat_entry_copy_map,asset.copy_note,actor.usr,actor.card,actor.usr_address,actor.stat_cat,actor.stat_cat_entry,actor.stat_cat_entry_usr_map,actor.usr_note,action.circulation,action.hold_request,money.grocery,money.billing,money.cash_payment,money.forgive_payment' );
 
-CREATE OR REPLACE FUNCTION migration_tools.production_tables () RETURNS TEXT[] AS $$
-    SELECT string_to_array(value,',') FROM migration_tools.config WHERE key = 'production_tables';
-$$ LANGUAGE SQL STRICT STABLE;
+CREATE OR REPLACE FUNCTION migration_tools.production_tables (TEXT) RETURNS TEXT[] AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+    BEGIN
+        EXECUTE 'SELECT string_to_array(value,'','') FROM ' || migration_schema || '.config WHERE key = ''production_tables'';';
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
 
--- This table is informational; feel free to modify etc.
-DROP TABLE IF EXISTS migration_tools.fields_requiring_mapping;
-CREATE TABLE migration_tools.fields_requiring_mapping(
-    table_schema TEXT, 
-    table_name TEXT, 
-    column_name TEXT, 
-    data_type TEXT
-);
+CREATE OR REPLACE FUNCTION migration_tools.base_init (TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+    BEGIN
+        EXECUTE 'DROP TABLE IF EXISTS ' || migration_schema || '.fields_requiring_mapping;';
+        EXECUTE 'CREATE TABLE ' || migration_schema || '.fields_requiring_mapping( table_schema TEXT, table_name TEXT, column_name TEXT, data_type TEXT);';
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
 CREATE OR REPLACE FUNCTION migration_tools.build_default_base_staging_tables (TEXT) RETURNS VOID AS $$
     DECLARE
