@@ -4,7 +4,7 @@
 -- DROP SCHEMA foo CASCADE; CREATE SCHEMA foo; 
 -- \i base.sql
 -- SELECT migration_tools.init('foo');
--- SELECT migration_tools.build_default_base_staging_tables('foo');
+-- SELECT migration_tools.build('foo');
 -- SELECT * FROM foo.fields_requiring_mapping;
 -- \d foo.actor_usr
 -- create some incoming ILS specific staging tables, like CREATE foo.legacy_items ( l_barcode TEXT, .. ) INHERITS foo.asset_copy;
@@ -43,12 +43,12 @@ CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
-CREATE OR REPLACE FUNCTION migration_tools.build_default_base_staging_tables (TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION migration_tools.build (TEXT) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
         production_tables TEXT[];
     BEGIN
-        --RAISE INFO 'In migration_tools.build_default_base_staging_tables(%)', migration_schema;
+        --RAISE INFO 'In migration_tools.build(%)', migration_schema;
         SELECT migration_tools.production_tables(migration_schema) INTO STRICT production_tables;
         EXECUTE migration_tools.build_base_staging_tables(migration_schema,production_tables);
     END;
