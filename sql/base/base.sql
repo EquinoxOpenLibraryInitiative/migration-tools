@@ -2,7 +2,7 @@
 -- An example of how to use:
 -- 
 -- DROP SCHEMA foo CASCADE; CREATE SCHEMA foo; 
--- \i base_migration_schema_procs.sql
+-- \i base.sql
 -- SELECT migration_tools.init('foo');
 -- SELECT migration_tools.build_default_base_staging_tables('foo');
 -- SELECT * FROM foo.fields_requiring_mapping;
