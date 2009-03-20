@@ -3,21 +3,15 @@
 -- 
 -- DROP SCHEMA foo CASCADE; CREATE SCHEMA foo; 
 -- \i base_migration_schema_procs.sql
+-- SELECT migration_tools.init('foo');
 -- SELECT migration_tools.build_default_base_staging_tables('foo');
--- SELECT * FROM migration_tools.fields_requiring_mapping;
+-- SELECT * FROM foo.fields_requiring_mapping;
 -- \d foo.actor_usr
 -- create some incoming ILS specific staging tables, like CREATE foo.legacy_items ( l_barcode TEXT, .. ) INHERITS foo.asset_copy;
 -- Do some mapping, like UPDATE foo.legacy_items SET barcode = TRIM(BOTH ' ' FROM l_barcode);
 -- Then, to move into production, do: select migration_tools.insert_default_into_production('foo')
 
 CREATE SCHEMA migration_tools;
-
-CREATE TABLE migration_tools.config (
-    key TEXT UNIQUE,
-    value TEXT
-);
-
-INSERT INTO migration_tools.config (key,value) VALUES ( 'production_tables', 'asset.call_number,asset.copy_location,asset.copy,asset.stat_cat,asset.stat_cat_entry,asset.stat_cat_entry_copy_map,asset.copy_note,actor.usr,actor.card,actor.usr_address,actor.stat_cat,actor.stat_cat_entry,actor.stat_cat_entry_usr_map,actor.usr_note,action.circulation,action.hold_request,money.grocery,money.billing,money.cash_payment,money.forgive_payment' );
 
 CREATE OR REPLACE FUNCTION migration_tools.production_tables (TEXT) RETURNS TEXT[] AS $$
     DECLARE
@@ -36,6 +30,8 @@ CREATE OR REPLACE FUNCTION migration_tools.base_init (TEXT) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
     BEGIN
+        EXECUTE 'CREATE TABLE ' || migration_schema || '.config ( key TEXT UNIQUE, value TEXT);';
+        EXECUTE 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''production_tables'', ''asset.call_number,asset.copy_location,asset.copy,asset.stat_cat,asset.stat_cat_entry,asset.stat_cat_entry_copy_map,asset.copy_note,actor.usr,actor.card,actor.usr_address,actor.stat_cat,actor.stat_cat_entry,actor.stat_cat_entry_usr_map,actor.usr_note,action.circulation,action.hold_request,money.grocery,money.billing,money.cash_payment,money.forgive_payment'' );';
         EXECUTE 'DROP TABLE IF EXISTS ' || migration_schema || '.fields_requiring_mapping;';
         EXECUTE 'CREATE TABLE ' || migration_schema || '.fields_requiring_mapping( table_schema TEXT, table_name TEXT, column_name TEXT, data_type TEXT);';
     END;
@@ -47,7 +43,7 @@ CREATE OR REPLACE FUNCTION migration_tools.build_default_base_staging_tables (TE
         production_tables TEXT[];
     BEGIN
         --RAISE INFO 'In migration_tools.build_default_base_staging_tables(%)', migration_schema;
-        SELECT migration_tools.production_tables() INTO STRICT production_tables;
+        SELECT migration_tools.production_tables(migration_schema) INTO STRICT production_tables;
         EXECUTE migration_tools.build_base_staging_tables(migration_schema,production_tables);
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
@@ -74,10 +70,12 @@ CREATE OR REPLACE FUNCTION migration_tools.build_specific_base_staging_table (TE
         base_staging_table = REPLACE( production_table, '.', '_' );
         --RAISE INFO 'In migration_tools.build_specific_base_staging_table(%,%) -> %', migration_schema, production_table, base_staging_table;
         EXECUTE 'CREATE TABLE ' || migration_schema || '.' || base_staging_table || ' ( like ' || production_table || ' including defaults excluding constraints );';
-        INSERT INTO migration_tools.fields_requiring_mapping
-            SELECT table_schema, table_name, column_name, data_type
-            FROM information_schema.columns 
-            WHERE table_schema = migration_schema AND table_name = base_staging_table AND is_nullable = 'NO' AND column_default IS NULL;
+        EXECUTE '
+            INSERT INTO ' || migration_schema || '.fields_requiring_mapping
+                SELECT table_schema, table_name, column_name, data_type
+                FROM information_schema.columns 
+                WHERE table_schema = ''' || migration_schema || ''' AND table_name = ''' || base_staging_table || ''' AND is_nullable = ''NO'' AND column_default IS NULL;
+        ';
         FOR columns IN 
             SELECT table_schema, table_name, column_name, data_type
             FROM information_schema.columns 
@@ -94,7 +92,7 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_default_into_production (TEXT)
         production_tables TEXT[];
     BEGIN
         --RAISE INFO 'In migration_tools.insert_into_production(%)', migration_schema;
-        SELECT migration_tools.production_tables() INTO STRICT production_tables;
+        SELECT migration_tools.production_tables(migration_schema) INTO STRICT production_tables;
         FOR i IN array_lower(production_tables,1) .. array_upper(production_tables,1) LOOP
             EXECUTE migration_tools.insert_into_production(migration_schema,production_tables[i]);
         END LOOP;
