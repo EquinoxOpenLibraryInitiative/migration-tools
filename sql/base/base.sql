@@ -26,7 +26,7 @@ CREATE OR REPLACE FUNCTION migration_tools.production_tables (TEXT) RETURNS TEXT
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
-CREATE OR REPLACE FUNCTION migration_tools.base_init (TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
     BEGIN
