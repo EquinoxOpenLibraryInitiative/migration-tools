@@ -30,6 +30,7 @@ CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
     BEGIN
+        EXECUTE 'CREATE SCHEMA ' || migration_schema || ';';
         EXECUTE 'CREATE TABLE ' || migration_schema || '.config ( key TEXT UNIQUE, value TEXT);';
         EXECUTE 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''production_tables'', ''asset.call_number,asset.copy_location,asset.copy,asset.stat_cat,asset.stat_cat_entry,asset.stat_cat_entry_copy_map,asset.copy_note,actor.usr,actor.card,actor.usr_address,actor.stat_cat,actor.stat_cat_entry,actor.stat_cat_entry_usr_map,actor.usr_note,action.circulation,action.hold_request,money.grocery,money.billing,money.cash_payment,money.forgive_payment'' );';
         EXECUTE 'DROP TABLE IF EXISTS ' || migration_schema || '.fields_requiring_mapping;';
