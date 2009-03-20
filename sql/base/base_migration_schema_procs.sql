@@ -28,7 +28,7 @@ CREATE OR REPLACE FUNCTION migration_tools.production_tables (TEXT) RETURNS TEXT
             EXECUTE 'SELECT string_to_array(value,'','') AS tables FROM ' || migration_schema || '.config WHERE key = ''production_tables'';'
         LOOP
             RETURN output.tables;
-        END;
+        END LOOP;
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
