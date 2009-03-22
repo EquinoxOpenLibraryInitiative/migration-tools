@@ -26,19 +26,52 @@ CREATE OR REPLACE FUNCTION migration_tools.production_tables (TEXT) RETURNS TEXT
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.log (TEXT,TEXT,INTEGER) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        sql ALIAS FOR $2;
+        nrows ALIAS FOR $3;
+    BEGIN
+        EXECUTE 'INSERT INTO ' || migration_schema || '.sql_log ( sql, row_count ) VALUES ( ' || quote_literal(sql) || ', ' || nrows || ' );';
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.exec (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        sql ALIAS FOR $2;
+        nrows INTEGER;
+    BEGIN
+        EXECUTE sql;
+        GET DIAGNOSTICS nrows = ROW_COUNT;
+        PERFORM migration_tools.log(migration_schema,sql,nrows);
+    EXCEPTION
+        WHEN OTHERS THEN 
+            RAISE EXCEPTION '!!!!!!!!!!! state = %, msg = %, sql = %', SQLSTATE, SQLERRM, sql;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
 CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
+        sql TEXT;
     BEGIN
-        EXECUTE 'DROP TABLE IF EXISTS ' || migration_schema || '.config;';
-        EXECUTE 'CREATE TABLE ' || migration_schema || '.config ( key TEXT UNIQUE, value TEXT);';
-        EXECUTE 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''production_tables'', ''asset.call_number,asset.copy_location,asset.copy,asset.stat_cat,asset.stat_cat_entry,asset.stat_cat_entry_copy_map,asset.copy_note,actor.usr,actor.card,actor.usr_address,actor.stat_cat,actor.stat_cat_entry,actor.stat_cat_entry_usr_map,actor.usr_note,action.circulation,action.hold_request,money.grocery,money.billing,money.cash_payment,money.forgive_payment'' );';
-        EXECUTE 'DROP TABLE IF EXISTS ' || migration_schema || '.fields_requiring_mapping;';
-        EXECUTE 'CREATE TABLE ' || migration_schema || '.fields_requiring_mapping( table_schema TEXT, table_name TEXT, column_name TEXT, data_type TEXT);';
         BEGIN
-            EXECUTE 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_init'', now() );';
+            SELECT 'CREATE TABLE ' || migration_schema || '.sql_log ( time TIMESTAMP NOT NULL DEFAULT NOW(), row_count INTEGER, sql TEXT );' INTO STRICT sql;
+            EXECUTE sql;
         EXCEPTION
-            WHEN OTHERS THEN EXECUTE 'UPDATE ' || migration_schema || '.config SET value = now() WHERE key = ''last_init'';';
+            WHEN OTHERS THEN 
+                RAISE INFO '!!!!!!!!!!! state = %, msg = %, sql = %', SQLSTATE, SQLERRM, sql;
+        END;
+        PERFORM migration_tools.exec( $1, 'DROP TABLE IF EXISTS ' || migration_schema || '.config;' );
+        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.config ( key TEXT UNIQUE, value TEXT);' );
+        PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''production_tables'', ''asset.call_number,asset.copy_location,asset.copy,asset.stat_cat,asset.stat_cat_entry,asset.stat_cat_entry_copy_map,asset.copy_note,actor.usr,actor.card,actor.usr_address,actor.stat_cat,actor.stat_cat_entry,actor.stat_cat_entry_usr_map,actor.usr_note,action.circulation,action.hold_request,money.grocery,money.billing,money.cash_payment,money.forgive_payment'' );' );
+        PERFORM migration_tools.exec( $1, 'DROP TABLE IF EXISTS ' || migration_schema || '.fields_requiring_mapping;' );
+        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.fields_requiring_mapping( table_schema TEXT, table_name TEXT, column_name TEXT, data_type TEXT);' );
+        BEGIN
+            PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_init'', now() );' );
+        EXCEPTION
+            WHEN OTHERS THEN PERFORM migration_tools.exec( $1, 'UPDATE ' || migration_schema || '.config SET value = now() WHERE key = ''last_init'';' );
         END;
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
@@ -50,7 +83,7 @@ CREATE OR REPLACE FUNCTION migration_tools.build (TEXT) RETURNS VOID AS $$
     BEGIN
         --RAISE INFO 'In migration_tools.build(%)', migration_schema;
         SELECT migration_tools.production_tables(migration_schema) INTO STRICT production_tables;
-        EXECUTE migration_tools.build_base_staging_tables(migration_schema,production_tables);
+        PERFORM migration_tools.build_base_staging_tables(migration_schema,production_tables);
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
@@ -61,7 +94,7 @@ CREATE OR REPLACE FUNCTION migration_tools.build_base_staging_tables (TEXT,TEXT[
     BEGIN
         --RAISE INFO 'In migration_tools.build_base_staging_tables(%,%)', migration_schema, production_tables;
         FOR i IN array_lower(production_tables,1) .. array_upper(production_tables,1) LOOP
-            EXECUTE migration_tools.build_specific_base_staging_table(migration_schema,production_tables[i]);
+            PERFORM migration_tools.build_specific_base_staging_table(migration_schema,production_tables[i]);
         END LOOP;
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
@@ -75,19 +108,19 @@ CREATE OR REPLACE FUNCTION migration_tools.build_specific_base_staging_table (TE
     BEGIN
         base_staging_table = REPLACE( production_table, '.', '_' );
         --RAISE INFO 'In migration_tools.build_specific_base_staging_table(%,%) -> %', migration_schema, production_table, base_staging_table;
-        EXECUTE 'CREATE TABLE ' || migration_schema || '.' || base_staging_table || ' ( like ' || production_table || ' including defaults excluding constraints );';
-        EXECUTE '
+        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.' || base_staging_table || ' ( LIKE ' || production_table || ' INCLUDING DEFAULTS EXCLUDING CONSTRAINTS );' );
+        PERFORM migration_tools.exec( $1, '
             INSERT INTO ' || migration_schema || '.fields_requiring_mapping
                 SELECT table_schema, table_name, column_name, data_type
                 FROM information_schema.columns 
                 WHERE table_schema = ''' || migration_schema || ''' AND table_name = ''' || base_staging_table || ''' AND is_nullable = ''NO'' AND column_default IS NULL;
-        ';
+        ' );
         FOR columns IN 
             SELECT table_schema, table_name, column_name, data_type
             FROM information_schema.columns 
             WHERE table_schema = migration_schema AND table_name = base_staging_table AND is_nullable = 'NO' AND column_default IS NULL
         LOOP
-            EXECUTE 'ALTER TABLE ' || columns.table_schema || '.' || columns.table_name || ' ALTER COLUMN ' || columns.column_name || ' DROP NOT NULL;';
+            PERFORM migration_tools.exec( $1, 'ALTER TABLE ' || columns.table_schema || '.' || columns.table_name || ' ALTER COLUMN ' || columns.column_name || ' DROP NOT NULL;' );
         END LOOP;
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
@@ -100,7 +133,7 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_base_into_production (TEXT) RE
         --RAISE INFO 'In migration_tools.insert_into_production(%)', migration_schema;
         SELECT migration_tools.production_tables(migration_schema) INTO STRICT production_tables;
         FOR i IN array_lower(production_tables,1) .. array_upper(production_tables,1) LOOP
-            EXECUTE migration_tools.insert_into_production(migration_schema,production_tables[i]);
+            PERFORM migration_tools.insert_into_production(migration_schema,production_tables[i]);
         END LOOP;
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
@@ -114,7 +147,7 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_into_production (TEXT,TEXT) RE
     BEGIN
         base_staging_table = REPLACE( production_table, '.', '_' );
         --RAISE INFO 'In migration_tools.insert_into_production(%,%) -> %', migration_schema, production_table, base_staging_table;
-        EXECUTE 'INSERT INTO ' || production_table || ' SELECT * FROM ' || migration_schema || '.' || base_staging_table || ';';
+        PERFORM migration_tools.exec( $1, 'INSERT INTO ' || production_table || ' SELECT * FROM ' || migration_schema || '.' || base_staging_table || ';' );
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
