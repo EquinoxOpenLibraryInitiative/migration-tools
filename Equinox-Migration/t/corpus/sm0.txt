@@ -1,0 +1,31 @@
+# comment lines are comments
+
+# blanks are ignored
+
+
+# format is as follows:
+#
+# fieldname  tag  sub  [modifier] [# line comment]
+
+call_number     949 a
+call_number_alt 999 a
+copy_seq        949 c
+copy_seq_alt    999 c
+barcode         949 i
+barcode_alt     999 i
+location        949 l # comments can go here, too
+location_alt    999 l
+library         949 m
+library_alt     999 m
+note            949 o multi
+note_alt        999 o multi
+type            949 t
+type_alt        999 t
+date_a          949 v
+date_a_alt      999 v
+date_b          949 u
+date_b_alt      999 u
+cat_a           949 w
+cat_a_alt       999 w
+cat_b           949 x
+cat_b_alt       999 x
