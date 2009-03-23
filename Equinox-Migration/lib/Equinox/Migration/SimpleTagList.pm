@@ -40,8 +40,8 @@ or
 
 =head2 new
 
-Takes one argument, optional argument, C<file>. If this is speficied,
-the tag list will be populated as per that file on instantiation.
+Takes one optional argument, C<file>. If this is speficied, the tag
+list will be populated as per that file on instantiation.
 
 Returns a E::M::STL object.
 
@@ -216,7 +216,7 @@ Please report any bugs or feature requests to the above email address.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Equinox::Migration::TrashTags
+    perldoc Equinox::Migration::SimpleTagList
 
 
 =head1 COPYRIGHT & LICENSE
