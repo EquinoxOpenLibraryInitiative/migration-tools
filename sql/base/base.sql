@@ -185,8 +185,10 @@ CREATE OR REPLACE FUNCTION migration_tools.rebarcode (o TEXT, t BIGINT) RETURNS 
     DECLARE
         n TEXT := o;
     BEGIN
-        IF o ~ E'^\\d+$' THEN
-            n = o::INT + t;
+        IF o ~ E'^\\d+$' AND o !~ E'^0' THEN
+            IF o::BIGINT < t THEN
+                n = o::BIGINT + t;
+            END IF;
         END IF;
 
         RETURN n;
