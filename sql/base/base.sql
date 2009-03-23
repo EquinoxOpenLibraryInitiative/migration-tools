@@ -42,6 +42,7 @@ CREATE OR REPLACE FUNCTION migration_tools.exec (TEXT,TEXT) RETURNS VOID AS $$
         sql ALIAS FOR $2;
         nrows INTEGER;
     BEGIN
+        EXECUTE 'UPDATE ' || migration_schema || '.sql_current SET sql = ' || quote_literal(sql) || ';';
         EXECUTE sql;
         GET DIAGNOSTICS nrows = ROW_COUNT;
         PERFORM migration_tools.log(migration_schema,sql,nrows);
@@ -56,6 +57,9 @@ CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
         migration_schema ALIAS FOR $1;
         sql TEXT;
     BEGIN
+        EXECUTE 'DROP TABLE IF EXISTS ' || migration_schema || '.sql_current;';
+        EXECUTE 'CREATE TABLE ' || migration_schema || '.sql_current ( sql TEXT);';
+        EXECUTE 'INSERT INTO ' || migration_schema || '.sql_current ( sql ) VALUES ( '''' );';
         BEGIN
             SELECT 'CREATE TABLE ' || migration_schema || '.sql_log ( time TIMESTAMP NOT NULL DEFAULT NOW(), row_count INTEGER, sql TEXT );' INTO STRICT sql;
             EXECUTE sql;
