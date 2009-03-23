@@ -5,20 +5,15 @@ use warnings;
 use XML::Twig;
 use YAML::Tiny;
 use Getopt::Long;
-
-
-my $conf = initialize();
-my $marcxml = shift;
-
-open HOLDINGS, '>', $conf->{output};
-open X, '>', $conf->{pubnotesfile};
-open Z, '>', $conf->{privnotesfile};
-my $holdings = {};
-my %sample = ( x => {}, z => {} ); # hash of all subfields in all 852s
-my $copyid = 0;
-
+use Equinox::Migration::SubfieldMapper;
 
 $| = 1;
+
+my $c = initialize();
+my $marcxml = shift;
+my $copyid = 0;
+my $holdings;
+
 my $count = 0;
 my $total = `grep -c '<record' $marcxml`;
 my $percent = 0;
@@ -27,83 +22,87 @@ my $prevper = -1;
 my $yaml = YAML::Tiny->new;
 my $t = XML::Twig->new( twig_handlers => { record => \&record } );
 $t->parsefile($marcxml);
-$yaml->[0] = \%sample;
-$yaml->write('holdings.sample');
-print "\n\n";
+write_sample_fieds();
 
 sub record {
     my($t, $r)= @_;
-    $holdings = { copies => [] };
+    $holdings = {};
 
     my @dfields = $r->children('datafield');
-    for my $d (@dfields) 
-      { process_datafields($d) }
-
-    for my $copy (@{$holdings->{copies}})
-      { print_reports($copy) }
+    for my $d (@dfields) {
+        process_datafields($d);
+    }
+    write_data_out();
     $r->purge;
 
     $count++;
     $percent = int(($count / $total) * 100);
-    print "\r$percent% done ($count)" if ($percent != $prevper);
+    print "\r$percent% done ($count)";# if ($percent != $prevper);
     $prevper = $percent;
 }
 
 sub process_datafields {
     my ($d) = @_;
-    # get 903
-    if ($d->{'att'}->{'tag'} == 903) {
+    my $tag = $d->{'att'}->{'tag'};
+
+    if ($tag == 903) {
         my $s = $d->first_child('subfield');
         $holdings->{id} = $s->text;;
-    }
-
-    # and holdings data
-    if ($d->{'att'}->{'tag'} == $conf->{tag}) {
-        push @{$holdings->{copies}}, { x =>[], z => [] };
-        $holdings->{copies}[-1]{copyid} = $copyid;
+    } elsif ($c->{map}->has($tag)) {
+        push @{$holdings->{copies}}, { tag => $tag };
         my @subs = $d->children('subfield');
-        for my $s (@subs)
-          { process_subs($s) }
-        $copyid++;
+        for my $sub (@subs)
+          { process_subs($tag,$sub) }
     }
 }
 
 sub process_subs {
-    my ($s) = @_;
+    my ($tag, $sub) = @_;
+    my $code = $sub->{'att'}->{'code'};
+
+    unless ($c->{map}->has($tag, $code)) {
+        # this is a subfield code we don't have mapped. report on it if this is a sample tag
+        push @{$c->{sample}{$tag}}, $code if defined $c->{sample}{tag};
+        return;
+    }
+
     my $copy = $holdings->{copies}[-1];
-
-    my $code = $s->{'att'}->{'code'};
-    my $value = $s->text;
-
-    if ($code eq $conf->{pubnotes} or $code eq $conf->{privnotes}) {
-        push @{$copy->{$code}}, $value;
-        my ($k,$v) = split /:/, $value;
-        $sample{$code}{$k} = $v;
+    my $field = $c->{map}->field($tag, $code);
+    if ($c->{map}->mod($field) eq 'multi') {
+        my $name = $tag . $code;
+        push @{$copy->{multi}{$name}}, $sub->text;
     } else {
-        $copy->{$code} = $value;
-        $sample{$code} = $value;
+        $copy->{uni}{$code} = $sub->text;
     }
 }
 
-sub print_reports {
-    return unless defined $holdings->{id};
-    my ($copy) = @_;
-    my $note = 0;
-    for (@{$copy->{x}}) {
-        print X join("\t", $holdings->{id}, $copy->{copyid}, $note, $_), "\n";
-        $note++;
+
+#------------------------------------------------
+
+sub write_data_out {
+    my $i = 0;
+
+    for my $copy (@{$holdings->{copies}}) {
+        print HOLDINGS $holdings->{id}, "\t$i\t", $copy->{tag};
+        for ( sort keys %{ $c->{map}{fields} } ) {
+            if (defined $copy->{uni}{$_->{sub}}) {
+                print HOLDINGS "\t", $copy->{uni}{$_->{sub}};
+            } else {
+                print HOLDINGS "\t";
+            }
+        }
+        print HOLDINGS "\n";
+
+        for my $m (sort keys %{$copy->{multi}}) {
+            my $fh = $c->{files}{multi}{$m};
+            print $fh join("\t", $holdings->{id}, $i, @{$copy->{multi}{$m}}), "\n";
+        }
+        $i++;
     }
-    $note = 0;
-    for (@{$copy->{z}}) {
-        print Z join("\t", $holdings->{id}, $copy->{copyid}, $note, $_), "\n";
-        $note++;
-    }
-    my @fields = ();
-    for ( @{$conf->{fields}} )
-      { $copy->{$_} = '' unless defined $copy->{$_}; push @fields, $copy->{$_} }
-    print HOLDINGS join("\t", $holdings->{id}, $copy->{copyid}, @fields), "\n";
 }
 
+sub write_sample_fields {
+}
 
 #------------------------------------------------
 
@@ -116,59 +115,72 @@ sub initialize {
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
-                         'fields|f=s',
-                         'output|o=s',
+                         'sample|s=s',
+                         'map|m=s',
+                         'ils=s',
                          'prefix|p=s',
-                         'pubnotes|pub=i',
-                         'pubnotesfile=s',
-                         'privnotes|priv=s',
-                         'privnotesfile=s',
-                         'tag|t=i',
                          'help|h',
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
 
-    # set defaults
-    $c->{prefix} = (defined $c->{prefix}) ? ($c->{prefix} . '.') : '';
-    $c->{tag} = $c->{tag} || '852';
-    $c->{output} =
-      $c->{output} || join('', $c->{prefix}, "holdings.pg");
-    $c->{pubnotes} = $c->{pubnotes} || 'x';
-    $c->{pubnotesfile} =
-      $c->{pubnotesfile} || join('', $c->{prefix}, "holdings.pubnote.pg");
-    $c->{privnotes} = $c->{privnotes} || 'z';
-    $c->{privnotesfile} =
-      $c->{privnotesfile} || join('', $c->{prefix}, "holdings.privnote.pg");
-
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
-    for my $key ('fields', 'tag')
+    for my $key ('prefix', 'map', 'ils')
       { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
         show_help();
     }
 
-    # explode and validate fields string
-    process_fields($c);
-    return $c;
-}
+    # generate subfield map
+    $c->{map} = Equinox::Migration::SubfieldMapper->new( file => $c->{map} );
 
-sub process_fields {
-    my ($c) = @_;
-    my @holdings_fields = split /,/, $c->{fields};
-    for (@holdings_fields) { 
-        die "Field names must be alphanumeric!\n" if /\W/;
-        die "Field names must be single characters!\n"
-          if /\w{2,}/;
+    # explode sample tags string
+    if (defined $c->{sample}) {
+        my $sample = $c->{sample};
+        $c->{sample} = {};
+        for (split /,/, $c->{sample}) {
+            $c->{sample}{$_} = [];
+        }
     }
-    $c->{fields} = \@holdings_fields;
+
+    # open required files
+    open HOLDINGS, '>', ($c->{prefix} . ".holdings.pg");
+    for my $f (keys %{$c->{map}{fields}}) {
+        if ($c->{map}->mod($f)) {
+          open my $mfh, '>', join('.', $c->{prefix}, "holdings",
+                                  $c->{map}{fields}{$f}{tag},
+                                  $c->{map}{fields}{$f}{sub}, "pg");
+          $c->{files}{multi}{ ($c->{map}{fields}{$f}{tag} . $c->{map}{fields}{$f}{sub}) }
+            = $mfh;
+      }
+    }
+
+    # print file headers
+    print HOLDINGS "BEGIN;\n";
+    print HOLDINGS "CREATE TABLE ", $c->{prefix}, ".asset_copy_", $c->{ils};
+    print HOLDINGS $c->{library} if (defined $c->{library});
+    print HOLDINGS " (";
+    for ( sort keys %{ $c->{map}{fields} } ) {
+        print HOLDINGS "l_", $_, " TEXT, ";
+    }
+    print HOLDINGS ") INHERITS FROM (", $c->{prefix}, ".asset_copy);\n";
+    print HOLDINGS "COPY ", $c->{prefix}, ".asset_copy_", $c->{ils};
+    print HOLDINGS $c->{library} if (defined $c->{library});
+    print HOLDINGS " (";
+    for ( sort keys %{ $c->{map}{fields} } ) {
+        print HOLDINGS "l_", $_, ", ";
+    }
+    print HOLDINGS ") FROM STDIN;\n";
+
+
+    return $c;
 }
 
 sub show_help {
     print <<HELP;
-Usage is: extract_holdings MARCXML_FILE HOLDINGS_TAG
+Usage is: ...
 HELP
     exit;
 }
