@@ -178,6 +178,8 @@ sub add_tag {
     my ($self, $tag) = @_;
     $tag =~ s/^0+//;
 
+    die "Values must be numeric\n" if ($tag =~ /[^\d\-]/);
+
     die "Values must be valid tags (0-999)\n"
       unless ($tag >= 0 and $tag <= 999);
 

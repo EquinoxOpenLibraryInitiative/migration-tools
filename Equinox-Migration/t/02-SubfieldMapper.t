@@ -1,7 +1,7 @@
 #!perl -T
 
-#use Test::More tests => 33;
-use Test::More qw(no_plan);
+use Test::More tests => 39;
+#use Test::More qw(no_plan);
 use Equinox::Migration::SubfieldMapper;
 
 # baseline object creation

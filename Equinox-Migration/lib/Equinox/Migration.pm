@@ -27,27 +27,6 @@ Perhaps a little code snippet.
     my $foo = Equinox::Migration->new();
     ...
 
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
-
-=head1 FUNCTIONS
-
-=head2 function1
-
-=cut
-
-sub function1 {
-}
-
-=head2 function2
-
-=cut
-
-sub function2 {
-}
-
 =head1 AUTHOR
 
 Shawn Boyette, C<< <sboyette at esilibrary.com> >>

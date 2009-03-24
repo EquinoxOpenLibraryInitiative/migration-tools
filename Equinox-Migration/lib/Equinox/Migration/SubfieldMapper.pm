@@ -228,7 +228,7 @@ sub validate {
      unless ($toks->{field} =~ /^[a-zA-z]/);
 
     die "Invalid tag (line $.)\n"
-      if ($toks->{tag} =~ /\D/ or $toks->{tag} < 0 or $toks->{tag} > 999);
+      if ($toks->{tag} =~ /[^\d\-]/ or $toks->{tag} < 0 or $toks->{tag} > 999);
 
     die "Invalid subfield code (line $.)\n"
       if (length $toks->{sub} != 1 or $toks->{sub} =~ /[^a-zA-Z0-9]/);
