@@ -51,7 +51,7 @@ Returns a E::M::STL object.
 sub new {
     my ($class, %args) = @_;
 
-    my $self = bless { conf   => { mods => { multi => 1, biblevel => 1} },
+    my $self = bless { conf   => { mods => { multi => 1, bib => 1, req => 1, bibreq => 1 } },
                        fields => {},
                        tags   => {} }, $class;
 
@@ -60,15 +60,25 @@ sub new {
             $self->{conf}{file} = $args{file};
             $self->generate;
         } else {
-            die "Can't open  file: $!\n";
+            die "Can't open file: $!\n";
         }
     }
 
     return $self;
 }
 
+=head2 has
 
-=head2 generate
+Ask it whether you mapping has various things, and it'll let you know.
+
+    $sm->has('fieldname')      # is this fieldname mapped?
+    $sm->has(901)              # are there any mappings for this tag?
+    $sm->has(650,'c')          # is this tag/subfield combo mapped?
+    $sm->has('name', 245, 'a') # is this name mapped to 245$a?
+
+Returns 1 if true, 0 if false.
+
+FIXME: use named params instead of positional
 
 =cut
 
@@ -88,17 +98,66 @@ sub has {
         if (defined $chunks[2]) {
             return 1 if ( $self->{fields}{$chunks[0]}{tag} eq $chunks[1] and
                           $self->{fields}{$chunks[0]}{sub} eq $chunks[2] );
-            return undef;
+            return 0;
         } elsif (defined $chunks[1]) {
             return 1 if ( $self->{fields}{$chunks[0]}{tag} eq $chunks[1] );
-            return undef;
+            return 0;
         } else {
             return 1 if ( defined $self->{fields}{$chunks[0]} );
-            return undef;
+            return 0;
         }
     }
 }
 
+=head2 field
+
+Given a tag and subfield code,
+
+    my $fname = $sm->field(945, 'p')
+
+return the name mapped to them. Returns C<undef> if no mapping exists.
+
+=cut
+
+sub field {
+    my ($self, $tag, $sub) = @_;
+    return undef unless (defined $tag and defined $sub);
+    return undef unless $self->has($tag, $sub);
+    return $self->{tags}{$tag}{$sub};
+}
+
+=head2 mod
+
+Returns the modifier set on a mapping.
+
+    if ($sm->mod('field) eq "bib")
+
+If there is no modifier, C<0> will be returned. At the moment, the
+valid mappings are
+
+    * multi - This field is expected to be seen multiple times per
+              datafield
+
+    * bib - This is a bib-level field, and is expected to be seen only
+            once per record (normal is once per datafield)
+
+    * req - This field is required to occur before output
+
+    * bibreq - Both 'bib' and 'req'
+
+=cut
+
+sub mod {
+    my ($self, $field) = @_;
+    return undef unless $self->has($field);
+    return $self->{fields}{$field}{mod};
+}
+
+=head2 generate
+
+Generate initial mapping from file.
+
+=cut
 
 sub generate {
     my ($self, $file) = @_;
@@ -121,17 +180,41 @@ sub generate {
 
 }
 
+=head2 add
+
+Add new item to mapping. Not usually called directly from user code.
+
+    $sm->add( field => 'value', tag => num, sub => 'c' );
+    $sm->add( field => 'value', tag => num,
+              sub => 'c', mod => 'modifier' );
+
+=cut
+
 sub add {
     my ($self, %toks) = @_;
 
     # check bits for validity
     $self->validate(\%toks);
 
-    $toks{mod} = (defined $toks{mod}) ? $toks{mod} : 0;
+    $toks{mod} = (defined $toks{mod} and $toks{mod} !~ /^#/) ? $toks{mod} : 0;
 
     $self->{fields}{$toks{field}} = { tag => $toks{tag}, sub => $toks{sub}, mod => $toks{mod}};
     $self->{tags}{$toks{tag}}{$toks{sub}} = $toks{field};
 }
+
+=head2 validate
+
+Passed a reference to the hash given to C<add>, validate scans its
+contents for common errors and dies if there is an issue.
+
+    * field, tag, and sub are required
+    * fieldnames must start with a letter
+    * fieldnames must be unique
+    * tag must be between 0 and 999
+    * subfield code must be a single alphanumeric character
+    * tag+subfield can only be mapped once
+
+=cut
 
 sub validate {
     my ($self, $toks) = @_;
@@ -142,13 +225,13 @@ sub validate {
       unless (defined $toks->{field} and defined $toks->{tag} and defined $toks->{sub});
 
     die "Fieldnames must start with letter (line $.)\n"
-     unless ($toks->{field} =~ /^\w/);
+     unless ($toks->{field} =~ /^[a-zA-z]/);
 
     die "Invalid tag (line $.)\n"
       if ($toks->{tag} =~ /\D/ or $toks->{tag} < 0 or $toks->{tag} > 999);
 
     die "Invalid subfield code (line $.)\n"
-      if (length $toks->{sub} != 1 or $toks->{sub} =~ /[^a-z0-9]/);
+      if (length $toks->{sub} != 1 or $toks->{sub} =~ /[^a-zA-Z0-9]/);
 
     # the next thing (if it exists), must be a comment or valid modifier
     if (defined $toks->{mod}) {
