@@ -26,6 +26,20 @@ CREATE OR REPLACE FUNCTION migration_tools.production_tables (TEXT) RETURNS TEXT
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.country_code (TEXT) RETURNS TEXT AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        output TEXT;
+    BEGIN
+        FOR output IN
+            EXECUTE 'SELECT value FROM ' || migration_schema || '.config WHERE key = ''country_code'';'
+        LOOP
+            RETURN output;
+        END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
+
 CREATE OR REPLACE FUNCTION migration_tools.log (TEXT,TEXT,INTEGER) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
@@ -70,6 +84,7 @@ CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
         PERFORM migration_tools.exec( $1, 'DROP TABLE IF EXISTS ' || migration_schema || '.config;' );
         PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.config ( key TEXT UNIQUE, value TEXT);' );
         PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''production_tables'', ''asset.call_number,asset.copy_location,asset.copy,asset.stat_cat,asset.stat_cat_entry,asset.stat_cat_entry_copy_map,asset.copy_note,actor.usr,actor.card,actor.usr_address,actor.stat_cat,actor.stat_cat_entry,actor.stat_cat_entry_usr_map,actor.usr_note,action.circulation,action.hold_request,money.grocery,money.billing,money.cash_payment,money.forgive_payment'' );' );
+        PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''country_code'', ''USA'' );' );
         PERFORM migration_tools.exec( $1, 'DROP TABLE IF EXISTS ' || migration_schema || '.fields_requiring_mapping;' );
         PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.fields_requiring_mapping( table_schema TEXT, table_name TEXT, column_name TEXT, data_type TEXT);' );
         BEGIN
