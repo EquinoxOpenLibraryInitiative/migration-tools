@@ -85,8 +85,9 @@ sub write_data_out {
     for my $copy (@{$holdings->{copies}}) {
         print HOLDINGS $holdings->{id}, "\t$i\t", $copy->{tag};
         for ( sort keys %{ $c->{map}{fields} } ) {
-            if (defined $copy->{uni}{$_->{sub}}) {
-                print HOLDINGS "\t", $copy->{uni}{$_->{sub}};
+            next if ($c->{map}->mod($_) =~ /^bib/);
+            if (defined $copy->{uni}{ $c->{map}{fields}{$_}{sub} }) {
+                print HOLDINGS "\t", $copy->{uni}{ $c->{map}{fields}{$_}{sub} };
             } else {
                 print HOLDINGS "\t";
             }
@@ -118,6 +119,7 @@ sub initialize {
                          'sample|s=s',
                          'map|m=s',
                          'ils=s',
+                         'library=s',
                          'prefix|p=s',
                          'help|h',
                        );
@@ -149,28 +151,30 @@ sub initialize {
     open HOLDINGS, '>', ($c->{prefix} . ".holdings.pg");
     for my $f (keys %{$c->{map}{fields}}) {
         if ($c->{map}->mod($f)) {
-          open my $mfh, '>', join('.', $c->{prefix}, "holdings",
-                                  $c->{map}{fields}{$f}{tag},
-                                  $c->{map}{fields}{$f}{sub}, "pg");
-          $c->{files}{multi}{ ($c->{map}{fields}{$f}{tag} . $c->{map}{fields}{$f}{sub}) }
-            = $mfh;
-      }
+            next if ($c->{map}->mod($f) =~ /bib/);
+            open my $mfh, '>', join('.', $c->{prefix}, "holdings",
+                                    $c->{map}{fields}{$f}{tag},
+                                    $c->{map}{fields}{$f}{sub}, "pg");
+            $c->{files}{multi}{ ($c->{map}{fields}{$f}{tag} . $c->{map}{fields}{$f}{sub}) }
+              = $mfh;
+        }
     }
 
     # print file headers
     print HOLDINGS "BEGIN;\n";
     print HOLDINGS "CREATE TABLE ", $c->{prefix}, ".asset_copy_", $c->{ils};
     print HOLDINGS $c->{library} if (defined $c->{library});
-    print HOLDINGS " (";
+    print HOLDINGS " (eg_bib_id INTEGER, eg_copy_id INTEGER, l_tag INTEGER";
     for ( sort keys %{ $c->{map}{fields} } ) {
-        print HOLDINGS "l_", $_, " TEXT, ";
+        next if ($c->{map}->mod($_) =~ /bib/);
+        print HOLDINGS ", l_", $_, " TEXT";
     }
-    print HOLDINGS ") INHERITS FROM (", $c->{prefix}, ".asset_copy);\n";
+    print HOLDINGS ") INHERITS (", $c->{prefix}, ".asset_copy);\n";
     print HOLDINGS "COPY ", $c->{prefix}, ".asset_copy_", $c->{ils};
     print HOLDINGS $c->{library} if (defined $c->{library});
-    print HOLDINGS " (";
+    print HOLDINGS " (eg_bib_id, eg_copy_id, l_tag";
     for ( sort keys %{ $c->{map}{fields} } ) {
-        print HOLDINGS "l_", $_, ", ";
+        print HOLDINGS ", l_", $_;
     }
     print HOLDINGS ") FROM STDIN;\n";
 
