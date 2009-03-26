@@ -1,6 +1,6 @@
 #!perl -T
 
-use Test::More tests => 45;
+use Test::More tests => 49;
 #use Test::More qw(no_plan);
 
 use Equinox::Migration::SimpleTagList;
@@ -59,6 +59,8 @@ is ($stl->has(12), 1);
 is ($stl->has('012'), 1);
 is ($stl->has(241), 1);
 is ($stl->has(359), 1);
+is ($stl->has(400), 1);
+is ($stl->has(416), 1);
 is ($stl->has(652), 1);
 is ($stl->has(654), 1);
 is ($stl->has(656), 1);
@@ -67,9 +69,11 @@ is ($stl->has(872), 1);
 is ($stl->has(900), 1);
 is ($stl->has(999), 1);
 is ($stl->has(988), 1);
+is ($stl->has(411), 0, 'exception');
 is ($stl->has(655), 0, 'exception');
+is ($stl->has(915), 0, 'exception');
 is ($stl->has(987), 0, 'exception');
-is ($stl->has(400), 0, 'not in input set');
+is ($stl->has(500), 0, 'not in input set');
 
 $stl = Equinox::Migration::SimpleTagList->new( file => "./t/corpus/stl-1.txt");
 is ($stl->has(258), 1);
