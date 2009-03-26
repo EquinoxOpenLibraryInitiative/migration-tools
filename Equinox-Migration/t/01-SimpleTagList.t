@@ -1,7 +1,7 @@
 #!perl -T
 
-#use Test::More tests => 34;
-use Test::More qw(no_plan);
+use Test::More tests => 45;
+#use Test::More qw(no_plan);
 
 use Equinox::Migration::SimpleTagList;
 
@@ -27,6 +27,10 @@ eval { $stl->add_tag(-37) };
 is ($@, "Values must be valid tags (0-999)\n");
 eval { $stl->add_tag(1027) };
 is ($@, "Values must be valid tags (0-999)\n");
+eval { $stl->add_tag(89) };
+is ($@, "Tag '89' specified twice\n");
+eval { $stl->remove_tag(11) };
+is ($@, "Tag '11' isn't in the list\n");
 
 # range addition, as_hashref, as_listref
 $stl->add_range("198..201");
@@ -42,6 +46,8 @@ eval { $stl->add_range("10..311") };
 is ($@, "Exception ranges must be within last addition range (10..311)\n");
 eval { $stl->add_range("6..11") };
 is ($@, "Exception ranges must be within last addition range (6..11)\n");
+eval { $stl->add_range("17..16") };
+is ($@, "Ranges must be 'low..high' (17 is greater than 16)\n");
 
 
 
@@ -74,3 +80,17 @@ is ($stl->has(286), 1);
 is ($stl->has(285), 0, 'exception');
 is ($stl->has(305), 1);
 is ($stl->has(304), 0, 'exception');
+
+# file with bad token
+$. = 0;
+$stl = Equinox::Migration::SimpleTagList->new;
+$stl->{conf}{file} = "./t/corpus/stl-2.txt";
+eval {$stl->generate};
+is ($@, "Unknown chunk fnord in tags file (line 1)\n");
+
+# file with except in wrong place
+$. = 0;
+$stl = Equinox::Migration::SimpleTagList->new;
+$stl->{conf}{file} = "./t/corpus/stl-3.txt";
+eval {$stl->generate};
+is ($@, "Keyword 'except' can only follow a range (line 1)\n");
