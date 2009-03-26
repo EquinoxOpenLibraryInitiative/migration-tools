@@ -109,12 +109,16 @@ sub generate {
 
     open TAGFILE, '<', $self->{conf}{file};
     while (<TAGFILE>) {
+        next if m/^#/;
+        next if m/^\s*\n$/;
+
         $self->{conf}{lastwasrange} = 0;
         $self->{conf}{range}{high}  = 0;
         $self->{conf}{range}{low}   = 0;
 
         my @chunks = split /\s+/;
         while (my $chunk = shift @chunks) {
+            last if ($chunk =~ /^#/);
 
             # single values
             if ($chunk =~ /^\d{1,3}$/) {
