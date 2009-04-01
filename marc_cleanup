@@ -8,9 +8,10 @@ use Getopt::Long;
 use Term::ReadLine;
 use Equinox::Migration::SimpleTagList;
 
-binmode STDOUT, ":utf8";
 my $term = new Term::ReadLine 'yaz-cleanup';
 my $OUT = $term->OUT || \*STDOUT;
+binmode STDOUT, ":utf8";
+binmode $OUT, ":utf8";
 
 $| = 1;
 
@@ -214,7 +215,8 @@ sub stow_record_data {
             my $osub = $conf->{'original-subfield'};
             $recmeta{oid} = 'NONE';
 
-            until ($line =~ m|</record>|) {
+            # skim to end of this tag
+            until ($line =~ m|</datafield>|) {
                 if ($line =~ /<subfield code="$osub">(.+?)</)
                   { $recmeta{oid} = $1 }
                 $lptr++;
