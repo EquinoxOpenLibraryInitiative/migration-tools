@@ -1,6 +1,6 @@
 #!perl -T
 
-use Test::More tests => 39;
+use Test::More tests => 40;
 #use Test::More qw(no_plan);
 use Equinox::Migration::SubfieldMapper;
 
@@ -46,10 +46,6 @@ $tokens = { field => 'foo', tag => 650, sub => 'qq' };
 eval { $sm->validate($tokens) };
 is ($@, "Invalid subfield code (line 1)\n", 'over-length subfield');
 
-$tokens = { field => 'foo', tag => 650, sub => 'a', mod => 'bar' };
-eval { $sm->validate($tokens) };
-is ($@, "Unknown chunk (line 1)\n", 'Extra, non-comment content');
-
 # and some which should have no problems
 $tokens = { field => 'foo', tag => 650, sub => 'a' };
 eval { $sm->validate($tokens) };
@@ -66,7 +62,7 @@ is ($@, "Fieldnames must be unique (line 1)\n", 'dupe fieldname');
 $sm->{tags}{650}{a} = 1;
 $tokens = { field => 'bar', tag => 650, sub => 'a', mod => '#', 'this', 'is', 'a', 'comment' };
 eval { $sm->validate($tokens) };
-is ($@, "Subfields cannot be multimapped (line 1)\n", 'dupe fieldname');
+is ($@, "Subfields cannot be mapped twice (line 1)\n", 'dupe fieldname');
 
 # test load from file
 $sm = Equinox::Migration::SubfieldMapper->new( file => "./t/corpus/sm0.txt" );
@@ -94,7 +90,10 @@ is ($sm->field(650,'z'), undef, 'tag+code not mapped');
 is ($sm->field(949,'a'), 'call_number', 'mapping returned');
 
 # mod method tests
-is ($sm->{fields}{type}{mod}, 0);
-is ($sm->{fields}{note}{mod}, 'multi');
-is ($sm->mod('zzz'), undef, 'nonexistant field');
-is ($sm->mod('note'), 'multi', 'multi');
+is ($sm->{fields}{note}{mods}[0], 'multi');
+is ($sm->mods('zzz'), undef, 'nonexistant field');
+is_deeply ($sm->mods('note'), ['multi'], 'multi');
+is_deeply ($sm->mods('note_alt'), ['multi', 'req'], 'multi, req');
+is_deeply ($sm->mods('date_a'), ['foo', 'bar', 'quux']);
+is_deeply ($sm->filters('date_a'), ['baz']);
+

@@ -17,11 +17,11 @@ location        949 l # comments can go here, too
 location_alt    999 l
 library         949 m
 library_alt     999 m
-note            949 o multi
-note_alt        999 o multi
+note            949 o m:multi
+note_alt        999 o m:multi m:req
 type            949 t
 type_alt        999 t
-date_a          949 v
+date_a          949 v m:foo m:bar f:baz m:quux
 date_a_alt      999 v
 date_b          949 u
 date_b_alt      999 u
