@@ -95,5 +95,5 @@ is ($sm->mods('zzz'), undef, 'nonexistant field');
 is_deeply ($sm->mods('note'), ['multi'], 'multi');
 is_deeply ($sm->mods('note_alt'), ['multi', 'req'], 'multi, req');
 is_deeply ($sm->mods('date_a'), ['foo', 'bar', 'quux']);
-is_deeply ($sm->filters('date_a'), ['baz']);
+is_deeply ($sm->filters('date_a'), ['one two three']);
 
