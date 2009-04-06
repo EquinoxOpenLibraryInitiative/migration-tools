@@ -189,8 +189,15 @@ sub generate {
         my $map = { mods => [], filt => [] };
         $map->{field} = shift @tokens;
         $map->{tag}   = shift @tokens;
-        for my $tok (@tokens) {
+        while (my $tok = shift @tokens) {
             last if ($tok =~ m/^#/);
+            if ($tok =~ m/^[a-z]:'/) {
+                $tok .= ' ' . shift @tokens
+                  until ($tokens[0] =~ m/'$/);
+                $tok .= ' ' . shift @tokens;
+                $tok =~ s/'//;
+                $tok =~ s/'$//;
+            }
             if ($tok =~ m/^m:/)
               { push @{$map->{mods}}, $tok }
             elsif ($tok =~ m/^f:/)
