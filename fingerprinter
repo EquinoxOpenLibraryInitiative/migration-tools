@@ -7,6 +7,7 @@ use Getopt::Long;
 use MARC::Batch;
 use Unicode::Normalize;
 use MARC::File::XML ( BinaryEncoding => 'utf-8' );
+use Equinox::Migration::SubfieldMapper;
 
 my $conf  = {}; # configuration hashref
 my $count = 0; my $scount = 0;
@@ -41,6 +42,8 @@ for my $file (@ARGV) {
 
         # populate and normalize marc
         $marc = populate_marc($record, $id);
+        # check for manual exclusion
+        next if this_record_is_excluded($record, $marc);
         normalize_marc($marc);
         unless (marc_isvalid($marc))
           { dump_exception($marc); next; }
@@ -374,12 +377,18 @@ Write line of exception report
 =cut
 
 sub dump_exception {
-    my ($marc) = @_;
+    my ($marc, $msg) = @_;
     unless (defined $marc) {
         print XF "Undefined record at line $count; likely bad XML\n";
         return;
     }
+
     print XF "Record ", $marc->{id}, " excluded: ";
+    if (defined $msg) {
+        print XF "$msg\n";
+        return
+    }
+
     print XF "missing item_form; " unless ($marc->{item_form});
     unless (defined $marc->{date1})
       { print XF "missing date1; " }
@@ -392,6 +401,42 @@ sub dump_exception {
     print XF "\n";
 }
 
+
+=head2 this_record_is_excluded
+
+Returns 1 if the record B<is> and 0 if the record B<is not> excluded,
+according to the subfield mapping (generated via the C<--excludelist>
+option).
+
+=cut
+
+sub this_record_is_excluded {
+    my ($rec, $marc) = @_;
+    return 0 unless defined $conf->{excludelist};
+
+    for my $tag (keys %{ $conf->{excludelist}->{tags} }) {
+        for my $sub (keys %{$conf->{excludelist}->{tags}{$tag}}) {
+            my $f = $conf->{excludelist}->field($tag, $sub);
+
+            # if this record doesn't have the right tag/sub, it can't be
+            return 0 unless ($rec->field($tag) and $rec->field($tag)->subfield($sub));
+            # but it does, so if there are no filters to check...
+            unless ($conf->{excludelist}->filters($f))
+              { dump_exception($marc, "exclusion $tag$sub"); return 1 }
+
+            my $sub_contents = $rec->field($tag)->subfield($sub);
+            for my $filter (@{ $conf->{excludelist}->filters($f)}) {
+                if ($sub_contents =~ /$filter/i) {
+                    # filter matches. no fp.
+                    dump_exception($marc, "exclusion $tag$sub '$filter'");
+                    return 1;
+                }
+                # no match, no exclude
+                return 0;
+            }
+        }
+    }
+}
 
 =head2 initialize
 
@@ -419,6 +464,7 @@ sub initialize {
                          'arbitrarily-lose-above=i',
                          'arbitrarily-lose-below=i',
                          'newwins',
+                         'excludelist=s',
                          'quiet|q',
                          'help|h',
                        );
@@ -469,6 +515,12 @@ sub initialize {
         $c->{exception} = join('.',$c->{prefix},'fp','ex');
     }
 
+    # get SFM object if excludelist was specified
+    if ($c->{excludelist}) {
+        $c->{excludelist} =
+          Equinox::Migration::SubfieldMapper->new( file => $c->{excludelist} );
+    }
+
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
     for my $key ('tag', 'subfield', 'output', 'exception')
@@ -514,6 +566,7 @@ Options
   --fingerprints=LIST  Fingerprints to generate, comma separated
                        Default: oclc,isbn,edition,issn,lccn,accomp,authpub
                        Others:  baseline
+  --excludelist=FILE   Name of fingerprints exclusions file
 
   --scores=LIST  Scores to calculate, comma separated
                  Default: oclc,dlc,num_650,num_tags,enc_level
