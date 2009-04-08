@@ -127,6 +127,7 @@ print $OUT "\nDone.               \n";
 sub do_automated_cleanups {
     $ptr = 0;
     until ($ptr == $#record) {
+
         # catch empty datafield elements
         if ($record[$ptr] =~ m/<datafield tag="..."/) {
             if ($record[$ptr + 1] =~ m|</datafield>|) {
@@ -180,12 +181,6 @@ sub do_automated_cleanups {
             $record[$ptr] =~ s|"\$">c?(\d+\.\d{2})|"c">\$$1|;
             message("Dollar sign corrected");
         }
-
-        # clean up tags with spaces in them
-        $record[$ptr] =~ s/tag="  /tag="00/g;
-        $record[$ptr] =~ s/tag=" /tag="0/g;
-        $record[$ptr] =~ s/tag="-/tag="0/g;
-        $record[$ptr] =~ s/tag="(\d\d) /tag="0$1/g;
 
         # automatable subfield maladies
         $record[$ptr] =~ s/code=" ">c/code="c">/;
@@ -287,21 +282,43 @@ to the driver loop.
 
 sub buildrecord {
     my $l = '';
+    my $istrash = 0;
+    my $trash = $conf->{trash};
+
     $l = <MARC> while (defined $l and $l !~ /<record>/);
     return $l unless defined $l;
     @record = ();
     %recmeta = ();
     $conf->{ricount}++;
 
-    until ($l =~ m|</record>|)
-      { push @record, $l; $l = <MARC>; }
+    until ($l =~ m|</record>|) {
+        # clean up tags with spaces in them
+        $l =~ s/tag="  /tag="00/g;
+        $l =~ s/tag=" /tag="0/g;
+        $l =~ s/tag="-/tag="0/g;
+        $l =~ s/tag="(\d\d) /tag="0$1/g;
+
+        # excise unwanted tags
+        if ($istrash) {
+            if ($l =~ m|</datafield|)
+              { $istrash = 0 }
+            else
+              { $l = <MARC>; next }
+        }
+        if ($l =~ m/<datafield tag="(.{3})"/) {
+            if ($trash->has($1) or ($conf->{autoscrub} and $1 =~ /\D/))
+              { $istrash = 1; next }
+        }
+
+        push @record, $l;
+        $l = <MARC>;
+    }
     push @record, $l;
     return 1;
 }
 
 sub write_record {
     my ($FH) = @_;
-    my $trash = $conf->{trash};
 
     if ($FH eq 'EX') {
         $EXMARC = undef;
@@ -313,27 +330,6 @@ sub write_record {
     $conf->{rocount}++ if ($FH eq $NUMARC);
     print $FH '<!-- ', $recmeta{explanation}, " -->\n"
       if(defined $recmeta{explanation});
-
-    # excise unwanted tags
-    if (defined $trash or $conf->{autoscrub}) {
-        my @trimmed = ();
-        my $istrash = 0;
-        for my $line (@record) {
-            if ($istrash) {
-                $istrash = 0 if $line =~ m|</datafield|;
-                next;
-            }
-            if ($line =~ m/<datafield tag="(.{3})"/) {
-                my $tag = $1;
-                if ($trash->has($tag) or ($conf->{autoscrub} and $tag =~ /\D/)) {
-                    $istrash = 1;
-                    next
-                }
-            }
-            push @trimmed, $line;
-        }
-        @record = @trimmed;
-    }
 
     # add 903(?) with new record id
     my $renumber = '';
@@ -597,7 +593,7 @@ sub initialize {
     $c->{window} = 5;
 
     if ($c->{trashfile}) {
-        $c->{trash} = Equinox::Migration::SimpleTagList->new($conf->{trashfile})
+        $c->{trash} = Equinox::Migration::SimpleTagList->new(file => $conf->{trashfile})
     } else {
         $c->{trash} = Equinox::Migration::SimpleTagList->new;
     }
