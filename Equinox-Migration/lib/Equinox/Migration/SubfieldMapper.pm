@@ -232,11 +232,18 @@ sub add {
     my ($self, $map) = @_;
 
     # trim the mods and filters
-    my $mods = []; my $filt = [];
-    for my $m (@{$map->{mods}})
-      { $m =~ s/^m://; push @{$mods}, $m }
-    for my $f (@{$map->{filt}})
-      { $f =~ s/^f://; push @{$filt}, $f }
+    my $mods = []; my %mods = ();
+    my $filt = []; my %filt = ();
+    for my $m (@{$map->{mods}}) {
+        die "Modifier collision '$m' at line $." if $mods{$m};
+        $m =~ s/^m://;
+        push @{$mods}, $m; $mods{$m} = 1;
+    }
+    for my $f (@{$map->{filt}}) {
+        die "Modifier collision '$f' at line $." if $filt{$f};
+        $f =~ s/^f://;
+        push @{$filt}, $f; $filt{$f} = 1;
+    }
     $map->{mods} = $mods;
     $map->{filt} = $filt;
 
