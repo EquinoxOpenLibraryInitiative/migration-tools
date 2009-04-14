@@ -9,11 +9,11 @@ Equinox::Migration::SubfieldMapper - Generate named-field to MARC tag map from f
 
 =head1 VERSION
 
-Version 1.000
+Version 1.001
 
 =cut
 
-our $VERSION = '1.000';
+our $VERSION = '1.001';
 
 
 =head1 SYNOPSIS
@@ -36,8 +36,7 @@ or
     }
 
 
-=head1 ROUTINES
-
+=head1 METHODS
 
 =head2 new
 
@@ -55,6 +54,13 @@ sub new {
                        fields => {},
                        tags   => {} }, $class;
 
+    if ($args{mods}) {
+        die "Argument 'mods' is wrong type\n"
+          unless (ref $args{mods} eq "ARRAY");
+        for my $mod ( @{$args{mods}} )
+          { $self->{conf}{mods}{$mod} = 1 }
+    }
+
     if ($args{file}) {
         if (-r $args{file}) {
             $self->{conf}{file} = $args{file};
@@ -62,13 +68,6 @@ sub new {
         } else {
             die "Can't open file: $!\n";
         }
-    }
-
-    if ($args{mods}) {
-        die "Argument 'mods' is wrong type\n"
-          unless (ref $args{mods} eq "ARRAY");
-        for my $mod ( @{$args{mods}} )
-          { $self->{conf}{mods}{$mod} = 1 }
     }
 
     return $self;
@@ -115,6 +114,44 @@ sub has {
         }
     }
 }
+
+=head2 tags
+
+Returns an arrayref containing the tags defined in the map.
+
+    my $tags = $sfm->tags;
+    for my tag ( @{$tags} ) {
+        my $subs = $sfm->subfields($tag);
+        ...
+    }
+
+=cut
+
+sub tags {
+    my ($self) = @_;
+    return [ keys %{$self->{tags}} ];
+}
+
+=head2 subfields
+
+Given a tag, return an arrayref of the subfields mapped with that tag.
+
+    my $tags = $sfm->tags;
+    for my tag ( @{$tags} ) {
+        my $subs = $sfm->subfields($tag);
+        ...
+    }
+
+Returns C<undef> if C<tag> is not mapped.
+
+=cut
+
+sub subfields {
+    my ($self, $tag) = @_;
+    return undef unless $self->has($tag);
+    return [ keys %{$self->{tags}{$tag}} ];
+}
+
 
 =head2 field
 
@@ -167,7 +204,9 @@ sub filters {
     return $self->{fields}{$field}{filt};
 }
 
+=head1 MAP CONSTRUCTION METHODS
 
+These methods are not generally accessed from user code.
 
 =head2 generate
 
