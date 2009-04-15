@@ -20,9 +20,10 @@ open CSV, '<', shift or die "Can't open file $!\n";
 
 while (<CSV>) {
     $csv->parse($_);
+    die "Bad data on line $.\n" if ($csv->error_diag);
     my @chunks = $csv->fields;
     my @out = ();
-    for (@ARGV)
-      { push @out, $chunks[$_]}
+    for my $chunk (@ARGV)
+      { push @out, $chunks[$chunk] }
     print join("\t", @out), "\n";
 }
