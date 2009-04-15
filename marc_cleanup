@@ -90,13 +90,6 @@ while ( buildrecord() ) {
                 edit("Non-numerics in tag") unless $conf->{autoscrub};
                 next;
             }
-            # test for existing 901/903 unless we're autocleaning them
-            unless ($conf->{'strip9'} or $conf->{'no-strip9'}) {
-                if ($match == 901 or $match == 903) {
-                    edit("Incoming 901/903 found in data");
-                    next;
-                }
-            }
         }
 
         # subfields can't be non-alphanumeric
@@ -300,10 +293,9 @@ sub buildrecord {
 
         # excise unwanted tags
         if ($istrash) {
-            if ($l =~ m|</datafield|)
-              { $istrash = 0 }
-            else
-              { $l = <MARC>; next }
+            $istrash = 0 if ($l =~ m|</datafield|);
+            $l = <MARC>;
+            next;
         }
         if ($l =~ m/<datafield tag="(.{3})"/) {
             if ($trash->has($1) or ($conf->{autoscrub} and $1 =~ /\D/))
@@ -574,13 +566,12 @@ sub initialize {
                          'original-tag|ot=i',
                          'original-subfield|os=s',
                          'script',
-                         'strip9',
                          'no-strip9',
                          'trashfile|t=s',
                          'trashhelp',
                          'help|h',
                        );
-    show_help() unless $rc;
+    show_help() unless $rc and @ARGV;
     show_help() if ($c->{help});
     show_trashhelp() if ($c->{trashhelp});
 
@@ -597,15 +588,14 @@ sub initialize {
     } else {
         $c->{trash} = Equinox::Migration::SimpleTagList->new;
     }
-    # remove original id sequence tag from trash hash if we know it
-    $c->{trash}->remove_tag($c->{'original-tag'})
-      if ( $c->{'original-tag'} and $c->{trash}->has($c->{'original-tag'}) );
-
-    # autotrash 901, 903 if strip-nines
-    if ($c->{'strip9'}) {
+    # autotrash 901, 903 unless no strip-nines
+    unless ($c->{'no-strip9'}) {
         $c->{trash}->add_tag(901);
         $c->{trash}->add_tag(903);
     }
+    # remove original id sequence tag from trash hash if we know it
+    $c->{trash}->remove_tag($c->{'original-tag'})
+      if ( $c->{'original-tag'} and $c->{trash}->has($c->{'original-tag'}) );
 
     my @keys = keys %{$c};
     show_help() unless (@ARGV and @keys);
@@ -632,8 +622,7 @@ Options
 
   --autoscrub  -a  Automatically remove non-numeric tags in data
   --nocollapse -n  Don't compress records to one line on output
-  --strip9         Automatically remove any existing 901/903 tags in data
-  --no-strip9      Don't complain about 901/903 tags in data
+  --no-strip9      Don't autoremove 901/903 tags in data
   --trashfile  -t  File containing trash tag data (see --trashhelp)
 
 
