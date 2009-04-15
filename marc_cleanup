@@ -110,7 +110,7 @@ while ( buildrecord() ) {
     write_record($NUMARC);
 }
 print $NUMARC "</collection>\n";
-print $OUT "\nDone.               \n";
+print $OUT "\nDone. ",$conf->{ricount}," in / ",$conf->{rocount}," out          \n";
 
 
 #-----------------------------------------------------------------------------------
