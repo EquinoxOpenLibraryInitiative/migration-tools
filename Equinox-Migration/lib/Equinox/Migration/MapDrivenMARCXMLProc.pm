@@ -67,10 +67,11 @@ sub new {
                      }, $class;
 
     # initialize map and taglist
+    die "Argument 'mapfile' must be specified\n" unless (defined $args{mapfile});
     my @mods = keys %{$self->{mods}};
     $self->{map} = Equinox::Migration::SubfieldMapper->new( file => $args{mapfile},
                                                             mods => \@mods );
-    $self->{tags} = $self->{map}->tags;
+    $self->{data}{tags} = $self->{map}->tags;
 
     # initialize twig
     die "Argument 'marcfile' must be specified\n" unless (defined $args{marcfile});
@@ -89,10 +90,11 @@ sub new {
 
 =head2 parse_record
 
-Extracts data from the next record, per the mapping file. Returns 1 on
-success, 0 otherwise.
+Extracts data from the next record, per the mapping file. Returns a
+normalized datastructure (see L</format_record> for details) on
+success; returns 0 otherwise.
 
-    while ($m->parse_record) {
+    while (my $rec = $m->parse_record) {
       # handle extracted record data
     }
 
@@ -104,7 +106,7 @@ sub parse_record {
     # get the next record and wipe current parsed record
     return 0 unless defined $self->{data}{recs}[ $self->{data}{rptr} ];
     my $record = $self->{data}{recs}[ $self->{data}{rptr} ];
-    $self->{data}{crec} = {};
+    $self->{data}{crec} = { bib => undef, multi => undef };
 
     my @fields = $record->children;
     for my $f (@fields)
@@ -113,6 +115,8 @@ sub parse_record {
     # cleanup memory and increment pointer
     $record->purge;
     $self->{data}{rptr}++;
+
+    return $self->format_record;
 }
 
 =head2 process_field
@@ -125,14 +129,17 @@ sub process_field {
     my $tag = $field->{'att'}->{'tag'};
     my $parsed = $self->{data}{crec};
 
-    if ($tag == 903) {
-        my $sub = $field->first_child('subfield');
-        $parsed->{egid} = $sub->text;;
-    } elsif ($map->has($tag)) {
-        push @{$parsed->{tags}}, { tag => $tag };
-        my @subs = $field->children('subfield');
-        for my $sub (@subs)
-          { $self->process_subs($tag, $sub) }
+    # datafields
+    if (defined $tag) {
+        if ($tag == 903) {
+            my $sub = $field->first_child('subfield');
+            $parsed->{egid} = $sub->text;;
+        } elsif ($map->has($tag)) {
+            push @{$parsed->{tags}}, { tag => $tag };
+            my @subs = $field->children('subfield');
+            for my $sub (@subs)
+              { $self->process_subs($tag, $sub) }
+        }
     }
 }
 
@@ -158,12 +165,16 @@ sub process_subs {
 
     my $data = $self->{data}{crec}{tags}[-1];
     my $field = $map->field($tag, $code);
-    if ($map->mod($field) eq 'multi') {
-        my $name = $tag . $code;
-        push @{$data->{multi}{$name}}, $sub->text;
-    } else {
-        $data->{uni}{$code} = $sub->text;
+
+    # handle modifiers
+    if (defined $map->mods($field)) {
+        if ($map->mods($field) eq 'multi') {
+            my $name = $tag . $code;
+            push @{$data->{multi}{$name}}, $sub->text;
+        }
     }
+
+    $data->{uni}{$code} = $sub->text;
 }
 
 =head1 PARSED RECORDS
@@ -197,6 +208,8 @@ times per record). The keys are composed of tag id and subfield code,
 catenated (e.g. 901c). The values are the contents of that subfield of
 that tag.
 
+If there are no tags defined as bib-level, C<bib> will be C<undef>.
+
 =head3 C<tags>
 
 This arrayref holds anonymous hashrefs, one for each instance of each
@@ -213,6 +226,8 @@ The C<uni> hashref holds data for tag/sub mappings which occur only
 once per instance of a tag (but may occur multiple times in a record
 due to there being multiple instances of that tag in a record). Keys
 are subfield codes and values are subfield content.
+
+If no tags are defined as C<multi>, it will be C<undef>.
 
 =head1 UNMAPPED TAGS
 
