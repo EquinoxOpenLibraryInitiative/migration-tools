@@ -2,10 +2,9 @@
 
 #use Test::More tests => 39;
 use Test::More qw(no_plan);
-#use Equinox::Migration::MapDrivenXMLProc;
-is (1,1);
-exit;
+use Equinox::Migration::MapDrivenXMLProc;
+
 # baseline object creation
-#my $sm = Equinox::Migration::MapDrivenXMLProc->new();
-#is(ref $sm, "Equinox::Migration::MapDrivenXMLProc", "self is self");
+my $sm = Equinox::Migration::MapDrivenXMLProc->new();
+is(ref $sm, "Equinox::Migration::MapDrivenXMLProc", "self is self");
 
