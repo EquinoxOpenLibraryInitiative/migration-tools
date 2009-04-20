@@ -334,7 +334,7 @@ sub validate {
 
     # test mod names if we have a set to check against
     if (defined $self->{conf}{mods}) {
-        for my $mod ( @{$map->{mods}} ) {
+        for my $mod ( keys %{$map->{mods}} ) {
             die "Modifier '$mod' not allowed\n"
               unless $self->{conf}{mods}{$mod};
         }
