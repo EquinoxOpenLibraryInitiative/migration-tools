@@ -176,7 +176,7 @@ Returns the modifiers set on a mapping.
 
     $self->mods('fieldname')
 
-If there are no modifiers, C<undef> will be returned. Else a listref
+If there are no modifiers, C<undef> will be returned. Else a hashref
 will be returned.
 
 =cut
@@ -271,12 +271,12 @@ sub add {
     my ($self, $map) = @_;
 
     # trim the mods and filters
-    my $mods = []; my %mods = ();
+    my $mods = {};
     my $filt = []; my %filt = ();
     for my $m (@{$map->{mods}}) {
-        die "Modifier collision '$m' at line $." if $mods{$m};
+        die "Modifier collision '$m' at line $." if $mods->{$m};
         $m =~ s/^m://;
-        push @{$mods}, $m; $mods{$m} = 1;
+        $mods->{$m} = 1;
     }
     for my $f (@{$map->{filt}}) {
         die "Modifier collision '$f' at line $." if $filt{$f};

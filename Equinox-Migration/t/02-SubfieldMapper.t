@@ -90,10 +90,10 @@ is ($sm->field(650,'z'), undef, 'tag+code not mapped');
 is ($sm->field(949,'a'), 'call_number', 'mapping returned');
 
 # mod method tests
-is ($sm->{fields}{note}{mods}[0], 'multi');
+is ($sm->{fields}{note}{mods}{multi}, 1);
 is ($sm->mods('zzz'), undef, 'nonexistant field');
-is_deeply ($sm->mods('note'), ['multi'], 'multi');
-is_deeply ($sm->mods('note_alt'), ['multi', 'req'], 'multi, req');
-is_deeply ($sm->mods('date_a'), ['foo', 'bar', 'quux']);
+is_deeply ($sm->mods('note'), { multi => 1}, 'multi');
+is_deeply ($sm->mods('note_alt'), { multi => 1, req => 1 }, 'multi, req');
+is_deeply ($sm->mods('date_a'), { foo => 1, bar => 1, quux => 1 });
 is_deeply ($sm->filters('date_a'), ['one two three']);
 
