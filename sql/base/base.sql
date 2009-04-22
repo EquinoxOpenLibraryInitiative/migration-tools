@@ -227,7 +227,7 @@ CREATE OR REPLACE FUNCTION migration_tools.rebarcode (o TEXT, t BIGINT) RETURNS 
     DECLARE
         n TEXT := o;
     BEGIN
-        IF o ~ E'^\\d+$' AND o !~ E'^0' THEN
+        IF o ~ E'^\\d+$' AND o !~ E'^0' AND length(o) < 19 THEN -- for reference, the max value for a bigint is 9223372036854775807.  May also want to consider the case where folks want to add prefixes to non-numeric barcodes
             IF o::BIGINT < t THEN
                 n = o::BIGINT + t;
             END IF;
