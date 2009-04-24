@@ -170,15 +170,15 @@ sub process_subs {
     my $dataf = $self->{data}{crec}{tags}[-1];
     my $field = $map->field($tag, $code);
 
-    # handle modifiers
-    if (defined $map->mods($field)) {
-        if ($map->mods($field) eq 'multi') {
+    # handle modifiers, or slug data in normally
+    if (my $mods = $map->mods($field)) {
+        if ($mods->{multi}) {
             my $name = $tag . $code;
             push @{$dataf->{multi}{$name}}, $sub->text;
         }
+    } else {
+        $dataf->{uni}{$code} = $sub->text;
     }
-
-    $dataf->{uni}{$code} = $sub->text;
 }
 
 =head1 PARSED RECORDS
