@@ -184,6 +184,7 @@ will be returned.
 sub mods {
     my ($self, $field) = @_;
     return undef unless $self->has($field);
+    return undef unless (%{ $self->{fields}{$field}{mods} });
     return $self->{fields}{$field}{mods};
 }
 
