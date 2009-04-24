@@ -106,7 +106,7 @@ sub parse_record {
     # get the next record and wipe current parsed record
     return 0 unless defined $self->{data}{recs}[ $self->{data}{rptr} ];
     my $record = $self->{data}{recs}[ $self->{data}{rptr} ];
-    $self->{data}{crec} = { bib => undef, multi => undef };
+    $self->{data}{crec} = { egid => undef, bib  => undef, tags => undef };
 
     my @fields = $record->children;
     for my $f (@fields)
@@ -116,7 +116,7 @@ sub parse_record {
     $record->purge;
     $self->{data}{rptr}++;
 
-    return $self->format_record;
+    return $self->{data}{crec};
 }
 
 =head2 process_field
@@ -127,18 +127,19 @@ sub process_field {
     my ($self, $field) = @_;
     my $map = $self->{map};
     my $tag = $field->{'att'}->{'tag'};
-    my $parsed = $self->{data}{crec};
+    my $crec = $self->{data}{crec};
 
     # datafields
     if (defined $tag) {
         if ($tag == 903) {
             my $sub = $field->first_child('subfield');
-            $parsed->{egid} = $sub->text;;
+            $crec->{egid} = $sub->text;;
         } elsif ($map->has($tag)) {
-            push @{$parsed->{tags}}, { tag => $tag };
+            push @{$crec->{tags}}, { tag => $tag, uni => undef, multi => undef };
             my @subs = $field->children('subfield');
             for my $sub (@subs)
               { $self->process_subs($tag, $sub) }
+            # check map to ensure all declared subs are in
         }
     }
 }
@@ -158,23 +159,26 @@ sub process_subs {
         my $s = $self->{data}{stag};
         return unless (defined $s->{$tag});
 
+        # set a value, total-seen count and records-seen-in count
         $u->{$tag}{$code}{value} = $sub->text unless defined $u->{$tag}{$code};
         $u->{$tag}{$code}{count}++;
+        $u->{$tag}{$code}{rcnt}++ unless ($u->{$tag}{$code}{last} == $self->{data}{rptr});
+        $u->{$tag}{$code}{last} = $self->{data}{rptr};
         return;
     }
 
-    my $data = $self->{data}{crec}{tags}[-1];
+    my $dataf = $self->{data}{crec}{tags}[-1];
     my $field = $map->field($tag, $code);
 
     # handle modifiers
     if (defined $map->mods($field)) {
         if ($map->mods($field) eq 'multi') {
             my $name = $tag . $code;
-            push @{$data->{multi}{$name}}, $sub->text;
+            push @{$dataf->{multi}{$name}}, $sub->text;
         }
     }
 
-    $data->{uni}{$code} = $sub->text;
+    $dataf->{uni}{$code} = $sub->text;
 }
 
 =head1 PARSED RECORDS
