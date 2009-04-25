@@ -9,11 +9,11 @@ Equinox::Migration::SubfieldMapper - Generate named-field to MARC tag map from f
 
 =head1 VERSION
 
-Version 1.001
+Version 1.002
 
 =cut
 
-our $VERSION = '1.001';
+our $VERSION = '1.002';
 
 
 =head1 SYNOPSIS
