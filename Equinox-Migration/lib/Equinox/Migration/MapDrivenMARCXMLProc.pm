@@ -84,6 +84,13 @@ sub new {
         die "Can't open marc file: $!\n";
     }
 
+    # if we have a sample arg, set up the sample set and umap hash
+    if (defined $args{sample}) {
+        for my $s ( @{$args{sample}})
+          { $self->{data}{stag}{$s} = 1 }
+        $self->{data}{umap} = {};
+    }
+
     return $self;
 }
 
@@ -166,7 +173,8 @@ sub process_subs {
         # set a value, total-seen count and records-seen-in count
         $u->{$tag}{$code}{value} = $sub->text unless defined $u->{$tag}{$code};
         $u->{$tag}{$code}{count}++;
-        $u->{$tag}{$code}{rcnt}++ unless ($u->{$tag}{$code}{last} == $self->{data}{rptr});
+        $u->{$tag}{$code}{rcnt}++ unless ( defined $u->{$tag}{$code}{last} and
+                                           $u->{$tag}{$code}{last} == $self->{data}{rptr} );
         $u->{$tag}{$code}{last} = $self->{data}{rptr};
         return;
     }
@@ -255,13 +263,29 @@ C<undef>.
 
 =head1 UNMAPPED TAGS
 
+If the C<sample> argument is passed to L</new>, there will also be a
+structure which holds data about unmapped subfields encountered in
+mapped tags which are also in the declared sample set. This
+information is collected over the life of the object and is not reset
+for every record processed (as the current record data neccessarily
+is).
+
     { tag_id => {
-                  sub_code  => { value => VALUE, count => COUNT },
-                  sub_code2 => { value => VALUE, count => COUNT },
+                  sub_code  => { value => VALUE,
+                                 count => COUNT,
+                                 rcnt => RCOUNT
+                               },
                   ...
                 },
       ...
     }
+
+For each mapped tag, for each unmapped subfield, there is a hash of
+data about that subfield containing
+
+    * value - A sample of the subfield text
+    * count - Total number of times the subfield was seen
+    * rcnt  - The number of records the subfield was seen in
 
 =head1 AUTHOR
 
