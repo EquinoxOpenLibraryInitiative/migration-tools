@@ -54,8 +54,7 @@ is ($rec, 0, 'no more records');
 # with map-01,  999$a and 999$q are captured. q only exists on the second
 # record; the others should the placeholder value of ''
 $mp = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => 't/corpus/mdmp-0.txt',
-                                                     mapfile  => 't/corpus/mdmpmap-01.txt',
-                                                     sample   => [ 999 ]
+                                                     mapfile  => 't/corpus/mdmpmap-01.txt'
                                                    );
 $rec = $mp->parse_record;
 is ($rec->{tags}[0]{uni}{a}, "MYS DEM", '999$a');
@@ -64,16 +63,6 @@ is ($rec->{tags}[0]{uni}{j}, undef, 'we shouldnt have captured this, even if it 
 $rec = $mp->parse_record;
 is ($rec->{tags}[0]{uni}{a}, "MYS 2", '999$a');
 is ($rec->{tags}[0]{uni}{q}, "TEST", '999$q does exist here');
-# process other two records and check the unmapped data stuffs
-$rec = $mp->parse_record;
-$rec = $mp->parse_record;
-my $unmapped = $mp->{data}{umap};
-is (defined $unmapped->{999}, 1);
-is (defined $unmapped->{999}{x}, 1);
-is ($unmapped->{999}{x}{value}, 'MYSTERY', 'Should be the first seen value');
-is ($unmapped->{999}{x}{count}, 7, 'One real in each record, plus 3 synthetic in last rec');
-is ($unmapped->{999}{x}{rcnt}, 4, 'Occurs in all records');
-is ($unmapped->{999}{s}{rcnt}, 3, 'Was removed from one record');
 
 # map-02 adds 999$x *not* as multi, producing a fatal error on the last record
 $mp = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => 't/corpus/mdmp-0.txt',
