@@ -6,6 +6,16 @@ use strict;
 use XML::Twig;
 use Equinox::Migration::SubfieldMapper 1.002;
 
+# FIXME
+#
+# sample functionality should be extracted into a new module which
+# uses E::M::SM to drive sampling of individual datafields, and
+# reports ALL datafields which occur
+#
+# --sample should give the list of all datafields
+# --samplefile should take a SM map as teh argument and introspect the mapped datafields
+
+
 =head1 NAME
 
 Equinox::Migration::MapDrivenMARCXMLProc
@@ -190,9 +200,33 @@ sub process_subs {
             push @{$dataf->{multi}{$name}}, $sub->text;
         }
     } else {
+        die "Multiple occurances of a non-multi field: \n"
+          if (defined $dataf->{uni}{$code});
         $dataf->{uni}{$code} = $sub->text;
     }
 }
+
+=head1 MODIFIERS
+
+MapDrivenMARCXMLProc implements the following modifiers, and passes
+them to L<Equinox::Migration::SubfieldMapper>, meaning that specifying
+any other modifiers in a MDMP map file will cause a fatal error when
+it is processed.
+
+=head2 multi
+
+If a mapping is declared to be C<multi>, then MDMP expects to see more
+than one instance of that subfield per datafield, and the data is
+handled accordingly (see L</PARSED RECORDS> below).
+
+Occurring zero or one time is legal for a C<multi> mapping.
+
+A mapping which is not flagged as C<multi>, but which occurs more than
+once per datafield will cause a fatal error.
+
+=head2 bib
+
+=head2 required
 
 =head1 PARSED RECORDS
 
