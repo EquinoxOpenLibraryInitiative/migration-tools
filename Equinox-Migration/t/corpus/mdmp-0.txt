@@ -63,7 +63,6 @@
     <subfield code="n">8</subfield>
     <subfield code="p">$25.00</subfield>
     <subfield code="r">Y</subfield>
-    <subfield code="s">Y</subfield>
     <subfield code="t">BOOK</subfield>
     <subfield code="u">11/22/2002</subfield>
     <subfield code="x">MYSTERY</subfield>
@@ -326,6 +325,9 @@
     <subfield code="t">BOOK</subfield>
     <subfield code="u">11/22/2002</subfield>
     <subfield code="x">FICTION</subfield>
+    <subfield code="x">FICTION2</subfield>
+    <subfield code="x">FICTION3</subfield>
+    <subfield code="x">FICTION4</subfield>
     <subfield code="z">ADULT</subfield>
   </datafield>
   <datafield tag="903" ind1=" " ind2=" ">
