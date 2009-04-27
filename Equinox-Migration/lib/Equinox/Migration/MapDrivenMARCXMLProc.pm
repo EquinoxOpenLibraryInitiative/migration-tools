@@ -133,6 +133,8 @@ sub parse_record {
     $record->purge;
     $self->{data}{rptr}++;
 
+    # FIXME check for required fields here
+
     return $self->{data}{crec};
 }
 
@@ -200,7 +202,7 @@ sub process_subs {
             push @{$dataf->{multi}{$name}}, $sub->text;
         }
     } else {
-        die "Multiple occurances of a non-multi field: \n"
+        die "Multiple occurances of a non-multi field: $tag$code at rec ",($self->{data}{rptr} + 1),"\n"
           if (defined $dataf->{uni}{$code});
         $dataf->{uni}{$code} = $sub->text;
     }
@@ -226,7 +228,17 @@ once per datafield will cause a fatal error.
 
 =head2 bib
 
+The C<bib> modifier declares that a mapping is "bib-level", and should
+be encountered once per B<record> instead of once per B<datafield> --
+which is another way of saying that it occurs in a non-repeating
+datafield or in a controlfield.
+
 =head2 required
+
+By default, if a mapping does not occur in a datafield (or record, in
+the case of C<bib> mappings), processing continues normally. if a
+mapping has the C<required> modifier, however, it must appear, or a
+fatal error will occur.
 
 =head1 PARSED RECORDS
 
