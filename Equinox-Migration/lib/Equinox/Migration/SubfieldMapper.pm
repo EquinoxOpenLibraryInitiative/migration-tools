@@ -9,11 +9,11 @@ Equinox::Migration::SubfieldMapper - Generate named-field to MARC tag map from f
 
 =head1 VERSION
 
-Version 1.002
+Version 1.003
 
 =cut
 
-our $VERSION = '1.002';
+our $VERSION = '1.003';
 
 
 =head1 SYNOPSIS
@@ -23,17 +23,7 @@ to arbitrary field names, and provides several access mechanisms to
 that set.
 
     use Equinox::Migration::SubfieldMapper;
-    
-    my $stl = Equinox::Migration::SubfieldMapper->new( file => ".txt" );
-    my $tags = $stl->as_hashref;
-
-or
-
-    my $stl = Equinox::Migration::SubfieldMapper->new( file => ".txt" );
-    if ( $stl->has($foo) ) {
-        # if $foo is an element of $stl's parsed list
-        # do stuff ...
-    }
+    ...
 
 
 =head1 METHODS
@@ -43,7 +33,7 @@ or
 Takes one optional argument, C<file>. If this is speficied, the tag
 list will be populated as per that file on instantiation.
 
-Returns a E::M::STL object.
+Returns a E::M::SM object.
 
 =cut
 
@@ -172,17 +162,27 @@ sub field {
 
 =head2 mods
 
-Returns the modifiers set on a mapping.
+With no argument, returns a hashref containing all modifiers for the entire map:
+
+    {
+      modifier => {
+                    tag => [ list_of subs ],
+                    ...
+                  },
+      ...
+    }
+
+Given a fieldname, returns a hashref of the modifiers set on that mapping.
 
     $self->mods('fieldname')
 
-If there are no modifiers, C<undef> will be returned. Else a hashref
-will be returned.
+Returns undef is nothing is defined.
 
 =cut
 
 sub mods {
     my ($self, $field) = @_;
+    return $self->{allmods} unless defined $field;
     return undef unless $self->has($field);
     return undef unless (%{ $self->{fields}{$field}{mods} });
     return $self->{fields}{$field}{mods};
@@ -278,6 +278,7 @@ sub add {
         die "Modifier collision '$m' at line $." if $mods->{$m};
         $m =~ s/^m://;
         $mods->{$m} = 1;
+        push @{$self->{allmods}{$m}{ $map->{tag} }}, $map->{sub};
     }
     for my $f (@{$map->{filt}}) {
         die "Modifier collision '$f' at line $." if $filt{$f};
