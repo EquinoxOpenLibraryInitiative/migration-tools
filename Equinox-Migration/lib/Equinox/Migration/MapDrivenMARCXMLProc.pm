@@ -4,7 +4,7 @@ use warnings;
 use strict;
 
 use XML::Twig;
-use Equinox::Migration::SubfieldMapper 1.002;
+use Equinox::Migration::SubfieldMapper 1.003;
 
 # FIXME
 #
@@ -65,7 +65,7 @@ sub new {
     my ($class, %args) = @_;
 
     my $self = bless { mods => { multi    => {},
-                                 once     => {},
+                                 bib      => {},
                                  required => {},
                                },
                        data => { recs => undef, # X::T record objects
@@ -133,7 +133,8 @@ sub parse_record {
     $record->purge;
     $self->{data}{rptr}++;
 
-    # FIXME check for required fields here
+    # check for required fields
+    $self->check_required;
 
     return $self->{data}{crec};
 }
@@ -195,17 +196,41 @@ sub process_subs {
     my $dataf = $self->{data}{crec}{tags}[-1];
     my $field = $map->field($tag, $code);
 
-    # handle modifiers, or slug data in normally
+    # handle modifiers
     if (my $mods = $map->mods($field)) {
         if ($mods->{multi}) {
             my $name = $tag . $code;
             push @{$dataf->{multi}{$name}}, $sub->text;
+            return;
         }
-    } else {
-        die "Multiple occurances of a non-multi field: $tag$code at rec ",($self->{data}{rptr} + 1),"\n"
-          if (defined $dataf->{uni}{$code});
-        $dataf->{uni}{$code} = $sub->text;
     }
+
+    die "Multiple occurances of a non-multi field: $tag$code at rec ",($self->{data}{rptr} + 1),"\n"
+      if (defined $dataf->{uni}{$code});
+    $dataf->{uni}{$code} = $sub->text;
+}
+
+
+sub check_required {
+    my ($self) = @_;
+    my $mods = $self->{map}->mods;
+    my $crec = $self->{data}{crec};
+
+    for my $tag_id (keys %{$mods->{required}}) {
+        for my $code (@{$mods->{required}{$tag_id}}) {
+            my $found = 0;
+
+            $found = 1 if ($crec->{bib}{($tag_id . $code)});
+            for my $tag (@{$crec->{tags}}) {
+                $found = 1 if ($tag->{multi}{($tag_id . $code)});
+                $found = 1 if ($tag->{uni}{$code});
+            }
+
+            die "Required mapping $tag_id$code not found in rec ",$self->{data}{rptr},"\n"
+              unless ($found);
+        }
+    }
+
 }
 
 =head1 MODIFIERS
