@@ -9,11 +9,11 @@ Equinox::Migration::SimpleTagList - Generate taglist from file
 
 =head1 VERSION
 
-Version 1.000
+Version 1.001
 
 =cut
 
-our $VERSION = '1.000';
+our $VERSION = '1.001';
 
 
 =head1 SYNOPSIS
@@ -58,11 +58,12 @@ sub new {
 
     if ($args{file}) {
         if (-r $args{file}) {
-            $self->{conf}{file} = $args{file};
-            $self->generate;
+            $self->generate($args{file});
         } else {
             die "Can't open tags file: $!\n";
         }
+    } elsif ($args{str}) {
+        $self->generate($args{str},'scalar');
     }
 
     return $self;
@@ -105,9 +106,13 @@ numerically by tag).
 sub as_listref { my ($self) = @_; return [ sort {$a <=> $b} keys %{$self->{tags}} ] }
 
 sub generate {
-    my ($self) = @_;
+    my ($self, $file, $scalar) = @_;
 
-    open TAGFILE, '<', $self->{conf}{file};
+    if ($scalar) {
+        open TAGFILE, '<:scalar', $file;
+    } else {
+        open TAGFILE, '<', $file;
+    }
     while (<TAGFILE>) {
         next if m/^#/;
         next if m/^\s*\n$/;
