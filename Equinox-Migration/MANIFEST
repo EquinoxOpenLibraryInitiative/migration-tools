@@ -3,9 +3,8 @@ MANIFEST
 Makefile.PL
 README
 lib/Equinox/Migration.pm
-lib/Equinox/Migration/MapDrivenXMLProc.pm
+lib/Equinox/Migration/MapDrivenMARCXMLProc.pm
+lib/Equinox/Migration/MARCXMLSampler.pm
 lib/Equinox/Migration/SubfieldMapper.pm
 lib/Equinox/Migration/SubfieldMapper.pm
 t/00-load.t
-t/pod-coverage.t
-t/pod.t

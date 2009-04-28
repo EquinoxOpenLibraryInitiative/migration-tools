@@ -90,13 +90,11 @@ is ($stl->has(304), 0, 'exception');
 # file with bad token
 $. = 0;
 $stl = Equinox::Migration::SimpleTagList->new;
-$stl->{conf}{file} = "./t/corpus/stl-2.txt";
-eval {$stl->generate};
+eval {$stl->generate("./t/corpus/stl-2.txt")};
 is ($@, "Unknown chunk fnord in tags file (line 1)\n");
 
 # file with except in wrong place
 $. = 0;
 $stl = Equinox::Migration::SimpleTagList->new;
-$stl->{conf}{file} = "./t/corpus/stl-3.txt";
-eval {$stl->generate};
+eval {$stl->generate("./t/corpus/stl-3.txt")};
 is ($@, "Keyword 'except' can only follow a range (line 1)\n");

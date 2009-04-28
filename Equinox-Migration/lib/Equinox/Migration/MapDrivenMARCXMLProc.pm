@@ -48,17 +48,6 @@ and C<marcfile> (the MARC data to be processed).
     my $m = Equinox::Migration::MapDrivenMARCXMLProc->new( mapfile  => FILE,
                                                            marcfile => FILE );
 
-There is an optional third, argument, C<sample>, which specifies a
-arrayref of datafields to "sample" by reporting on subfields which are
-found in the data but not in the map.
-
-    my $m = Equinox::Migration::MapDrivenMARCXMLProc->new( mapfile  => FILE,
-                                                           marcfile => FILE,
-                                                           sample   => \@TAGS
-                                                         );
-
-See L</UNMAPPED TAGS> for more info.
-
 =cut
 
 sub new {
@@ -71,8 +60,6 @@ sub new {
                        data => { recs => undef, # X::T record objects
                                  rptr => 0,     # next record pointer
                                  crec => undef, # parsed record storage
-                                 stag => undef, # list of tags to sample
-                                 umap => undef, # unmapped data samples
                                },
                      }, $class;
 
@@ -92,13 +79,6 @@ sub new {
         $self->{data}{recs} = \@records;
     } else {
         die "Can't open marc file: $!\n";
-    }
-
-    # if we have a sample arg, set up the sample set and umap hash
-    if (defined $args{sample}) {
-        for my $s ( @{$args{sample}})
-          { $self->{data}{stag}{$s} = 1 }
-        $self->{data}{umap} = {};
     }
 
     return $self;
@@ -178,19 +158,7 @@ sub process_subs {
     my $code = $sub->{'att'}->{'code'};
 
     # handle unmapped tag/subs
-    unless ($map->has($tag, $code)) {
-        my $u = $self->{data}{umap};
-        my $s = $self->{data}{stag};
-        return unless (defined $s->{$tag});
-
-        # set a value, total-seen count and records-seen-in count
-        $u->{$tag}{$code}{value} = $sub->text unless defined $u->{$tag}{$code};
-        $u->{$tag}{$code}{count}++;
-        $u->{$tag}{$code}{rcnt}++ unless ( defined $u->{$tag}{$code}{last} and
-                                           $u->{$tag}{$code}{last} == $self->{data}{rptr} );
-        $u->{$tag}{$code}{last} = $self->{data}{rptr};
-        return;
-    }
+    return unless ($map->has($tag, $code));
 
     # fetch our datafield struct and fieldname
     my $dataf = $self->{data}{crec}{tags}[-1];
@@ -205,8 +173,8 @@ sub process_subs {
         }
     }
 
-    die "Multiple occurances of a non-multi field: $tag$code at rec ",($self->{data}{rptr} + 1),"\n"
-      if (defined $dataf->{uni}{$code});
+    die "Multiple occurances of a non-multi field: $tag$code at rec ",
+      ($self->{data}{rptr} + 1),"\n" if (defined $dataf->{uni}{$code});
     $dataf->{uni}{$code} = $sub->text;
 }
 
@@ -332,31 +300,6 @@ datafield will be given a value of '' (the null string) in the current
 record struct. Oppose subfields which are not mapped, which will be
 C<undef>.
 
-=head1 UNMAPPED TAGS
-
-If the C<sample> argument is passed to L</new>, there will also be a
-structure which holds data about unmapped subfields encountered in
-mapped tags which are also in the declared sample set. This
-information is collected over the life of the object and is not reset
-for every record processed (as the current record data neccessarily
-is).
-
-    { tag_id => {
-                  sub_code  => { value => VALUE,
-                                 count => COUNT,
-                                 rcnt => RCOUNT
-                               },
-                  ...
-                },
-      ...
-    }
-
-For each mapped tag, for each unmapped subfield, there is a hash of
-data about that subfield containing
-
-    * value - A sample of the subfield text
-    * count - Total number of times the subfield was seen
-    * rcnt  - The number of records the subfield was seen in
 
 =head1 AUTHOR
 

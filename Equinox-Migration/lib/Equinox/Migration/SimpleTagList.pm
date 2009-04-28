@@ -62,7 +62,7 @@ sub new {
         } else {
             die "Can't open tags file: $!\n";
         }
-    } elsif ($args{str}) {
+    }elsif ($args{str}) {
         $self->generate($args{str},'scalar');
     }
 
@@ -109,7 +109,7 @@ sub generate {
     my ($self, $file, $scalar) = @_;
 
     if ($scalar) {
-        open TAGFILE, '<:scalar', $file;
+        open TAGFILE, '<', \$file;
     } else {
         open TAGFILE, '<', $file;
     }
