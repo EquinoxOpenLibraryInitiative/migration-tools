@@ -28,7 +28,7 @@ open my $NUMARC, '>:utf8', $conf->{output}
 open my $OLD2NEW, '>', 'old2new.map'
   if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
 my $EXMARC = 'EX';
-print $NUMARC "<collection>\n";
+print $NUMARC "<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n";
 
 $conf->{totalrecs} = `grep -c '<record' $marcfile`;
 chomp $conf->{totalrecs};
