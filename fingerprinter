@@ -88,11 +88,14 @@ sub populate_marc {
     }
     unless ($marc{date1} and $marc{date1} =~ /\d{4}/) {
         my $my_260 = $record->field('260');
-        my $date1 = $my_260->subfield('c') if $my_260;
-        if (defined $date1 and $date1 =~ /\d{4}/) {
-            $marc{date1} = $date1;
-            $marc{fudgedate} = 1;
-            print XF ">> using 260c as date1 at rec $count\n";
+        if ($my_260) {
+            my $date1 = $my_260->subfield('c');
+            $date1 =~ s/\D//g;
+            if (defined $date1 and $date1 =~ /\d{4}/) {
+                $marc{date1} = $date1;
+                $marc{fudgedate} = 1;
+                print XF ">> using 260c as date1 at rec $count\n";
+            }
         }
     }
 
