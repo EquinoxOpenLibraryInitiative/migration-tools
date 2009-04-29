@@ -6,15 +6,6 @@ use strict;
 use XML::Twig;
 use Equinox::Migration::SimpleTagList 1.001;
 
-# FIXME
-#
-# sample functionality should be extracted into a new module which
-# uses E::M::SM to drive sampling of individual datafields, and
-# reports ALL datafields which occur
-#
-# --sample should give the list of all datafields
-# --samplefile should take a SM map as teh argument and introspect the mapped datafields
-
 
 =head1 NAME
 

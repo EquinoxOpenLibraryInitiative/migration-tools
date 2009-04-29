@@ -6,15 +6,6 @@ use strict;
 use XML::Twig;
 use Equinox::Migration::SubfieldMapper 1.003;
 
-# FIXME
-#
-# sample functionality should be extracted into a new module which
-# uses E::M::SM to drive sampling of individual datafields, and
-# reports ALL datafields which occur
-#
-# --sample should give the list of all datafields
-# --samplefile should take a SM map as teh argument and introspect the mapped datafields
-
 
 =head1 NAME
 
@@ -54,12 +45,12 @@ sub new {
     my ($class, %args) = @_;
 
     my $self = bless { mods => { multi    => {},
-                                 bib      => {},
                                  required => {},
                                },
                        data => { recs => undef, # X::T record objects
                                  rptr => 0,     # next record pointer
                                  crec => undef, # parsed record storage
+                                 tmap => undef, # tag_id-to-tag array map
                                },
                      }, $class;
 
@@ -103,7 +94,8 @@ sub parse_record {
     # get the next record and wipe current parsed record
     return 0 unless defined $self->{data}{recs}[ $self->{data}{rptr} ];
     my $record = $self->{data}{recs}[ $self->{data}{rptr} ];
-    $self->{data}{crec} = { egid => undef, bib  => undef, tags => undef };
+    $self->{data}{crec} = { egid => undef, tags => undef };
+    $self->{data}{tmap} = {};
 
     my @fields = $record->children;
     for my $f (@fields)
@@ -124,6 +116,7 @@ sub process_field {
     my $map = $self->{map};
     my $tag = $field->{'att'}->{'tag'};
     my $crec = $self->{data}{crec};
+    my $tmap = $self->{data}{tmap};
 
     # leader
     unless (defined $tag) {
@@ -139,6 +132,7 @@ sub process_field {
     }
     if ($map->has($tag)) {
         push @{$crec->{tags}}, { tag => $tag, uni => undef, multi => undef };
+        push @{$tmap->{$tag}}, (@{$crec->{tags}} - 1);
         my @subs = $field->children('subfield');
         for my $sub (@subs)
           { $self->process_subs($tag, $sub) }
@@ -188,7 +182,6 @@ sub check_required {
         for my $code (@{$mods->{required}{$tag_id}}) {
             my $found = 0;
 
-            $found = 1 if ($crec->{bib}{($tag_id . $code)});
             for my $tag (@{$crec->{tags}}) {
                 $found = 1 if ($tag->{multi}{($tag_id . $code)});
                 $found = 1 if ($tag->{uni}{$code});
@@ -219,19 +212,11 @@ Occurring zero or one time is legal for a C<multi> mapping.
 A mapping which is not flagged as C<multi>, but which occurs more than
 once per datafield will cause a fatal error.
 
-=head2 bib
-
-The C<bib> modifier declares that a mapping is "bib-level", and should
-be encountered once per B<record> instead of once per B<datafield> --
-which is another way of saying that it occurs in a non-repeating
-datafield or in a controlfield.
-
 =head2 required
 
-By default, if a mapping does not occur in a datafield (or record, in
-the case of C<bib> mappings), processing continues normally. if a
-mapping has the C<required> modifier, however, it must appear, or a
-fatal error will occur.
+By default, if a mapping does not occur in a datafield, processing
+continues normally. if a mapping has the C<required> modifier,
+however, it must appear, or a fatal error will occur.
 
 =head1 PARSED RECORDS
 
@@ -243,12 +228,7 @@ Given:
 Then C<$rec> will look like:
 
     {
-      egid   => evergreen_record_id,
-      bib    => {
-                  (tag_id . sub_code)1 => value1,
-                  (tag_id . sub_code)2 => value2,
-                  ...
-                },
+      egid => evergreen_record_id,
       tags => [
                 {
                   tag   => tag_id,
@@ -260,19 +240,7 @@ Then C<$rec> will look like:
     }
 
 That is, there is an C<egid> key which points to the Evergreen ID of
-that record, a C<bib> key which points to a hashref, and a C<tags>
-key which points to an arrayref.
-
-=head3 C<bib>
-
-A reference to a hash which holds extracted data which occurs only
-once per record (and is therefore "bib-level"; the default assumption
-is that a tag/subfield pair can occur multiple times per record). The
-keys are composed of tag id and subfield code, catenated
-(e.g. 901c). The values are the contents of that subfield of that tag.
-
-If there are no tags defined as bib-level in the mapfile, C<bib> will
-be C<undef>.
+that record, and a C<tags> key which points to an arrayref.
 
 =head3 C<tags>
 

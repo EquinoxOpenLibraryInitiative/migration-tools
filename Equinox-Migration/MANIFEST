@@ -8,3 +8,7 @@ lib/Equinox/Migration/MARCXMLSampler.pm
 lib/Equinox/Migration/SubfieldMapper.pm
 lib/Equinox/Migration/SubfieldMapper.pm
 t/00-load.t
+t/01-SimpleTagList.t
+t/02-SubfieldMapper.t
+t/03-MapDrivenMARCXMLProc.t
+t/04-MARCXMLSampler.t

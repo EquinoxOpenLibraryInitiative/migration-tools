@@ -34,7 +34,6 @@ is ($rec->{tags}[0]{uni}{a}, "MYS DEM", 'single-ocurrance subfield "a" should be
 is ($rec->{tags}[0]{uni}{b}, undef, 'only one uni subfield defined');
 is ($rec->{tags}[0]{multi},  undef, 'no multi subfields were defined');
 is ($rec->{tags}[1],         undef, 'Only one tag in map');
-is ($rec->{bib},             undef, 'No bib-level fields in map');
 # let's go ahead and look at the rest of the file
 $rec = $mp->parse_record;
 is ($rec->{egid}, 9000001, '903 #2');
@@ -81,3 +80,23 @@ is ($@, "Required mapping 999s not found in rec 1\n", '999$s removed from this r
 eval { $rec = $mp->parse_record };
 is ($@, "", '999$s exists here tho');
 
+# map-04 has fields in 999 and 250, and multi data
+$mp = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => 't/corpus/mdmp-0.txt',
+                                                     mapfile  => 't/corpus/mdmpmap-04.txt');
+$rec = $mp->parse_record;
+is ($rec->{tags}[0]{tag}, 250, 'should be 250');
+is ($rec->{tags}[0]{uni}{a}, "1st ed.", '999$a');
+is ($rec->{tags}[1]{tag}, 999, 'should be 999');
+is ($rec->{tags}[1]{uni}{a}, "MYS DEM", '999$a');
+is_deeply ($rec->{tags}[1]{multi}{'999x'}, ['MYSTERY'], '999$x - multi');
+is_deeply ($mp->{data}{tmap}{250}, [0], 'tag map test 1a');
+is_deeply ($mp->{data}{tmap}{999}, [1], 'tag map test 1b');
+$rec = $mp->parse_record;
+$rec = $mp->parse_record;
+$rec = $mp->parse_record;
+is ($rec->{tags}[0]{tag}, 999, '250 doesnt exist in this record');
+is ($rec->{tags}[0]{uni}{a}, "FIC DEV", 'subfield value 4');
+is_deeply ($rec->{tags}[0]{multi}{'999x'}, ['FICTION','FICTION2','FICTION3','FICTION4'],
+           '999$x - multi');
+is ($mp->{data}{tmap}{250}, undef, 'tag map test 2a');
+is_deeply ($mp->{data}{tmap}{999}, [0], 'tag map test 2b');
