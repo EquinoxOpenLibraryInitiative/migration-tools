@@ -22,15 +22,38 @@ our $VERSION = '1.000';
 
 =head1 SYNOPSIS
 
-Foo
+Produce a list of all fields in a MARCXML file which have a C<tag>
+attribute, and count how many times each occurs
 
-    use Equinox::Migration::MARCXMLSampler;
+    my $s =  E::M::MARCXMLSampler->new( marcfile => "foo.marc.xml" );
+    $s->parse_records;
+
+Also deeply introspect certain tags, producing lists of all subfields,
+and counts of how many times each subfield occurs I<in toto> and how
+many records each subfield appears in
+
+    my $s = E::M::MARCXMLSampler->new( marcfile => "foo.marc.xml",
+                                       mapfile  => "foo.map" );
+             ~ or ~
+    
+    my $s = E::M::MARCXMLSampler->new( marcfile  => "foo.marc.xml",
+                                       mapstring => "852 999" );
+    $s->parse_records;
 
 
 =head1 METHODS
 
 
 =head2 new
+
+Takes one required argument, C<marcfile>, which points to the MARCXML
+file to be processed.
+
+Has two mutually-exclusive optional arguments, C<mapfile> and
+C<mapstring>". The former should point to a file which will be used as
+a L<Equinox::Migration::SimpleTagList> map; the latter should have as
+its value a text string which will be used in the same way (handy for
+when you only want deep introspection on a handful of tags).
 
 =cut
 
@@ -56,6 +79,8 @@ sub new {
     }
 
     # if we have a sample arg, create the sample map
+    die "Can't use a mapfile and mapstring\n"
+      if ($args{mapfile} and $args{mapstring})
     $self->{map} = Equinox::Migration::SimpleTagList->new(file => $args{mapfile})
         if ($args{mapfile});
     $self->{map} = Equinox::Migration::SimpleTagList->new(str => $args{mapstring})
@@ -119,12 +144,8 @@ sub process_subs {
 
 =head1 SAMPLED TAGS
 
-If the C<sample> argument is passed to L</new>, there will also be a
-structure which holds data about unmapped subfields encountered in
-mapped tags which are also in the declared sample set. This
-information is collected over the life of the object and is not reset
-for every record processed (as the current record data neccessarily
-is).
+If the C<mapfile> or C<mapstring> arguments are passed to L</new>, a
+structure will be constructed which holds data about tags in the map.
 
     { tag_id => {
                   sub_code  => { value => VALUE,
@@ -136,8 +157,8 @@ is).
       ...
     }
 
-For each mapped tag, for each unmapped subfield, there is a hash of
-data about that subfield containing
+For each subfield in each mapped tag, there is a hash of data about
+that subfield containing
 
     * value - A sample of the subfield text
     * count - Total number of times the subfield was seen
