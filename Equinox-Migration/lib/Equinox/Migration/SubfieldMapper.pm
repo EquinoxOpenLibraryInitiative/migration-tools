@@ -9,11 +9,11 @@ Equinox::Migration::SubfieldMapper - Generate named-field to MARC tag map from f
 
 =head1 VERSION
 
-Version 1.003
+Version 1.004
 
 =cut
 
-our $VERSION = '1.003';
+our $VERSION = '1.004';
 
 
 =head1 SYNOPSIS
@@ -202,6 +202,7 @@ will be returned.
 sub filters {
     my ($self, $field) = @_;
     return undef unless $self->has($field);
+    return undef unless ($self->{fields}{$field}{filt});
     return $self->{fields}{$field}{filt};
 }
 
@@ -231,11 +232,11 @@ sub generate {
         $map->{tag}   = shift @tokens;
         while (my $tok = shift @tokens) {
             last if ($tok =~ m/^#/);
-            if ($tok =~ m/^[a-z]:'/) {
+            if ($tok =~ m/^[a-z]:'/ and $tok !~ /'$/) {
                 $tok .= ' ' . shift @tokens
                   until ($tokens[0] =~ m/'$/);
                 $tok .= ' ' . shift @tokens;
-                $tok =~ s/'//;
+                $tok =~ s/^'//;
                 $tok =~ s/'$//;
             }
             if ($tok =~ m/^m:/)
@@ -281,7 +282,7 @@ sub add {
         push @{$self->{allmods}{$m}{ $map->{tag} }}, $map->{sub};
     }
     for my $f (@{$map->{filt}}) {
-        die "Modifier collision '$f' at line $." if $filt{$f};
+        die "Filter collision '$f' at line $." if $filt{$f};
         $f =~ s/^f://;
         push @{$filt}, $f; $filt{$f} = 1;
     }
