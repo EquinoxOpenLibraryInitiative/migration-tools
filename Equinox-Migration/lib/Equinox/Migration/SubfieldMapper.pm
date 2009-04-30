@@ -236,7 +236,7 @@ sub generate {
                 $tok .= ' ' . shift @tokens
                   until ($tokens[0] =~ m/'$/);
                 $tok .= ' ' . shift @tokens;
-                $tok =~ s/^'//;
+                $tok =~ s/'//;
                 $tok =~ s/'$//;
             }
             if ($tok =~ m/^m:/)

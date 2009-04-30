@@ -19,7 +19,7 @@ library         949 m
 library_alt     999 m
 note            949 o m:multi
 note_alt        999 o m:multi m:req
-type            949 t
+type            949 t f:foo
 type_alt        999 t
 date_a          949 v m:foo m:bar f:'one two three' m:quux
 date_a_alt      999 v

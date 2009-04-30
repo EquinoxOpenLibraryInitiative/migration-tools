@@ -158,7 +158,11 @@ sub process_subs {
     my $dataf = $self->{data}{crec}{tags}[-1];
     my $field = $map->field($tag, $code);
 
-    # handle modifiers
+    # test filters
+    for my $filter ( @{$map->filters($field)} ) {
+        return if ($sub->text =~ /$filter/i);
+    }
+    # handle multi modifier
     if (my $mods = $map->mods($field)) {
         if ($mods->{multi}) {
             my $name = $tag . $code;
@@ -167,8 +171,11 @@ sub process_subs {
         }
     }
 
+    # if this were a multi field, it would be handled already. make sure its a singleton
     die "Multiple occurances of a non-multi field: $tag$code at rec ",
       ($self->{data}{rptr} + 1),"\n" if (defined $dataf->{uni}{$code});
+
+    # everything seems okay
     $dataf->{uni}{$code} = $sub->text;
 }
 

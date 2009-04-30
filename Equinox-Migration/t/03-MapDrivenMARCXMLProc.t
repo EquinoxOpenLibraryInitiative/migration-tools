@@ -100,3 +100,13 @@ is_deeply ($rec->{tags}[0]{multi}{'999x'}, ['FICTION','FICTION2','FICTION3','FIC
            '999$x - multi');
 is ($mp->{data}{tmap}{250}, undef, 'tag map test 2a');
 is_deeply ($mp->{data}{tmap}{999}, [0], 'tag map test 2b');
+
+# map-05 is map-04 with a "no digits" filter on 999$x
+$mp = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => 't/corpus/mdmp-0.txt',
+                                                     mapfile  => 't/corpus/mdmpmap-05.txt');
+is_deeply ($mp->{map}->filters('multi_field'), ['\d']);
+$rec = $mp->parse_record;
+$rec = $mp->parse_record;
+$rec = $mp->parse_record;
+$rec = $mp->parse_record;
+is_deeply ($rec->{tags}[0]{multi}{'999x'}, ['FICTION'], '999$x - multi no digits');

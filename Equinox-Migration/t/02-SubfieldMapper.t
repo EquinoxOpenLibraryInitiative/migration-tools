@@ -1,6 +1,6 @@
 #!perl -T
 
-use Test::More tests => 40;
+use Test::More tests => 41;
 #use Test::More qw(no_plan);
 use Equinox::Migration::SubfieldMapper;
 
@@ -96,4 +96,5 @@ is_deeply ($sm->mods('note'), { multi => 1}, 'multi');
 is_deeply ($sm->mods('note_alt'), { multi => 1, req => 1 }, 'multi, req');
 is_deeply ($sm->mods('date_a'), { foo => 1, bar => 1, quux => 1 });
 is_deeply ($sm->filters('date_a'), ['one two three']);
+is_deeply ($sm->filters('type'), ['foo']);
 
