@@ -80,7 +80,7 @@ sub new {
 
     # if we have a sample arg, create the sample map
     die "Can't use a mapfile and mapstring\n"
-      if ($args{mapfile} and $args{mapstring})
+      if ($args{mapfile} and $args{mapstring});
     $self->{map} = Equinox::Migration::SimpleTagList->new(file => $args{mapfile})
         if ($args{mapfile});
     $self->{map} = Equinox::Migration::SimpleTagList->new(str => $args{mapstring})
