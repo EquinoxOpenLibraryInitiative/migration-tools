@@ -2,111 +2,79 @@
 use strict;
 use warnings;
 
-use XML::Twig;
-use YAML::Tiny;
 use Getopt::Long;
-use Equinox::Migration::SubfieldMapper;
+use Equinox::Migration::MapDrivenMARCXMLProc;
+use Equinox::Migration::MARCXMLSampler;
 
-$| = 1;
 
 my $c = initialize();
-my $marcxml = shift;
-my $copyid = 0;
-my $holdings;
 
-my $count = 0;
-my $total = `grep -c '<record' $marcxml`;
-my $percent = 0;
-my $prevper = -1;
+# run samples if we've been asked for them
+run_samples($c) if ($c->{sample} or $c->{samplemap} or $c->{samplestr});
 
-my $yaml = YAML::Tiny->new;
-my $t = XML::Twig->new( twig_handlers => { record => \&record } );
-$t->parsefile($marcxml);
-write_sample_fieds();
 
-sub record {
-    my($t, $r)= @_;
-    $holdings = {};
-
-    my @dfields = $r->children('datafield');
-    for my $d (@dfields) {
-        process_datafields($d);
-    }
-    write_data_out();
-    $r->purge;
-
-    $count++;
-    $percent = int(($count / $total) * 100);
-    print "\r$percent% done ($count)";# if ($percent != $prevper);
-    $prevper = $percent;
-}
-
-sub process_datafields {
-    my ($d) = @_;
-    my $tag = $d->{'att'}->{'tag'};
-
-    if ($tag == 903) {
-        my $s = $d->first_child('subfield');
-        $holdings->{id} = $s->text;;
-    } elsif ($c->{map}->has($tag)) {
-        push @{$holdings->{copies}}, { tag => $tag };
-        my @subs = $d->children('subfield');
-        for my $sub (@subs)
-          { process_subs($tag,$sub) }
-    }
-}
-
-sub process_subs {
-    my ($tag, $sub) = @_;
-    my $code = $sub->{'att'}->{'code'};
-
-    unless ($c->{map}->has($tag, $code)) {
-        # this is a subfield code we don't have mapped. report on it if this is a sample tag
-        push @{$c->{sample}{$tag}}, $code if defined $c->{sample}{tag};
-        return;
-    }
-
-    my $copy = $holdings->{copies}[-1];
-    my $field = $c->{map}->field($tag, $code);
-    if ($c->{map}->mod($field) eq 'multi') {
-        my $name = $tag . $code;
-        push @{$copy->{multi}{$name}}, $sub->text;
+sub run_samples {
+    my ($c) = @_;
+    my $s;
+    if ($c->{samplemap}) {
+        $s = Equinox::Migration::MARCXMLSampler->new( marcfile => $c->{marcfile},
+                                                      mapfile  => $c->{samplemap});
+    } elsif ($c->{samplestr}) {
+        $s = Equinox::Migration::MARCXMLSampler->new( marcfile  => $c->{marcfile},
+                                                      mapstring => $c->{samplestr});
     } else {
-        $copy->{uni}{$code} = $sub->text;
+        $s = Equinox::Migration::MARCXMLSampler->new( marcfile => $c->{marcfile} );
     }
+    $s->parse_records;
+
+    dump_sample_overview($c, $s) if $c->{sample};
+    dump_sample_detail($c, $s) if ($c->{samplemap} or $c->{samplestr});
 }
 
+sub dump_sample_detail {
+    my ($c, $s) = @_;
+    my $tags = $s->{data}{samp};
+    my $count = $s->{data}{rcnt};
 
-#------------------------------------------------
-
-sub write_data_out {
-    my $i = 0;
-
-    for my $copy (@{$holdings->{copies}}) {
-        print HOLDINGS $holdings->{id}, "\t$i\t", $copy->{tag};
-        for ( sort keys %{ $c->{map}{fields} } ) {
-            next if ($c->{map}->mod($_) =~ /^bib/);
-            if (defined $copy->{uni}{ $c->{map}{fields}{$_}{sub} }) {
-                print HOLDINGS "\t", $copy->{uni}{ $c->{map}{fields}{$_}{sub} };
-            } else {
-                print HOLDINGS "\t";
-            }
+    open DETAIL, '>', ($c->{prefix} . "-HOLDINGS-DETAIL.txt");
+    select DETAIL;
+    for my $tag (sort keys %{$tags}) {
+        print ">>>>> TAG $tag\n";
+        for my $subkey (sort keys %{$tags->{$tag}}) {
+            my $sub = $tags->{$tag}{$subkey};
+            print "  Subfield: $subkey\n";
+            print "  Sample:   '", $sub->{value}, "'\n\n";
+            print "  Count:    ", $sub->{count}, " in ", $sub->{rcnt}, " tags\n";
+            #print "(", int($sub->{count} / $sub->{rcnt}), "%)\n";
         }
-        print HOLDINGS "\n";
-
-        for my $m (sort keys %{$copy->{multi}}) {
-            my $fh = $c->{files}{multi}{$m};
-            print $fh join("\t", $holdings->{id}, $i, @{$copy->{multi}{$m}}), "\n";
-        }
-        $i++;
     }
+    select STDOUT;
+    close DETAIL;
 }
 
-sub write_sample_fields {
+sub dump_sample_overview {
+    my ($c, $s) = @_;
+    my $tags = $s->{data}{tags};
+    my $count = $s->{data}{rcnt};
+
+    my @tagsbyname  = sort keys %{$tags};
+    my @tagsbycount = reverse sort { $tags->{$a} <=> $tags->{$b} } keys %{$tags};
+
+    open SAMPLE, '>', ($c->{prefix} . "-HOLDINGS-OVERVIEW.txt");
+    select SAMPLE;
+    print "FOUND TAGS (BY TAG)    FOUND TAGS (BY COUNT)\n";
+    print "-------------------    ---------------------\n";
+    for my $i (0 .. @tagsbyname - 1) {
+        print $tagsbyname[$i], (" " x (14 - length $tags->{ $tagsbyname[$i] })),
+          $tags->{ $tagsbyname[$i] }, "      ";
+        print $tagsbycount[$i], (" " x (16 - length $tags->{ $tagsbycount[$i] })),
+          $tags->{ $tagsbycount[$i] }, "\n";
+    }
+    select STDOUT;
+    close SAMPLE;
 }
 
-#------------------------------------------------
-
+#--------------------------
 
 sub initialize {
     my $c = {};
@@ -116,10 +84,12 @@ sub initialize {
     binmode(STDIN, ':utf8');
 
     my $rc = GetOptions( $c,
-                         'sample|s=s',
-                         'map|m=s',
-                         'ils=s',
-                         'library=s',
+                         'sample|s',
+                         'samplemap|sm=s',
+                         'samplestr|ss=s',
+                         'marcfile|m=s',
+                         'ils|i=s',
+                         'library|l=s',
                          'prefix|p=s',
                          'help|h',
                        );
@@ -127,64 +97,25 @@ sub initialize {
     show_help() if ($c->{help});
 
     my @keys = keys %{$c};
-    show_help() unless (@ARGV and @keys);
-    for my $key ('prefix', 'map', 'ils')
+    for my $key ('prefix', 'ils')
       { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
         show_help();
     }
 
-    # generate subfield map
-    $c->{map} = Equinox::Migration::SubfieldMapper->new( file => $c->{map} );
-
-    # explode sample tags string
-    if (defined $c->{sample}) {
-        my $sample = $c->{sample};
-        $c->{sample} = {};
-        for (split /,/, $c->{sample}) {
-            $c->{sample}{$_} = [];
-        }
-    }
-
-    # open required files
-    open HOLDINGS, '>', ($c->{prefix} . ".holdings.pg");
-    for my $f (keys %{$c->{map}{fields}}) {
-        if ($c->{map}->mod($f)) {
-            next if ($c->{map}->mod($f) =~ /bib/);
-            open my $mfh, '>', join('.', $c->{prefix}, "holdings",
-                                    $c->{map}{fields}{$f}{tag},
-                                    $c->{map}{fields}{$f}{sub}, "pg");
-            $c->{files}{multi}{ ($c->{map}{fields}{$f}{tag} . $c->{map}{fields}{$f}{sub}) }
-              = $mfh;
-        }
-    }
-
-    # print file headers
-    print HOLDINGS "BEGIN;\n";
-    print HOLDINGS "CREATE TABLE ", $c->{prefix}, ".asset_copy_", $c->{ils};
-    print HOLDINGS $c->{library} if (defined $c->{library});
-    print HOLDINGS " (eg_bib_id INTEGER, eg_copy_id INTEGER, l_tag INTEGER";
-    for ( sort keys %{ $c->{map}{fields} } ) {
-        next if ($c->{map}->mod($_) =~ /bib/);
-        print HOLDINGS ", l_", $_, " TEXT";
-    }
-    print HOLDINGS ") INHERITS (", $c->{prefix}, ".asset_copy);\n";
-    print HOLDINGS "COPY ", $c->{prefix}, ".asset_copy_", $c->{ils};
-    print HOLDINGS $c->{library} if (defined $c->{library});
-    print HOLDINGS " (eg_bib_id, eg_copy_id, l_tag";
-    for ( sort keys %{ $c->{map}{fields} } ) {
-        print HOLDINGS ", l_", $_;
-    }
-    print HOLDINGS ") FROM STDIN;\n";
-
-
     return $c;
 }
 
 sub show_help {
     print <<HELP;
-Usage is: ...
+Usage is: extract_holdings -p PREFIX -m MAPFILE -i ILS [OPTIONS] <MARCXML>
+  prefix  p  Prefix string for output filenames
+  map     m  Subfield map file to use
+  ils     i  Legacy ILS name (affects SQL generation)
+
+  sample  s  Comma-delineated list of datafield tags to be sampled
+  library l  Legacy library name (affects SQL generation)
 HELP
     exit;
 }
