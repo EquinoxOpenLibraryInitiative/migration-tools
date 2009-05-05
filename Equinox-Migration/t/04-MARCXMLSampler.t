@@ -24,8 +24,8 @@ is (defined $sample->{999}, 1);
 is (defined $sample->{999}{x}, 1);
 is ($sample->{999}{x}{value}, 'MYSTERY', 'Should be the first seen value');
 is ($sample->{999}{x}{count}, 7, 'One real in each record, plus 3 synthetic in last rec');
-is ($sample->{999}{x}{rcnt}, 4, 'Occurs in all records');
-is ($sample->{999}{s}{rcnt}, 3, 'Was removed from one record');
+is ($sample->{999}{x}{tcnt}, 4, 'Occurs in all records');
+is ($sample->{999}{s}{tcnt}, 3, 'Was removed from one record');
 
 my $tags = $mp->{data}{tags};
 is ($tags->{961}, 4);

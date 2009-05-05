@@ -61,7 +61,8 @@ sub new {
     my ($class, %args) = @_;
 
     my $self = bless { data => { recs => undef, # X::T record objects
-                                 rcnt => 0,     # next record counter
+                                 rcnt => 0,     # record counter
+                                 tcnt => 0,     # tag counter
                                  samp => {},    # data samples
                                  tags => {},    # all found tags
                                },
@@ -117,6 +118,7 @@ sub process_field {
     return unless ($tag and $tag > 9);
 
     # increment raw tag count
+    $self->{data}{tcnt}++;
     $self->{data}{tags}{$tag}++;
 
     if ($map and $map->has($tag)) {
@@ -136,9 +138,9 @@ sub process_subs {
     # set a value, total-seen count and records-seen-in count
     $samp->{$tag}{$code}{value} = $sub->text unless defined $samp->{$tag}{$code};
     $samp->{$tag}{$code}{count}++;
-    $samp->{$tag}{$code}{rcnt}++ unless ( defined $samp->{$tag}{$code}{last} and
-                                          $samp->{$tag}{$code}{last} == $self->{data}{rcnt} );
-    $samp->{$tag}{$code}{last} = $self->{data}{rcnt};
+    $samp->{$tag}{$code}{tcnt}++ unless ( defined $samp->{$tag}{$code}{last} and
+                                          $samp->{$tag}{$code}{last} == $self->{data}{tcnt} );
+    $samp->{$tag}{$code}{last} = $self->{data}{tcnt};
     #FIXME tcnt not rcnt
 }
 
@@ -151,7 +153,7 @@ structure will be constructed which holds data about tags in the map.
     { tag_id => {
                   sub_code  => { value => VALUE,
                                  count => COUNT,
-                                 rcnt => RCOUNT
+                                 tcnt  => TAGCOUNT
                                },
                   ...
                 },
@@ -163,7 +165,7 @@ that subfield containing
 
     * value - A sample of the subfield text
     * count - Total number of times the subfield was seen
-    * rcnt  - The number of records the subfield was seen in
+    * tcnt  - The number of tags the subfield was seen in
 
 =head1 AUTHOR
 
