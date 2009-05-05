@@ -43,8 +43,8 @@ sub dump_sample_detail {
         for my $subkey (sort keys %{$tags->{$tag}}) {
             my $sub = $tags->{$tag}{$subkey};
             print "  Subfield: $subkey\n";
-            print "  Sample:   '", $sub->{value}, "'\n\n";
-            print "  Count:    ", $sub->{count}, " in ", $sub->{rcnt}, " tags\n";
+            print "  Sample:   '", $sub->{value}, "'\n";
+            print "  Count:    ", $sub->{count}, " in ", $sub->{tcnt}, " tags\n\n";
             #print "(", int($sub->{count} / $sub->{rcnt}), "%)\n";
         }
     }
