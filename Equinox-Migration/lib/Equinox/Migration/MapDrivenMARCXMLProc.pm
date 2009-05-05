@@ -45,6 +45,7 @@ sub new {
     my ($class, %args) = @_;
 
     my $self = bless { mods => { multi    => {},
+                                 bib      => {},
                                  required => {},
                                },
                        data => { recs => undef, # X::T record objects

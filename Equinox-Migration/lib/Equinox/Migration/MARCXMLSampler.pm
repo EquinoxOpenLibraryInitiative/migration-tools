@@ -139,6 +139,7 @@ sub process_subs {
     $samp->{$tag}{$code}{rcnt}++ unless ( defined $samp->{$tag}{$code}{last} and
                                           $samp->{$tag}{$code}{last} == $self->{data}{rcnt} );
     $samp->{$tag}{$code}{last} = $self->{data}{rcnt};
+    #FIXME tcnt not rcnt
 }
 
 
