@@ -89,8 +89,8 @@ is ($rec->{tags}[0]{uni}{a}, "1st ed.", '999$a');
 is ($rec->{tags}[1]{tag}, 999, 'should be 999');
 is ($rec->{tags}[1]{uni}{a}, "MYS DEM", '999$a');
 is_deeply ($rec->{tags}[1]{multi}{'999x'}, ['MYSTERY'], '999$x - multi');
-is_deeply ($mp->{data}{tmap}{250}, [0], 'tag map test 1a');
-is_deeply ($mp->{data}{tmap}{999}, [1], 'tag map test 1b');
+is_deeply ($rec->{tmap}{250}, [0], 'tag map test 1a');
+is_deeply ($rec->{tmap}{999}, [1], 'tag map test 1b');
 $rec = $mp->parse_record;
 $rec = $mp->parse_record;
 $rec = $mp->parse_record;
@@ -98,8 +98,8 @@ is ($rec->{tags}[0]{tag}, 999, '250 doesnt exist in this record');
 is ($rec->{tags}[0]{uni}{a}, "FIC DEV", 'subfield value 4');
 is_deeply ($rec->{tags}[0]{multi}{'999x'}, ['FICTION','FICTION2','FICTION3','FICTION4'],
            '999$x - multi');
-is ($mp->{data}{tmap}{250}, undef, 'tag map test 2a');
-is_deeply ($mp->{data}{tmap}{999}, [0], 'tag map test 2b');
+is ($rec->{tmap}{250}, undef, 'tag map test 2a');
+is_deeply ($rec->{tmap}{999}, [0], 'tag map test 2b');
 
 # map-05 is map-04 with a "no digits" filter on 999$x
 $mp = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => 't/corpus/mdmp-0.txt',

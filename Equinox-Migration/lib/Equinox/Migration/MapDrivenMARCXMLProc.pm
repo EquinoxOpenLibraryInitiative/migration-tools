@@ -51,7 +51,6 @@ sub new {
                        data => { recs => undef, # X::T record objects
                                  rptr => 0,     # next record pointer
                                  crec => undef, # parsed record storage
-                                 tmap => undef, # tag_id-to-tag array map
                                },
                      }, $class;
 
@@ -96,7 +95,6 @@ sub parse_record {
     return 0 unless defined $self->{data}{recs}[ $self->{data}{rptr} ];
     my $record = $self->{data}{recs}[ $self->{data}{rptr} ];
     $self->{data}{crec} = { egid => undef, tags => undef };
-    $self->{data}{tmap} = {};
 
     my @fields = $record->children;
     for my $f (@fields)
@@ -117,7 +115,6 @@ sub process_field {
     my $map = $self->{map};
     my $tag = $field->{'att'}->{'tag'};
     my $crec = $self->{data}{crec};
-    my $tmap = $self->{data}{tmap};
 
     # leader
     unless (defined $tag) {
@@ -133,7 +130,7 @@ sub process_field {
     }
     if ($map->has($tag)) {
         push @{$crec->{tags}}, { tag => $tag, uni => undef, multi => undef };
-        push @{$tmap->{$tag}}, (@{$crec->{tags}} - 1);
+        push @{$crec->{tmap}{$tag}}, (@{$crec->{tags}} - 1);
         my @subs = $field->children('subfield');
         for my $sub (@subs)
           { $self->process_subs($tag, $sub) }
@@ -244,11 +241,13 @@ Then C<$rec> will look like:
                   uni   => { code => value, code2 => value2, ... },
                 },
                 ...
-              ]
+              ],
+      tmap => { tag_id => [ INDEX_LIST ], tag_id2 => [ INDEX_LIST ], ... }
     }
 
 That is, there is an C<egid> key which points to the Evergreen ID of
-that record, and a C<tags> key which points to an arrayref.
+that record, a C<tags> key which points to an arrayref, and a C<tmap>
+key which points to a hashref.
 
 =head3 C<tags>
 
@@ -276,6 +275,22 @@ datafield will be given a value of '' (the null string) in the current
 record struct. Oppose subfields which are not mapped, which will be
 C<undef>.
 
+=head3 tmap
+
+A hashref, where each key (a tag id like "650") points to a listref
+containing the index (or indices) of C<tags> where that tag has
+extracted data.
+
+The intended use of this is to simplify the processing of data from
+tags which can appear more than once in a MARC record, like
+holdings. If your holdings data is in 852, C<tmap->{852}> will be a
+listref with the indices of C<tags> which hold the data from the 852
+datafields.
+
+Complimentarily, C<tmap> prevents data from singular datafields from
+having to be copied for every instance of a multiple datafield, as it
+lets you get the data from that record's one instance of whichever
+field you're looking for.
 
 =head1 AUTHOR
 
