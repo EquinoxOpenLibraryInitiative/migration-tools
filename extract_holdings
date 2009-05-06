@@ -8,10 +8,63 @@ use Equinox::Migration::MARCXMLSampler;
 
 
 my $c = initialize();
+$| = 1;
 
 # run samples if we've been asked for them
 run_samples($c) if ($c->{sample} or $c->{samplemap} or $c->{samplestr});
+extract_holdings($c) if ($c->{map});
 
+#--------------------------
+
+sub extract_holdings {
+    my ($c) = @_;
+    print "Parsing records for extraction... ";
+    my $m = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => $c->{marcfile},
+                                                           mapfile  => $c->{map} );
+    # open main holdings file
+    open HOLDINGS, '>', ($c->{prefix} . "-HOLDINGS.pg");
+    # open the files for multi mappings
+    # FIXME DO THIS
+    select HOLDINGS;
+
+    while (my $rec = $m->parse_record) {
+        # for each holdings tag in the record...
+        for my $holdidx ( @{$rec->{tmap}{ $c->{holdings} }} ) {
+            print STDOUT "\r", $m->recno;
+            my @out = ();            # clear the output buffer
+            push @out, $rec->{egid}; # slug in the egid first thing
+            print "BEGIN;\n\negid\t" if ($m->recno == 1);
+
+            # grab the unary mappings and slug 'em in
+            for my $sub ( sort keys %{$rec->{tags}[$holdidx]{uni}} ) {
+                push @out, $rec->{tags}[$holdidx]{uni}{$sub};
+                print "l_", $m->name($rec->{tags}[$holdidx]{tag}, $sub),"\t"
+                  if ($m->recno == 1);
+            }
+
+            # now get everything else in the mapping
+            for my $othertag ( sort keys %{$rec->{tmap}} ) {
+                next if $othertag eq $c->{holdings};  # ignoring the holdings, o'course
+                my $idx = $rec->{tmap}{$othertag}[0]; # get index into tags struct
+                for my $sub ( sort keys %{$rec->{tags}[$idx]{uni}} ) {
+                    push @out, $rec->{tags}[$idx]{uni}{$sub};
+                    print "l_", $m->name($rec->{tags}[$idx]{tag}, $sub), "\t"
+                      if ($m->recno == 1);
+                }
+            }
+
+            # and dump it
+            print "\n" if ($m->recno == 1);
+            print join("\t", @out);
+            print "\n";
+        }
+
+    }
+    select STDOUT;
+    print "\n";
+}
+
+#--------------------------
 
 sub run_samples {
     my ($c) = @_;
@@ -25,6 +78,7 @@ sub run_samples {
     } else {
         $s = Equinox::Migration::MARCXMLSampler->new( marcfile => $c->{marcfile} );
     }
+    print "Parsing records for sampling... ";
     $s->parse_records;
 
     dump_sample_overview($c, $s) if $c->{sample};
@@ -49,6 +103,7 @@ sub dump_sample_detail {
         }
     }
     select STDOUT;
+    print "\n";
     close DETAIL;
 }
 
@@ -62,15 +117,20 @@ sub dump_sample_overview {
 
     open SAMPLE, '>', ($c->{prefix} . "-HOLDINGS-OVERVIEW.txt");
     select SAMPLE;
-    print "FOUND TAGS (BY TAG)    FOUND TAGS (BY COUNT)\n";
-    print "-------------------    ---------------------\n";
+    print "SAMPLE REPORT FOR ", $c->{prefix},": $count records\n\n";
+    print "FOUND TAGS (BY TAG)           FOUND TAGS (BY COUNT)\n";
+    print "------------------------      --------------------------\n";
     for my $i (0 .. @tagsbyname - 1) {
         print $tagsbyname[$i], (" " x (14 - length $tags->{ $tagsbyname[$i] })),
-          $tags->{ $tagsbyname[$i] }, "      ";
+          $tags->{ $tagsbyname[$i] };
+        print " (", sprintf("%03d", int($tags->{ $tagsbyname[$i] } / $count * 100)), "%)";
+        print "      ";
         print $tagsbycount[$i], (" " x (16 - length $tags->{ $tagsbycount[$i] })),
-          $tags->{ $tagsbycount[$i] }, "\n";
+          $tags->{ $tagsbycount[$i] };
+        print " (", sprintf("%03d", int($tags->{ $tagsbycount[$i] } / $count * 100)), "%)\n";
     }
     select STDOUT;
+    print "\n";
     close SAMPLE;
 }
 
@@ -88,16 +148,18 @@ sub initialize {
                          'samplemap|sm=s',
                          'samplestr|ss=s',
                          'marcfile|m=s',
-                         'ils|i=s',
-                         'library|l=s',
+                         'map=s',
+                         'holdings|h=i',
                          'prefix|p=s',
-                         'help|h',
+                         'help',
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
+    show_help("map and holdings must be specified together!")
+      if ($c->{map} and !$c->{holdings});
 
     my @keys = keys %{$c};
-    for my $key ('prefix', 'ils')
+    for my $key ('prefix')
       { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
@@ -108,14 +170,32 @@ sub initialize {
 }
 
 sub show_help {
+    my ($msg) = @_;
+    print "\nERROR - $msg\n" if $msg;
     print <<HELP;
-Usage is: extract_holdings -p PREFIX -m MAPFILE -i ILS [OPTIONS] <MARCXML>
-  prefix  p  Prefix string for output filenames
-  map     m  Subfield map file to use
-  ils     i  Legacy ILS name (affects SQL generation)
 
-  sample  s  Comma-delineated list of datafield tags to be sampled
-  library l  Legacy library name (affects SQL generation)
+Usage is: extract_holdings -p PREFIX -m MARCFILE [ARGUMENTS]
+
+REQUIRED ARGUMENTS
+  --prefix   -p  Prefix string for output filenames
+  --marcfile -m  MARCXML to use as source data
+
+SAMPLING ARGUMENTS
+  --sample    -s   Generate a report of all tags in the MARC data
+  --samplemap -sm  Specify a E::M::STL map file which will be used to generate
+                   subfield breakdown reports about specific tags in the MARC
+                   data
+  --samplestr -ss  As above, but with a one-liner map specified on the command
+                   line as a string (e.g. '-ss "852 999"')
+
+  If --samplemap and --samplestr are both specified, --samplemap wins.
+
+HOLDINGS EXTRACTION ARGUMENTS
+  --map          E::M::SM map file which will be used to extract holdings data
+                 from the input MARC file
+  --holdings -h  Specifies actual holdings tag
+
+  Both these must be given together.
 HELP
     exit;
 }
