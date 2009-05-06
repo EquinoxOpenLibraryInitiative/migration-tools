@@ -72,9 +72,7 @@ sub new {
     die "Argument 'marcfile' must be specified\n" unless ($args{marcfile});
     if (-r $args{marcfile}) {
         $self->{twig} = XML::Twig->new;
-        $self->{twig}->parsefile($args{marcfile});
-        my @records = $self->{twig}->root->children;
-        $self->{data}{recs} = \@records;
+        $self->{conf}{marc} = $args{marcfile};
     } else {
         die "Can't open marc file: $!\n";
     }
@@ -100,10 +98,11 @@ Extracts data from MARC records, per the mapping file.
 sub parse_records {
     my ($self) = @_;
 
-    for my $record ( @{$self->{data}{recs}} ) {
+    $self->{twig}->parsefile( $self->{conf}{marc} );
+    for my $record ( $self->{twig}->root->children ) {
         my @fields = $record->children;
         for my $f (@fields)
-          { $self->process_field($f) }
+          { $self->process_field($f); $f->purge }
 
         # cleanup memory and increment pointer
         $record->purge;
@@ -124,7 +123,7 @@ sub process_field {
     if ($map and $map->has($tag)) {
         my @subs = $field->children('subfield');
         for my $sub (@subs)
-          { $self->process_subs($tag, $sub) }
+          { $self->process_subs($tag, $sub); $sub->purge }
     }
 }
 

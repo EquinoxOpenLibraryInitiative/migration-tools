@@ -98,7 +98,7 @@ sub parse_record {
 
     my @fields = $record->children;
     for my $f (@fields)
-      { $self->process_field($f) }
+      { $self->process_field($f); $f->purge; }
 
     # cleanup memory and increment pointer
     $record->purge;
@@ -133,13 +133,18 @@ sub process_field {
         push @{$crec->{tmap}{$tag}}, (@{$crec->{tags}} - 1);
         my @subs = $field->children('subfield');
         for my $sub (@subs)
-          { $self->process_subs($tag, $sub) }
-        # check map to ensure all declared subs have a value
+          { $self->process_subs($tag, $sub); $sub->purge; }
+
+        # check map to ensure all declared tags and subs have a value
         my $mods = $map->mods($field);
         for my $mappedsub ( @{ $map->subfields($tag) } ) {
             next if $mods->{multi};
             $crec->{tags}[-1]{uni}{$mappedsub} = ''
               unless defined $crec->{tags}[-1]{uni}{$mappedsub};
+        }
+        for my $mappedtag ( @{ $map->tags }) {
+            $crec->{tmap}{$mappedtag} = undef
+              unless defined $crec->{tmap}{$mappedtag};
         }
     }
 }
@@ -155,6 +160,7 @@ sub process_subs {
     # fetch our datafield struct and fieldname
     my $dataf = $self->{data}{crec}{tags}[-1];
     my $field = $map->field($tag, $code);
+    $self->{data}{crec}{names}{$tag}{$code} = $field;
 
     # test filters
     for my $filter ( @{$map->filters($field)} ) {
@@ -198,6 +204,24 @@ sub check_required {
     }
 
 }
+
+=head2 recno
+
+Returns current record number (starting from zero)
+
+=cut
+
+sub recno { my ($self) = @_; return $self->{data}{rptr} }
+
+=head2 name
+
+Returns mapped fieldname when pass a tag and code
+
+    my $name = $m->name(999,'a');
+
+=cut
+
+sub name { my ($self, $t, $c) = @_; return $self->{data}{crec}{names}{$t}{$c} };
 
 =head1 MODIFIERS
 
