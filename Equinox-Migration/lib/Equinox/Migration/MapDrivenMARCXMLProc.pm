@@ -4,7 +4,7 @@ use warnings;
 use strict;
 
 use XML::Twig;
-use Equinox::Migration::SubfieldMapper 1.003;
+use Equinox::Migration::SubfieldMapper 1.004;
 
 
 =head1 NAME

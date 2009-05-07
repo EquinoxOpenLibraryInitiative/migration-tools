@@ -6,6 +6,7 @@ use Getopt::Long;
 use Equinox::Migration::MapDrivenMARCXMLProc;
 use Equinox::Migration::MARCXMLSampler;
 
+my $VERSION = '1.000';
 
 my $c = initialize();
 $| = 1;
@@ -151,12 +152,14 @@ sub initialize {
                          'map=s',
                          'holdings|h=i',
                          'prefix|p=s',
+                         'version|v',
                          'help',
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
     show_help("map and holdings must be specified together!")
       if ($c->{map} and !$c->{holdings});
+    show_version() if $c->{version};
 
     my @keys = keys %{$c};
     for my $key ('prefix')
@@ -199,3 +202,5 @@ HOLDINGS EXTRACTION ARGUMENTS
 HELP
     exit;
 }
+
+sub show_version { print "extract_holdings v$VERSION\n"; exit }

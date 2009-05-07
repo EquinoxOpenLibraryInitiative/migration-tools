@@ -1,4 +1,31 @@
 Revision history for Equinox-Migration
 
-1.000   2009-03-17
-        First version, E::M::STL
+2009-05-07  MDMP 1.000 & MS 1.000
+
+2009-04-30  SM 1.004
+
+  * single-chunk tokens being quoted is ok now
+  * misc other fixes
+
+2009-04-27  SM 1.003
+
+  * mods now returns *all* mods with no argument
+
+2009-04-27  STL 1.001
+
+  * generate now takes 2 arguments: a filename or string, and any true
+    value if the first argument is a string, to indicate that fact
+
+2009-04-25  SM 1.002
+
+  * mods should return undef when there are no *mods* as well as when
+    there is no mapping *at all*
+
+  * mods returns a hashref
+
+2009-04-14  SM 1.001
+
+  * added tags, subfields methods
+
+2009-03-17  1.000   
+            First version, E::M::STL
