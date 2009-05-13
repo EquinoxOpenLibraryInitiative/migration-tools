@@ -88,7 +88,7 @@ sub populate_marc {
     }
     unless ($marc{date1} and $marc{date1} =~ /\d{4}/) {
         my $my_260 = $record->field('260');
-        if ($my_260) {
+        if ($my_260 and $my_260->subfield('c')) {
             my $date1 = $my_260->subfield('c');
             $date1 =~ s/\D//g;
             if (defined $date1 and $date1 =~ /\d{4}/) {
