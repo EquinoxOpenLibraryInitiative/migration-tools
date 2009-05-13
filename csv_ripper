@@ -14,13 +14,13 @@ use warnings;
 
 use Text::CSV;
 
-my $csv = Text::CSV->new();
+my $csv = Text::CSV->new( {binary => 1});
 
 open CSV, '<', shift or die "Can't open file $!\n";
 
 while (<CSV>) {
     $csv->parse($_);
-    die "Bad data on line $.\n" if ($csv->error_diag);
+    die "Bad data on line $.\n$_\n" if ($csv->error_diag);
     my @chunks = $csv->fields;
     my @out = ();
     for my $chunk (@ARGV)
