@@ -34,9 +34,9 @@ $conf->{totalrecs} = `grep -c '<record' $marcfile`;
 chomp $conf->{totalrecs};
 $conf->{percent}   = 0;
 
-my @record  = (); # current record storage
-my %recmeta = (); # metadata about current record
-my $ptr  = 0;  # record index pointer
+my @record;  # current record storage
+my %recmeta; # metadata about current record
+my $ptr = 0; # record index pointer
 
 # this is the dispatch table which drives command selection in
 # edit(), below
@@ -127,6 +127,7 @@ sub do_automated_cleanups {
                 my @a = @record[0 .. $ptr - 1];
                 my @b = @record[$ptr + 2 .. $#record];
                 @record = (@a, @b);
+                @a = undef; @b = undef;
                 message("Empty datafield scrubbed");
                 $ptr = 0;
                 next;
@@ -139,6 +140,7 @@ sub do_automated_cleanups {
                 my @a = @record[0 .. $ptr - 1];
                 my @b = @record[$ptr + 1 .. $#record];
                 @record = (@a, @b);
+                @a = undef; @b = undef;
                 message("Empty subfield scrubbed");
                 $ptr = 0;
                 next;
@@ -280,10 +282,12 @@ sub buildrecord {
 
     $l = <MARC> while (defined $l and $l !~ /<record>/);
     return $l unless defined $l;
-    @record = ();
-    %recmeta = ();
     $conf->{ricount}++;
 
+    for (keys %recmeta) { $recmeta{$_} = undef }
+    for (0 .. @record)  { delete $record[$_] }
+
+    my $i = 0;
     until ($l =~ m|</record>|) {
         # clean up tags with spaces in them
         $l =~ s/tag="  /tag="00/g;
@@ -302,10 +306,11 @@ sub buildrecord {
               { $istrash = 1; next }
         }
 
-        push @record, $l;
+        $record[$i] = $l;
         $l = <MARC>;
+        $i++;
     }
-    push @record, $l;
+    $record[$i] = $l;
     return 1;
 }
 
@@ -331,9 +336,11 @@ sub write_record {
                          '" ind1=" " ind2=" "> <subfield code="',
                          $conf->{'renumber-subfield'},
                          '">', $recmeta{nid}, "</subfield></datafield>\n");
-        my @tmp = @record[0 .. $#record - 1];
-        my $last = $record[$#record];
+        my @tmp = @record[0 .. @record - 2];
+        my $last = $record[-1];
+        @record = undef;
         @record = (@tmp, $renumber, $last);
+        @tmp = undef; $last = undef;
         $conf->{'renumber-from'}++;
     }
 
@@ -411,6 +418,7 @@ sub substitute {
 
     $recmeta{prevline} = $record[$ptr];
     $record[$ptr] =~ s/$from/$to/;
+    $ofrom = undef; $to = undef; $from = undef;
     print_context();
     return 0;
 }
@@ -441,6 +449,7 @@ sub flip_line {
     my $temp = $record[$ptr];
     $record[$ptr] = $recmeta{prevline};
     $recmeta{prevline} = $temp;
+    $temp = undef;
     print_context();
     return 0;
 }
@@ -450,6 +459,7 @@ sub kill_line {
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr + 1 .. $#record];
     @record = (@a, @b);
+    @a = undef; @b = undef;
     print_context();
     return 0;
 }
@@ -460,6 +470,7 @@ sub yank_line {
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr .. $#record];
     @record = (@a, $conf->{killline}, @b);
+    @a = undef; @b = undef;
     print_context();
     return 0;
 }
@@ -482,6 +493,7 @@ sub dump_record {
     my (@explanation) = @_;
     print $OUT @explanation;
     $recmeta{explanation} = join(' ', 'Tag', $recmeta{tag}, @explanation);
+    @explanation = undef;
     write_record($EXMARC);
     return 1;
 }
