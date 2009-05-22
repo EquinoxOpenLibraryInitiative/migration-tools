@@ -7,7 +7,7 @@ use Equinox::Migration::SimpleTagList;
 
 # baseline object creation
 eval { my $stl = Equinox::Migration::SimpleTagList->new( file => "thefileisalie.txt" ) };
-is ($@ =~ /^Can't open tags file:/, 1, 'cannot open that');
+is ($@ =~ /^Can't open tags file 'thefileisalie\.txt':/, 1, 'cannot open that');
 
 my $stl = Equinox::Migration::SimpleTagList->new();
 is(ref $stl, "Equinox::Migration::SimpleTagList", "self is self");

@@ -60,7 +60,7 @@ sub new {
         if (-r $args{file}) {
             $self->generate($args{file});
         } else {
-            die "Can't open tags file: $!\n";
+            die "Can't open tags file '", $args{file}, "': $!\n";
         }
     }elsif ($args{str}) {
         $self->generate($args{str},'scalar');
