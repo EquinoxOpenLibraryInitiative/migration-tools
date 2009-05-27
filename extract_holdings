@@ -26,11 +26,15 @@ sub extract_holdings {
     open HOLDINGS, '>', ($c->{prefix} . "-HOLDINGS.pg");
     # open the files for multi mappings
     # FIXME DO THIS
+    open X, '>', ($c->{prefix} . "-HOLDINGS-privnotes.pg");
+    open Z, '>', ($c->{prefix} . "-HOLDINGS-pubnotes.pg");
     select HOLDINGS;
 
     while (my $rec = $m->parse_record) {
         # for each holdings tag in the record...
         for my $holdidx ( @{$rec->{tmap}{ $c->{holdings} }} ) {
+            my $tagid = $rec->{tags}[$holdidx]{tag};
+
             print STDOUT "\r", $m->recno;
             my @out = ();            # clear the output buffer
             push @out, $rec->{egid}; # slug in the egid first thing
@@ -39,9 +43,20 @@ sub extract_holdings {
             # grab the unary mappings and slug 'em in
             for my $sub ( sort keys %{$rec->{tags}[$holdidx]{uni}} ) {
                 push @out, $rec->{tags}[$holdidx]{uni}{$sub};
-                print "l_", $m->name($rec->{tags}[$holdidx]{tag}, $sub),"\t"
+                print "l_", $m->name($tagid, $sub),"\t"
                   if ($m->recno == 1);
             }
+            for my $x (@{$rec->{tags}[$holdidx]{multi}{x}} ) {
+                print X $rec->{egid}, "\t",
+                  $rec->{tags}[$holdidx]{uni}{ $c->{copyid} },
+                    "\t$x\n";
+            }
+            for my $z (@{$rec->{tags}[$holdidx]{multi}{z}} ) {
+                print Z $rec->{egid}, "\t",
+                  $rec->{tags}[$holdidx]{uni}{ $c->{copyid} },
+                    "\t$z\n";
+            }
+
 
             # now get everything else in the mapping
             for my $othertag ( sort keys %{$rec->{tmap}} ) {
@@ -151,18 +166,21 @@ sub initialize {
                          'marcfile|m=s',
                          'map=s',
                          'holdings|h=i',
+                         'copyid|c=s',
                          'prefix|p=s',
                          'version|v',
                          'help',
                        );
     show_help() unless $rc;
     show_help() if ($c->{help});
-    show_help("map and holdings must be specified together!")
-      if ($c->{map} and !$c->{holdings});
+    show_help("Nothing to do!")
+      unless ($c->{map} or $c->{sample} or $c->{samplemap} or $c->{samplestr});
+    show_help("map, holdings, and copyid must be specified together!")
+      if ($c->{map} and !$c->{holdings} and !$c->{copyid});
     show_version() if $c->{version};
 
     my @keys = keys %{$c};
-    for my $key ('prefix')
+    for my $key ('prefix', 'marcfile')
       { push @missing, $key unless $c->{$key} }
     if (@missing) {
         print "Required option: ", join(', ', @missing), " missing!\n";
@@ -197,6 +215,7 @@ HOLDINGS EXTRACTION ARGUMENTS
   --map          E::M::SM map file which will be used to extract holdings data
                  from the input MARC file
   --holdings -h  Specifies actual holdings tag
+  --copyid   -c  Specifies subfield of holdings with unique copy identifier
 
   Both these must be given together.
 HELP
