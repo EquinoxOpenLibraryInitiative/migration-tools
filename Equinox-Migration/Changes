@@ -1,5 +1,10 @@
 Revision history for Equinox-Migration
 
+2009-05-27  MDMP 1.001
+
+  * The multi hash no longer uses tag+code for keys. Just code
+    (e.g. '999a' is now just 'a')
+
 2009-05-07  MDMP 1.000 & MS 1.000
 
 2009-04-30  SM 1.004

@@ -13,11 +13,11 @@ Equinox::Migration::MapDrivenMARCXMLProc
 
 =head1 VERSION
 
-Version 1.000
+Version 1.001
 
 =cut
 
-our $VERSION = '1.000';
+our $VERSION = '1.001';
 
 
 =head1 SYNOPSIS
@@ -169,8 +169,7 @@ sub process_subs {
     # handle multi modifier
     if (my $mods = $map->mods($field)) {
         if ($mods->{multi}) {
-            my $name = $tag . $code;
-            push @{$dataf->{multi}{$name}}, $sub->text;
+            push @{$dataf->{multi}{$code}}, $sub->text;
             return;
         }
     }
@@ -261,7 +260,7 @@ Then C<$rec> will look like:
       tags => [
                 {
                   tag   => tag_id,
-                  multi => { (tag_id . sub_code) => [ val1, val2, ... ] },
+                  multi => { code => [ val1, val2, ... ] },
                   uni   => { code => value, code2 => value2, ... },
                 },
                 ...
@@ -282,9 +281,8 @@ Each tag hash holds its own id (e.g. C<998>), and two references to
 two more hashrefs, C<multi> and C<uni>.
 
 The C<multi> hash holds the extracted data for tag/sub mappings which
-have the C<multiple> modifier on them. The keys in C<multi> are
-composed of the tag id and subfield code, catenated
-(e.g. C<901c>). The values are arrayrefs containing the content of all
+have the C<multiple> modifier on them. The keys in C<multi> subfield
+codes.  The values are arrayrefs containing the content of all
 instances of that subfield in that instance of that tag. If no tags
 are defined as C<multi>, it will be C<undef>.
 
