@@ -13,11 +13,11 @@ Equinox::Migration::MARCXMLSampler
 
 =head1 VERSION
 
-Version 1.000
+Version 1.001
 
 =cut
 
-our $VERSION = '1.000';
+our $VERSION = '1.001';
 
 
 =head1 SYNOPSIS
@@ -63,6 +63,7 @@ sub new {
     my $self = bless { data => { recs => undef, # X::T record objects
                                  rcnt => 0,     # record counter
                                  tcnt => 0,     # tag counter
+                                 scnt => {},    # subfield/tag counters
                                  samp => {},    # data samples
                                  tags => {},    # all found tags
                                },
@@ -122,8 +123,12 @@ sub process_field {
 
     if ($map and $map->has($tag)) {
         my @subs = $field->children('subfield');
+        my $i= 0;
         for my $sub (@subs)
-          { $self->process_subs($tag, $sub); $sub->purge }
+          { $self->process_subs($tag, $sub); $sub->purge; $i++ }
+
+        # increment sub length counter
+        $self->{data}{scnt}{$tag}{$i}++;
     }
 }
 
@@ -140,7 +145,6 @@ sub process_subs {
     $samp->{$tag}{$code}{tcnt}++ unless ( defined $samp->{$tag}{$code}{last} and
                                           $samp->{$tag}{$code}{last} == $self->{data}{tcnt} );
     $samp->{$tag}{$code}{last} = $self->{data}{tcnt};
-    #FIXME tcnt not rcnt
 }
 
 
