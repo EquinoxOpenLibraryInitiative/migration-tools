@@ -8,6 +8,14 @@ use Equinox::Migration::MARCXMLSampler;
 
 my $VERSION = '1.001';
 
+=pod
+
+TODO
+
+  * Have detail mode report on number of subfields per datafield
+
+=cut
+
 my $c = initialize();
 $| = 1;
 
@@ -46,6 +54,7 @@ sub extract_holdings {
                 print "l_", $m->name($tagid, $sub),"\t"
                   if ($m->recno == 1);
             }
+
             for my $x (@{$rec->{tags}[$holdidx]{multi}{x}} ) {
                 print X $rec->{egid}, "\t",
                   $rec->{tags}[$holdidx]{uni}{ $c->{copyid} },
@@ -105,20 +114,29 @@ sub dump_sample_detail {
     my ($c, $s) = @_;
     my $tags = $s->{data}{samp};
     my $count = $s->{data}{rcnt};
+    my $scnt  = $s->{data}{scnt};
 
     open DETAIL, '>', ($c->{prefix} . "-HOLDINGS-DETAIL.txt");
     select DETAIL;
-    for my $tag (sort keys %{$tags}) {
+    for my $tag (sort keys %{ $tags }) {
         print ">>>>> TAG $tag\n\n";
-        for my $subkey (sort keys %{$tags->{$tag}}) {
+        for my $subkey (sort keys %{ $tags->{$tag} }) {
             my $sub = $tags->{$tag}{$subkey};
             print "|| $subkey | ", $sub->{value}, " | ", 
               $sub->{count}, "/", $sub->{tcnt}, " |  ||\n";
         }
+        print "\n";
     }
-    print "\n";
-    select STDOUT;
     close DETAIL;
+    open SCOUNT, '>', ($c->{prefix} . "-HOLDINGS-SUBCOUNTS.txt");
+    select SCOUNT;
+    for my $tag (sort keys %{ $scnt }) {
+        print ">>>>> TAG $tag\n\n";
+        for my $len (sort keys %{ $scnt->{$tag} }) 
+          { print "|| $len | ", $scnt->{$tag}{$len}, " ||\n" }
+        print "\n";
+    }
+    select STDOUT;
 }
 
 sub dump_sample_overview {
