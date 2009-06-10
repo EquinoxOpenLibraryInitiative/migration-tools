@@ -13,11 +13,11 @@ Equinox::Migration::MARCXMLSampler
 
 =head1 VERSION
 
-Version 1.001
+Version 1.002
 
 =cut
 
-our $VERSION = '1.001';
+our $VERSION = '1.002';
 
 
 =head1 SYNOPSIS
@@ -140,7 +140,7 @@ sub process_subs {
     # handle unmapped tag/subs
     my $samp = $self->{data}{samp};
     # set a value, total-seen count and records-seen-in count
-    $samp->{$tag}{$code}{value} = $sub->text unless defined $samp->{$tag}{$code};
+    $samp->{$tag}{$code}{value} = $sub->text unless $samp->{$tag}{$code};
     $samp->{$tag}{$code}{count}++;
     $samp->{$tag}{$code}{tcnt}++ unless ( defined $samp->{$tag}{$code}{last} and
                                           $samp->{$tag}{$code}{last} == $self->{data}{tcnt} );
