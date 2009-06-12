@@ -192,7 +192,7 @@ sub initialize {
     show_help("Nothing to do!")
       unless ($c->{map} or $c->{sample} or $c->{samplemap} or $c->{samplestr});
     show_help("map, holdings, and copyid must be specified together!")
-      if ($c->{map} and !$c->{holdings} and !$c->{copyid});
+      if ($c->{map} and !($c->{holdings} and $c->{copyid}));
     show_version() if $c->{version};
 
     my @keys = keys %{$c};
