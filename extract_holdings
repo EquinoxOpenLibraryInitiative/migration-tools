@@ -29,30 +29,35 @@ sub extract_holdings {
     my ($c) = @_;
     print "Parsing records for extraction... ";
     my $m = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => $c->{marcfile},
-                                                           mapfile  => $c->{map} );
+                                                           mapfile  => $c->{map},
+                                                           verbose  => 1,
+                                                         );
+    print "Writing holdings to output file(s)...\n";
     # open main holdings file
     open HOLDINGS, '>', ($c->{prefix} . "-HOLDINGS.pg");
     # open the files for multi mappings
-    # FIXME DO THIS
+    # FIXME make this actually key off multi fields
     open X, '>', ($c->{prefix} . "-HOLDINGS-privnotes.pg");
     open Z, '>', ($c->{prefix} . "-HOLDINGS-pubnotes.pg");
     select HOLDINGS;
 
-    while (my $rec = $m->parse_record) {
+    my $i = 0;
+    for my $rec ( @{$m->{data}{recs}} ) {
         # for each holdings tag in the record...
         for my $holdidx ( @{$rec->{tmap}{ $c->{holdings} }} ) {
             my $tagid = $rec->{tags}[$holdidx]{tag};
 
-            print STDOUT "\r", $m->recno;
+            print STDOUT "\r$i";
             my @out = ();            # clear the output buffer
             push @out, $rec->{egid}; # slug in the egid first thing
-            print "BEGIN;\n\negid\t" if ($m->recno == 1);
+            print "BEGIN;\n\n" unless $i;
 
             # grab the unary mappings and slug 'em in
             for my $sub ( sort keys %{$rec->{tags}[$holdidx]{uni}} ) {
                 push @out, $rec->{tags}[$holdidx]{uni}{$sub};
-                print "l_", $m->name($tagid, $sub),"\t"
-                  if ($m->recno == 1);
+                #print "l_", $m->name($tagid, $sub),"\t"
+                #  unless $i;
+                # FIXME column names should be made workable again
             }
 
             for my $x (@{$rec->{tags}[$holdidx]{multi}{x}} ) {
@@ -74,16 +79,16 @@ sub extract_holdings {
                 for my $sub ( sort keys %{$rec->{tags}[$idx]{uni}} ) {
                     push @out, $rec->{tags}[$idx]{uni}{$sub};
                     print "l_", $m->name($rec->{tags}[$idx]{tag}, $sub), "\t"
-                      if ($m->recno == 1);
+                      unless $i;
                 }
             }
 
             # and dump it
-            print "\n" if ($m->recno == 1);
+            print "\n" if ($i == 1);
             print join("\t", @out);
             print "\n";
         }
-
+        $i++;
     }
     select STDOUT;
     print "\n";
