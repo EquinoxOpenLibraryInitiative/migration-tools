@@ -18,7 +18,6 @@ is(ref $mp, "Equinox::Migration::MARCXMLSampler", "self is self");
 $mp = Equinox::Migration::MARCXMLSampler->new( marcfile  => 't/corpus/mdmp-0.txt',
                                                mapstring => '999',
                                              );
-$mp->parse_records;
 my $sample = $mp->{data}{samp};
 is (defined $sample->{999}, 1);
 is (defined $sample->{999}{x}, 1);
