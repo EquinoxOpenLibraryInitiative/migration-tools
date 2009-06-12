@@ -13,11 +13,15 @@ Equinox::Migration::MARCXMLSampler
 
 =head1 VERSION
 
-Version 1.002
+Version 1.003
 
 =cut
 
-our $VERSION = '1.002';
+our $VERSION = '1.003';
+
+my $xmltwig;
+my $taglist;
+my $dstore;
 
 
 =head1 SYNOPSIS
@@ -60,19 +64,20 @@ when you only want deep introspection on a handful of tags).
 sub new {
     my ($class, %args) = @_;
 
-    my $self = bless { data => { recs => undef, # X::T record objects
-                                 rcnt => 0,     # record counter
-                                 tcnt => 0,     # tag counter
-                                 scnt => {},    # subfield/tag counters
-                                 samp => {},    # data samples
-                                 tags => {},    # all found tags
-                               },
+    $dstore = { rcnt => 0,     # record counter
+                tcnt => 0,     # tag counter
+                scnt => {},    # subfield/tag counters
+                samp => {},    # data samples
+                tags => {},    # all found tags
+              };
+
+    my $self = bless { data => $dstore,
                      }, $class;
 
     # initialize twig
     die "Argument 'marcfile' must be specified\n" unless ($args{marcfile});
     if (-r $args{marcfile}) {
-        $self->{twig} = XML::Twig->new;
+        $xmltwig = XML::Twig->new( twig_handlers => { record => \&parse_record } );
         $self->{conf}{marc} = $args{marcfile};
     } else {
         die "Can't open marc file: $!\n";
@@ -81,70 +86,71 @@ sub new {
     # if we have a sample arg, create the sample map
     die "Can't use a mapfile and mapstring\n"
       if ($args{mapfile} and $args{mapstring});
-    $self->{map} = Equinox::Migration::SimpleTagList->new(file => $args{mapfile})
+    $taglist = Equinox::Migration::SimpleTagList->new(file => $args{mapfile})
         if ($args{mapfile});
-    $self->{map} = Equinox::Migration::SimpleTagList->new(str => $args{mapstring})
+    $taglist = Equinox::Migration::SimpleTagList->new(str => $args{mapstring})
         if ($args{mapstring});
 
+    # do the xml processing
+    $xmltwig->parsefile( $self->{conf}{marc} );
+
+    # hand ourselves back for 
     return $self;
 }
 
 
-=head2 parse_records
+=head2 parse_record
 
-Extracts data from MARC records, per the mapping file.
+XML::Twig handler for record elements; drives data extraction process.
 
 =cut
 
-sub parse_records {
-    my ($self) = @_;
+sub parse_record {
+    my ($twig, $record) = @_;
 
-    $self->{twig}->parsefile( $self->{conf}{marc} );
-    for my $record ( $self->{twig}->root->children ) {
-        my @fields = $record->children;
-        for my $f (@fields)
-          { $self->process_field($f); $f->purge }
+    my @fields = $record->children;
+    for my $f (@fields)
+      { process_field($f) }
 
-        # cleanup memory and increment pointer
-        $record->purge;
-        $self->{data}{rcnt}++;
-    }
+    # cleanup memory and increment pointer
+    $record->purge;
+    $dstore->{rcnt}++;
 }
 
+
 sub process_field {
-    my ($self, $field) = @_;
-    my $map = $self->{map};
+    my ($field) = @_;
     my $tag = $field->{'att'}->{'tag'};
     return unless ($tag and $tag > 9);
 
     # increment raw tag count
-    $self->{data}{tcnt}++;
-    $self->{data}{tags}{$tag}++;
+    $dstore->{tcnt}++;
+    $dstore->{tags}{$tag}++;
 
-    if ($map and $map->has($tag)) {
+
+    if ($taglist and $taglist->has($tag)) {
         my @subs = $field->children('subfield');
         my $i= 0;
         for my $sub (@subs)
-          { $self->process_subs($tag, $sub); $sub->purge; $i++ }
+          { process_subs($tag, $sub); $i++ }
 
         # increment sub length counter
-        $self->{data}{scnt}{$tag}{$i}++;
+        $dstore->{scnt}{$tag}{$i}++;
     }
 }
 
 sub process_subs {
-    my ($self, $tag, $sub) = @_;
-    my $map  = $self->{map};
+    my ($tag, $sub) = @_;
     my $code = $sub->{'att'}->{'code'};
 
     # handle unmapped tag/subs
-    my $samp = $self->{data}{samp};
+    my $samp = $dstore->{samp};
     # set a value, total-seen count and records-seen-in count
     $samp->{$tag}{$code}{value} = $sub->text unless $samp->{$tag}{$code};
     $samp->{$tag}{$code}{count}++;
     $samp->{$tag}{$code}{tcnt}++ unless ( defined $samp->{$tag}{$code}{last} and
-                                          $samp->{$tag}{$code}{last} == $self->{data}{tcnt} );
-    $samp->{$tag}{$code}{last} = $self->{data}{tcnt};
+                                          $samp->{$tag}{$code}{last} == $dstore->{tcnt} );
+    $samp->{$tag}{$code}{last} = $dstore->{tcnt};
 }
 
 
