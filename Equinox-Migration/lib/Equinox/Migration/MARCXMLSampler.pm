@@ -19,7 +19,6 @@ Version 1.003
 
 our $VERSION = '1.003';
 
-my $xmltwig;
 my $taglist;
 my $dstore;
 
@@ -74,15 +73,6 @@ sub new {
     my $self = bless { data => $dstore,
                      }, $class;
 
-    # initialize twig
-    die "Argument 'marcfile' must be specified\n" unless ($args{marcfile});
-    if (-r $args{marcfile}) {
-        $xmltwig = XML::Twig->new( twig_handlers => { record => \&parse_record } );
-        $self->{conf}{marc} = $args{marcfile};
-    } else {
-        die "Can't open marc file: $!\n";
-    }
-
     # if we have a sample arg, create the sample map
     die "Can't use a mapfile and mapstring\n"
       if ($args{mapfile} and $args{mapstring});
@@ -91,10 +81,16 @@ sub new {
     $taglist = Equinox::Migration::SimpleTagList->new(str => $args{mapstring})
         if ($args{mapstring});
 
-    # do the xml processing
-    $xmltwig->parsefile( $self->{conf}{marc} );
+    # initialize twig and process xml
+    die "Argument 'marcfile' must be specified\n" unless ($args{marcfile});
+    if (-r $args{marcfile}) {
+        my $xmltwig = XML::Twig->new( twig_handlers => { record => \&parse_record } );
+        $xmltwig->parsefile( $args{marcfile} );
+    } else {
+        die "Can't open marc file: $!\n";
+    }
 
-    # hand ourselves back for 
+    # hand ourselves back for datastore manipulation
     return $self;
 }
 
