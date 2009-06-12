@@ -23,7 +23,9 @@ our $VERSION = '1.002';
 my $dstore;
 my $sfmap;
 my @mods = qw( multi bib required );
+my $reccount;
 my $verbose = 0;
+
 
 =head1 SYNOPSIS
 
@@ -49,6 +51,8 @@ and C<marcfile> (the MARC data to be processed).
 sub new {
     my ($class, %args) = @_;
 
+    $verbose = 1 if $args{verbose};
+
     my $self = bless { 
                      }, $class;
 
@@ -60,7 +64,7 @@ sub new {
     # initialize datastore
     $dstore = DBM::Deep->new( file => "EMMXSSTORAGE.dbmd",
                               data_sector_size => 256 );
-    $dstore->{rcnt} = 0;            # next record ptr
+    $reccount = 0;            # next record ptr
     $dstore->{tags} = $sfmap->tags; # list of all tags
     $self->{data} = $dstore;
 
@@ -94,11 +98,14 @@ sub parse_record {
 
     # cleanup memory and increment pointer
     $record->purge;
-    $dstore->{rcnt}++;
+    $reccount++;
 
     # check for required fields
     check_required();
     push @{ $dstore->{recs} }, $crec;
+
+    print STDERR "$reccount\n"
+      if ($verbose and !($reccount % 1000));
 }
 
 sub process_field {
@@ -164,7 +171,7 @@ sub process_subs {
 
     # if this were a multi field, it would be handled already. make sure its a singleton
     die "Multiple occurances of a non-multi field: $tag$code at rec ",
-      ($dstore->{rcnt} + 1),"\n" if (defined $dataf->{uni}{$code});
+      ($reccount + 1),"\n" if (defined $dataf->{uni}{$code});
 
     # everything seems okay
     $dataf->{uni}{$code} = $sub->text;
@@ -184,7 +191,7 @@ sub check_required {
                 $found = 1 if ($tag->{uni}{$code});
             }
 
-            die "Required mapping $tag_id$code not found in rec ",$dstore->{rcnt},"\n"
+            die "Required mapping $tag_id$code not found in rec ",$reccount,"\n"
               unless ($found);
         }
     }
