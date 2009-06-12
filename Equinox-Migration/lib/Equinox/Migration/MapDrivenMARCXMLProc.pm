@@ -23,6 +23,7 @@ our $VERSION = '1.002';
 my $dstore;
 my $sfmap;
 my @mods = qw( multi bib required );
+my $verbose = 0;
 
 =head1 SYNOPSIS
 
@@ -59,7 +60,7 @@ sub new {
     # initialize datastore
     $dstore = DBM::Deep->new( file => "EMMXSSTORAGE.dbmd",
                               data_sector_size => 256 );
-    $dstore->{rptr} = 0;            # next record ptr
+    $dstore->{rcnt} = 0;            # next record ptr
     $dstore->{tags} = $sfmap->tags; # list of all tags
     $self->{data} = $dstore;
 
@@ -93,7 +94,7 @@ sub parse_record {
 
     # cleanup memory and increment pointer
     $record->purge;
-    $dstore->{rptr}++;
+    $dstore->{rcnt}++;
 
     # check for required fields
     check_required();
@@ -163,7 +164,7 @@ sub process_subs {
 
     # if this were a multi field, it would be handled already. make sure its a singleton
     die "Multiple occurances of a non-multi field: $tag$code at rec ",
-      ($dstore->{rptr} + 1),"\n" if (defined $dataf->{uni}{$code});
+      ($dstore->{rcnt} + 1),"\n" if (defined $dataf->{uni}{$code});
 
     # everything seems okay
     $dataf->{uni}{$code} = $sub->text;
@@ -183,7 +184,7 @@ sub check_required {
                 $found = 1 if ($tag->{uni}{$code});
             }
 
-            die "Required mapping $tag_id$code not found in rec ",$dstore->{rptr},"\n"
+            die "Required mapping $tag_id$code not found in rec ",$dstore->{rcnt},"\n"
               unless ($found);
         }
     }
@@ -196,7 +197,7 @@ Returns current record number (starting from zero)
 
 =cut
 
-sub recno { my ($self) = @_; return $self->{data}{rptr} }
+sub recno { my ($self) = @_; return $self->{data}{rcnt} }
 
 =head2 name
 
