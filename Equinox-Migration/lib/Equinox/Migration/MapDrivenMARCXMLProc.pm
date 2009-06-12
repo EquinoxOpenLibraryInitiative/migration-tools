@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use XML::Twig;
+use DBM::Deep;
 use Equinox::Migration::SubfieldMapper 1.004;
 
 
@@ -13,12 +14,15 @@ Equinox::Migration::MapDrivenMARCXMLProc
 
 =head1 VERSION
 
-Version 1.001
+Version 1.002
 
 =cut
 
-our $VERSION = '1.001';
+our $VERSION = '1.002';
 
+my $dstore;
+my $sfmap;
+my @mods = qw( multi bib required );
 
 =head1 SYNOPSIS
 
@@ -44,30 +48,26 @@ and C<marcfile> (the MARC data to be processed).
 sub new {
     my ($class, %args) = @_;
 
-    my $self = bless { mods => { multi    => {},
-                                 bib      => {},
-                                 required => {},
-                               },
-                       data => { recs => undef, # X::T record objects
-                                 rptr => 0,     # next record pointer
-                                 crec => undef, # parsed record storage
-                               },
+    my $self = bless { 
                      }, $class;
 
     # initialize map and taglist
-    die "Argument 'mapfile' must be specified\n" unless (defined $args{mapfile});
-    my @mods = keys %{$self->{mods}};
-    $self->{map} = Equinox::Migration::SubfieldMapper->new( file => $args{mapfile},
-                                                            mods => \@mods );
-    $self->{data}{tags} = $self->{map}->tags;
+    die "Argument 'mapfile' must be specified\n" unless ($args{mapfile});
+    $sfmap = Equinox::Migration::SubfieldMapper->new( file => $args{mapfile},
+                                                      mods => \@mods );
+
+    # initialize datastore
+    $dstore = DBM::Deep->new( file => "EMMXSSTORAGE.dbmd",
+                              data_sector_size => 256 );
+    $dstore->{rptr} = 0;            # next record ptr
+    $dstore->{tags} = $sfmap->tags; # list of all tags
+    $self->{data} = $dstore;
 
     # initialize twig
-    die "Argument 'marcfile' must be specified\n" unless (defined $args{marcfile});
+    die "Argument 'marcfile' must be specified\n" unless ($args{marcfile});
     if (-r $args{marcfile}) {
-        $self->{twig} = XML::Twig->new;
-        $self->{twig}->parsefile($args{marcfile});
-        my @records = $self->{twig}->root->children;
-        $self->{data}{recs} = \@records;
+        my $xmltwig = XML::Twig->new( twig_handlers => { record => \&parse_record } );
+        $xmltwig->parsefile( $args{marcfile} );
     } else {
         die "Can't open marc file: $!\n";
     }
@@ -75,46 +75,34 @@ sub new {
     return $self;
 }
 
+sub DESTROY { unlink "EMMXSSTORAGE.dbmd" }
 
 =head2 parse_record
 
-Extracts data from the next record, per the mapping file. Returns a
-normalized datastructure (see L</format_record> for details) on
-success; returns 0 otherwise.
-
-    while (my $rec = $m->parse_record) {
-      # handle extracted record data
-    }
+Extracts data from the next record, per the mapping file.
 
 =cut
 
 sub parse_record {
-    my ($self) = @_;
-
-    # get the next record and wipe current parsed record
-    return 0 unless defined $self->{data}{recs}[ $self->{data}{rptr} ];
-    my $record = $self->{data}{recs}[ $self->{data}{rptr} ];
-    $self->{data}{crec} = { egid => undef, tags => undef };
+    my ($twig, $record) = @_;
+    my $crec = {}; # current record
 
     my @fields = $record->children;
     for my $f (@fields)
-      { $self->process_field($f); $f->purge; }
+      { process_field($f, $crec) }
 
     # cleanup memory and increment pointer
     $record->purge;
-    $self->{data}{rptr}++;
+    $dstore->{rptr}++;
 
     # check for required fields
-    $self->check_required;
-
-    return $self->{data}{crec};
+    check_required();
+    push @{ $dstore->{recs} }, $crec;
 }
 
 sub process_field {
-    my ($self, $field) = @_;
-    my $map = $self->{map};
+    my ($field, $crec) = @_;
     my $tag = $field->{'att'}->{'tag'};
-    my $crec = $self->{data}{crec};
 
     # leader
     unless (defined $tag) {
@@ -128,21 +116,21 @@ sub process_field {
         $crec->{egid} = $sub->text;
         return;
     }
-    if ($map->has($tag)) {
+    if ($sfmap->has($tag)) {
         push @{$crec->{tags}}, { tag => $tag, uni => undef, multi => undef };
         push @{$crec->{tmap}{$tag}}, (@{$crec->{tags}} - 1);
         my @subs = $field->children('subfield');
         for my $sub (@subs)
-          { $self->process_subs($tag, $sub); $sub->purge; }
+          { process_subs($tag, $sub, $crec) }
 
         # check map to ensure all declared tags and subs have a value
-        my $mods = $map->mods($field);
-        for my $mappedsub ( @{ $map->subfields($tag) } ) {
+        my $mods = $sfmap->mods($field);
+        for my $mappedsub ( @{ $sfmap->subfields($tag) } ) {
             next if $mods->{multi};
             $crec->{tags}[-1]{uni}{$mappedsub} = ''
               unless defined $crec->{tags}[-1]{uni}{$mappedsub};
         }
-        for my $mappedtag ( @{ $map->tags }) {
+        for my $mappedtag ( @{ $sfmap->tags }) {
             $crec->{tmap}{$mappedtag} = undef
               unless defined $crec->{tmap}{$mappedtag};
         }
@@ -150,24 +138,23 @@ sub process_field {
 }
 
 sub process_subs {
-    my ($self, $tag, $sub) = @_;
-    my $map  = $self->{map};
+    my ($tag, $sub, $crec) = @_;
     my $code = $sub->{'att'}->{'code'};
 
     # handle unmapped tag/subs
-    return unless ($map->has($tag, $code));
+    return unless ($sfmap->has($tag, $code));
 
     # fetch our datafield struct and fieldname
-    my $dataf = $self->{data}{crec}{tags}[-1];
-    my $field = $map->field($tag, $code);
-    $self->{data}{crec}{names}{$tag}{$code} = $field;
+    my $dataf = $crec->{tags}[-1];
+    my $field = $sfmap->field($tag, $code);
+    $crec->{names}{$tag}{$code} = $field;
 
     # test filters
-    for my $filter ( @{$map->filters($field)} ) {
+    for my $filter ( @{$sfmap->filters($field)} ) {
         return if ($sub->text =~ /$filter/i);
     }
     # handle multi modifier
-    if (my $mods = $map->mods($field)) {
+    if (my $mods = $sfmap->mods($field)) {
         if ($mods->{multi}) {
             push @{$dataf->{multi}{$code}}, $sub->text;
             return;
@@ -176,7 +163,7 @@ sub process_subs {
 
     # if this were a multi field, it would be handled already. make sure its a singleton
     die "Multiple occurances of a non-multi field: $tag$code at rec ",
-      ($self->{data}{rptr} + 1),"\n" if (defined $dataf->{uni}{$code});
+      ($dstore->{rptr} + 1),"\n" if (defined $dataf->{uni}{$code});
 
     # everything seems okay
     $dataf->{uni}{$code} = $sub->text;
@@ -184,9 +171,8 @@ sub process_subs {
 
 
 sub check_required {
-    my ($self) = @_;
-    my $mods = $self->{map}->mods;
-    my $crec = $self->{data}{crec};
+    my $mods = $sfmap->mods;
+    my $crec = $dstore->{crec};
 
     for my $tag_id (keys %{$mods->{required}}) {
         for my $code (@{$mods->{required}{$tag_id}}) {
@@ -197,7 +183,7 @@ sub check_required {
                 $found = 1 if ($tag->{uni}{$code});
             }
 
-            die "Required mapping $tag_id$code not found in rec ",$self->{data}{rptr},"\n"
+            die "Required mapping $tag_id$code not found in rec ",$dstore->{rptr},"\n"
               unless ($found);
         }
     }
@@ -214,13 +200,13 @@ sub recno { my ($self) = @_; return $self->{data}{rptr} }
 
 =head2 name
 
-Returns mapped fieldname when pass a tag and code
+Returns mapped fieldname when passed a record number, tag, and code
 
-    my $name = $m->name(999,'a');
+    my $name = $m->name(3,999,'a');
 
 =cut
 
-sub name { my ($self, $t, $c) = @_; return $self->{data}{crec}{names}{$t}{$c} };
+sub name { my ($self, $r, $t, $c) = @_; return $dstore->{recs}[$r]{names}{$t}{$c} };
 
 =head1 MODIFIERS
 
