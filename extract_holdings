@@ -47,7 +47,6 @@ sub extract_holdings {
         for my $holdidx ( @{$rec->{tmap}{ $c->{holdings} }} ) {
             my $tagid = $rec->{tags}[$holdidx]{tag};
 
-            print STDOUT "\r$i";
             my @out = ();            # clear the output buffer
             push @out, $rec->{egid}; # slug in the egid first thing
             print "BEGIN;\n\n" unless $i;
@@ -87,8 +86,9 @@ sub extract_holdings {
             print "\n" if ($i == 1);
             print join("\t", @out);
             print "\n";
+            print STDOUT "\r$i";
+            $i++;
         }
-        $i++;
     }
     select STDOUT;
     print "\n";
