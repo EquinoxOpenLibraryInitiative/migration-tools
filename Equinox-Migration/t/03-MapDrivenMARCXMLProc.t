@@ -49,6 +49,7 @@ is ($rec->{tags}[0]{tag}, 999, 'tag id 4');
 is ($rec->{tags}[0]{uni}{a}, "FIC DEV", 'subfield value 4');
 $rec = shift @{ $mp->{data}{recs} };
 is ($rec, undef, 'no more records');
+$mp->DESTROY;
 
 # with map-01,  999$a and 999$q are captured. q only exists on the second
 # record; the others should the placeholder value of ''
@@ -62,6 +63,7 @@ is ($rec->{tags}[0]{uni}{j}, undef, 'we shouldnt have captured this, even if it 
 $rec = shift @{ $mp->{data}{recs} };
 is ($rec->{tags}[0]{uni}{a}, "MYS 2", '999$a');
 is ($rec->{tags}[0]{uni}{q}, "TEST", '999$q does exist here');
+$mp->DESTROY;
 
 # map-02 adds 999$x *not* as multi, producing a fatal error on the last record
 #eval { $mp = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => 't/corpus/mdmp-0.txt',
@@ -99,6 +101,7 @@ is_deeply ($rec->{tags}[0]{multi}{'x'}, ['FICTION','FICTION2','FICTION3','FICTIO
            '999$x - multi');
 is ($rec->{tmap}{250}, undef, 'tag map test 2a');
 is_deeply ($rec->{tmap}{999}, [0], 'tag map test 2b');
+$mp->DESTROY;
 
 # map-05 is map-04 with a "no digits" filter on 999$x
 $mp = Equinox::Migration::MapDrivenMARCXMLProc->new( marcfile => 't/corpus/mdmp-0.txt',
