@@ -593,7 +593,7 @@ sub initialize {
     $c->{exception} = join('.',$c->{prefix},'exception','marc','xml');
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
-    $c->{window} = 5;
+    $c->{window} = 9;
 
     if ($c->{trashfile}) {
         $c->{trash} = Equinox::Migration::SimpleTagList->new(file => $conf->{trashfile})
