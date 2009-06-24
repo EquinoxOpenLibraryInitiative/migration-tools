@@ -66,7 +66,8 @@ sub new {
     die "Datastore file 'EMMXSSTORAGE.dbmd' already exists. Exiting.\n"
       if (-e "EMMXSSTORAGE.dbmd");
     $dstore = DBM::Deep->new( file => "EMMXSSTORAGE.dbmd",
-                              data_sector_size => 256,
+                              max_buckets => 64,
+                              #data_sector_size => 256,
                               autoflush => 0,
                             );
     $reccount = 0;            # next record ptr

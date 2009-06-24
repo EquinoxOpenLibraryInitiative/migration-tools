@@ -49,10 +49,13 @@ sub extract_holdings {
     while (  $m->{data}{recs}[$i] ) {
         print HOLDINGS "BEGIN;\n\negid\thseq\t" unless $j;
         my $rec = $m->{data}{recs}[$i];
+        my $k = 0; # holding-within-record pointer
 
         # for each holdings tag in the record...
-        for my $holdidx ( @{$rec->{tmap}{ $c->{holdings} }} ) {
+        while ( $rec->{tmap}{ $c->{holdings} }[$k] ) {
+            my $holdidx = $rec->{tmap}{ $c->{holdings} }[$k];
             my $tagid = $rec->{tags}[$holdidx]{tag};
+            $k++;
 
             my @out = ();            # clear the output buffer
             push @out, $rec->{egid}; # slug in the egid first thing
@@ -79,8 +82,7 @@ sub extract_holdings {
                 my $idx = $rec->{tmap}{$othertag}[0]; # get index into tags struct
                 for my $sub ( sort keys %{$rec->{tags}[$idx]{uni}} ) {
                     push @out, $rec->{tags}[$idx]{uni}{$sub};
-                    print "l_", $m->name($rec->{tags}[$idx]{tag}, $sub), "\t"
-                      unless $j;
+                    print "l_", $m->name($rec->{tags}[$idx]{tag}, $sub), "\t" unless $j;
                 }
             }
 
@@ -89,6 +91,8 @@ sub extract_holdings {
             print HOLDINGS join("\t", @out);
             print HOLDINGS "\n";
             $j++;
+
+            @out = undef;
         }
         $i++;
         print "\r$i";
