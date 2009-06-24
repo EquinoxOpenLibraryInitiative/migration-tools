@@ -36,12 +36,15 @@ sub extract_holdings {
     # open main holdings file
     open HOLDINGS, '>', ($c->{prefix} . "-HOLDINGS.pg");
     # create multi files
-    my @multifiles = <*HOLDINGS-MULT*>;
-    unlink @multifiles;
+    my $multis = $m->get_multis;
+    my %MULTIFILE = ();
+    for my $t ( keys %{$multis} ) {
+        for my $s ( keys %{$t}) 
+          { open my $fh, ">", ($c->{prefix} . "-HOLDINGS-MULT-$t$s.pg"); $MULTIFILE{"$t$s"} = $fh }
+    }
 
     my $i = 0; # record counter
     my $j = 0; # holdings counter
-    my $multis = $m->get_multis;
 
     while (  $m->{data}{recs}[$i] ) {
         print HOLDINGS "BEGIN;\n\negid\thseq\t" unless $j;
@@ -63,10 +66,8 @@ sub extract_holdings {
 
             # handle holdings multis
             for my $sub ( sort keys %{$multis->{$tagid}} ) {
-                open MULT, ">>", ($c->{prefix} . "HOLDINGS-MULT" . "$tagid$sub.pg");
                 for my $value ( @{$rec->{tags}[$holdidx]{multi}{$sub}} ) 
-                  { print MULT join("\t", $rec->{egid}, $j, $value), "\n" }
-                close MULT;
+                  { my $fh = $MULTIFILE{"$tagid$sub"}; print $fh join("\t", $rec->{egid}, $j, $value), "\n" }
             }
 
 
