@@ -65,7 +65,9 @@ sub new {
     die "Datastore file 'EMMXSSTORAGE.dbmd' already exists. Exiting.\n"
       if (-e "EMMXSSTORAGE.dbmd");
     $dstore = DBM::Deep->new( file => "EMMXSSTORAGE.dbmd",
-                              data_sector_size => 256 );
+                              data_sector_size => 256,
+                              autoflush => 0,
+                            );
     $reccount = 0;            # next record ptr
     $dstore->{tags} = $sfmap->tags; # list of all tags
     $self->{data} = $dstore;
@@ -157,7 +159,6 @@ sub process_subs {
     # fetch our datafield struct and fieldname
     my $dataf = $crec->{tags}[-1];
     my $field = $sfmap->field($tag, $code);
-    $crec->{names}{$tag}{$code} = $field;
 
     # test filters
     for my $filter ( @{$sfmap->filters($field)} ) {
@@ -210,13 +211,13 @@ sub recno { my ($self) = @_; return $self->{data}{rcnt} }
 
 =head2 name
 
-Returns mapped fieldname when passed a record number, tag, and code
+Returns mapped fieldname when passed a tag, and code
 
-    my $name = $m->name(3,999,'a');
+    my $name = $m->name(999,'a');
 
 =cut
 
-sub name { my ($self, $r, $t, $c) = @_; return $dstore->{recs}[$r]{names}{$t}{$c} };
+sub name { my ($self, $t, $c) = @_; return $sfmap->field($t, $c) }
 
 =head1 MODIFIERS
 
