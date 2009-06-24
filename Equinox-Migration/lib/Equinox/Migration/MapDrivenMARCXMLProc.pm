@@ -23,6 +23,7 @@ our $VERSION = '1.002';
 my $dstore;
 my $sfmap;
 my @mods = qw( multi bib required );
+my $multis = {};
 my $reccount;
 my $verbose = 0;
 
@@ -53,7 +54,7 @@ sub new {
 
     $verbose = 1 if $args{verbose};
 
-    my $self = bless { 
+    my $self = bless { multis => \$multis,
                      }, $class;
 
     # initialize map and taglist
@@ -136,8 +137,9 @@ sub process_field {
           { process_subs($tag, $sub, $crec) }
 
         # check map to ensure all declared tags and subs have a value
-        my $mods = $sfmap->mods($field);
         for my $mappedsub ( @{ $sfmap->subfields($tag) } ) {
+            my $fieldname = $sfmap->field($tag, $mappedsub);
+            my $mods = $sfmap->mods($fieldname);
             next if $mods->{multi};
             $crec->{tags}[-1]{uni}{$mappedsub} = ''
               unless defined $crec->{tags}[-1]{uni}{$mappedsub};
@@ -156,7 +158,7 @@ sub process_subs {
     # handle unmapped tag/subs
     return unless ($sfmap->has($tag, $code));
 
-    # fetch our datafield struct and fieldname
+    # fetch our datafield struct and fiel
     my $dataf = $crec->{tags}[-1];
     my $field = $sfmap->field($tag, $code);
 
@@ -164,10 +166,12 @@ sub process_subs {
     for my $filter ( @{$sfmap->filters($field)} ) {
         return if ($sub->text =~ /$filter/i);
     }
+
     # handle multi modifier
     if (my $mods = $sfmap->mods($field)) {
         if ($mods->{multi}) {
             push @{$dataf->{multi}{$code}}, $sub->text;
+            $multis->{$tag}{$code} = 1;
             return;
         }
     }
@@ -218,6 +222,17 @@ Returns mapped fieldname when passed a tag, and code
 =cut
 
 sub name { my ($self, $t, $c) = @_; return $sfmap->field($t, $c) }
+
+=head2 get_multis
+
+Returns hashref of C<{tag}{code}> for all mapped multi fields
+
+=cut
+
+sub get_multis {
+    my ($self) = @_;
+    return $multis;
+}
 
 =head1 MODIFIERS
 
