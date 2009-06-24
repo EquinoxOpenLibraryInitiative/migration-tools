@@ -26,7 +26,7 @@ open MARC, '<:utf8', $marcfile
 open my $NUMARC, '>:utf8', $conf->{output}
   or die "Can't open output file $!\n";
 open my $OLD2NEW, '>', 'old2new.map'
-  if ($conf->{'renumber-from'} and $conf->{'original-subfield'});
+  if ($conf->{'renumber-from'} and $conf->{'original-tag'});
 my $EXMARC = 'EX';
 print $NUMARC "<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n";
 
@@ -76,7 +76,7 @@ while ( buildrecord() ) {
     $ptr = 0;
     until ($ptr == $#record) {
         # get datafield/tag data if we have it
-        my $rc = stow_record_data();
+        $rc = stow_record_data() if ($conf->{'renumber-from'} and $conf->{'original-tag'});
         return $rc if $rc;
 
         # naked ampersands
@@ -110,7 +110,7 @@ while ( buildrecord() ) {
     write_record($NUMARC);
 }
 print $NUMARC "</collection>\n";
-print $OUT "\nDone. ",$conf->{ricount}," in / ",$conf->{rocount}," out          \n";
+print $OUT "\nDone. ",$conf->{ricount}," in; ",$conf->{rocount}," dumped          \n";
 
 
 #-----------------------------------------------------------------------------------
@@ -186,37 +186,54 @@ sub do_automated_cleanups {
 
 sub stow_record_data {
     # get tag data if we're looking at it
-    if ($record[$ptr] =~ m/<datafield tag="(?<TAG>.{3})"/) {
+    my $tag = 0;
+    if ($record[$ptr] =~ m/<(control|data)field tag="(?<TAG>.{3})"/) {
         $recmeta{tag} = $+{TAG};
+        $tag = $recmeta{tag};
         $record[$ptr] =~ m/ind1="(?<IND1>.)"/;
         $recmeta{ind1} = $+{IND1} || '';
         $record[$ptr] =~ m/ind2="(?<IND2>.)"/;
         $recmeta{ind2} = $+{IND2} || '';
 
-        unless (defined $recmeta{tag}) {
+        unless ($tag) {
             message("Autokill record: no detectable tag");
             dump_record("No detectable tag") ;
             return 1;
         }
 
         # and since we are looking at a tag, see if it's the original id
-        if ($conf->{'original-subfield'} and $recmeta{tag} == $conf->{'original-tag'}) {
-            my $line = $record[$ptr]; my $lptr = $ptr;
-            my $osub = $conf->{'original-subfield'};
-            $recmeta{oid} = 'NONE';
-
-            # skim to end of this tag
-            until ($line =~ m|</datafield>|) {
-                if ($line =~ /<subfield code="$osub">(.+?)</)
-                  { $recmeta{oid} = $1 }
-                $lptr++;
-                $line = $record[$lptr];
+        if ($tag == $conf->{'original-tag'}) {
+            my $oid = 0;
+            if ($tag < 10) {
+                # controlfield
+                if ($record[$ptr] =~ m|<controlfield tag="$tag">(.+?)</controlfield>|)
+                      { $oid = $1; print $OLD2NEW "$oid\t", $recmeta{nid}, "\n" }
+            } elsif ($tag >= 10 and $conf->{'original-subfield'}) {
+                # datafield
+                my $line = $record[$ptr]; my $lptr = $ptr;
+                my $osub = $conf->{'original-subfield'};
+                # skim to end of this tag
+                until ($line =~ m|</datafield>|) {
+                    if ($line =~ /<subfield code="$osub">(.+?)</)
+                      { $oid = $1; print $OLD2NEW "$oid\t", $recmeta{nid}, "\n" }
+                    $lptr++;
+                    $line = $record[$lptr];
+                }
+            } else {
+                return 0;
             }
-            unless (defined $recmeta{oid}) {
+
+            # didn't find the old id!
+            unless ($oid) {
                 message("Autokill record: no oldid when old2new mapping requested");
                 dump_record("No old id found");
                 return 1;
             }
+
+            # got it; write to old->new map file
+            if ($conf->{'renumber-from'} and $conf->{'original-subfield'}) {
+            }
+
         }
     }
     return 0;
@@ -236,6 +253,9 @@ sub edit {
     my ($msg) = @_;
 
     return if $conf->{trash}->has( $recmeta{tag} );
+    if ( $conf->{fullauto} )
+    { dump_record($msg); return }
+
     $conf->{editmsg} = $msg;
     print_fullcontext();
 
@@ -306,11 +326,25 @@ sub buildrecord {
               { $istrash = 1; next }
         }
 
-        $record[$i] = $l;
+        push @record, $l;
         $l = <MARC>;
         $i++;
     }
-    $record[$i] = $l;
+
+    # add 903(?) with new record id
+    if ($conf->{'renumber-from'}) {
+        $recmeta{nid} = $conf->{'renumber-from'};
+        push @record, join('', ' <datafield tag="', $conf->{'renumber-tag'},
+                           '" ind1=" " ind2=" "> <subfield code="',
+                           $conf->{'renumber-subfield'},
+                           '">',
+                           $recmeta{nid},
+                           "</subfield></datafield>\n");
+        $conf->{'renumber-from'}++;
+    }
+    $i++;
+
+    push @record, $l;
     return 1;
 }
 
@@ -324,37 +358,18 @@ sub write_record {
         $FH = $EXMARC;
     }
 
-    $conf->{rocount}++ if ($FH eq $NUMARC);
     print $FH '<!-- ', $recmeta{explanation}, " -->\n"
       if(defined $recmeta{explanation});
-
-    # add 903(?) with new record id
-    my $renumber = '';
-    if ($conf->{'renumber-from'}) {
-        $recmeta{nid} = $conf->{'renumber-from'};
-        $renumber = join('', ' <datafield tag="', $conf->{'renumber-tag'},
-                         '" ind1=" " ind2=" "> <subfield code="',
-                         $conf->{'renumber-subfield'},
-                         '">', $recmeta{nid}, "</subfield></datafield>\n");
-        my @tmp = @record[0 .. @record - 2];
-        my $last = $record[-1];
-        @record = undef;
-        @record = (@tmp, $renumber, $last);
-        @tmp = undef; $last = undef;
-        $conf->{'renumber-from'}++;
-    }
 
     # scrub newlines (unless told not to or writing exception record)
     unless ($conf->{nocollapse} or $FH eq $EXMARC)
       { s/\n// for (@record) }
 
-    # write to old->new map file if needed
-    if ($conf->{'renumber-from'} and $conf->{'original-subfield'}) {
-        print $OLD2NEW $recmeta{oid}, "\t", $recmeta{nid}, "\n"
-    }
-
     # actually write the record
     print $FH @record,"\n";
+
+    # increment output record count (if not exception)
+    $conf->{rocount}++ if ($FH eq $EXMARC);
 
     # if we were dumping to exception file, nuke the record and set ptr
     # to terminate processing loop
@@ -367,7 +382,7 @@ sub print_fullcontext {
     print $OUT $conf->{editmsg},"\n";
     print $OUT "\r    Tag:",$recmeta{tag}, " Ind1:'",
       $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'";
-    print $OUT " @ ", $conf->{ricount}, "/", $conf->{rocount} + 1;
+    print $OUT " @ ", $conf->{ricount}, "/", $conf->{totalrecs};
     print_context();
     return 0;
 }
@@ -387,7 +402,7 @@ sub print_context {
 
 sub message {
     my ($msg) = @_;
-    print $OUT "\r$msg at ",$conf->{ricount},"/",$conf->{rocount} + 1,"\n";
+    print $OUT "\r$msg at ",$conf->{ricount},"/",$conf->{totalrecs}, "\n";
 }
 
 #-----------------------------------------------------------------------------------
@@ -491,9 +506,8 @@ sub display_lines {
 
 sub dump_record {
     my (@explanation) = @_;
-    print $OUT @explanation;
-    $recmeta{explanation} = join(' ', 'Tag', $recmeta{tag}, @explanation);
-    @explanation = undef;
+    $recmeta{explanation} = join(' ', 'DUMPING RECORD: Tag', $recmeta{tag}, @explanation);
+    message( $recmeta{explanation} );
     write_record($EXMARC);
     return 1;
 }
@@ -568,6 +582,7 @@ sub initialize {
 
     my $rc = GetOptions( $c,
                          'autoscrub|a',
+                         'fullauto',
                          'exception|x=s',
                          'output|o=s',
                          'prefix|p=s',
@@ -589,6 +604,8 @@ sub initialize {
 
     # defaults
     my $pfx = $c->{prefix} // "bibs";
+    $c->{ricount} = 0;
+    $c->{rocount} = 0;
     $c->{output} = join('.',$c->{prefix},'clean','marc','xml');
     $c->{exception} = join('.',$c->{prefix},'exception','marc','xml');
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
@@ -637,6 +654,8 @@ Options
   --no-strip9      Don't autoremove 901/903 tags in data
   --trashfile  -t  File containing trash tag data (see --trashhelp)
 
+  --fullauto       No manual edits. All problematic records dumped to
+                   exception file.
 
   --script         Store human-initiated ops in scriptfile (.mcscript)
                    Not yet implemented
