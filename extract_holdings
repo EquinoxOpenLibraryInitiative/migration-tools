@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use Equinox::Migration::MapDrivenMARCXMLProc;
+use Equinox::Migration::MapDrivenMARCXMLProc 1.003;
 use Equinox::Migration::MARCXMLSampler;
 
 my $VERSION = '1.001';
@@ -35,39 +35,38 @@ sub extract_holdings {
     print "Writing holdings to output file(s)...\n";
     # open main holdings file
     open HOLDINGS, '>', ($c->{prefix} . "-HOLDINGS.pg");
-    # open the files for multi mappings
-    # FIXME make this actually key off multi fields
-    open X, '>', ($c->{prefix} . "-HOLDINGS-privnotes.pg");
-    open Z, '>', ($c->{prefix} . "-HOLDINGS-pubnotes.pg");
-    select HOLDINGS;
+    # create multi files
+    my @multifiles = <*HOLDINGS-MULT*>;
+    unlink @multifiles;
 
-    my $i = 0;
-    for my $rec ( @{$m->{data}{recs}} ) {
+    my $i = 0; # record counter
+    my $j = 0; # holdings counter
+    my $multis = $m->get_multis;
+
+    while (  $m->{data}{recs}[$i] ) {
+        print HOLDINGS "BEGIN;\n\negid\thseq\t" unless $j;
+        my $rec = $m->{data}{recs}[$i];
+
         # for each holdings tag in the record...
         for my $holdidx ( @{$rec->{tmap}{ $c->{holdings} }} ) {
             my $tagid = $rec->{tags}[$holdidx]{tag};
 
             my @out = ();            # clear the output buffer
             push @out, $rec->{egid}; # slug in the egid first thing
-            print "BEGIN;\n\n" unless $i;
+            push @out, $j;           # holding seq goes next
 
             # grab the unary mappings and slug 'em in
             for my $sub ( sort keys %{$rec->{tags}[$holdidx]{uni}} ) {
                 push @out, $rec->{tags}[$holdidx]{uni}{$sub};
-                #print "l_", $m->name($tagid, $sub),"\t"
-                #  unless $i;
-                # FIXME column names should be made workable again
+                print HOLDINGS "l_", $m->name($tagid, $sub),"\t" unless $j;
             }
 
-            for my $x (@{$rec->{tags}[$holdidx]{multi}{x}} ) {
-                print X $rec->{egid}, "\t",
-                  $rec->{tags}[$holdidx]{uni}{ $c->{copyid} },
-                    "\t$x\n";
-            }
-            for my $z (@{$rec->{tags}[$holdidx]{multi}{z}} ) {
-                print Z $rec->{egid}, "\t",
-                  $rec->{tags}[$holdidx]{uni}{ $c->{copyid} },
-                    "\t$z\n";
+            # handle holdings multis
+            for my $sub ( sort keys %{$multis->{$tagid}} ) {
+                open MULT, ">>", ($c->{prefix} . "HOLDINGS-MULT" . "$tagid$sub.pg");
+                for my $value ( @{$rec->{tags}[$holdidx]{multi}{$sub}} ) 
+                  { print MULT join("\t", $rec->{egid}, $j, $value), "\n" }
+                close MULT;
             }
 
 
@@ -78,19 +77,19 @@ sub extract_holdings {
                 for my $sub ( sort keys %{$rec->{tags}[$idx]{uni}} ) {
                     push @out, $rec->{tags}[$idx]{uni}{$sub};
                     print "l_", $m->name($rec->{tags}[$idx]{tag}, $sub), "\t"
-                      unless $i;
+                      unless $j;
                 }
             }
 
             # and dump it
-            print "\n" if ($i == 1);
-            print join("\t", @out);
-            print "\n";
-            print STDOUT "\r$i";
-            $i++;
+            print HOLDINGS "\n" unless $j;
+            print HOLDINGS join("\t", @out);
+            print HOLDINGS "\n";
+            $j++;
         }
+        $i++;
+        print "\r$i";
     }
-    select STDOUT;
     print "\n";
 }
 
@@ -99,6 +98,7 @@ sub extract_holdings {
 sub run_samples {
     my ($c) = @_;
     my $s;
+    print "Parsing records for sampling... ";
     if ($c->{samplemap}) {
         $s = Equinox::Migration::MARCXMLSampler->new( marcfile => $c->{marcfile},
                                                       mapfile  => $c->{samplemap});
@@ -108,8 +108,6 @@ sub run_samples {
     } else {
         $s = Equinox::Migration::MARCXMLSampler->new( marcfile => $c->{marcfile} );
     }
-    print "Parsing records for sampling... ";
-    $s->parse_records;
 
     dump_sample_overview($c, $s) if $c->{sample};
     dump_sample_detail($c, $s) if ($c->{samplemap} or $c->{samplestr});
