@@ -14,11 +14,11 @@ Equinox::Migration::MapDrivenMARCXMLProc
 
 =head1 VERSION
 
-Version 1.002
+Version 1.003
 
 =cut
 
-our $VERSION = '1.002';
+our $VERSION = '1.003';
 
 my $dstore;
 my $sfmap;
