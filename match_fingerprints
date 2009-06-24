@@ -94,6 +94,9 @@ sub dump_records {
             die "Collision: lead in sub list ", $rec->{id}, "\n"
               if $subs{ $rec->{id} };
 
+            # we don't want subs below threshold
+            next if ($_ < $conf->{threshold});
+
             # still here? output.
             print OUT $rec->{id}, "\t$_\n"
         }
@@ -109,6 +112,7 @@ sub initialize {
 
     my $rc = GetOptions( $c,
                          'output|o=s',
+                         'threshold|t=i',
                          'help|h',
                        );
     show_help() unless $rc;
@@ -122,11 +126,13 @@ sub initialize {
         print "Required option: ", join(', ', @missing), " missing!\n";
         show_help();
     }
+
+    $c->{threshold} = 0 unless $c->{threshold};
 }
 
 sub show_help {
     print <<HELP;
-Usage is: compress_fingerprints -o OUTPUTFILE INPUTFILE
+Usage is: compress_fingerprints [-t THRESHOLD] -o OUTPUTFILE INPUTFILE
 HELP
 exit;
 }
