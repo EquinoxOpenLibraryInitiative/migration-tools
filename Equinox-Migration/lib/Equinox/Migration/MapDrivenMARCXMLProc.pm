@@ -14,11 +14,11 @@ Equinox::Migration::MapDrivenMARCXMLProc
 
 =head1 VERSION
 
-Version 1.003
+Version 1.004
 
 =cut
 
-our $VERSION = '1.003';
+our $VERSION = '1.004';
 
 my $dstore;
 my $sfmap;
@@ -63,13 +63,14 @@ sub new {
                                                       mods => \@mods );
 
     # initialize datastore
-    die "Datastore file 'EMMXSSTORAGE.dbmd' already exists. Exiting.\n"
-      if (-e "EMMXSSTORAGE.dbmd");
-    $dstore = DBM::Deep->new( file => "EMMXSSTORAGE.dbmd",
-                              max_buckets => 64,
-                              #data_sector_size => 256,
-                              autoflush => 0,
-                            );
+    #die "Datastore file 'EMMXSSTORAGE.dbmd' already exists. Exiting.\n"
+    #  if (-e "EMMXSSTORAGE.dbmd");
+    #$dstore = DBM::Deep->new( file => "EMMXSSTORAGE.dbmd",
+    #                          max_buckets => 64,
+    #                          #data_sector_size => 256,
+    #                          autoflush => 0,
+    #                        );
+    $dstore = {};
     $reccount = 0;            # next record ptr
     $dstore->{tags} = $sfmap->tags; # list of all tags
     $self->{data} = $dstore;
@@ -85,8 +86,6 @@ sub new {
 
     return $self;
 }
-
-sub DESTROY { unlink "EMMXSSTORAGE.dbmd" }
 
 =head2 parse_record
 
@@ -107,7 +106,7 @@ sub parse_record {
     $reccount++;
 
     # check for required fields
-    check_required();
+    check_required($crec);
     push @{ $dstore->{recs} }, $crec;
 
     print STDERR "$reccount\n"
@@ -187,8 +186,8 @@ sub process_subs {
 
 
 sub check_required {
+    my ($crec) = @_;
     my $mods = $sfmap->mods;
-    my $crec = $dstore->{crec};
 
     for my $tag_id (keys %{$mods->{required}}) {
         for my $code (@{$mods->{required}{$tag_id}}) {

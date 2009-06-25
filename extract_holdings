@@ -50,9 +50,8 @@ sub extract_holdings {
         print HOLDINGS "BEGIN;\n\negid\thseq\t" unless $j;
         my $rec = $m->{data}{recs}[$i];
         my $k = 0; # holding-within-record pointer
-
         # for each holdings tag in the record...
-        while ( $rec->{tmap}{ $c->{holdings} }[$k] ) {
+        while ( defined $rec->{tmap}{ $c->{holdings} }[$k] ) {
             my $holdidx = $rec->{tmap}{ $c->{holdings} }[$k];
             my $tagid = $rec->{tags}[$holdidx]{tag};
             $k++;
