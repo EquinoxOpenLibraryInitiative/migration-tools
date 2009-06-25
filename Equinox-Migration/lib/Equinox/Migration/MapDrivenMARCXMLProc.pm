@@ -4,7 +4,6 @@ use warnings;
 use strict;
 
 use XML::Twig;
-use DBM::Deep;
 use Equinox::Migration::SubfieldMapper 1.004;
 
 
@@ -63,13 +62,6 @@ sub new {
                                                       mods => \@mods );
 
     # initialize datastore
-    #die "Datastore file 'EMMXSSTORAGE.dbmd' already exists. Exiting.\n"
-    #  if (-e "EMMXSSTORAGE.dbmd");
-    #$dstore = DBM::Deep->new( file => "EMMXSSTORAGE.dbmd",
-    #                          max_buckets => 64,
-    #                          #data_sector_size => 256,
-    #                          autoflush => 0,
-    #                        );
     $dstore = {};
     $reccount = 0;            # next record ptr
     $dstore->{tags} = $sfmap->tags; # list of all tags
