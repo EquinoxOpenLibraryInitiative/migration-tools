@@ -205,6 +205,10 @@ sub initialize {
       if ($c->{map} and !($c->{holdings} and $c->{copyid}));
     show_version() if $c->{version};
 
+    if ($c->{prefix} and !$c->{marcfile}) {
+        $c->{marcfile} = $c->{prefix} . ".clean.marc.xml";
+    }
+
     my @keys = keys %{$c};
     for my $key ('prefix', 'marcfile')
       { push @missing, $key unless $c->{$key} }
@@ -226,6 +230,7 @@ Usage is: extract_holdings -p PREFIX -m MARCFILE [ARGUMENTS]
 REQUIRED ARGUMENTS
   --prefix   -p  Prefix string for output filenames
   --marcfile -m  MARCXML to use as source data
+                 Defaults to 'PREFIX.clean.marc.xml'
 
 SAMPLING ARGUMENTS
   --sample    -s   Generate a report of all tags in the MARC data
