@@ -606,14 +606,18 @@ sub initialize {
     my $pfx = $c->{prefix} // "bibs";
     $c->{ricount} = 0;
     $c->{rocount} = 0;
-    $c->{output} = join('.',$c->{prefix},'clean','marc','xml');
-    $c->{exception} = join('.',$c->{prefix},'exception','marc','xml');
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
     $c->{window} = 9;
-
-    $c->{marcfile} = $c->{prefix} . '.marc.xml'
-      unless $c->{marcfile};
+    if ($c->{prefix}) {
+        $c->{output} = join('.',$c->{prefix},'clean','marc','xml')
+          unless $c->{output};
+        $c->{exception} = join('.',$c->{prefix},'exception','marc','xml')
+          unless $c->{exception};
+        $c->{marcfile} = $c->{prefix} . '.marc.xml'
+          unless $c->{marcfile};
+    }
+    show_help() unless ($c->{marcfile} and $c->{output});
 
     if ($c->{trashfile}) {
         $c->{trash} = Equinox::Migration::SimpleTagList->new(file => $c->{trashfile})
@@ -628,14 +632,11 @@ sub initialize {
     # remove original id sequence tag from trash hash if we know it
     $c->{trash}->remove_tag($c->{'original-tag'})
       if ( $c->{'original-tag'} and $c->{trash}->has($c->{'original-tag'}) );
-
-    my @keys = keys %{$c};
-    show_help() unless @keys;
 }
 
 sub show_help {
     print <<HELP;
-Usage is: marc-cleanup [OPTIONS] <filelist>
+Usage is: marc_cleanup [OPTIONS] <filelist>
 Options
   --output     -o  Cleaned MARCXML output filename
   --exception  -x  Exception (dumped records) MARCXML filename
@@ -662,8 +663,6 @@ Options
   --fullauto       No manual edits. All problematic records dumped to
                    exception file.
 
-  --script         Store human-initiated ops in scriptfile (.mcscript)
-                   Not yet implemented
 HELP
 exit;
 }
