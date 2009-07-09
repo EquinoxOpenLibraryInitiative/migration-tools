@@ -86,7 +86,7 @@ or Perl will think you're passing a (possibly malformed) octal value.
 
 =cut
 
-sub has { my ($self, $t) = @_; $t =~ s/^0+//; return (defined $self->{tags}{$t}) ? 1 : 0 }
+sub has { my ($self, $t) = @_; return 0 unless $t; $t =~ s/^0+//; return (defined $self->{tags}{$t}) ? 1 : 0 }
 
 =head2 as_hashref
 

@@ -9,11 +9,11 @@ Equinox::Migration::SubfieldMapper - Generate named-field to MARC tag map from f
 
 =head1 VERSION
 
-Version 1.004
+Version 1.005
 
 =cut
 
-our $VERSION = '1.004';
+our $VERSION = '1.005';
 
 
 =head1 SYNOPSIS
@@ -230,7 +230,7 @@ sub generate {
         my $map = { mods => [], filt => [] };
         $map->{field} = shift @tokens;
         $map->{tag}   = shift @tokens;
-        while (my $tok = shift @tokens) {
+        while (defined (my $tok = shift @tokens)) {
             last if ($tok =~ m/^#/);
             if ($tok =~ m/^[a-z]:'/ and $tok !~ /'$/) {
                 $tok .= ' ' . shift @tokens
