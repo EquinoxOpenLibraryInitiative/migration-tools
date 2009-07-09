@@ -16,23 +16,22 @@ binmode $OUT, ":utf8";
 $| = 1;
 
 # initialization and setup
-my $conf = {};
-initialize($conf);
+my $c = {};
+initialize($c);
 
 # set up files, since everything appears to be in order
-my $marcfile = shift || 'incoming.marc.xml';
-open MARC, '<:utf8', $marcfile
+open MARC, '<:utf8', $c->{marcfile}
   or die "Can't open input file $!\n";
-open my $NUMARC, '>:utf8', $conf->{output}
+open my $NUMARC, '>:utf8', $c->{output}
   or die "Can't open output file $!\n";
 open my $OLD2NEW, '>', 'old2new.map'
-  if ($conf->{'renumber-from'} and $conf->{'original-tag'});
+  if ($c->{'renumber-from'} and $c->{'original-tag'});
 my $EXMARC = 'EX';
 print $NUMARC "<collection xmlns=\"http://www.loc.gov/MARC21/slim\">\n";
 
-$conf->{totalrecs} = `grep -c '<record' $marcfile`;
-chomp $conf->{totalrecs};
-$conf->{percent}   = 0;
+$c->{totalrecs} = `grep -c '<record' $c->{marcfile}`;
+chomp $c->{totalrecs};
+$c->{percent}   = 0;
 
 my @record;  # current record storage
 my %recmeta; # metadata about current record
@@ -64,9 +63,9 @@ my @spinner = qw(- \\ | /);
 my $sidx = 0;
 
 while ( buildrecord() ) {
-    unless ($conf->{ricount} % 50) {
-        $conf->{percent} = int(($conf->{ricount} / $conf->{totalrecs}) * 100);
-        print "\rWorking (",$conf->{percent},"%) ", $spinner[$sidx];
+    unless ($c->{ricount} % 50) {
+        $c->{percent} = int(($c->{ricount} / $c->{totalrecs}) * 100);
+        print "\rWorking (",$c->{percent},"%) ", $spinner[$sidx];
         $sidx = ($sidx == $#spinner) ? 0 : $sidx + 1;
     }
 
@@ -76,7 +75,7 @@ while ( buildrecord() ) {
     $ptr = 0;
     until ($ptr == $#record) {
         # get datafield/tag data if we have it
-        $rc = stow_record_data() if ($conf->{'renumber-from'} and $conf->{'original-tag'});
+        $rc = stow_record_data() if ($c->{'renumber-from'} and $c->{'original-tag'});
         return $rc if $rc;
 
         # naked ampersands
@@ -87,7 +86,7 @@ while ( buildrecord() ) {
             my $match = $1;
             # tags must be numeric
             if ($match =~ /\D/) {
-                edit("Non-numerics in tag") unless $conf->{autoscrub};
+                edit("Non-numerics in tag") unless $c->{autoscrub};
                 next;
             }
         }
@@ -110,7 +109,7 @@ while ( buildrecord() ) {
     write_record($NUMARC);
 }
 print $NUMARC "</collection>\n";
-print $OUT "\nDone. ",$conf->{ricount}," in; ",$conf->{rocount}," dumped          \n";
+print $OUT "\nDone. ",$c->{ricount}," in; ",$c->{rocount}," dumped          \n";
 
 
 #-----------------------------------------------------------------------------------
@@ -202,16 +201,16 @@ sub stow_record_data {
         }
 
         # and since we are looking at a tag, see if it's the original id
-        if ($tag == $conf->{'original-tag'}) {
+        if ($tag == $c->{'original-tag'}) {
             my $oid = 0;
             if ($tag < 10) {
                 # controlfield
                 if ($record[$ptr] =~ m|<controlfield tag="$tag">(.+?)</controlfield>|)
                       { $oid = $1; print $OLD2NEW "$oid\t", $recmeta{nid}, "\n" }
-            } elsif ($tag >= 10 and $conf->{'original-subfield'}) {
+            } elsif ($tag >= 10 and $c->{'original-subfield'}) {
                 # datafield
                 my $line = $record[$ptr]; my $lptr = $ptr;
-                my $osub = $conf->{'original-subfield'};
+                my $osub = $c->{'original-subfield'};
                 # skim to end of this tag
                 until ($line =~ m|</datafield>|) {
                     if ($line =~ /<subfield code="$osub">(.+?)</)
@@ -231,7 +230,7 @@ sub stow_record_data {
             }
 
             # got it; write to old->new map file
-            if ($conf->{'renumber-from'} and $conf->{'original-subfield'}) {
+            if ($c->{'renumber-from'} and $c->{'original-subfield'}) {
             }
 
         }
@@ -252,11 +251,11 @@ Handles the Term::ReadLine loop
 sub edit {
     my ($msg) = @_;
 
-    return if $conf->{trash}->has( $recmeta{tag} );
-    if ( $conf->{fullauto} )
+    return if $c->{trash}->has( $recmeta{tag} );
+    if ( $c->{fullauto} )
     { dump_record($msg); return }
 
-    $conf->{editmsg} = $msg;
+    $c->{editmsg} = $msg;
     print_fullcontext();
 
     # stow original problem line
@@ -298,11 +297,11 @@ to the driver loop.
 sub buildrecord {
     my $l = '';
     my $istrash = 0;
-    my $trash = $conf->{trash};
+    my $trash = $c->{trash};
 
     $l = <MARC> while (defined $l and $l !~ /<record>/);
     return $l unless defined $l;
-    $conf->{ricount}++;
+    $c->{ricount}++;
 
     for (keys %recmeta) { $recmeta{$_} = undef }
     for (0 .. @record)  { delete $record[$_] }
@@ -322,7 +321,7 @@ sub buildrecord {
             next;
         }
         if ($l =~ m/<datafield tag="(.{3})"/) {
-            if ($trash->has($1) or ($conf->{autoscrub} and $1 =~ /\D/))
+            if ($trash->has($1) or ($c->{autoscrub} and $1 =~ /\D/))
               { $istrash = 1; next }
         }
 
@@ -332,15 +331,15 @@ sub buildrecord {
     }
 
     # add 903(?) with new record id
-    if ($conf->{'renumber-from'}) {
-        $recmeta{nid} = $conf->{'renumber-from'};
-        push @record, join('', ' <datafield tag="', $conf->{'renumber-tag'},
+    if ($c->{'renumber-from'}) {
+        $recmeta{nid} = $c->{'renumber-from'};
+        push @record, join('', ' <datafield tag="', $c->{'renumber-tag'},
                            '" ind1=" " ind2=" "> <subfield code="',
-                           $conf->{'renumber-subfield'},
+                           $c->{'renumber-subfield'},
                            '">',
                            $recmeta{nid},
                            "</subfield></datafield>\n");
-        $conf->{'renumber-from'}++;
+        $c->{'renumber-from'}++;
     }
     $i++;
 
@@ -353,7 +352,7 @@ sub write_record {
 
     if ($FH eq 'EX') {
         $EXMARC = undef;
-        open $EXMARC, '>:utf8', $conf->{exception}
+        open $EXMARC, '>:utf8', $c->{exception}
           or die "Can't open exception file $!\n";
         $FH = $EXMARC;
     }
@@ -362,14 +361,14 @@ sub write_record {
       if(defined $recmeta{explanation});
 
     # scrub newlines (unless told not to or writing exception record)
-    unless ($conf->{nocollapse} or $FH eq $EXMARC)
+    unless ($c->{nocollapse} or $FH eq $EXMARC)
       { s/\n// for (@record) }
 
     # actually write the record
     print $FH @record,"\n";
 
     # increment output record count (if not exception)
-    $conf->{rocount}++ if ($FH eq $EXMARC);
+    $c->{rocount}++ if ($FH eq $EXMARC);
 
     # if we were dumping to exception file, nuke the record and set ptr
     # to terminate processing loop
@@ -379,17 +378,17 @@ sub write_record {
 
 sub print_fullcontext {
     print $OUT "\r", ' ' x 72, "\n";
-    print $OUT $conf->{editmsg},"\n";
+    print $OUT $c->{editmsg},"\n";
     print $OUT "\r    Tag:",$recmeta{tag}, " Ind1:'",
       $recmeta{ind1},"' Ind2:'", $recmeta{ind2}, "'";
-    print $OUT " @ ", $conf->{ricount}, "/", $conf->{totalrecs};
+    print $OUT " @ ", $c->{ricount}, "/", $c->{totalrecs};
     print_context();
     return 0;
 }
 
 sub print_context {
-    my $upper = int($conf->{window} / 2) + 1;
-    my $lower = int($conf->{window} / 2) - 1;
+    my $upper = int($c->{window} / 2) + 1;
+    my $lower = int($c->{window} / 2) - 1;
     my $start = ($ptr - $upper < 0) ? 0 : $ptr - $upper;
     my $stop  = ($ptr + $lower > $#record) ? $#record : $ptr + $lower;
     print $OUT "\n";
@@ -402,7 +401,7 @@ sub print_context {
 
 sub message {
     my ($msg) = @_;
-    print $OUT "\r$msg at ",$conf->{ricount},"/",$conf->{totalrecs}, "\n";
+    print $OUT "\r$msg at ",$c->{ricount},"/",$c->{totalrecs}, "\n";
 }
 
 #-----------------------------------------------------------------------------------
@@ -484,7 +483,7 @@ sub yank_line {
       { print $OUT "No killed line to yank\n"; return }
     my @a = @record[0 .. $ptr - 1];
     my @b = @record[$ptr .. $#record];
-    @record = (@a, $conf->{killline}, @b);
+    @record = (@a, $c->{killline}, @b);
     @a = undef; @b = undef;
     print_context();
     return 0;
@@ -527,16 +526,16 @@ sub prev_line {
 sub commit_edit { return 1 }
 
 sub widen_window {
-    if ($conf->{window} == 15)
+    if ($c->{window} == 15)
       { print $OUT "Window can't be bigger than 15 lines\n"; return }
-    $conf->{window} += 2;
+    $c->{window} += 2;
     print_context;
 }
 
 sub narrow_window {
-    if ($conf->{window} == 5)
+    if ($c->{window} == 5)
       { print $OUT "Window can't be smaller than 5 lines\n"; return }
-    $conf->{window} -= 2;
+    $c->{window} -= 2;
     print_context;
 }
 
@@ -585,6 +584,7 @@ sub initialize {
                          'fullauto',
                          'exception|x=s',
                          'output|o=s',
+                         'marcfile|m=s',
                          'prefix|p=s',
                          'nocollapse|n',
                          'renumber-from|rf=i',
@@ -598,7 +598,7 @@ sub initialize {
                          'trashhelp',
                          'help|h',
                        );
-    show_help() unless $rc and @ARGV;
+    show_help() unless $rc;
     show_help() if ($c->{help});
     show_trashhelp() if ($c->{trashhelp});
 
@@ -612,8 +612,11 @@ sub initialize {
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
     $c->{window} = 9;
 
+    $c->{marcfile} = $c->{prefix} . '.marc.xml'
+      unless $c->{marcfile};
+
     if ($c->{trashfile}) {
-        $c->{trash} = Equinox::Migration::SimpleTagList->new(file => $conf->{trashfile})
+        $c->{trash} = Equinox::Migration::SimpleTagList->new(file => $c->{trashfile})
     } else {
         $c->{trash} = Equinox::Migration::SimpleTagList->new;
     }
@@ -627,7 +630,7 @@ sub initialize {
       if ( $c->{'original-tag'} and $c->{trash}->has($c->{'original-tag'}) );
 
     my @keys = keys %{$c};
-    show_help() unless (@ARGV and @keys);
+    show_help() unless @keys;
 }
 
 sub show_help {
@@ -639,6 +642,8 @@ Options
        or
   --prefix=<PREFIX>>   -p  Shared prefix for output/exception files. Will produce
                            PREFIX.clean.marc.xml and PREFIX.exception.marc.xml
+
+  --marcfile  -m  Input filename. Defaults to PREFIX.marc.xml
 
   --renumber-from     -rf  Begin renumbering id sequence with this number
   --renumber-tag      -rt  Tag to use in renumbering (default: 903)
