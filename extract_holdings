@@ -189,8 +189,8 @@ sub initialize {
                          'sample|s',
                          'samplemap|sm=s',
                          'samplestr|ss=s',
-                         'marcfile|m=s',
-                         'map=s',
+                         'marcfile=s',
+                         'map|m=s',
                          'holdings|h=i',
                          'copyid|c=s',
                          'prefix|p=s',
@@ -229,7 +229,7 @@ Usage is: extract_holdings -p PREFIX -m MARCFILE [ARGUMENTS]
 
 REQUIRED ARGUMENTS
   --prefix   -p  Prefix string for output filenames
-  --marcfile -m  MARCXML to use as source data
+  --marcfile     MARCXML to use as source data
                  Defaults to 'PREFIX.clean.marc.xml'
 
 SAMPLING ARGUMENTS
@@ -243,7 +243,7 @@ SAMPLING ARGUMENTS
   If --samplemap and --samplestr are both specified, --samplemap wins.
 
 HOLDINGS EXTRACTION ARGUMENTS
-  --map          E::M::SM map file which will be used to extract holdings data
+  --map      -m   E::M::SM map file which will be used to extract holdings data
                  from the input MARC file
   --holdings -h  Specifies actual holdings tag
   --copyid   -c  Specifies subfield of holdings with unique copy identifier
