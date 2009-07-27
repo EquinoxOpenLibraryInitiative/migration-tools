@@ -13,15 +13,16 @@ Equinox::Migration::MapDrivenMARCXMLProc
 
 =head1 VERSION
 
-Version 1.004
+Version 1.005
 
 =cut
 
-our $VERSION = '1.004';
+our $VERSION = '1.005';
 
 my $dstore;
 my $sfmap;
-my @mods = qw( multi bib required );
+my @modlist = qw( multi ignoremulti bib required );
+my %allmods = ();
 my $multis = {};
 my $reccount;
 my $verbose = 0;
@@ -59,7 +60,7 @@ sub new {
     # initialize map and taglist
     die "Argument 'mapfile' must be specified\n" unless ($args{mapfile});
     $sfmap = Equinox::Migration::SubfieldMapper->new( file => $args{mapfile},
-                                                      mods => \@mods );
+                                                      mods => \@modlist );
 
     # initialize datastore
     $dstore = {};
@@ -150,9 +151,11 @@ sub process_subs {
     # handle unmapped tag/subs
     return unless ($sfmap->has($tag, $code));
 
-    # fetch our datafield struct and fiel
+    # fetch our datafield struct and field and mods
     my $dataf = $crec->{tags}[-1];
     my $field = $sfmap->field($tag, $code);
+    $allmods{$field} = $sfmap->mods($field) unless $allmods{$field};
+    my $mods = $allmods{$field};
 
     # test filters
     for my $filter ( @{$sfmap->filters($field)} ) {
@@ -160,17 +163,15 @@ sub process_subs {
     }
 
     # handle multi modifier
-    if (my $mods = $sfmap->mods($field)) {
-        if ($mods->{multi}) {
-            push @{$dataf->{multi}{$code}}, $sub->text;
-            $multis->{$tag}{$code} = 1;
-            return;
-        }
+    if ($mods->{multi}) {
+        push @{$dataf->{multi}{$code}}, $sub->text;
+        $multis->{$tag}{$code} = 1;
+        return;
     }
 
     # if this were a multi field, it would be handled already. make sure its a singleton
     die "Multiple occurances of a non-multi field: $tag$code at rec ",
-      ($reccount + 1),"\n" if (defined $dataf->{uni}{$code});
+      ($reccount + 1),"\n" if (defined $dataf->{uni}{$code} and !$mods->{ignoremulti});
 
     # everything seems okay
     $dataf->{uni}{$code} = $sub->text;
