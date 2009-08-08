@@ -105,6 +105,19 @@ CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
         PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''country_code'', ''USA'' );' );
         PERFORM migration_tools.exec( $1, 'DROP TABLE IF EXISTS ' || migration_schema || '.fields_requiring_mapping;' );
         PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.fields_requiring_mapping( table_schema TEXT, table_name TEXT, column_name TEXT, data_type TEXT);' );
+        PERFORM migration_tools.exec( $1, 'DROP TABLE IF EXISTS ' || migration_schema || '.base_profile_map;' );  
+        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || E'.base_profile_map ( 
+            id SERIAL,
+            perm_grp_id INTEGER,
+            transcribed_perm_group TEXT,
+            legacy_field1 TEXT,
+            legacy_value1 TEXT,
+            legacy_field2 TEXT,
+            legacy_value2 TEXT,
+            legacy_field3 TEXT,
+            legacy_value3 TEXT
+        );' );
+        PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''base_profile_map'', ''base_profile_map'' );' );
         BEGIN
             PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_init'', now() );' );
         EXCEPTION
@@ -237,4 +250,52 @@ CREATE OR REPLACE FUNCTION migration_tools.rebarcode (o TEXT, t BIGINT) RETURNS 
         RETURN n;
     END;
 $$ LANGUAGE PLPGSQL STRICT IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.base_profile_map (TEXT) RETURNS TEXT AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        output TEXT;
+    BEGIN
+        FOR output IN
+            EXECUTE 'SELECT ''' || migration_schema || '.'' || value FROM ' || migration_schema || '.config WHERE key = ''base_profile_map'';'
+        LOOP
+            RETURN output;
+        END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.map_base_patron_profile (TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        profile_map TEXT;
+        patron_table ALIAS FOR $2;
+        default_patron_profile ALIAS FOR $3;
+        sql TEXT;
+        sql_update TEXT;
+        sql_where1 TEXT := '';
+        sql_where2 TEXT := '';
+        sql_where3 TEXT := '';
+        output RECORD;
+    BEGIN
+        SELECT migration_tools.base_profile_map(migration_schema) INTO STRICT profile_map;
+        FOR output IN 
+            EXECUTE 'SELECT * FROM ' || profile_map || E' ORDER BY id;'
+        LOOP
+            sql_update := 'UPDATE ' || patron_table || ' AS u SET profile = perm_grp_id FROM ' || profile_map || ' AS m WHERE ';
+            sql_where1 := NULLIF(output.legacy_field1,'') || ' = ' || quote_literal( output.legacy_value1 ) || ' AND legacy_field1 = ' || quote_literal(output.legacy_field1) || ' AND legacy_value1 = ' || quote_literal(output.legacy_value1);
+            sql_where2 := NULLIF(output.legacy_field2,'') || ' = ' || quote_literal( output.legacy_value2 ) || ' AND legacy_field2 = ' || quote_literal(output.legacy_field2) || ' AND legacy_value2 = ' || quote_literal(output.legacy_value2);
+            sql_where3 := NULLIF(output.legacy_field3,'') || ' = ' || quote_literal( output.legacy_value3 ) || ' AND legacy_field3 = ' || quote_literal(output.legacy_field3) || ' AND legacy_value3 = ' || quote_literal(output.legacy_value3);
+            sql := sql_update || COALESCE(sql_where1,'') || CASE WHEN sql_where1 <> '' AND sql_where2<> ''  THEN ' AND ' ELSE '' END || COALESCE(sql_where2,'') || CASE WHEN sql_where2 <> '' AND sql_where3 <> '' THEN ' AND ' ELSE '' END || COALESCE(sql_where3,'') || ';';
+            --RAISE INFO 'sql = %', sql;
+            PERFORM migration_tools.exec( $1, sql );
+        END LOOP;
+        PERFORM migration_tools.exec( $1, 'UPDATE ' || patron_table || ' AS u SET profile = ' || quote_literal(default_patron_profile) || ' WHERE profile IS NULL;'  );
+        BEGIN
+            PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_base_patron_mapping_profile'', now() );' );
+        EXCEPTION
+            WHEN OTHERS THEN PERFORM migration_tools.exec( $1, 'UPDATE ' || migration_schema || '.config SET value = now() WHERE key = ''last_base_patron_mapping_profile'';' );
+        END;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
 
