@@ -264,7 +264,7 @@ CREATE OR REPLACE FUNCTION migration_tools.base_profile_map (TEXT) RETURNS TEXT 
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
-CREATE OR REPLACE FUNCTION migration_tools.map_base_patron_profile (TEXT,TEXT,TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION migration_tools.map_base_patron_profile (TEXT,TEXT,INTEGER) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
         profile_map TEXT;
