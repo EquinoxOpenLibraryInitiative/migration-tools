@@ -258,7 +258,7 @@ CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_last_comma_prefix_firs
 
         RETURN ARRAY[ family_name, prefix, first_given_name, second_given_name, suffix ];
     END;
-$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+$$ LANGUAGE PLPGSQL STRICT IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION migration_tools.address_parse_out_citystatezip (TEXT) RETURNS TEXT[] AS $$
     DECLARE
