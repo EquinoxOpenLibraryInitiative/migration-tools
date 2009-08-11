@@ -207,6 +207,59 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_into_production (TEXT,TEXT) RE
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_last_comma_prefix_first_middle_suffix (TEXT) RETURNS TEXT[] AS $$
+    DECLARE
+        full_name TEXT := $1;
+        temp TEXT;
+        family_name TEXT := '';
+        first_given_name TEXT := '';
+        second_given_name TEXT := '';
+        suffix TEXT := '';
+        prefix TEXT := '';
+    BEGIN
+        temp := full_name;
+        -- Use values, not structure, for prefix/suffix, unless we come up with a better idea
+        IF temp ilike '%MR.%' THEN
+            prefix := 'Mr.';
+            temp := REGEXP_REPLACE( temp, E'MR\.\\s*', '', 'i' );
+        END IF;
+        IF temp ilike '%MRS.%' THEN
+            prefix := 'Mrs.';
+            temp := REGEXP_REPLACE( temp, E'MRS\.\\s*', '', 'i' );
+        END IF;
+        IF temp ilike '%MS.%' THEN
+            prefix := 'Ms.';
+            temp := REGEXP_REPLACE( temp, E'MS\.\\s*', '', 'i' );
+        END IF;
+        IF temp ilike '%DR.%' THEN
+            prefix := 'Dr.';
+            temp := REGEXP_REPLACE( temp, E'DR\.\\s*', '', 'i' );
+        END IF;
+        IF temp ilike '%JR%' THEN
+            suffix := 'Jr.';
+            temp := REGEXP_REPLACE( temp, E'JR\.?\\s*', '', 'i' );
+        END IF;
+        IF temp ilike '%SR%' THEN
+            suffix := 'Sr.';
+            temp := REGEXP_REPLACE( temp, E'SR\.?\\s*', '', 'i' );
+        END IF;
+        IF temp ~ E'\\sII$' THEN
+            suffix := 'II';
+            temp := REGEXP_REPLACE( temp, E'II$', '', 'i' );
+        END IF;
+        IF temp ~ E'\\sIII$' THEN
+            suffix := 'III';
+            temp := REGEXP_REPLACE( temp, E'III$', '', 'i' );
+        END IF;
+
+        family_name := BTRIM( REGEXP_REPLACE(temp,E'^([^,]*)\\s*,.*$',E'\\1') );
+        first_given_name := BTRIM( CASE WHEN temp ~ ',' THEN REGEXP_REPLACE(temp,E'^[^,]*\\s*,\\s*([^,\\s]*)\\s*.*$',E'\\1') ELSE 'N/A' END );
+        second_given_name := BTRIM( CASE WHEN temp ~ ',' THEN REGEXP_REPLACE(temp,E'^[^,]*\\s*,\\s*[^,\\s]*\\s*(.*)$',E'\\1') ELSE ''  END );
+
+        RETURN ARRAY[ family_name, prefix, first_given_name, second_given_name, suffix ];
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
 CREATE OR REPLACE FUNCTION migration_tools.address_parse_out_citystatezip (TEXT) RETURNS TEXT[] AS $$
     DECLARE
         city_state_zip TEXT := $1;
