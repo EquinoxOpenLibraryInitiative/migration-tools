@@ -135,6 +135,28 @@ CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
         PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_item_dynamic_lf2_idx ON ' || migration_schema || '.base_item_dynamic_field_map (legacy_field2,legacy_value2);' ); 
         PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_item_dynamic_lf3_idx ON ' || migration_schema || '.base_item_dynamic_field_map (legacy_field3,legacy_value3);' ); 
         PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''base_item_dynamic_field_map'', ''base_item_dynamic_field_map'' );' );
+        PERFORM migration_tools.exec( $1, 'DROP TABLE IF EXISTS ' || migration_schema || '.base_copy_location_map;' );  
+        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || E'.base_copy_location_map ( 
+            id SERIAL,
+            location INTEGER,
+            holdable BOOLEAN NOT NULL DEFAULT TRUE,
+            hold_verify BOOLEAN NOT NULL DEFAULT FALSE,
+            opac_visible BOOLEAN NOT NULL DEFAULT TRUE,
+            circulate BOOLEAN NOT NULL DEFAULT TRUE,
+            transcribed_location TEXT,
+            legacy_field1 TEXT,
+            legacy_value1 TEXT,
+            legacy_field2 TEXT,
+            legacy_value2 TEXT,
+            legacy_field3 TEXT,
+            legacy_value3 TEXT
+        );' );
+        PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_base_copy_location_lf1_idx ON ' || migration_schema || '.base_copy_location_map (legacy_field1,legacy_value1);' ); 
+        PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_base_copy_location_lf2_idx ON ' || migration_schema || '.base_copy_location_map (legacy_field2,legacy_value2);' ); 
+        PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_base_copy_location_lf3_idx ON ' || migration_schema || '.base_copy_location_map (legacy_field3,legacy_value3);' ); 
+        PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_base_copy_location_loc_idx ON ' || migration_schema || '.base_copy_location_map (transcribed_location);' ); 
+        PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''base_copy_location_map'', ''base_copy_location_map'' );' );
+
         BEGIN
             PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_init'', now() );' );
         EXCEPTION
@@ -347,6 +369,18 @@ CREATE OR REPLACE FUNCTION migration_tools.base_item_dynamic_field_map (TEXT) RE
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.base_copy_location_map (TEXT) RETURNS TEXT AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        output TEXT;
+    BEGIN
+        FOR output IN
+            EXECUTE 'SELECT ''' || migration_schema || '.'' || value FROM ' || migration_schema || '.config WHERE key = ''base_copy_location_map'';'
+        LOOP
+            RETURN output;
+        END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
 
 CREATE OR REPLACE FUNCTION migration_tools.map_base_patron_profile (TEXT,TEXT,INTEGER) RETURNS VOID AS $$
     DECLARE
@@ -410,6 +444,38 @@ CREATE OR REPLACE FUNCTION migration_tools.map_base_item_table_dynamic (TEXT,TEX
             PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_base_item_mapping_dynamic'', now() );' );
         EXCEPTION
             WHEN OTHERS THEN PERFORM migration_tools.exec( $1, 'UPDATE ' || migration_schema || '.config SET value = now() WHERE key = ''last_base_item_mapping_dynamic'';' );
+        END;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.map_base_item_table_locations (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        base_copy_location_map TEXT;
+        item_table TEXT ALIAS FOR $2;
+        sql TEXT;
+        sql_update TEXT;
+        sql_where1 TEXT := '';
+        sql_where2 TEXT := '';
+        sql_where3 TEXT := '';
+        output RECORD;
+    BEGIN
+        SELECT migration_tools.base_copy_location_map(migration_schema) INTO STRICT base_copy_location_map;
+        FOR output IN 
+            EXECUTE 'SELECT * FROM ' || base_copy_location_map || E' ORDER BY id;'
+        LOOP
+            sql_update := 'UPDATE ' || item_table || ' AS i SET location = m.location FROM ' || base_copy_location_map || ' AS m WHERE ';
+            sql_where1 := NULLIF(output.legacy_field1,'') || ' = ' || quote_literal( output.legacy_value1 ) || ' AND legacy_field1 = ' || quote_literal(output.legacy_field1) || ' AND legacy_value1 = ' || quote_literal(output.legacy_value1);
+            sql_where2 := NULLIF(output.legacy_field2,'') || ' = ' || quote_literal( output.legacy_value2 ) || ' AND legacy_field2 = ' || quote_literal(output.legacy_field2) || ' AND legacy_value2 = ' || quote_literal(output.legacy_value2);
+            sql_where3 := NULLIF(output.legacy_field3,'') || ' = ' || quote_literal( output.legacy_value3 ) || ' AND legacy_field3 = ' || quote_literal(output.legacy_field3) || ' AND legacy_value3 = ' || quote_literal(output.legacy_value3);
+            sql := sql_update || COALESCE(sql_where1,'') || CASE WHEN sql_where1 <> '' AND sql_where2<> ''  THEN ' AND ' ELSE '' END || COALESCE(sql_where2,'') || CASE WHEN sql_where2 <> '' AND sql_where3 <> '' THEN ' AND ' ELSE '' END || COALESCE(sql_where3,'') || ';';
+            --RAISE INFO 'sql = %', sql;
+            PERFORM migration_tools.exec( $1, sql );
+        END LOOP;
+        BEGIN
+            PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_base_item_mapping_locations'', now() );' );
+        EXCEPTION
+            WHEN OTHERS THEN PERFORM migration_tools.exec( $1, 'UPDATE ' || migration_schema || '.config SET value = now() WHERE key = ''last_base_item_mapping_locations'';' );
         END;
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
