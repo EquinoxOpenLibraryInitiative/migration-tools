@@ -420,7 +420,7 @@ CREATE OR REPLACE FUNCTION migration_tools.map_base_item_table_dynamic (TEXT,TEX
     DECLARE
         migration_schema ALIAS FOR $1;
         field_map TEXT;
-        item_table TEXT ALIAS FOR $2;
+        item_table ALIAS FOR $2;
         sql TEXT;
         sql_update TEXT;
         sql_where1 TEXT := '';
@@ -452,7 +452,7 @@ CREATE OR REPLACE FUNCTION migration_tools.map_base_item_table_locations (TEXT,T
     DECLARE
         migration_schema ALIAS FOR $1;
         base_copy_location_map TEXT;
-        item_table TEXT ALIAS FOR $2;
+        item_table ALIAS FOR $2;
         sql TEXT;
         sql_update TEXT;
         sql_where1 TEXT := '';
