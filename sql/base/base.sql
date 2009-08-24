@@ -480,4 +480,43 @@ CREATE OR REPLACE FUNCTION migration_tools.map_base_item_table_locations (TEXT,T
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- expand_barcode
+--   $barcode      source barcode
+--   $prefix       prefix to add to barcode, NULL = add no prefix
+--   $maxlen       maximum length of barcode; default to 14 if left NULL
+--   $pad          padding string to apply to left of source barcode before adding
+--                 prefix and suffix; set to NULL or '' if no padding is desired
+--   $suffix       suffix to add to barcode, NULL = add no suffix
+--
+-- Returns a new string consisting of prefix concatenated with padded barcode and suffix.
+-- If new barcode would be longer than $maxlen, the original barcode is returned instead.
+--
+CREATE OR REPLACE FUNCTION migration_tools.expand_barcode (TEXT, TEXT, INTEGER, TEXT, TEXT) RETURNS TEXT AS $$
+    my ($barcode, $prefix, $maxlen, $pad, $suffix) = @_;
 
+    # default case
+    return unless defined $barcode;
+
+    $prefix     = '' unless defined $prefix;
+    $maxlen ||= 14;
+    $pad        = '0' unless defined $pad;
+    $suffix     = '' unless defined $suffix;
+
+    # bail out if adding prefix and suffix would bring new barcode over max length
+    return $barcode if (length($prefix) + length($barcode) + length($suffix)) > $maxlen;
+
+    my $new_barcode = $barcode;
+    if ($pad ne '') {
+        my $pad_length = $maxlen - length($prefix) - length($suffix);
+        if (length($barcode) < $pad_length) {
+            # assuming we always want padding on the left
+            # also assuming that it is possible to have the pad string be longer than 1 character
+            $new_barcode = substr($pad x ($pad_length - length($barcode)), 0, $pad_length - length($barcode)) . $new_barcode;
+        }
+    }
+
+    # bail out if adding prefix and suffix would bring new barcode over max length
+    return $barcode if (length($prefix) + length($new_barcode) + length($suffix)) > $maxlen;
+
+    return "$prefix$new_barcode$suffix";
+$$ LANGUAGE PLPERL;
