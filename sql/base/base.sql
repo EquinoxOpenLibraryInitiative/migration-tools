@@ -593,4 +593,4 @@ CREATE OR REPLACE FUNCTION migration_tools.expand_barcode (TEXT, TEXT, INTEGER, 
     return $barcode if (length($prefix) + length($new_barcode) + length($suffix)) > $maxlen;
 
     return "$prefix$new_barcode$suffix";
-$$ LANGUAGE PLPERL;
+$$ LANGUAGE PLPERL STABLE;
