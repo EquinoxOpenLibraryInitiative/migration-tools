@@ -156,6 +156,30 @@ CREATE OR REPLACE FUNCTION migration_tools.init (TEXT) RETURNS VOID AS $$
         PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_base_copy_location_lf3_idx ON ' || migration_schema || '.base_copy_location_map (legacy_field3,legacy_value3);' ); 
         PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_base_copy_location_loc_idx ON ' || migration_schema || '.base_copy_location_map (transcribed_location);' ); 
         PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''base_copy_location_map'', ''base_copy_location_map'' );' );
+        PERFORM migration_tools.exec( $1, 'DROP TABLE IF EXISTS ' || migration_schema || '.base_circ_field_map;' );  
+        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || E'.base_circ_field_map ( 
+            id SERIAL,
+            circulate BOOLEAN,
+            loan_period TEXT,
+            max_renewals TEXT,
+            max_out TEXT,
+            fine_amount TEXT,
+            fine_interval TEXT,
+            max_fine TEXT,
+            item_field1 TEXT,
+            item_value1 TEXT,
+            item_field2 TEXT,
+            item_value2 TEXT,
+            patron_field1 TEXT,
+            patron_value1 TEXT,
+            patron_field2 TEXT,
+            patron_value2 TEXT
+        );' );
+        PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_circ_dynamic_lf1_idx ON ' || migration_schema || '.base_circ_field_map (item_field1,item_value1);' ); 
+        PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_circ_dynamic_lf2_idx ON ' || migration_schema || '.base_circ_field_map (item_field2,item_value2);' ); 
+        PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_circ_dynamic_lf3_idx ON ' || migration_schema || '.base_circ_field_map (patron_field1,patron_value1);' ); 
+        PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_circ_dynamic_lf4_idx ON ' || migration_schema || '.base_circ_field_map (patron_field2,patron_value2);' ); 
+        PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''base_circ_field_map'', ''base_circ_field_map'' );' );
 
         BEGIN
             PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_init'', now() );' );
@@ -382,6 +406,19 @@ CREATE OR REPLACE FUNCTION migration_tools.base_copy_location_map (TEXT) RETURNS
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.base_circ_field_map (TEXT) RETURNS TEXT AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        output TEXT;
+    BEGIN
+        FOR output IN
+            EXECUTE 'SELECT ''' || migration_schema || '.'' || value FROM ' || migration_schema || '.config WHERE key = ''base_circ_field_map'';'
+        LOOP
+            RETURN output;
+        END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.map_base_patron_profile (TEXT,TEXT,INTEGER) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
@@ -476,6 +513,43 @@ CREATE OR REPLACE FUNCTION migration_tools.map_base_item_table_locations (TEXT,T
             PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_base_item_mapping_locations'', now() );' );
         EXCEPTION
             WHEN OTHERS THEN PERFORM migration_tools.exec( $1, 'UPDATE ' || migration_schema || '.config SET value = now() WHERE key = ''last_base_item_mapping_locations'';' );
+        END;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- circulate       loan period     max renewals    max out fine amount     fine interval   max fine        item field 1    item value 1    item field 2    item value 2    patron field 1  patron value 1  patron field 2  patron value 2
+CREATE OR REPLACE FUNCTION migration_tools.map_base_circ_table_dynamic (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        field_map TEXT;
+        circ_table ALIAS FOR $2;
+        item_table ALIAS FOR $3;
+        patron_table ALIAS FOR $4;
+        sql TEXT;
+        sql_update TEXT;
+        sql_where1 TEXT := '';
+        sql_where2 TEXT := '';
+        sql_where3 TEXT := '';
+        sql_where4 TEXT := '';
+        output RECORD;
+    BEGIN
+        SELECT migration_tools.base_circ_field_map(migration_schema) INTO STRICT field_map;
+        FOR output IN 
+            EXECUTE 'SELECT * FROM ' || field_map || E' ORDER BY id;'
+        LOOP
+            sql_update := 'UPDATE ' || circ_table || ' AS c SET duration = ' || quote_literal(output.loan_period) || '::INTERVAL, renewal_remaining = ' || quote_literal(output.max_renewals) || '::INTEGER, recuring_fine = ' || quote_literal(output.fine_amount) || '::NUMERIC(6,2), fine_interval = ' || quote_literal(output.fine_interval) || '::INTERVAL, max_fine = ' || quote_literal(output.max_fine) || '::NUMERIC(6,2) FROM ' || field_map || ' AS m, ' || item_table || ' AS i, ' || patron_table || ' AS u WHERE c.usr = u.id AND c.target_copy = i.id AND ';
+            sql_where1 := NULLIF(output.item_field1,'') || ' = ' || quote_literal( output.item_value1 ) || ' AND item_field1 = ' || quote_literal(output.item_field1) || ' AND item_value1 = ' || quote_literal(output.item_value1);
+            sql_where2 := NULLIF(output.item_field2,'') || ' = ' || quote_literal( output.item_value2 ) || ' AND item_field2 = ' || quote_literal(output.item_field2) || ' AND item_value2 = ' || quote_literal(output.item_value2);
+            sql_where3 := NULLIF(output.patron_field1,'') || ' = ' || quote_literal( output.patron_value1 ) || ' AND patron_field1 = ' || quote_literal(output.patron_field1) || ' AND patron_value1 = ' || quote_literal(output.patron_value1);
+            sql_where4 := NULLIF(output.patron_field2,'') || ' = ' || quote_literal( output.patron_value2 ) || ' AND patron_field2 = ' || quote_literal(output.patron_field2) || ' AND patron_value2 = ' || quote_literal(output.patron_value2);
+            sql := sql_update || COALESCE(sql_where1,'') || CASE WHEN sql_where1 <> '' AND sql_where2<> ''  THEN ' AND ' ELSE '' END || COALESCE(sql_where2,'') || CASE WHEN sql_where2 <> '' AND sql_where3 <> '' THEN ' AND ' ELSE '' END || COALESCE(sql_where3,'') || CASE WHEN sql_where3 <> '' AND sql_where4 <> '' THEN ' AND ' ELSE '' END || COALESCE(sql_where4,'') || ';';
+            --RAISE INFO 'sql = %', sql;
+            PERFORM migration_tools.exec( $1, sql );
+        END LOOP;
+        BEGIN
+            PERFORM migration_tools.exec( $1, 'INSERT INTO ' || migration_schema || '.config (key,value) VALUES ( ''last_base_circ_field_mapping'', now() );' );
+        EXCEPTION
+            WHEN OTHERS THEN PERFORM migration_tools.exec( $1, 'UPDATE ' || migration_schema || '.config SET value = now() WHERE key = ''last_base_circ_field_mapping'';' );
         END;
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
