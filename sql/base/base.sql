@@ -594,3 +594,47 @@ CREATE OR REPLACE FUNCTION migration_tools.expand_barcode (TEXT, TEXT, INTEGER, 
 
     return "$prefix$new_barcode$suffix";
 $$ LANGUAGE PLPERL STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.attempt_cast (TEXT,TEXT,TEXT) RETURNS RECORD AS $$
+    DECLARE
+        attempt_value ALIAS FOR $1;
+        datatype ALIAS FOR $2;
+        fail_value ALIAS FOR $3;
+        output RECORD;
+    BEGIN
+        FOR output IN
+            EXECUTE 'SELECT ' || quote_literal(attempt_value) || '::' || datatype || ' AS a;'
+        LOOP
+            RETURN output;
+        END LOOP;
+    EXCEPTION
+        WHEN OTHERS THEN
+            FOR output IN
+                EXECUTE 'SELECT ' || quote_literal(fail_value) || '::' || datatype || ' AS a;'
+            LOOP
+                RETURN output;
+            END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.attempt_date (TEXT,TEXT) RETURNS DATE AS $$
+    DECLARE
+        attempt_value ALIAS FOR $1;
+        fail_value ALIAS FOR $2;
+        output DATE;
+    BEGIN
+        FOR output IN
+            EXECUTE 'SELECT ' || quote_literal(attempt_value) || '::date AS a;'
+        LOOP
+            RETURN output;
+        END LOOP;
+    EXCEPTION
+        WHEN OTHERS THEN
+            FOR output IN
+                EXECUTE 'SELECT ' || quote_literal(fail_value) || '::date AS a;'
+            LOOP
+                RETURN output;
+            END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
