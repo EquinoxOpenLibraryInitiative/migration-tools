@@ -13,7 +13,7 @@ my %unique_fields;
 
 # Load each record
 while (<>) {
-
+    s/\r\n/\n/g;
 # print STDERR "Loaded this line: " . $_;
 
 	# Is this the start of a new record?
