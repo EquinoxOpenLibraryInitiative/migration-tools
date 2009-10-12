@@ -12,13 +12,15 @@ initialize($conf);
 open FP, '<', shift or die "Can't open matchset file: $!\n";
 my %exclude = ();
 while (<FP>) {
+    chomp;
     my ($lead,$sub) = split /\t/;
+    $sub =~ s/\s//g; # any whitespace is extraneous
     $exclude{$sub}  = 1 unless ($sub < $conf->{lowerbound});
 }
 close FP;
 
 # strip exclusions from marcxml file
-open MI, '<', $conf->{marc} or die "Can't open input file: $!\n";
+open MI, '<', $conf->{input} or die "Can't open input file: $!\n";
 open MO, '>', $conf->{output} or die "Can't open output file: $!\n";
 while (<MI>) {
     m/tag="$conf->{tag}",+?<subfield code="$conf->{subfield}">(\d+)</;
