@@ -25,6 +25,11 @@ while (<>) {
 		next;
 	}
 
+	# Is this a FORM= line (which can be ignored)?
+	if ( /^FORM=/ ) {
+		next;
+	}
+
 	# If this isn't the start of the new record, it's a new line in the present record.
 	$line++;
 
