@@ -107,35 +107,35 @@ for (my $u = 0; $u < @records; $u++) {
 
 	# Some fields can be mapped straightforwardly:
 	foreach $f (qw( user_id user_alt_id user_pin user_profile user_status user_library user_priv_granted user_priv_expires user_mailingaddr user_claims_ret user_environment user_department user_last_activity user_category1 user_category2 user_category3 user_category4 )) {
-		$records[$u]{uc($f)} '' unless defined $records[$u]{uc($f)};
-		$records[$u]{'l_' + $f} = $records[$u]{uc($f)};
+		$records[$u]{uc($f)} = '' unless defined $records[$u]{uc($f)};
+		$records[$u]{'l_' . $f} = $records[$u]{uc($f)};
 	}
 
 	# Addresses are a bit different:
 	foreach $a (qw( addr1 addr2 addr3 )) {
 		foreach $f (qw( std_line1 std_line2 std_city std_state std_zip country township room company office phone dayphone homephone workphone cellphone fax email location usefor care_of known_bad ums_addrid )) {
-			$records[$u]{uc('USER_' + $a + '.' + $f)} = '' unless defined $records[$u]{uc('USER_' + $a + '.' + $f)};
-			$records[$u]{'l_' + $a + '_' + '$f'} = $records[$u]{uc('USER_' + $a + '.' + $f)};
+			$records[$u]{uc('USER_' . $a . '.' . $f)} = '' unless defined $records[$u]{uc('USER_' . $a . '.' . $f)};
+			$records[$u]{'l_' . $a . '_' . '$f'} = $records[$u]{uc('USER_' . $a . '.' . $f)};
 		}
 	}
 
 	# Handle fields that don't exactly match (e.g. parse USER_NAME into l_last_name etc.)
 
-	$records[$u]{'l_birthdate'} = $records[$u]{'USER.BIRTH_DATE'}';
-	$records[$u]{'l_note'} = $records[$u]{'USER_XINFO.NOTE'}';
+	$records[$u]{'l_birthdate'} = $records[$u]{'USER.BIRTH_DATE'};
+	$records[$u]{'l_note'} = $records[$u]{'USER_XINFO.NOTE'};
 	$records[$u]{'l_note1'} = '';
 	$records[$u]{'l_patron'} = '';
-	$records[$u]{'l_comment'} = $records[$u]{'USER_XINFO.COMMENT'}';
-	$records[$u]{'l_staff'} = $records[$u]{'USER_XINFO.STAFF'}';
-	$records[$u]{'l_webcatpref'} = $records[$u]{'USER_XINFO.WEBCATPREF'}';
-	$records[$u]{'l_dept'} = $records[$u]{'USER_DEPARTMENT'}';
+	$records[$u]{'l_comment'} = $records[$u]{'USER_XINFO.COMMENT'};
+	$records[$u]{'l_staff'} = $records[$u]{'USER_XINFO.STAFF'};
+	$records[$u]{'l_webcatpref'} = $records[$u]{'USER_XINFO.WEBCATPREF'};
+	$records[$u]{'l_dept'} = $records[$u]{'USER_DEPARTMENT'};
 	$records[$u]{'l_guardian'} = '';
-	$records[$u]{'l_license'} = $records[$u]{'USER_XINFO.LICENSE'}';
-	$records[$u]{'l_ssn'} = $records[$u]{'USER_XINFO.SSN'}';
+	$records[$u]{'l_license'} = $records[$u]{'USER_XINFO.LICENSE'};
+	$records[$u]{'l_ssn'} = $records[$u]{'USER_XINFO.SSN'};
 	$records[$u]{'l_misc'} = '';
 	$records[$u]{'l_aup'} = '';
 	$records[$u]{'l_photo'} = '';
-	$records[$u]{'l_notify_via'} = $records[$u]{'USER_XINFO.NOTIFY_VIA'}';
+	$records[$u]{'l_notify_via'} = $records[$u]{'USER_XINFO.NOTIFY_VIA'};
 	$records[$u]{'l_ums_id'} = '';
 	$records[$u]{'l_placcard'} = '';
 	$records[$u]{'l_user_email'} = '';
@@ -145,8 +145,8 @@ for (my $u = 0; $u < @records; $u++) {
 	$records[$u]{'l_program'} = '';
 	$records[$u]{'l_represent'} = '';
 	$records[$u]{'l_userid_active'} = '';
-	$records[$u]{'l_inactive_barcode1'} = $records[$u]{'USER_XINFO.PREV_ID'}';
-	$records[$u]{'l_inactive_barcode2'} = $records[$u]{'USER_XINFO.PREV_ID2'}';
+	$records[$u]{'l_inactive_barcode1'} = $records[$u]{'USER_XINFO.PREV_ID'};
+	$records[$u]{'l_inactive_barcode2'} = $records[$u]{'USER_XINFO.PREV_ID2'};
 
 	# We can parse the name like so:
 
