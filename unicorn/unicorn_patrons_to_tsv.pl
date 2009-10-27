@@ -83,20 +83,23 @@ while (<>) {
 
 print STDERR "Loaded " . scalar(@records) . " records.\n";
 
-# We're aiming to produce output that can be slurped in by this SQL code: \COPY m_anderson.actor_usr_unicorn ( l_user_id, l_user_altid, l_user_pin, l_user_profile, l_user_status, l_user_library, l_user_priv_granted, l_user_priv_expires, l_user_mailingaddr, 
-# l_birthdate, l_last_name, l_first_name, l_middle_name, l_suffix_name, l_note, l_note1, l_patron, l_comment, l_staff, l_webcatpref, l_user_category1, l_user_category2, l_user_category3, l_user_category4, l_dept, l_guardian, l_license, l_ssn, l_misc, l_aup, l_photo, 
-# l_notify_via, l_user_claims_ret, l_user_environment, l_user_department, l_ums_id, l_user_last_activity, l_placcard, l_user_email, l_addr1_std_line1, l_addr1_std_line2, l_addr1_std_city, l_addr1_std_state, l_addr1_std_zip, l_addr1_country, l_addr1_township, 
-# l_addr1_room, l_addr1_company, l_addr1_office, l_addr1_phone, l_addr1_dayphone, l_addr1_homephone, l_addr1_workphone, l_addr1_cellphone, l_addr1_fax, l_addr1_email, l_addr1_location, l_addr1_usefor, l_addr1_care_of, l_addr1_known_bad, l_addr1_ums_addrid, 
-# l_addr2_std_line1, l_addr2_std_line2, l_addr2_std_city, l_addr2_std_state, l_addr2_std_zip, l_addr2_country, l_addr2_township, l_addr2_room, l_addr2_company, l_addr2_office, l_addr2_phone, l_addr2_dayphone, l_addr2_homephone, l_addr2_workphone, l_addr2_cellphone, 
-# l_addr2_fax, l_addr2_email, l_addr2_location,l_addr2_usefor, l_addr2_care_of, l_addr2_known_bad, l_addr2_ums_addrid, l_addr3_std_line1, l_addr3_std_line2, l_addr3_std_city, l_addr3_std_state, l_addr3_std_zip, l_addr3_country, l_addr3_township, l_addr3_room, 
-# l_addr3_company, l_addr3_office, l_addr3_phone, l_addr3_dayphone, l_addr3_homephone, l_addr3_workphone, l_addr3_cellphone, l_addr3_fax, l_addr3_email, l_addr3_location, l_addr3_usefor, l_addr3_care_of, l_addr3_known_bad, l_addr3_ums_addrid, l_identific, l_noempl, 
-# l_profession, l_program, l_represent, l_userid_active, l_inactive_barcode1, l_inactive_barcode2 ) FROM './users.data.tsv'
+
+# We're aiming to produce output that can be slurped in by this SQL code: \COPY m_anderson.actor_usr_unicorn ( l_user_id, l_user_altid, l_user_pin, l_user_profile, l_user_status, l_user_library, 
+# l_user_priv_granted, l_user_priv_expires, l_user_mailingaddr, l_birthdate, l_prefix_name, l_last_name, l_first_name, l_middle_name, l_suffix_name, l_note, l_note1, l_patron, l_comment, l_staff, 
+# l_webcatpref, l_user_category1, l_user_category2, l_user_category3, l_user_category4, l_dept, l_guardian, l_license, l_ssn, l_misc, l_aup, l_photo, l_notify_via, l_user_claims_ret, l_user_environment, 
+# l_user_department, l_ums_id, l_user_last_activity, l_placcard, l_user_email, l_addr1_std_line1, l_addr1_std_line2, l_addr1_std_city, l_addr1_std_state, l_addr1_std_zip, l_addr1_country, l_addr1_township, 
+# l_addr1_room, l_addr1_company, l_addr1_office, l_addr1_phone, l_addr1_dayphone, l_addr1_homephone, l_addr1_workphone, l_addr1_cellphone, l_addr1_fax, l_addr1_email, l_addr1_location, l_addr1_usefor, 
+# l_addr1_care_of, l_addr1_known_bad, l_addr1_ums_addrid, l_addr2_std_line1, l_addr2_std_line2, l_addr2_std_city, l_addr2_std_state, l_addr2_std_zip, l_addr2_country, l_addr2_township, l_addr2_room, 
+# l_addr2_company, l_addr2_office, l_addr2_phone, l_addr2_dayphone, l_addr2_homephone, l_addr2_workphone, l_addr2_cellphone, l_addr2_fax, l_addr2_email, l_addr2_location,l_addr2_usefor, l_addr2_care_of, 
+# l_addr2_known_bad, l_addr2_ums_addrid, l_addr3_std_line1, l_addr3_std_line2, l_addr3_std_city, l_addr3_std_state, l_addr3_std_zip, l_addr3_country, l_addr3_township, l_addr3_room, l_addr3_company, 
+# l_addr3_office, l_addr3_phone, l_addr3_dayphone, l_addr3_homephone, l_addr3_workphone, l_addr3_cellphone, l_addr3_fax, l_addr3_email, l_addr3_location, l_addr3_usefor, l_addr3_care_of, l_addr3_known_bad, 
+# l_addr3_ums_addrid, l_identific, l_noempl, l_profession, l_program, l_represent, l_userid_active, l_inactive_barcode1, l_inactive_barcode2 ) FROM './users.data.tsv'
 
 # Process the records:
 for (my $u = 0; $u < @records; $u++) {
 
 	# Some fields can be mapped straightforwardly:
-	foreach $f (qw( user_id user_alt_id user_pin user_profile user_status user_library user_priv_granted user_priv_expires user_mailingaddr user_claims_ret user_environment user_department user_last_activity )) {
+	foreach $f (qw( user_id user_alt_id user_pin user_profile user_status user_library user_priv_granted user_priv_expires user_mailingaddr user_claims_ret user_environment user_department user_last_activity user_category1 user_category2 user_category3 user_category4 )) {
 		$records[$u]{uc($f)} '' unless defined $records[$u]{uc($f)};
 		$records[$u]{'l_' + $f} = $records[$u]{uc($f)};
 	}
@@ -109,21 +112,62 @@ for (my $u = 0; $u < @records; $u++) {
 		}
 	}
 
-	# FIXME: handle fields that don't exactly match (e.g. parse USER_NAME into l_last_name etc.)
-    # l_birthdate, l_last_name, l_first_name, l_middle_name, l_suffix_name, l_note, l_note1, l_patron, l_comment, l_staff, l_webcatpref, l_user_category1, l_user_category2, l_user_category3, l_user_category4, l_dept, l_guardian, l_license, l_ssn, l_misc, l_aup, 
-    # l_photo, l_notify_via, l_ums_id, l_placcard, l_user_email, l_identific, l_noempl, l_profession, l_program, l_represent, l_userid_active, l_inactive_barcode1, l_inactive_barcode2
+	# Handle fields that don't exactly match (e.g. parse USER_NAME into l_last_name etc.)
+
+	$records[$u]{'l_birthdate'} = $records[$u]{'USER.BIRTH_DATE'}';
+	$records[$u]{'l_note'} = $records[$u]{'USER_XINFO.NOTE'}';
+	$records[$u]{'l_note1'} = '';
+	$records[$u]{'l_patron'} = '';
+	$records[$u]{'l_comment'} = $records[$u]{'USER_XINFO.COMMENT'}';
+	$records[$u]{'l_staff'} = $records[$u]{'USER_XINFO.STAFF'}';
+	$records[$u]{'l_webcatpref'} = $records[$u]{'USER_XINFO.WEBCATPREF'}';
+	$records[$u]{'l_dept'} = $records[$u]{'USER_DEPARTMENT'}';
+	$records[$u]{'l_guardian'} = '';
+	$records[$u]{'l_license'} = $records[$u]{'USER_XINFO.LICENSE'}';
+	$records[$u]{'l_ssn'} = $records[$u]{'USER_XINFO.SSN'}';
+	$records[$u]{'l_misc'} = '';
+	$records[$u]{'l_aup'} = '';
+	$records[$u]{'l_photo'} = '';
+	$records[$u]{'l_notify_via'} = $records[$u]{'USER_XINFO.NOTIFY_VIA'}';
+	$records[$u]{'l_ums_id'} = '';
+	$records[$u]{'l_placcard'} = '';
+	$records[$u]{'l_user_email'} = '';
+	$records[$u]{'l_identific'} = '';
+	$records[$u]{'l_noempl'} = '';
+	$records[$u]{'l_profession'} = '';
+	$records[$u]{'l_program'} = '';
+	$records[$u]{'l_represent'} = '';
+	$records[$u]{'l_userid_active'} = '';
+	$records[$u]{'l_inactive_barcode1'} = $records[$u]{'USER_XINFO.PREV_ID'}';
+	$records[$u]{'l_inactive_barcode2'} = $records[$u]{'USER_XINFO.PREV_ID2'}';
 
 	# We can parse the name like so:
+
 	# Copy the name to a temp value
+	$temp_name = $records[$u]{'USER_NAME'};
+
 	# Strip off a prefix, if there is one
+	foreach $prefix (qw( Ms. Mrs. Mr. Dr. )) {
+		if ($temp_name =~ /$prefix /i) {
+			$records[$u]{'l_prefix_name'} = $prefix;
+			$temp_name =~ s/$prefix //i;
+		}
+	}
+
 	# Strip off a suffix, if there is one
+	foreach $suffix (qw( Jr. Sr. II III IV )) {
+		if ($temp_name =~ /$suffix /i) {
+			$records[$u]{'l_suffix_name'} = $suffix;
+			$temp_name =~ s/$suffix //i;
+		}
+	}
+
 	# Strip off the family name (before the comma)
 	# Of what remains, whatever is before the first space is the first name and the rest is the middle name
-
+	$records[$u]{'l_last_name'} = $temp_name =~ /^([^,])*\s*,.*$/;
+	$records[$u]{'l_first_given_name', 'l_second_given_name'} = $temp_name =~ /^[^,]*\s*,\s*([^,\s]*)\s*(.*)$/;
 
 }
-
-
 
 
 # Print the records
