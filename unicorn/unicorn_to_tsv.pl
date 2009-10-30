@@ -25,8 +25,9 @@ while (<>) {
 		next;
 	}
 
-	# Is this a FORM= line (which can be ignored)?
-	if ( /^FORM=/ ) {
+	# Is this a FORM= line?
+	if ( /^FORM=(.*)/ ) {
+		$records[$serial]{'l_form'} = $1;
 		next;
 	}
 
