@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Converts a Unicorn users.data, bill.data, or charge.data file to a tab-separated file.
+# Converts a Unicorn users.data file to a tab-separated file.
 # 2009-08-10 Ben Ostrowsky <ben@esilibrary.com>
 
 my @records;
