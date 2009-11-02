@@ -9,7 +9,7 @@ my $line = 0;
 my $section = '';
 my $field = '';
 my %unique_fields;
-my @output_fields = qw( l_form l_user_id l_item_id l_billing_lib l_bill_date l_bill_amt l_bill_reason );
+my @output_fields = qw( l_form l_user_id l_item_id l_billing_lib l_bill_date l_bill_amt l_bill_reason ); # in that order
 
 # Load each record
 while (<>) {
@@ -63,10 +63,13 @@ while (<>) {
 		$field .= $1;
 
 		# Now we can actually store this line of data!
-#FIXME: Assign it manually to one of the l_fields in the SQL comment below.
-		$records[$serial]{$field} = $3;		
 
-		# print STDERR "Data extracted: \$records[$serial]{'$field'} = '$3'\n";
+		if ($field eq 'USER_ID')      { $records[$serial]{'l_user_id'}     = $3; }
+		if ($field eq 'ITEM_ID')      { $records[$serial]{'l_item_id'}     = $3; }
+		if ($field eq 'BILL_DB')      { $records[$serial]{'l_bill_date'}   = $3; }
+		if ($field eq 'BILL_AMOUNT')  { $records[$serial]{'l_bill_amt'}    = $3; }
+		if ($field eq 'BILL_LIBRARY') { $records[$serial]{'l_billing_lib'} = $3; }
+		if ($field eq 'BILL_REASON')  { $records[$serial]{'l_bill_reason'} = $3; }
 
 		next;
 	}	
@@ -82,26 +85,7 @@ while (<>) {
 
 print STDERR "Loaded " . scalar(@records) . " records.\n";
 
-
-#CREATE OR REPLACE FUNCTION migration_tools.unicorn_create_money_table (TEXT) RETURNS VOID AS $$
-#    DECLARE
-#        migration_schema ALIAS FOR $1;
-#    BEGIN
-#        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.money_grocery_unicorn (
-#            l_form TEXT NOT NULL CHECK ( l_form = ''LDBILL'' ),
-#            l_user_id TEXT,
-#            l_item_id TEXT,
-#            l_billing_lib TEXT,
-#            l_bill_date TEXT,
-#            l_bill_amt TEXT,
-#            l_bill_reason TEXT
-#        ) INHERITS ( ' || migration_schema || '.money_grocery);' );
-#    END;
-#$$ LANGUAGE PLPGSQL STRICT STABLE;
-
-
 # Print a header line
-print "SERIAL\t";
 foreach $i (@output_fields) {
 	print "$i\t";
 }
@@ -114,7 +98,7 @@ for (my $u = 0; $u < @records; $u++) {
 		if (defined $records[$u]{$f}) {
 			print $records[$u]{$f};
 		}
-	print "\t";
+		print "\t";
 	}
 	print "\n";
 }
