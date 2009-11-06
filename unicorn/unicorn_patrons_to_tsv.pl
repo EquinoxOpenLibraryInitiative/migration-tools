@@ -3,6 +3,9 @@
 # Converts a Unicorn users.data file to a tab-separated file.
 # 2009-08-10 Ben Ostrowsky <ben@esilibrary.com>
 
+#use Data::Dumper;
+#$Data::Dumper::Sortkeys = true;
+
 my @records;
 my $serial = -1;
 my $line = 0;
@@ -105,6 +108,9 @@ print STDERR "Loaded " . scalar(@records) . " records.\n";
 # Process the records:
 for (my $u = 0; $u < @records; $u++) {
 
+#print STDERR "Before processing:\n\n";
+#print STDERR Dumper($records[$u]);
+
 	# Some fields can be mapped straightforwardly:
 	foreach $f (qw( user_id user_alt_id user_pin user_profile user_status user_library user_priv_granted user_priv_expires user_mailingaddr user_claims_ret user_environment user_department user_last_activity user_category1 user_category2 user_category3 user_category4 )) {
 		$records[$u]{uc($f)} = '' unless defined $records[$u]{uc($f)};
@@ -115,13 +121,20 @@ for (my $u = 0; $u < @records; $u++) {
 	foreach $a (qw( addr1 addr2 addr3 )) {
 		foreach $f (qw( std_line1 std_line2 std_city std_state std_zip country township room company office phone dayphone homephone workphone cellphone fax email location usefor care_of known_bad ums_addrid )) {
 			$records[$u]{uc('USER_' . $a . '.' . $f)} = '' unless defined $records[$u]{uc('USER_' . $a . '.' . $f)};
-			$records[$u]{'l_' . $a . '_' . '$f'} = $records[$u]{uc('USER_' . $a . '.' . $f)};
+			$records[$u]{'l_' . $a . '_' . $f} = $records[$u]{uc('USER_' . $a . '.' . $f)};
 		}
+		$records[$u]{'l_' . $a . '_std_line1'} = $records[$u]{'USER_' . uc($a) . '.STREET'};
+		if ((defined $records[$u]{'USER_' . uc($a) . '.CITY/STATE'}) && ($records[$u]{'USER_' . uc($a) . '.CITY/STATE'} =~ m/^(.*), (.*)$/)) {
+			$records[$u]{'l_' . $a . '_std_city'} = $1;
+			$records[$u]{'l_' . $a . '_std_state'} = $2;
+		}
+		$records[$u]{'l_' . $a . '_std_zip'} = $records[$u]{'USER_' . uc($a) . '.ZIP'};
+
 	}
 
 	# Handle fields that don't exactly match (e.g. parse USER_NAME into l_last_name etc.)
 
-	$records[$u]{'l_birthdate'} = $records[$u]{'USER.BIRTH_DATE'};
+	$records[$u]{'l_birthdate'} = $records[$u]{'USER_BIRTH_DATE'};
 	$records[$u]{'l_note'} = $records[$u]{'USER_XINFO.NOTE'};
 	$records[$u]{'l_note1'} = '';
 	$records[$u]{'l_patron'} = '';
@@ -147,11 +160,19 @@ for (my $u = 0; $u < @records; $u++) {
 	$records[$u]{'l_userid_active'} = '';
 	$records[$u]{'l_inactive_barcode1'} = $records[$u]{'USER_XINFO.PREV_ID'};
 	$records[$u]{'l_inactive_barcode2'} = $records[$u]{'USER_XINFO.PREV_ID2'};
+	$records[$u]{'l_user_category1'} = $records[$u]{'USER_ROUTING_FLAG'};
+	$records[$u]{'l_user_category2'} = $records[$u]{'USER_WEB_AUTH'};
 
 	# We can parse the name like so:
 
 	# Copy the name to a temp value
 	$temp_name = $records[$u]{'USER_NAME'};
+
+	# If there's no comma, don't try to parse the name
+	unless ($temp_name =~ m/,/) {
+		$records[$u]{'l_last_name'} = $temp_name;
+		next;
+	}
 
 	# Strip off a prefix, if there is one
 	foreach $prefix (qw( Ms. Mrs. Mr. Dr. )) {
@@ -163,16 +184,23 @@ for (my $u = 0; $u < @records; $u++) {
 
 	# Strip off a suffix, if there is one
 	foreach $suffix (qw( Jr. Sr. II III IV )) {
-		if ($temp_name =~ /$suffix /i) {
+		if ($temp_name =~ / $suffix/i) {
 			$records[$u]{'l_suffix_name'} = $suffix;
-			$temp_name =~ s/$suffix //i;
+			$temp_name =~ s/ $suffix//i;
 		}
 	}
 
 	# Strip off the family name (before the comma)
 	# Of what remains, whatever is before the first space is the first name and the rest is the middle name
-	$records[$u]{'l_last_name'} = $temp_name =~ /^([^,])*\s*,.*$/;
-	$records[$u]{'l_first_given_name', 'l_second_given_name'} = $temp_name =~ /^[^,]*\s*,\s*([^,\s]*)\s*(.*)$/;
+	$temp_name =~ m/^([^,]*)\s*,.*$/;
+	$records[$u]{'l_last_name'} = $1;
+	$temp_name =~ m/^[^,]*\s*,\s*([^,\s]*)\s*(.*)$/;
+	$records[$u]{'l_first_name'} = $1;
+	$records[$u]{'l_middle_name'} = $2;
+
+#print STDERR "\n\nAfter processing:\n\n";
+#print STDERR Dumper($records[$u]);
+
 
 }
 
