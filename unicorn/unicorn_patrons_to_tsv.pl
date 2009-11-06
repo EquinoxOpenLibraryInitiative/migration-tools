@@ -61,7 +61,7 @@ while (<>) {
 		next;
 	}
 
-	# Is this line the beginning of a block of data (typically an address or a note)?
+	# Is this line the end of a block of data (typically an address or a note)?
 	if ( /^\.(.*?)_END.$/ ) {
 		if ("$1." ne $section) {
 			print STDERR "Error in record $serial, line $line (input line $.): got an end-of-$1 but I thought I was in a $section block!\n";
