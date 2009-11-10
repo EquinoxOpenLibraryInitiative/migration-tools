@@ -243,17 +243,17 @@ REQUIRED ARGUMENTS
 
 SAMPLING ARGUMENTS
   --sample    -s   Generate a report of all tags in the MARC data
-  --samplemap -sm  Specify a E::M::STL map file which will be used to generate
-                   subfield breakdown reports about specific tags in the MARC
-                   data
+  --samplemap -sm  Specify a Equinox::Migration::SimpleTagList map file which
+                   will be used to generate subfield breakdown reports about
+                   specific tags in the MARC data
   --samplestr -ss  As above, but with a one-liner map specified on the command
                    line as a string (e.g. '-ss "852 999"')
 
   If --samplemap and --samplestr are both specified, --samplemap wins.
 
 HOLDINGS EXTRACTION ARGUMENTS
-  --map      -m   E::M::SM map file which will be used to extract holdings data
-                 from the input MARC file
+  --map      -m  Equinox::Migration::SubfieldMapper map file which will be
+                 used to extract holdings data from the input MARC file
   --holdings -h  Specifies actual holdings tag
   --copyid   -c  Specifies subfield of holdings with unique copy identifier
 
