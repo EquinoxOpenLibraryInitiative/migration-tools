@@ -257,7 +257,7 @@ HOLDINGS EXTRACTION ARGUMENTS
   --holdings -h  Specifies actual holdings tag
   --copyid   -c  Specifies subfield of holdings with unique copy identifier
 
-  Both these must be given together.
+  All three of these must be given together.
 HELP
     exit;
 }
