@@ -133,6 +133,11 @@ sub populate_marc {
           if (defined $oclc and $oclc =~ /\(OCoLC\)/ and $oclc =~/([0-9]+)/);
     }
 
+    if ($record->field('999')) {
+        my $koha_bib_id = $record->field('999')->subfield('c');
+        $marc{koha_bib_id} = $koha_bib_id if defined $koha_bib_id and $koha_bib_id =~ /^\d+$/;
+    }
+
     # "Accompanying material" and check for "copy" (300)
     if ($record->field('300')) {
         $marc{accomp} = $record->field('300')->subfield('e');
@@ -320,6 +325,14 @@ sub dump_fingerprints {
         }
     }
 
+    if ($conf->{fingerprints}{koha_bib_id}) {
+        print OF join("\t", $marc->{score}, $marc->{id}, "z_koha_bib_id",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type},
+                      $marc->{bib_lvl}, $marc->{title},
+                      $marc->{koha_bib_id}), "\n";
+    }
+
     if ($conf->{fingerprints}{isbn}) {
         if ((scalar @{ $marc->{isbns} } > 0) and $marc->{pages}) {
             foreach my $isbn ( @{ $marc->{isbns}} ) {
@@ -480,6 +493,7 @@ sub initialize {
         my %valid_fps = ( oclc => 1, isbn => 1, issn => 1, lccn => 1,
                           edition => 1, accomp => 1, authpub => 1,
                           baseline => 1, crap => 1,
+                          koha_bib_id => 1,
                         );
         for (split /,/, $c->{fingerprints}) {
             die "Invalid fingerprint '$_'\n" unless $valid_fps{$_};
@@ -568,7 +582,7 @@ Options
 
   --fingerprints=LIST  Fingerprints to generate, comma separated
                        Default: oclc,isbn,edition,issn,lccn,accomp,authpub
-                       Others:  baseline
+                       Others:  baseline,koha_bib_id
   --excludelist=FILE   Name of fingerprints exclusions file
 
   --scores=LIST  Scores to calculate, comma separated
