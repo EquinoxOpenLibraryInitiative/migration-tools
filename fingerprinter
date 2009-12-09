@@ -325,7 +325,7 @@ sub dump_fingerprints {
         }
     }
 
-    if ($conf->{fingerprints}{koha_bib_id}) {
+    if ($conf->{fingerprints}{koha_bib_id} and exists $marc->{koha_bib_id}) {
         print OF join("\t", $marc->{score}, $marc->{id}, "z_koha_bib_id",
                       $marc->{item_form}, $marc->{date1},
                       $marc->{record_type},
