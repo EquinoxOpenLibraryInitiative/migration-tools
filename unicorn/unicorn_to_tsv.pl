@@ -21,7 +21,7 @@ while (<>) {
 		$line = 0;
 		$serial++;
 		$section = ''; # just in case this didn't get reset in the previous record
-		print STDERR "Processing record $serial.\n";
+		# print STDERR "Processing record $serial.\n";
 		next;
 	}
 
@@ -36,7 +36,7 @@ while (<>) {
 
 	# Is this line the beginning of a block of data (typically an address or a note)?
 	if ( /^\.(.*?)_BEGIN.$/ ) {
-		print STDERR "I think this might be the beginning of a beautiful " . $1 . ".\n";
+		# print STDERR "I think this might be the beginning of a beautiful " . $1 . ".\n";
 		$section = "$1.";
 		next;
 	}
@@ -46,7 +46,7 @@ while (<>) {
 		if ("$1." ne $section) {
 			print STDERR "Error in record $serial, line $line (input line $.): got an end-of-$1 but I thought I was in a $section block!\n";
 		}
-		print STDERR "It's been fun, guys, but... this is the end of the " . $1 . ".\n";
+		# print STDERR "It's been fun, guys, but... this is the end of the " . $1 . ".\n";
 		$section = '';
 		next;
 	}
@@ -68,7 +68,7 @@ while (<>) {
 		# Now we can actually store this line of data!
 		$records[$serial]{$field} = $3;		
 
-		print STDERR "Data extracted: \$records[$serial]{'$field'} = '$3'\n";
+		# print STDERR "Data extracted: \$records[$serial]{'$field'} = '$3'\n";
 
 		next;
 	}	
@@ -77,7 +77,7 @@ while (<>) {
 	else {
 		chomp($_);
 		$records[$serial]{$field} .= ' ' . $_;
-		print STDERR "Appended data to previous field. \$records[$serial]{'$field'} is now '" . $records[$serial]{$field} . "'.\n";
+		# print STDERR "Appended data to previous field. \$records[$serial]{'$field'} is now '" . $records[$serial]{$field} . "'.\n";
 	}
 
 }
