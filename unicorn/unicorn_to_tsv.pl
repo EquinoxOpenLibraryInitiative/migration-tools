@@ -53,7 +53,7 @@ while (<>) {
 
 	# Looks like we've got some actual data!  Let's store it.
 	# FIXME: For large batches of data, we may run out of memory and should store this on disk.
-	if ( /^\.(.*?).\s+(\|a)?(.*)$/ ) {
+	if ( /^\.([A-Z]*?).\s+(\|a)?(.*)$/ ) {
 
 		# Build the name of this field (taking note of whether we're in a named section of data)
 		$field = '';
