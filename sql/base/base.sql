@@ -302,9 +302,17 @@ CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_last_comma_prefix_firs
             suffix := 'Jr.';
             temp := REGEXP_REPLACE( temp, E'JR\.?\\s*', '', 'i' );
         END IF;
+        IF temp ilike '%JR,%' THEN
+            suffix := 'Jr.';
+            temp := REGEXP_REPLACE( temp, E'JR,\\s*', ',', 'i' );
+        END IF;
         IF temp ilike '%SR%' THEN
             suffix := 'Sr.';
             temp := REGEXP_REPLACE( temp, E'SR\.?\\s*', '', 'i' );
+        END IF;
+        IF temp ilike '%SR,%' THEN
+            suffix := 'Sr.';
+            temp := REGEXP_REPLACE( temp, E'SR,\\s*', ',', 'i' );
         END IF;
         IF temp ~ E'\\sII$' THEN
             suffix := 'II';
@@ -313,6 +321,10 @@ CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_last_comma_prefix_firs
         IF temp ~ E'\\sIII$' THEN
             suffix := 'III';
             temp := REGEXP_REPLACE( temp, E'III$', '', 'i' );
+        END IF;
+        IF temp ~ E'\\sIV$' THEN
+            suffix := 'IV';
+            temp := REGEXP_REPLACE( temp, E'IV$', '', 'i' );
         END IF;
 
         family_name := BTRIM( REGEXP_REPLACE(temp,E'^([^,]*)\\s*,.*$',E'\\1') );
