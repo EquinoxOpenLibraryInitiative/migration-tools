@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+#~ Converter Script for XLS to TSV.  Handles Multiple Tabs into separate files.
+#~ (c)2004 Anima Legato <l3gatosan@gmail.com>
+#~
+#~ This code is redistributable and modifiable under the same terms as Perl
+#~ itself.
+
+use strict;
+use warnings;
+
+use Spreadsheet::ParseExcel::Simple;
+use File::Spec;
+
+for (@ARGV) {
+    for (glob $_) {
+        next unless m/\.xls$/i;
+        next unless -r $_;
+        dump_books($_);
+    }
+}
+
+sub dump_books {
+    my ($vol, $path, $file) = File::Spec->splitpath(shift);
+    my $eBook = Spreadsheet::ParseExcel::Simple->read(File::Spec->catpath($vol,$path,$file));
+    unless (defined $eBook) {
+        warn "Can't open Spreadsheet in file $file (@".File::Spec->catpath($vol,$path,$file)."\n";
+        return undef;
+    }
+    
+    my @sheet = $eBook->sheets;
+    for (0..@sheet-1) {
+        next unless $sheet[$_]->has_data();
+        my $sfn = $file;
+        $sfn =~ s?\.xls$??i;
+        $sfn.= ((@sheet > 1) ? sprintf(".%02i",$_) : "").'.tab';
+        open TAB, '>', $sfn or do {
+            warn "Unable to write to $sfn";
+            next;
+        };
+        
+        while ($sheet[$_]->has_data) { 
+            my @row = $sheet[$_]->next_row;
+            print TAB join("\t",@row)."\n";
+        }
+    }
+} ##--dump_books--##        
