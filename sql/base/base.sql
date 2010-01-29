@@ -671,3 +671,24 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_money (TEXT,TEXT) RETURNS NUM
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+-- add_codabar_checkdigit
+--   $barcode      source barcode
+--
+-- If the source string is 13 or 14 characters long and contains only digits, adds or replaces the 14
+-- character with a checkdigit computed according to the usual algorithm for library barcodes
+-- using the Codabar symbology - see <http://www.makebarcode.com/specs/codabar.html>.  If the
+-- input string does not meet those requirements, it is returned unchanged.
+--
+CREATE OR REPLACE FUNCTION migration_tools.add_codabar_checkdigit (TEXT) RETURNS TEXT AS $$
+    my $barcode = shift;
+
+    return $barcode if $barcode !~ /^\d{13,14}$/;
+    $barcode = substr($barcode, 0, 13); # ignore 14th digit
+    my @digits = split //, $barcode;
+    my $total = 0;
+    $total += $digits[$_] foreach (1, 3, 5, 7, 9, 11);
+    $total += (2 * $digits[$_] > 10) ? (2 * $digits[$_] - 9) : (2 * $digits[$_]) foreach (0, 2, 4, 6, 8, 10, 12);
+    my $remainder = $total % 10;
+    my $checkdigit = ($remainder == 0) ? $remainder : 10 - $remainder;
+    return $barcode . $checkdigit; 
+$$ LANGUAGE PLPERL STRICT STABLE;
