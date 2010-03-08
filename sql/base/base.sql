@@ -687,7 +687,7 @@ CREATE OR REPLACE FUNCTION migration_tools.add_codabar_checkdigit (TEXT) RETURNS
     my @digits = split //, $barcode;
     my $total = 0;
     $total += $digits[$_] foreach (1, 3, 5, 7, 9, 11);
-    $total += (2 * $digits[$_] > 10) ? (2 * $digits[$_] - 9) : (2 * $digits[$_]) foreach (0, 2, 4, 6, 8, 10, 12);
+    $total += (2 * $digits[$_] >= 10) ? (2 * $digits[$_] - 9) : (2 * $digits[$_]) foreach (0, 2, 4, 6, 8, 10, 12);
     my $remainder = $total % 10;
     my $checkdigit = ($remainder == 0) ? $remainder : 10 - $remainder;
     return $barcode . $checkdigit; 
