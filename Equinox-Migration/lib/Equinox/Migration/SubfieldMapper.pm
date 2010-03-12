@@ -206,6 +206,19 @@ sub filters {
     return $self->{fields}{$field}{filt};
 }
 
+=head2 sep
+
+Returns the separator string set on a mapping.  Used only
+if concatenating.
+
+=cut
+
+sub sep {
+    my ($self, $field) = @_;
+    return undef unless $self->has($field);
+    return $self->{fields}{$field}{sep};
+}
+
 =head1 MAP CONSTRUCTION METHODS
 
 These methods are not generally accessed from user code.
@@ -227,12 +240,12 @@ sub generate {
         chomp;
         my @tokens = split /\s+/;
 
-        my $map = { mods => [], filt => [] };
+        my $map = { mods => [], filt => [], sep => ' ' };
         $map->{field} = shift @tokens;
         $map->{tag}   = shift @tokens;
         while (defined (my $tok = shift @tokens)) {
             last if ($tok =~ m/^#/);
-            if ($tok =~ m/^[a-z]:'/ and $tok !~ /'$/) {
+            if ($tok =~ m/^[a-z]:'/ and $tok !~ /^'$/) {
                 $tok .= ' ' . shift @tokens
                   until ($tokens[0] =~ m/'$/);
                 $tok .= ' ' . shift @tokens;
@@ -245,6 +258,8 @@ sub generate {
               { push @{$map->{filt}}, $tok }
             elsif ($tok =~ m/^[a-z0-9]$/)
               { $map->{sub} = $tok }
+            elsif ($tok =~ /^c:(.*)$/)
+              { $map->{sep} = $1 }
             else
               { die "Unknown chunk '$tok' at line $.\n" }
         }
@@ -296,7 +311,8 @@ sub add {
     $self->{fields}{ $map->{field} } = { tag => $map->{tag},
                                          sub => $map->{sub},
                                          mods => $map->{mods},
-                                         filt => $map->{filt}
+                                         filt => $map->{filt},
+                                         sep => $map->{sep},
                                        };
     # and to the tags hash
     $self->{tags}{ $map->{tag} }{ $map->{sub} } = $map->{field};

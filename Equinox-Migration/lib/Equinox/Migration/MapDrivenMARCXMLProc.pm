@@ -21,7 +21,7 @@ our $VERSION = '1.005';
 
 my $dstore;
 my $sfmap;
-my @modlist = qw( multi ignoremulti bib required );
+my @modlist = qw( multi ignoremulti bib required first concatenate );
 my %allmods = ();
 my $multis = {};
 my $reccount;
@@ -154,6 +154,7 @@ sub process_subs {
     # fetch our datafield struct and field and mods
     my $dataf = $crec->{tags}[-1];
     my $field = $sfmap->field($tag, $code);
+    my $sep = $sfmap->sep($field);
     $allmods{$field} = $sfmap->mods($field) unless $allmods{$field};
     my $mods = $allmods{$field};
 
@@ -164,8 +165,27 @@ sub process_subs {
 
     # handle multi modifier
     if ($mods->{multi}) {
-        push @{$dataf->{multi}{$code}}, $sub->text;
         $multis->{$tag}{$code} = 1;
+        if ($mods->{concatenate}) {
+            if (exists($dataf->{multi}{$code})) {
+                $dataf->{multi}{$code}[0] .= $sep . $sub->text;
+            } else {
+                push @{$dataf->{multi}{$code}}, $sub->text;
+            }
+            $multis->{$tag}{$code} = 1;
+        } else {
+            push @{$dataf->{multi}{$code}}, $sub->text;
+        }
+        return;
+    }
+
+
+    if ($mods->{concatenate}) {
+        if (exists($dataf->{uni}{$code})) {
+            $dataf->{uni}{$code} .= $sep . $sub->text;
+        } else {
+            $dataf->{uni}{$code} = $sub->text;
+        }
         return;
     }
 
@@ -215,6 +235,20 @@ Returns mapped fieldname when passed a tag, and code
 =cut
 
 sub name { my ($self, $t, $c) = @_; return $sfmap->field($t, $c) }
+
+=head2 first_only
+
+Returns whether mapped fieldname is to be applied only to first
+item in a bib
+
+=cut
+
+sub first_only {
+    my ($self, $t, $c) = @_;
+    my $field = $sfmap->field($t, $c);
+    my $mods = $sfmap->mods($field);
+    return exists($mods->{first});
+}
 
 =head2 get_multis
 

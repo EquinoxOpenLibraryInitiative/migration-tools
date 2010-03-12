@@ -33,6 +33,7 @@ sub extract_holdings {
                                                            mapfile  => $c->{map},
                                                            verbose  => 1,
                                                          );
+
     print "Writing holdings to output file(s)...\n";
     # open main holdings file
     open HOLDINGS, '>', ($c->{prefix} . "-HOLDINGS.pg");
@@ -79,20 +80,33 @@ sub extract_holdings {
             # now get everything else in the mapping
             for my $othertag ( sort keys %{$rec->{tmap}} ) {
                 next if $othertag eq $c->{holdings};  # ignoring the holdings, o'course
-                my $idx = $rec->{tmap}{$othertag}[0]; # get index into tags struct
-                unless (defined $idx) {
+                my $test_idx = $rec->{tmap}{$othertag}[0]; # get index into tags struct
+                unless (defined $test_idx) {
                     push @out, '';
                     next;
                 }
-                for my $sub ( sort keys %{$rec->{tags}[$idx]{uni}} ) {
-                    push @out, $rec->{tags}[$idx]{uni}{$sub};
-                    print HOLDINGS "l_", $m->name($rec->{tags}[$idx]{tag}, $sub), ", "
-                      unless $j;
+                # handle only first other tag unless it is known to be multi
+                my $limit = 0;
+                if (exists($multis->{$othertag})) {
+                    $limit = $#{ $rec->{tmap}{$othertag} };
                 }
-                for my $sub ( sort keys %{$multis->{$othertag}} ) {
-                    for my $value ( @{$rec->{tags}[$idx]{multi}{$sub}} ) {
-                        my $fh = $MULTIFILE{"$othertag$sub"};
-                        print $fh join("\t", $rec->{egid}, $j, $value), "\n";
+                foreach my $idx (0..$limit) {
+                    for my $sub ( sort keys %{$rec->{tags}[$idx]{uni}} ) {
+                        if ($m->first_only($rec->{tags}[$idx]{tag}, $sub)) {
+                            push @out, ($k == 1) ? $rec->{tags}[$idx]{uni}{$sub} : '';
+                        } else {
+                            push @out, $rec->{tags}[$idx]{uni}{$sub};
+                        }
+                        print HOLDINGS "l_", $m->name($rec->{tags}[$idx]{tag}, $sub), ", "
+                        unless $j;
+                    }
+                    next unless exists($multis->{$othertag});
+                    for my $sub ( sort keys %{$multis->{$othertag}} ) {
+                        next if $m->first_only($rec->{tags}[$idx]{tag}, $sub) and ($k > 1);
+                        for my $value ( @{$rec->{tags}[$idx]{multi}{$sub}} ) {
+                            my $fh = $MULTIFILE{"$othertag$sub"};
+                            print $fh join("\t", $rec->{egid}, $j, $value), "\n";
+                        }
                     }
                 }
             }
