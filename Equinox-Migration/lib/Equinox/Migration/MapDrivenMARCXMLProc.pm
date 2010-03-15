@@ -94,6 +94,22 @@ sub parse_record {
     for my $f (@fields)
       { process_field($f, $crec) }
 
+    # fill in blank values if needed
+    for my $mappedtag ( @{ $sfmap->tags }) {
+        unless (exists $crec->{tmap}{$mappedtag}) {
+            push @{ $crec->{tags} }, {};
+            for my $mappedsub ( @{ $sfmap->subfields($mappedtag) } ) {
+                my $fieldname = $sfmap->field($mappedtag, $mappedsub);
+                my $mods = $sfmap->mods($fieldname);
+                next if $mods->{multi};
+                $crec->{tags}[-1]{uni}{$mappedsub} = '';
+                $crec->{tags}[-1]{multi} = undef;
+                $crec->{tags}[-1]{tag} = $mappedtag;
+            }
+            push @{ $crec->{tmap}{$mappedtag} }, $#{ $crec->{tags} };
+        }
+    }
+
     # cleanup memory and increment pointer
     $record->purge;
     $reccount++;
@@ -136,10 +152,6 @@ sub process_field {
             next if $mods->{multi};
             $crec->{tags}[-1]{uni}{$mappedsub} = ''
               unless defined $crec->{tags}[-1]{uni}{$mappedsub};
-        }
-        for my $mappedtag ( @{ $sfmap->tags }) {
-            $crec->{tmap}{$mappedtag} = undef
-              unless defined $crec->{tmap}{$mappedtag};
         }
     }
 }

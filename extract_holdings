@@ -91,19 +91,19 @@ sub extract_holdings {
                     $limit = $#{ $rec->{tmap}{$othertag} };
                 }
                 foreach my $idx (0..$limit) {
-                    for my $sub ( sort keys %{$rec->{tags}[$idx]{uni}} ) {
-                        if ($m->first_only($rec->{tags}[$idx]{tag}, $sub)) {
-                            push @out, ($k == 1) ? $rec->{tags}[$idx]{uni}{$sub} : '';
+                    my $tag_idx = $rec->{tmap}{$othertag}[$idx];
+                    for my $sub ( sort keys %{$rec->{tags}[$tag_idx]{uni}} ) {
+                        if ($m->first_only($rec->{tags}[$tag_idx]{tag}, $sub)) {
+                            push @out, ($k == 1) ? $rec->{tags}[$tag_idx]{uni}{$sub} : '';
                         } else {
-                            push @out, $rec->{tags}[$idx]{uni}{$sub};
+                            push @out, $rec->{tags}[$tag_idx]{uni}{$sub};
                         }
-                        print HOLDINGS "l_", $m->name($rec->{tags}[$idx]{tag}, $sub), ", "
-                        unless $j;
+                        print HOLDINGS "l_", $m->name($rec->{tags}[$tag_idx]{tag}, $sub), ", " unless $j;
                     }
                     next unless exists($multis->{$othertag});
                     for my $sub ( sort keys %{$multis->{$othertag}} ) {
-                        next if $m->first_only($rec->{tags}[$idx]{tag}, $sub) and ($k > 1);
-                        for my $value ( @{$rec->{tags}[$idx]{multi}{$sub}} ) {
+                        next if $m->first_only($rec->{tags}[$tag_idx]{tag}, $sub) and ($k > 1);
+                        for my $value ( @{$rec->{tags}[$tag_idx]{multi}{$sub}} ) {
                             my $fh = $MULTIFILE{"$othertag$sub"};
                             print $fh join("\t", $rec->{egid}, $j, $value), "\n";
                         }
