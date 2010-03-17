@@ -105,7 +105,7 @@ sub extract_holdings {
                         next if $m->first_only($rec->{tags}[$tag_idx]{tag}, $sub) and ($k > 1);
                         for my $value ( @{$rec->{tags}[$tag_idx]{multi}{$sub}} ) {
                             my $fh = $MULTIFILE{"$othertag$sub"};
-                            print $fh join("\t", $rec->{egid}, $j, $value), "\n";
+                            print $fh normalize_output(join("\t", $rec->{egid}, $j, $value)), "\n";
                         }
                     }
                 }
@@ -113,7 +113,7 @@ sub extract_holdings {
 
             # and dump it
             print HOLDINGS "\n" unless $j;
-            print HOLDINGS join("\t", @out);
+            print HOLDINGS normalize_output(join("\t", @out));
             print HOLDINGS "\n";
             $j++;
         }
@@ -217,6 +217,7 @@ sub initialize {
                          'holdings|h=i',
                          'copyid|c=s',
                          'prefix|p=s',
+                         'disable-pg-normalization',
                          'version|v',
                          'help',
                        );
@@ -241,6 +242,12 @@ sub initialize {
     }
 
     return $c;
+}
+
+sub normalize_output {
+    my $str = shift;
+    $str =~ s!\\!\\\\!g unless $c->{'disable-pg-normalization'};
+    return $str;
 }
 
 sub show_help {
@@ -270,6 +277,10 @@ HOLDINGS EXTRACTION ARGUMENTS
                  used to extract holdings data from the input MARC file
   --holdings -h  Specifies actual holdings tag
   --copyid   -c  Specifies subfield of holdings with unique copy identifier
+  --disable-pg-normalization  By default, output is normalized so that a Postgres
+                              copy or \\copy can import the data without choking on
+                              backslashes; use this command-line option if
+                              output is not meant to be consumed by psql.
 
   All three of these must be given together.
 HELP
