@@ -27,7 +27,7 @@ my $table = new XBase $in or die XBase->errstr;
 # get list of field names
 my @names = $table->field_names;
 
-# dump PATRONID, SURNAME, FIRSTNAME
+# print a header line with field names
 print OUT join ("\t", @names) . "\n";
 
 sub clean {
