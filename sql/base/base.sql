@@ -701,9 +701,10 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEX
     output TEXT := '';
     n_digits INTEGER := 0;
   BEGIN
-    temp := REGEXP_REPLACE(phone, '^1[^0-9]*', '');
+    temp := phone;
+    temp := REGEXP_REPLACE(temp, '^1*[^0-9]*', '');
     temp := REGEXP_REPLACE(temp, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2-\\3');
-    n_digits := LENGTH(REGEXP_REPLACE(temp, '[^0-9]', '', 'g'));
+    n_digits := LENGTH(REGEXP_REPLACE(REGEXP_REPLACE(temp, '(.*)?[a-zA-Z].*', E'\\1') , '[^0-9]', '', 'g'));
     IF n_digits = 7 THEN
       temp := REGEXP_REPLACE(temp, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2');
       output := (areacode || '-' || temp);
