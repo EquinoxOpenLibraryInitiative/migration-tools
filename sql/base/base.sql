@@ -702,7 +702,7 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEX
     n_digits INTEGER := 0;
   BEGIN
     temp := phone;
-    temp := REGEXP_REPLACE(temp, '^1*[^0-9]*', '');
+    temp := REGEXP_REPLACE(temp, '^1*[^0-9]*(?=[0-9])', '');
     temp := REGEXP_REPLACE(temp, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2-\\3');
     n_digits := LENGTH(REGEXP_REPLACE(REGEXP_REPLACE(temp, '(.*)?[a-zA-Z].*', E'\\1') , '[^0-9]', '', 'g'));
     IF n_digits = 7 THEN
