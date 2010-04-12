@@ -692,3 +692,21 @@ CREATE OR REPLACE FUNCTION migration_tools.add_codabar_checkdigit (TEXT) RETURNS
     my $checkdigit = ($remainder == 0) ? $remainder : 10 - $remainder;
     return $barcode . $checkdigit; 
 $$ LANGUAGE PLPERL STRICT STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEXT AS $$
+  DECLARE
+    phone TEXT := $1;
+    areacode TEXT := $2;
+    output TEXT := '';
+    n_digits INTEGER := 0;
+  BEGIN
+    output := REGEXP_REPLACE(phone, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2-\\3');
+    n_digits := LENGTH(REGEXP_REPLACE(output, '[^0-9]', '', 'g'));
+    IF n_digits = 7 THEN
+      RETURN (areacode || '-' || output);
+    ELSE
+      RETURN output;
+    END IF;
+  END;
+
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
