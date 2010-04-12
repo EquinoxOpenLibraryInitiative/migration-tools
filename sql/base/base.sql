@@ -697,16 +697,20 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEX
   DECLARE
     phone TEXT := $1;
     areacode TEXT := $2;
+    temp TEXT := '';
     output TEXT := '';
     n_digits INTEGER := 0;
   BEGIN
-    output := REGEXP_REPLACE(phone, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2-\\3');
-    n_digits := LENGTH(REGEXP_REPLACE(output, '[^0-9]', '', 'g'));
+    temp := REGEXP_REPLACE(phone, '^1[^0-9]*', '');
+    temp := REGEXP_REPLACE(temp, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2-\\3');
+    n_digits := LENGTH(REGEXP_REPLACE(temp, '[^0-9]', '', 'g'));
     IF n_digits = 7 THEN
-      RETURN (areacode || '-' || output);
+      temp := REGEXP_REPLACE(temp, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2');
+      output := (areacode || '-' || temp);
     ELSE
-      RETURN output;
+      output := temp;
     END IF;
+    RETURN output;
   END;
 
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
