@@ -27,7 +27,15 @@ for my $file (@ARGV) {
     $batch->strict_off();
     $batch->warnings_off();
 
-    while ( $record = $batch->next ) {
+    my $record;
+    while ( 1 ) {
+        eval { $record = $batch->next; };
+        if ($@) {
+            import MARC::File::XML;
+            print "skipping bad record: $@\n";
+            next;
+        }
+        last unless $record;
         $count++; progress_ticker();
         my $marc = undef;
         unless ( defined $record )
