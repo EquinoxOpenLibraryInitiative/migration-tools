@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+=head1 NAME
+
+xlsx2tab
+
+=head1 SUMMARY
+
+Quick-and-dirty filter lifted from the Spreadsheet::XSLX POD
+to convert the first sheet of an Excel .xlsx file to TSV
+
+=head1 USAGE
+
+xlsx2tab foo.xlsx > foo.tsv
+
+=cut
+
+use Spreadsheet::XLSX;
+use Text::Iconv;
+my $converter = Text::Iconv->new ("utf-8", "windows-1251");
+ 
+my $excel = Spreadsheet::XLSX->new ($ARGV[0], $converter);
+ 
+foreach my $sheet (@{$excel->{Worksheet}}) {
+    $sheet->{MaxRow} ||= $sheet->{MinRow};
+    foreach my $row ($sheet->{MinRow} .. $sheet->{MaxRow}) {
+        print join("\t", map { $_->unformatted() } @{ $sheet->{Cells}[$row] }), "\n";
+    }
+    last; # only look at the first worksheet for now
+}
