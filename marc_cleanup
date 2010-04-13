@@ -92,12 +92,12 @@ while ( buildrecord() ) {
         }
 
         # subfields can't be non-alphanumeric
-        if ($record[$ptr] =~ /<subfield code="(.*?)"/) {
-            if ($1 =~ /\P{IsAlnum}/ or $1 eq '') {
-                edit("Junk in subfield code/Null subfield code");
-                next;
-            }
-        }
+        #if ($record[$ptr] =~ /<subfield code="(.*?)"/) {
+            #if ($1 =~ /\P{IsAlnum}/ or $1 eq '') {
+                #edit("Junk in subfield code/Null subfield code");
+                #next;
+            #}
+        #}
         # subfields can't be non-alphanumeric
         if ($record[$ptr] =~ /<subfield code="(\w{2,})"/) {
             edit("Subfield code larger than 1 char");
