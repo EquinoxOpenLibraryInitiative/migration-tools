@@ -12,3 +12,8 @@ from one library automation system to another:
   to deduplicate MARC bibliographic records
 * sql/base/base.sql - set of stored procedures for staging
   and loading data into an Evergreen database
+
+The tools created by Equinox Software are licensed under the GPL
+(see LICENSE).  Other tools, such as xls2tab, are under their
+creators' chosen license (in this case, you may choose the GPL
+or the Artistic License, as Perl is available under these terms).
