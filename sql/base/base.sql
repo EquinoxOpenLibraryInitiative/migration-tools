@@ -715,3 +715,49 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEX
   END;
 
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.set_leader (TEXT, INT, TEXT) RETURNS TEXT AS $$
+  my ($marcxml, $pos, $value) = @_;
+
+  use MARC::Record;
+  use MARC::File::XML;
+
+  my $xml = $marcxml;
+  eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+    my $leader = $marc->leader();
+    substr($leader, $pos, 1) = $value;
+    $marc->leader($leader);
+    $xml = $marc->as_xml_record;
+    $xml =~ s/^<\?.+?\?>$//mo;
+    $xml =~ s/\n//sgo;
+    $xml =~ s/>\s+</></sgo;
+  };
+  return $xml;
+$$ LANGUAGE PLPERLU STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.set_008 (TEXT, INT, TEXT) RETURNS TEXT AS $$
+  my ($marcxml, $pos, $value) = @_;
+
+  use MARC::Record;
+  use MARC::File::XML;
+
+  my $xml = $marcxml;
+  eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+    my $f008 = $marc->field('008');
+
+    if ($f008) {
+       my $field = $f008->data();
+       substr($field, $pos, 1) = $value;
+       $f008->update($field);
+       $xml = $marc->as_xml_record;
+       $xml =~ s/^<\?.+?\?>$//mo;
+       $xml =~ s/\n//sgo;
+       $xml =~ s/>\s+</></sgo;
+    }
+  };
+  return $xml;
+$$ LANGUAGE PLPERLU STABLE;
+
+
