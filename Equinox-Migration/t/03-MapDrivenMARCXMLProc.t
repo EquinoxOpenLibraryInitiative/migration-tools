@@ -96,7 +96,7 @@ is ($rec->{tags}[0]{tag}, 999, '250 doesnt exist in this record');
 is ($rec->{tags}[0]{uni}{a}, "FIC DEV", 'subfield value 4');
 is_deeply ($rec->{tags}[0]{multi}{'x'}, ['FICTION','FICTION2','FICTION3','FICTION4'],
            '999$x - multi');
-is ($rec->{tmap}{250}, undef, 'tag map test 2a');
+is_deeply ($rec->{tmap}{250}, [1], 'tag map test 2a');
 is_deeply ($rec->{tmap}{999}, [0], 'tag map test 2b');
 
 # map-05 is map-04 with a "no digits" filter on 999$x
