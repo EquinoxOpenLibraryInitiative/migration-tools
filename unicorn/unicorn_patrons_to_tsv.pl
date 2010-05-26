@@ -183,7 +183,7 @@ for (my $u = 0; $u < @records; $u++) {
 	}
 
 	# Strip off a suffix, if there is one
-	foreach $suffix (qw( Jr\. Jr Sr\. Sr II III IV )) {
+	foreach $suffix (qw( Jr\. Jr Sr\. Sr III II IV )) {
 		if ($temp_name =~ / $suffix/i) {
 			$records[$u]{'l_suffix_name'} = $suffix;
 			$temp_name =~ s/ $suffix//i;
