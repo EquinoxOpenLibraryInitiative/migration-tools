@@ -175,7 +175,7 @@ for (my $u = 0; $u < @records; $u++) {
 	}
 
 	# Strip off a prefix, if there is one
-	foreach $prefix (qw( Ms. Mrs. Mr. Dr. )) {
+	foreach $prefix (qw( Ms\. Mrs\. Mr\. Dr\. )) {
 		if ($temp_name =~ /$prefix /i) {
 			$records[$u]{'l_prefix_name'} = $prefix;
 			$temp_name =~ s/$prefix //i;
@@ -183,7 +183,7 @@ for (my $u = 0; $u < @records; $u++) {
 	}
 
 	# Strip off a suffix, if there is one
-	foreach $suffix (qw( Jr. Sr. II III IV )) {
+	foreach $suffix (qw( Jr\. Jr Sr\. Sr II III IV )) {
 		if ($temp_name =~ / $suffix/i) {
 			$records[$u]{'l_suffix_name'} = $suffix;
 			$temp_name =~ s/ $suffix//i;
