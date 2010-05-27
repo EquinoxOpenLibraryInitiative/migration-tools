@@ -255,7 +255,7 @@ sub show_help {
     print "\nERROR - $msg\n" if $msg;
     print <<HELP;
 
-Usage is: extract_holdings -p PREFIX -m MARCFILE [ARGUMENTS]
+Usage is: extract_holdings --prefix PREFIX --marcfile MARCFILE [ARGUMENTS]
 
 REQUIRED ARGUMENTS
   --prefix   -p  Prefix string for output filenames
