@@ -761,3 +761,11 @@ CREATE OR REPLACE FUNCTION migration_tools.set_008 (TEXT, INT, TEXT) RETURNS TEX
 $$ LANGUAGE PLPERLU STABLE;
 
 
+CREATE OR REPLACE FUNCTION migration_tools.is_staff_profile (INT) RETURNS BOOLEAN AS $$
+  DECLARE
+    profile ALIAS FOR $1;
+  BEGIN
+    RETURN CASE WHEN 'Staff' IN (select (permission.grp_ancestors(profile)).name) THEN TRUE ELSE FALSE END;
+  END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
