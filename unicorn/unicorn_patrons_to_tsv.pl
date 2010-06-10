@@ -18,14 +18,14 @@ l_user_priv_expires l_user_mailingaddr l_birthdate l_prefix_name l_last_name l_f
 l_suffix_name l_note l_note1 l_patron l_comment l_staff l_webcatpref l_user_category1 l_user_category2 
 l_user_category3 l_user_category4 l_dept l_guardian l_license l_ssn l_misc l_aup l_photo l_notify_via 
 l_user_claims_ret l_user_environment l_user_department l_ums_id l_user_last_activity l_placcard l_user_email 
-l_addr1_std_line1 l_addr1_std_line2 l_addr1_std_city l_addr1_std_state l_addr1_std_zip l_addr1_country 
+l_addr1_std_line1 l_addr1_std_line2 l_addr1_std_city l_addr1_std_state l_addr1_std_zip l_addr1_country l_addr1_county
 l_addr1_township l_addr1_room l_addr1_company l_addr1_office l_addr1_phone l_addr1_dayphone l_addr1_homephone 
 l_addr1_workphone l_addr1_cellphone l_addr1_fax l_addr1_email l_addr1_location l_addr1_usefor l_addr1_care_of 
 l_addr1_known_bad l_addr1_ums_addrid l_addr2_std_line1 l_addr2_std_line2 l_addr2_std_city l_addr2_std_state 
-l_addr2_std_zip l_addr2_country l_addr2_township l_addr2_room l_addr2_company l_addr2_office l_addr2_phone 
+l_addr2_std_zip l_addr2_country l_addr2_county l_addr2_township l_addr2_room l_addr2_company l_addr2_office l_addr2_phone 
 l_addr2_dayphone l_addr2_homephone l_addr2_workphone l_addr2_cellphone l_addr2_fax l_addr2_email 
 l_addr2_location l_addr2_usefor l_addr2_care_of l_addr2_known_bad l_addr2_ums_addrid l_addr3_std_line1 
-l_addr3_std_line2 l_addr3_std_city l_addr3_std_state l_addr3_std_zip l_addr3_country l_addr3_township 
+l_addr3_std_line2 l_addr3_std_city l_addr3_std_state l_addr3_std_zip l_addr3_country l_addr3_county l_addr3_township 
 l_addr3_room l_addr3_company l_addr3_office l_addr3_phone l_addr3_dayphone l_addr3_homephone l_addr3_workphone 
 l_addr3_cellphone l_addr3_fax l_addr3_email l_addr3_location l_addr3_usefor l_addr3_care_of l_addr3_known_bad 
 l_addr3_ums_addrid l_identific l_noempl l_profession l_program l_represent l_userid_active l_inactive_barcode1 
@@ -119,7 +119,7 @@ for (my $u = 0; $u < @records; $u++) {
 
 	# Addresses are a bit different:
 	foreach $a (qw( addr1 addr2 addr3 )) {
-		foreach $f (qw( std_line1 std_line2 std_city std_state std_zip country township room company office phone dayphone homephone workphone cellphone fax email location usefor care_of known_bad ums_addrid )) {
+		foreach $f (qw( std_line1 std_line2 std_city std_state std_zip country county township room company office phone dayphone homephone workphone cellphone fax email location usefor care_of known_bad ums_addrid )) {
 			$records[$u]{uc('USER_' . $a . '.' . $f)} = '' unless defined $records[$u]{uc('USER_' . $a . '.' . $f)};
 			$records[$u]{'l_' . $a . '_' . $f} = $records[$u]{uc('USER_' . $a . '.' . $f)};
 		}
