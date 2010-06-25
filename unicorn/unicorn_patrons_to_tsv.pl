@@ -160,8 +160,8 @@ for (my $u = 0; $u < @records; $u++) {
 	$records[$u]{'l_userid_active'} = '';
 	$records[$u]{'l_inactive_barcode1'} = $records[$u]{'USER_XINFO.PREV_ID'};
 	$records[$u]{'l_inactive_barcode2'} = $records[$u]{'USER_XINFO.PREV_ID2'};
-	$records[$u]{'l_user_category1'} = $records[$u]{'USER_ROUTING_FLAG'};
-	$records[$u]{'l_user_category2'} = $records[$u]{'USER_WEB_AUTH'};
+#	$records[$u]{'l_user_category1'} = $records[$u]{'USER_ROUTING_FLAG'};
+#	$records[$u]{'l_user_category2'} = $records[$u]{'USER_WEB_AUTH'};
 
 	# We can parse the name like so:
 
