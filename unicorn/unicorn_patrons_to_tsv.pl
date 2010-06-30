@@ -124,9 +124,9 @@ for (my $u = 0; $u < @records; $u++) {
 			$records[$u]{'l_' . $a . '_' . $f} = $records[$u]{uc('USER_' . $a . '.' . $f)};
 		}
 		$records[$u]{'l_' . $a . '_std_line1'} = $records[$u]{'USER_' . uc($a) . '.STREET'};
-		if ((defined $records[$u]{'USER_' . uc($a) . '.CITY/STATE'}) && ($records[$u]{'USER_' . uc($a) . '.CITY/STATE'} =~ m/^(.*), (.*)$/)) {
+		if ((defined $records[$u]{'USER_' . uc($a) . '.CITY/STATE'}) && ($records[$u]{'USER_' . uc($a) . '.CITY/STATE'} =~ m/^(.*),(\s*)(.*)$/)) {
 			$records[$u]{'l_' . $a . '_std_city'} = $1;
-			$records[$u]{'l_' . $a . '_std_state'} = $2;
+			$records[$u]{'l_' . $a . '_std_state'} = $3;
 		}
 		$records[$u]{'l_' . $a . '_std_zip'} = $records[$u]{'USER_' . uc($a) . '.ZIP'};
 
