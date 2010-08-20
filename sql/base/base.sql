@@ -776,3 +776,39 @@ CREATE OR REPLACE FUNCTION migration_tools.is_blank (TEXT) RETURNS BOOLEAN AS $$
   END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+
+CREATE OR REPLACE FUNCTION migration_tools.insert_tags (TEXT, TEXT) RETURNS TEXT AS $$
+
+  my ($marcxml, $tags) = @_;
+
+  use MARC::Record;
+  use MARC::File::XML;
+
+  my $xml = $marcxml;
+
+  eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+    my $to_insert = MARC::Record->new_from_xml("<record>$tags</record>", 'UTF-8');
+
+    my @incumbents = ();
+
+    foreach my $field ( $marc->fields() ) {
+      push @incumbents, $field->as_string();
+    }
+
+    foreach $field ( $to_insert->fields() ) {
+      if (!grep {$_ eq $field->as_string()} @incumbents) {
+        $marc->insert_fields_ordered( ($field) );
+      }
+    }
+
+    $xml = $marc->as_xml_record;
+    $xml =~ s/^<\?.+?\?>$//mo;
+    $xml =~ s/\n//sgo;
+    $xml =~ s/>\s+</></sgo;
+  };
+
+  return $xml;
+
+$$ LANGUAGE PLPERLU STABLE;
+
