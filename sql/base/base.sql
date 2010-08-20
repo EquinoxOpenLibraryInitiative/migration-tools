@@ -793,11 +793,11 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_tags (TEXT, TEXT) RETURNS TEXT
     my @incumbents = ();
 
     foreach my $field ( $marc->fields() ) {
-      push @incumbents, $field->as_string();
+      push @incumbents, $field->as_formatted();
     }
 
     foreach $field ( $to_insert->fields() ) {
-      if (!grep {$_ eq $field->as_string()} @incumbents) {
+      if (!grep {$_ eq $field->as_formatted()} @incumbents) {
         $marc->insert_fields_ordered( ($field) );
       }
     }
