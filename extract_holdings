@@ -170,6 +170,8 @@ sub dump_sample_detail {
         print "\n";
     }
     select STDOUT;
+    print "Saved results as ", ($c->{prefix} . "-HOLDINGS-DETAIL.txt"), " and ",
+        ($c->{prefix} . "-HOLDINGS-SUBCOUNTS.txt"), "\n";
 }
 
 sub dump_sample_overview {
@@ -195,7 +197,7 @@ sub dump_sample_overview {
         print " (", sprintf("%03d", int($tags->{ $tagsbycount[$i] } / $count * 100)), "%)\n";
     }
     select STDOUT;
-    print "\n";
+    print "Saved results as ", ($c->{prefix} . "-HOLDINGS-OVERVIEW.txt"), "\n";
     close SAMPLE;
 }
 
