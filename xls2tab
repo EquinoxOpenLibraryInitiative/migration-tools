@@ -11,6 +11,7 @@ use warnings;
 
 use Spreadsheet::ParseExcel::Simple;
 use File::Spec;
+use Data::Dumper;
 
 for (@ARGV) {
     for (glob $_) {
@@ -33,7 +34,8 @@ sub dump_books {
         next unless $sheet[$_]->has_data();
         my $sfn = $file;
         $sfn =~ s?\.xls$??i;
-        $sfn.= ((@sheet > 1) ? sprintf(".%02i",$_) : "").'.tab';
+        $sfn .= '_' . $sheet[$_]->sheet->get_name() . '.tsv';
+        $sfn =~ s/ /_/g;
         open TAB, '>', $sfn or do {
             warn "Unable to write to $sfn";
             next;
