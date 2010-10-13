@@ -124,6 +124,7 @@ for (my $u = 0; $u < @records; $u++) {
 			$records[$u]{'l_' . $a . '_' . $f} = $records[$u]{uc('USER_' . $a . '.' . $f)};
 		}
 		$records[$u]{'l_' . $a . '_std_line1'} = $records[$u]{'USER_' . uc($a) . '.STREET'};
+		$records[$u]{'l_' . $a . '_std_line2'} = $records[$u]{'USER_' . uc($a) . '.LINE2'};
 		if ((defined $records[$u]{'USER_' . uc($a) . '.CITY/STATE'}) && ($records[$u]{'USER_' . uc($a) . '.CITY/STATE'} =~ m/^(.*),(\s*)(.*)$/)) {
 			$records[$u]{'l_' . $a . '_std_city'} = $1;
 			$records[$u]{'l_' . $a . '_std_state'} = $3;
