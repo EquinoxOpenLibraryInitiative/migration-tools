@@ -910,3 +910,37 @@ BEGIN
 END;
 
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION migration_tools.stage_not_applicable_asset_stat_cats( schemaname TEXT ) RETURNS VOID AS $$
+
+-- USAGE: Make sure the stat_cat and stat_cat_entry tables are populated, including exactly one 'Not Applicable' entry per stat cat.
+--        Then SELECT migration_tools.stage_not_applicable_asset_stat_cats('m_foo');
+
+-- TODO: Make a variant that will go directly to production tables -- which would be useful for retrofixing the absence of N/A cats.
+-- TODO: Add a similar tool for actor stat cats, which behave differently.
+
+DECLARE
+	c                    TEXT := schemaname || '.asset_copy_legacy';
+	sc									 TEXT := schemaname || '.asset_stat_cat';
+	sce									 TEXT := schemaname || '.asset_stat_cat_entry';
+	scecm								 TEXT := schemaname || '.asset_stat_cat_entry_copy_map';
+	stat_cat						 INT;
+  stat_cat_entry       INT;
+  
+BEGIN
+
+  FOR stat_cat IN EXECUTE ('SELECT id FROM ' || sc) LOOP
+
+		EXECUTE ('SELECT id FROM ' || sce || ' WHERE stat_cat = ' || stat_cat || E' AND value = \'Not Applicable\';') INTO stat_cat_entry;
+
+		EXECUTE ('INSERT INTO ' || scecm || ' (owning_copy, stat_cat, stat_cat_entry)
+							SELECT c.id, ' || stat_cat || ', ' || stat_cat_entry || ' FROM ' || c || ' c WHERE c.id NOT IN
+							(SELECT owning_copy FROM ' || scecm || ' WHERE stat_cat = ' || stat_cat || ');');
+
+  END LOOP;
+
+  RETURN;
+END;
+
+$$ LANGUAGE plpgsql;
+
