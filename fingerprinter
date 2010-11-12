@@ -16,8 +16,8 @@ $| = 1;
 
 initialize($conf);
 
-open OF, '>', $conf->{output};
-open XF, '>', $conf->{exception};
+open OF, '>', $conf->{output} or die "$0: cannot open output file $conf->{output}: $!\n";
+open XF, '>', $conf->{exception} or die "$0: cannot open exception file $conf->{output}: $!\n";
 
 for my $file (@ARGV) {
     print XF "Processing $file\n";
