@@ -5,6 +5,7 @@
 # Works fine on TITLE.DB, but misses the boat on other files; probably different block sizes or something.
 
 use strict;
+use POSIX;
 
 $/ = undef;
 
@@ -32,11 +33,11 @@ while (<DBD>) {
 
   my $data = $_;
 
-  $rowLength = ord substr($data, 0, 1);
-  #print "Row length: $rowLength\n";
+  $rowLength = ord(substr($data, 0, 1)) + (256 * (ord(substr($data, 1, 1))));
+  #print STDERR "Row length: $rowLength\n";
 
   my $numColumns = ord substr($data, 2, 1);
-  #print "Columns:    $numColumns\n";
+  #print STDERR "Columns:    $numColumns\n";
 
   my $namedata = substr($data, $startOfColumnTypes + ($numColumns * 7) - 2);
   @fieldNames = split(/\x00/, $namedata);
@@ -59,9 +60,11 @@ my $blocks = 0;
 while (read DB, my $data, $blockSize) {
   $blocks++;
   next if ($blocks == 1);
-  my $maxRecords = int( $blockSize / $rowLength);
-  my $indexIndicator = ord substr($data, 7, 1);
-  next if ($indexIndicator == 0);
+  my $maxRecords = POSIX::floor($blockSize / $rowLength);
+  my $indexIndicator1 = ord substr($data, 1, 1);
+  next if ($indexIndicator1 != 0);
+  my $indexIndicator2 = ord substr($data, 7, 1);
+  next if ($indexIndicator2 == 0);
 
 #  for (my $i = 1; $i <= scalar(@fieldLengths); $i++) {
 #    print "Field $i has length $fieldLengths[$i-1]\n";
@@ -72,6 +75,9 @@ while (read DB, my $data, $blockSize) {
     my $pos = 0;
     my @field;
 
+    #print STDERR "Record " . ($r+1) . " of $maxRecords\n";
+
+
     for (my $f = 0; $f < scalar(@fieldLengths); $f++) {
       $field[$f] = substr($data, $initialOffset + ($r * $rowLength) + $pos, $fieldLengths[$f]);
       if ($fieldTypes[$f] eq 'S') { $field[$f] = ord $field[$f]; }
@@ -80,7 +86,9 @@ while (read DB, my $data, $blockSize) {
 
     if ($field[0] =~ m/[^\x00]/) {
       print join("\t", @field) . "\n";
+      #print STDERR "Length: $pos\n";
     }
+
   }
 
 }
