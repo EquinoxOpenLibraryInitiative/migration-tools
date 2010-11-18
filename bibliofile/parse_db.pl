@@ -86,7 +86,6 @@ while (read DB, my $data, $blockSize) {
 
     if ($field[0] =~ m/[^\x00]/) {
       print join("\t", @field) . "\n";
-      #print STDERR "Length: $pos\n";
     }
 
   }
