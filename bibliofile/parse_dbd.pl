@@ -38,7 +38,7 @@ while (<>) {
   for (my $i = 1; $i <= $numcolumns; $i++) {
     my $coltype = substr($dbd, 7*($i-1)+$startOfColumnTypes, 1);
     my $collength = ord substr($dbd, 7*($i-1)+$startOfColumnTypes+1, 1);
-    printf ("Column %02d: %-8s %s (%d chars)\n", $i, $coltypes{$coltype}, $col[$i-1], $collength);
+    printf ("Column %0" . length($numcolumns) . "d: %-8s %s (%d chars)\n", $i, $coltypes{$coltype}, $col[$i-1], $collength);
   }
 
 }
