@@ -1,11 +1,16 @@
 #!/usr/bin/perl -w
 
 # Parses Bibliofile files.
-# Usage: parse_db.pl TITLE.DB
-# Works fine on TITLE.DB, but misses the boat on other files; probably different block sizes or something.
+# Usage: parse_db.pl TITLE.DB [--ignore-indexes]
+# Choosing --ignore-indexes will find data you'd otherwise miss, but also grabs a lot of junk you'll need to filter out.
 
 use strict;
 use POSIX;
+use Getopt::Long;
+
+my $ignoreIndexes = '';
+
+my $opts = GetOptions('ignore-indexes' => \$ignoreIndexes);
 
 $/ = undef;
 
@@ -61,14 +66,12 @@ while (read DB, my $data, $blockSize) {
   $blocks++;
   next if ($blocks == 1);
   my $maxRecords = POSIX::floor($blockSize / $rowLength);
-  my $indexIndicator1 = ord substr($data, 1, 1);
-  next if ($indexIndicator1 != 0);
-  my $indexIndicator2 = ord substr($data, 7, 1);
-  next if ($indexIndicator2 == 0);
-
-#  for (my $i = 1; $i <= scalar(@fieldLengths); $i++) {
-#    print "Field $i has length $fieldLengths[$i-1]\n";
-#  }
+  unless $ignoreIndexes {
+    my $indexIndicator1 = ord substr($data, 1, 1);
+    next if ($indexIndicator1 != 0);
+    my $indexIndicator2 = ord substr($data, 7, 1);
+    next if ($indexIndicator2 == 0);
+  }
 
   for (my $r = 0; $r < $maxRecords; $r++) {
 
@@ -76,7 +79,6 @@ while (read DB, my $data, $blockSize) {
     my @field;
 
     #print STDERR "Record " . ($r+1) . " of $maxRecords\n";
-
 
     for (my $f = 0; $f < scalar(@fieldLengths); $f++) {
       $field[$f] = substr($data, $initialOffset + ($r * $rowLength) + $pos, $fieldLengths[$f]);
