@@ -159,6 +159,10 @@ sub populate_marc {
     $marc{pages} = $1 if (defined $marc{desc} and $marc{desc} =~ /(\d+)/);
     $marc{title} = $record->field('245')->subfield('a')
       if $record->field('245');
+    $marc{title} .= ' ' . $record->field('245')->subfield('b')
+      if ($record->field('245') and 
+          $record->field('245')->subfield('b') and 
+          not $conf->{ignoresubtitle});
     $marc{edition} = $record->field('250')->subfield('a')
       if $record->field('250');
     if ($record->field('260')) {
@@ -489,6 +493,7 @@ sub initialize {
                          'arbitrarily-lose-below=i',
                          'newwins',
                          'excludelist=s',
+                         'ignoresubtitle|i',
                          'quiet|q',
                          'help|h',
                        );
@@ -584,9 +589,10 @@ Req'd Arguments
   --prefix=<PREFIX>>   -p  Shared prefix for output/exception files. Will
                            produce PREFIX.fp and PREFIX.fp.ex
 Options
-  --tag=N       -t  Which tag to use (default 903)
-  --subfield=X  -s  Which subfield to use (default 'a')
-  --quiet       -q  Don't write status messages to STDOUT
+  --tag=N           -t  Which tag to use (default 903)
+  --subfield=X      -s  Which subfield to use (default 'a')
+  --quiet           -q  Don't write status messages to STDOUT
+  --ignoresubtitle  -i  Ignore 245$b and construct the title from 245$a alone.
 
   --fingerprints=LIST  Fingerprints to generate, comma separated
                        Default: oclc,isbn,edition,issn,lccn,accomp,authpub
