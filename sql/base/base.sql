@@ -944,6 +944,33 @@ END;
 
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION migration_tools.assign_standing_penalties ( ) RETURNS VOID AS $$
+
+-- USAGE: Once circulation data has been loaded, and group penalty thresholds have been set up, run this.
+--        This will assign standing penalties as needed.
+
+DECLARE
+  org_unit  INT;
+  usr       INT;
+
+BEGIN
+
+  FOR org_unit IN EXECUTE ('SELECT DISTINCT org_unit FROM permission.grp_penalty_threshold;') LOOP
+
+    FOR usr IN EXECUTE ('SELECT id FROM actor.usr WHERE NOT deleted;') LOOP
+  
+      EXECUTE('SELECT actor.calculate_system_penalties(' || usr || ', ' || org_unit || ');');
+
+    END LOOP;
+
+  END LOOP;
+
+  RETURN;
+
+END;
+
+$$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION migration_tools.insert_metarecords_for_pristine_database () RETURNS VOID AS $$
 
@@ -963,6 +990,7 @@ BEGIN
 END;
   
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION migration_tools.insert_metarecords_for_incumbent_database () RETURNS VOID AS $$
 
