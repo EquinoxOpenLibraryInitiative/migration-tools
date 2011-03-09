@@ -1011,3 +1011,25 @@ BEGIN
 END;
     
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION migration_tools.create_cards( schemaname TEXT ) RETURNS VOID AS $$
+
+-- USAGE: Make sure the patrons are staged in schemaname.actor_usr_legacy and have 'usrname' assigned.
+--        Then SELECT migration_tools.create_cards('m_foo');
+
+DECLARE
+	u                    TEXT := schemaname || '.actor_usr_legacy';
+	c                    TEXT := schemaname || '.actor_card';
+  
+BEGIN
+
+	EXECUTE ('TRUNCATE ' || c || ';');
+	EXECUTE ('INSERT INTO ' || c || ' (usr, barcode) SELECT id, usrname FROM ' || u || ';');
+	EXECUTE ('UPDATE ' || u || ' u SET card = c.id FROM ' || c || ' c WHERE c.usr = u.id;');
+
+  RETURN;
+
+END;
+
+$$ LANGUAGE plpgsql;
