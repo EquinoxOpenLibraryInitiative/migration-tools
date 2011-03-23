@@ -833,7 +833,7 @@ DECLARE
   this_fine_rule       INT;
   this_max_fine_rule   INT;
   rcd                  config.rule_circ_duration%ROWTYPE;
-  rrf                  config.rule_recuring_fine%ROWTYPE;
+  rrf                  config.rule_recurring_fine%ROWTYPE;
   rmf                  config.rule_max_fine%ROWTYPE;
   circ                 INT;
   n                    INT := 0;
@@ -872,7 +872,7 @@ BEGIN
         );
     SELECT INTO rcd * FROM config.rule_circ_duration 
       WHERE id = this_duration_rule;
-    SELECT INTO rrf * FROM config.rule_recuring_fine 
+    SELECT INTO rrf * FROM config.rule_recurring_fine 
       WHERE id = this_fine_rule;
     SELECT INTO rmf * FROM config.rule_max_fine 
       WHERE id = this_max_fine_rule;
@@ -881,15 +881,15 @@ BEGIN
     EXECUTE ('UPDATE ' || tablename || ' c
     SET
       duration_rule = rcd.name,
-      recuring_fine_rule = rrf.name,
+      recurring_fine_rule = rrf.name,
       max_fine_rule = rmf.name,
       duration = rcd.normal,
-      recuring_fine = rrf.normal,
+      recurring_fine = rrf.normal,
       max_fine = rmf.amount,
       renewal_remaining = rcd.max_renewals
     FROM
       config.rule_circ_duration rcd,
-      config.rule_recuring_fine rrf,
+      config.rule_recurring_fine rrf,
       config.rule_max_fine rmf
     WHERE
       rcd.id = ' || this_duration_rule || ' AND
@@ -1033,3 +1033,36 @@ BEGIN
 END;
 
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION migration_tools.insert_856_9 (TEXT, TEXT) RETURNS TEXT AS $$
+
+  ## USAGE: UPDATE biblio.record_entry SET marc = migration_tools.insert_856_9(marc, 'ABC') WHERE [...];
+
+  my ($marcxml, $shortname) = @_;
+
+  use MARC::Record;
+  use MARC::File::XML;
+
+  my $xml = $marcxml;
+
+  eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+
+    foreach my $field ( $marc->field('856') ) {
+      if ( scalar(grep( /(netlibrary|overdrive)\.com/i, $field->subfield('u'))) > 0 &&
+           scalar(grep( $shortname, $field->subfield('9'))) == 0 ) {
+        $field->add_subfields( '9' => $shortname );
+      }
+    }
+
+    $xml = $marc->as_xml_record;
+    $xml =~ s/^<\?.+?\?>$//mo;
+    $xml =~ s/\n//sgo;
+    $xml =~ s/>\s+</></sgo;
+  };
+
+  return $xml;
+
+$$ LANGUAGE PLPERLU STABLE;
+
