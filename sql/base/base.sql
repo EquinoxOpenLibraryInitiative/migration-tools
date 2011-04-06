@@ -1066,3 +1066,67 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_856_9 (TEXT, TEXT) RETURNS TEX
 
 $$ LANGUAGE PLPERLU STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.change_call_number(copy_id BIGINT, new_label TEXT) RETURNS VOID AS $$
+
+DECLARE
+  old_volume   BIGINT;
+  new_volume   BIGINT;
+  bib          BIGINT;
+  owner        INTEGER;
+  old_label    TEXT;
+  remainder    BIGINT;
+
+BEGIN
+
+  -- Bail out if asked to change the label to ##URI##
+  IF new_label = '##URI##' THEN
+    RETURN;
+  END IF;
+
+  -- Gather information
+  SELECT call_number INTO old_volume FROM asset.copy WHERE id = copy_id;
+  SELECT record INTO bib FROM asset.call_number WHERE id = old_volume;
+  SELECT owning_lib, label INTO owner, old_label FROM asset.call_number WHERE id = old_volume;
+
+  -- Bail out if the label already is ##URI##
+  IF old_label = '##URI##' THEN
+    RETURN;
+  END IF;
+
+  -- Bail out if the call number label is already correct
+  IF new_volume = old_volume THEN
+    RETURN;
+  END IF;
+
+  -- Check whether we already have a destination volume available
+  SELECT id INTO new_volume FROM asset.call_number 
+    WHERE 
+      record = bib AND
+      owning_lib = owner AND
+      label = new_label AND
+      NOT deleted;
+
+  -- Create destination volume if needed
+  IF NOT FOUND THEN
+    INSERT INTO asset.call_number (creator, editor, record, owning_lib, label) 
+      VALUES (1, 1, bib, owner, new_label);
+    SELECT id INTO new_volume FROM asset.call_number
+      WHERE 
+        record = bib AND
+        owning_lib = owner AND
+        label = new_label AND
+        NOT deleted;
+  END IF;
+
+  -- Move copy to destination
+  UPDATE asset.copy SET call_number = new_volume WHERE id = copy_id;
+
+  -- Delete source volume if it is now empty
+  SELECT id INTO remainder FROM asset.copy WHERE call_number = old_volume AND NOT deleted;
+  IF NOT FOUND THEN
+    DELETE FROM asset.call_number WHERE id = old_volume;
+  END IF;
+
+END;
+
+$$ LANGUAGE plpgsql;
