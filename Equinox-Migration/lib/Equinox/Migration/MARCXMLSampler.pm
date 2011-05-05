@@ -117,7 +117,7 @@ sub parse_record {
 sub process_field {
     my ($field) = @_;
     my $tag = $field->{'att'}->{'tag'};
-    return unless ($tag and $tag > 9);
+    return unless ($tag and ($tag =~ /[^0-9]/ or $tag > 9));
 
     # increment raw tag count
     $dstore->{tcnt}++;
