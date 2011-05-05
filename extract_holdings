@@ -156,7 +156,7 @@ sub dump_sample_detail {
         for my $subkey (sort keys %{ $tags->{$tag} }) {
             my $sub = $tags->{$tag}{$subkey};
             print "|| $subkey | ", $sub->{value}, " | ", 
-              $sub->{count}, "/", $sub->{tcnt}, " |  ||\n";
+              $sub->{count}, "/", $sub->{tcnt}, " | ", ($sub->{count} > $sub->{tcnt}) ? "MULTI" : "", " ||\n";
         }
         print "\n";
     }
