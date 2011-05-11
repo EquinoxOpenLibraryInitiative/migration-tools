@@ -1,0 +1,72 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+
+my $VERSION = '1.01';
+
+=pod
+
+NAME
+
+	enrich_zips - Utility to add county information to city/state/ZIP data (and optionally use zips.txt format)
+
+USAGE
+
+	enrich_zips --db US.txt < citystatezip.tsv
+	enrich_zips --makezips --db US.txt < citystatezip.tsv > zips.txt
+
+NOTES
+
+	Geonames database can be downloaded from http://download.geonames.org/export/zip/US.zip
+
+=cut
+
+my ($db, $makezips, %zips, $warn);
+my $result = GetOptions ("db=s"     => \$db,
+                         "makezips" => \$makezips,
+                         "warn"     => \$warn);
+die
+	"Please specify the location of the Geonames database with --db US.txt\n" .
+	"HINT: You can download it at http://download.geonames.org/export/zip/US.zip" .
+  "\n\nProgram halted"
+unless defined($db);
+
+open DB, $db or die "Couldn't open Geonames database $db: $!\n";
+
+# Slurp in the Geonames database
+while (<DB>) {
+	chomp;
+	my @f = split(/\t/);
+	@{$zips{$f[1]}} = @f[4,2,5];
+	# @{$zips{"33166"}} == ("FL", "Miami Springs", "Miami-Dade")
+}
+
+while (<>) {
+
+	chomp;
+	(my $city, my $state, my $zip) = split(/\t/) or next;
+	my $county = "";
+	my ($dbcity, $dbstate);
+
+	if (defined $zips{$zip}) {
+		($dbstate, $dbcity, $county) = @{$zips{$zip}};
+	} 
+
+	if ($warn) {
+		if (!defined $zips{$zip}) {
+			print STDERR "No county data found for ZIP code $zip ($city, $state)\n\n";
+			next;
+		}
+		if ($city ne $dbcity || $state ne $dbstate) {
+			print STDERR "Patron data input says $zip is $city, $state\n".
+			             "Geonames database says $zip is $dbcity, $dbstate\n\n";
+		}
+	}
+
+	if ($makezips) {
+		print "|" . join("|", ($state, $city, $zip, "1", "", $county)) . "||\n";
+	} else {
+		print join("\t", ($city, $state, $zip, $county)) . "\n";
+	}
+}
