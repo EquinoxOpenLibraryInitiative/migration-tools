@@ -1,0 +1,33 @@
+#!/usr/bin/perl -w
+use strict;
+
+# Given input like "Miami Springs\tFL\t33166\n" derived from patron addresses,
+# this utility will print a city and state for each zip that has the maximum
+# number of occurrences. (It does not attempt to break ties. If there is a tie,
+# the city and state that reaches the maximum first will end up winning.)
+
+my %zips;
+
+# Go through the input and tally the city-state combinations for each ZIP code
+while (<>) {
+	chomp;
+	(my $city, my $state, my $zip) = split(/\t/) or next;
+	next unless $zip =~ m/([\d]{5})/; # If it doesn't have 5 digits in a row, it's not a ZIP
+	$zip =~ s/^([\d]{5}).*$/$1/;      # We only want the 5-digit ZIP
+	$state = uc($state);
+	$zips{$zip}{"$city\t$state"}++;
+}
+
+# Pick and print a winner for each ZIP code
+foreach(sort keys %zips) {
+	my $zip = $_;
+	my $max = 0;
+	my $citystate = "";
+	foreach(keys %{$zips{$zip}}) {
+		if ($zips{$zip}{$_} > $max) {
+			$max = $zips{$zip}{$_};
+			$citystate = $_;
+		}
+	}
+	print "$citystate\t$zip\n";
+}
