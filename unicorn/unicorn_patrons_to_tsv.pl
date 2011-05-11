@@ -205,8 +205,9 @@ for (my $u = 0; $u < @records; $u++) {
 
 }
 
-
 # Print the results
+print join("\t", @output_fields) . "\n";
+
 for (my $u = 0; $u < @records; $u++) {
 	foreach $f (@output_fields) {
 		if (defined $records[$u]{$f}) {
