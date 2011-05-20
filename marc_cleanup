@@ -641,7 +641,7 @@ Options
   --output     -o  Cleaned MARCXML output filename
   --exception  -x  Exception (dumped records) MARCXML filename
        or
-  --prefix=<PREFIX>>   -p  Shared prefix for output/exception files. Will produce
+  --prefix=<PREFIX>    -p  Shared prefix for output/exception files. Will produce
                            PREFIX.clean.marc.xml and PREFIX.exception.marc.xml
 
   --marcfile  -m  Input filename. Defaults to PREFIX.marc.xml
