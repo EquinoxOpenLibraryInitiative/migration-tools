@@ -186,13 +186,13 @@ sub do_automated_cleanups {
 sub stow_record_data {
     # get tag data if we're looking at it
     my $tag = 0;
-    if ($record[$ptr] =~ m/<(control|data)field tag="(?<TAG>.{3})"/) {
-        $recmeta{tag} = $+{TAG};
+    if ($record[$ptr] =~ m/<(control|data)field tag="(.{3})"/) {
+        $recmeta{tag} = $1;
         $tag = $recmeta{tag};
-        $record[$ptr] =~ m/ind1="(?<IND1>.)"/;
-        $recmeta{ind1} = $+{IND1} || '';
-        $record[$ptr] =~ m/ind2="(?<IND2>.)"/;
-        $recmeta{ind2} = $+{IND2} || '';
+        $record[$ptr] =~ m/ind1="(.)"/;
+        $recmeta{ind1} = $1 || '';
+        $record[$ptr] =~ m/ind2="(.)"/;
+        $recmeta{ind2} = $1 || '';
 
         unless ($tag) {
             message("Autokill record: no detectable tag");
