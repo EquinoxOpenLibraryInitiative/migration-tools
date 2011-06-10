@@ -1053,6 +1053,7 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_856_9 (TEXT, TEXT) RETURNS TEX
       if ( scalar(grep( /(netlibrary|overdrive)\.com/i, $field->subfield('u'))) > 0 &&
            scalar(grep( $shortname, $field->subfield('9'))) == 0 ) {
         $field->add_subfields( '9' => $shortname );
+				$field->update( ind2 => '0');
       }
     }
 
