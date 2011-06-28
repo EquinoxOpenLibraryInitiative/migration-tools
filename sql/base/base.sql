@@ -650,6 +650,27 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_date (TEXT,TEXT) RETURNS DATE
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.attempt_timestamptz (TEXT,TEXT) RETURNS TIMESTAMPTZ AS $$
+    DECLARE
+        attempt_value ALIAS FOR $1;
+        fail_value ALIAS FOR $2;
+        output TIMESTAMPTZ;
+    BEGIN
+        FOR output IN
+            EXECUTE 'SELECT ' || quote_literal(attempt_value) || '::TIMESTAMPTZ AS a;'
+        LOOP
+            RETURN output;
+        END LOOP;
+    EXCEPTION
+        WHEN OTHERS THEN
+            FOR output IN
+                EXECUTE 'SELECT ' || quote_literal(fail_value) || '::TIMESTAMPTZ AS a;'
+            LOOP
+                RETURN output;
+            END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.attempt_money (TEXT,TEXT) RETURNS NUMERIC(8,2) AS $$
     DECLARE
         attempt_value ALIAS FOR $1;
