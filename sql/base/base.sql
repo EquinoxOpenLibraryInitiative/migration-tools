@@ -868,34 +868,34 @@ BEGIN
 
     -- Fetch the correct rules for this circulation
     EXECUTE ('
-      SELECT 
-        circ_lib, 
-        target_copy, 
-        usr, 
-        CASE 
-          WHEN phone_renewal OR desk_renewal OR opac_renewal THEN TRUE 
-          ELSE FALSE 
-        END 
-      FROM ' || tablename || ' WHERE id = ' || circ || ';') 
+      SELECT
+        circ_lib,
+        target_copy,
+        usr,
+        CASE
+          WHEN phone_renewal OR desk_renewal OR opac_renewal THEN TRUE
+          ELSE FALSE
+        END
+      FROM ' || tablename || ' WHERE id = ' || circ || ';')
       INTO circ_lib, target_copy, usr, is_renewal ;
-    SELECT 
+    SELECT
       INTO this_duration_rule,
            this_fine_rule,
-           this_max_fine_rule 
-      duration_rule, 
-      recurring_fine_rule, 
-      max_fine_rule 
-      FROM action.find_circ_matrix_matchpoint( 
-        circ_lib, 
-        target_copy, 
-        usr, 
-        is_renewal 
+           this_max_fine_rule
+      duration_rule,
+      recurring_fine_rule,
+      max_fine_rule
+      FROM action.find_circ_matrix_matchpoint(
+        circ_lib,
+        target_copy,
+        usr,
+        is_renewal
         );
-    SELECT INTO rcd * FROM config.rule_circ_duration 
+    SELECT INTO rcd * FROM config.rule_circ_duration
       WHERE id = this_duration_rule;
-    SELECT INTO rrf * FROM config.rule_recurring_fine 
+    SELECT INTO rrf * FROM config.rule_recurring_fine
       WHERE id = this_fine_rule;
-    SELECT INTO rmf * FROM config.rule_max_fine 
+    SELECT INTO rmf * FROM config.rule_max_fine
       WHERE id = this_max_fine_rule;
 
     -- Apply the rules to this circulation
@@ -906,22 +906,28 @@ BEGIN
       max_fine_rule = rmf.name,
       duration = rcd.normal,
       recurring_fine = rrf.normal,
-      max_fine = rmf.amount,
+      max_fine =
+        CASE rmf.is_percent
+          WHEN TRUE THEN (rmf.amount / 100.0) * ac.price
+          ELSE rmf.amount
+        END,
       renewal_remaining = rcd.max_renewals
     FROM
       config.rule_circ_duration rcd,
       config.rule_recurring_fine rrf,
-      config.rule_max_fine rmf
+      config.rule_max_fine rmf,
+                        asset.copy ac
     WHERE
       rcd.id = ' || this_duration_rule || ' AND
       rrf.id = ' || this_fine_rule || ' AND
       rmf.id = ' || this_max_fine_rule || ' AND
+                        ac.id = c.target_copy AND
       c.id = ' || circ || ';');
 
     -- Keep track of where we are in the process
     n := n + 1;
-    IF (n % 100 = 0) THEN 
-      RAISE INFO '%', n || ' of ' || n_circs 
+    IF (n % 100 = 0) THEN
+      RAISE INFO '%', n || ' of ' || n_circs
         || ' (' || (100*n/n_circs) || '%) circs updated.';
     END IF;
 
