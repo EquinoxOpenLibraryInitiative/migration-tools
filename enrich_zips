@@ -20,12 +20,16 @@ NOTES
 
 	Geonames database can be downloaded from http://download.geonames.org/export/zip/US.zip
 
+	Add the --believegn flag if you want to believe the Geonames database when it conflicts with patron data.
+
 =cut
 
-my ($db, $makezips, %zips, $warn);
-my $result = GetOptions ("db=s"     => \$db,
-                         "makezips" => \$makezips,
-                         "warn"     => \$warn);
+my ($db, $makezips, %zips, $warn, $believegn);
+my $result = GetOptions ("db=s"      => \$db,
+                         "makezips"  => \$makezips,
+                         "warn"      => \$warn,
+                         "believegn" => \$believegn);
+
 die
 	"Please specify the location of the Geonames database with --db US.txt\n" .
 	"HINT: You can download it at http://download.geonames.org/export/zip/US.zip" .
@@ -65,6 +69,12 @@ while (<>) {
 	}
 
 	if ($makezips) {
+		if ($city ne $dbcity || $state ne $dbstate) {
+			if ($believegn) {
+				$city = $dbcity;
+				$state = $dbstate;
+			}
+		}
 		print "|" . join("|", ($state, $city, $zip, "1", "", $county)) . "||\n";
 	} else {
 		print join("\t", ($city, $state, $zip, $county)) . "\n";
