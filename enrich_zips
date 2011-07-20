@@ -71,7 +71,7 @@ while (<>) {
 	if ($makezips) {
 		if ($city ne $dbcity || $state ne $dbstate) {
 			if ($believegn) {
-				$city = $dbcity;
+				$city  = $dbcity;
 				$state = $dbstate;
 			}
 		}
