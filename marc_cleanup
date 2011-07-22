@@ -186,7 +186,7 @@ sub do_automated_cleanups {
 sub stow_record_data {
     # get tag data if we're looking at it
     my $tag = 0;
-    if ($record[$ptr] =~ m/<(control|data)field tag="(.{3})"/) {
+    if ($record[$ptr] =~ m/<(?:control|data)field tag="(.{3})"/) {
         $recmeta{tag} = $1;
         $tag = $recmeta{tag};
         $record[$ptr] =~ m/ind1="(.)"/;
