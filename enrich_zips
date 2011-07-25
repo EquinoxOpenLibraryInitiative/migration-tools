@@ -69,7 +69,7 @@ while (<>) {
 	}
 
 	if ($makezips) {
-		if ($city ne $dbcity || $state ne $dbstate) {
+		if (defined $zips{$zip} && ($city ne $dbcity || $state ne $dbstate)) {
 			if ($believegn) {
 				$city  = $dbcity;
 				$state = $dbstate;
