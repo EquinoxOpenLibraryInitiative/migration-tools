@@ -200,6 +200,7 @@ CREATE OR REPLACE FUNCTION migration_tools.build (TEXT) RETURNS VOID AS $$
         PERFORM migration_tools.exec( $1, 'CREATE UNIQUE INDEX ' || migration_schema || '_patron_barcode_key ON ' || migration_schema || '.actor_card ( barcode );' );
         PERFORM migration_tools.exec( $1, 'CREATE UNIQUE INDEX ' || migration_schema || '_patron_usrname_key ON ' || migration_schema || '.actor_usr ( usrname );' );
         PERFORM migration_tools.exec( $1, 'CREATE UNIQUE INDEX ' || migration_schema || '_copy_barcode_key ON ' || migration_schema || '.asset_copy ( barcode );' );
+        PERFORM migration_tools.exec( $1, 'CREATE UNIQUE INDEX ' || migration_schema || '_copy_id_key ON ' || migration_schema || '.asset_copy ( id );' );
         PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_callnum_record_idx ON ' || migration_schema || '.asset_call_number ( record );' );
         PERFORM migration_tools.exec( $1, 'CREATE INDEX ' || migration_schema || '_callnum_upper_label_id_lib_idx ON ' || migration_schema || '.asset_call_number ( UPPER(label),id,owning_lib );' );
         PERFORM migration_tools.exec( $1, 'CREATE UNIQUE INDEX ' || migration_schema || '_callnum_label_once_per_lib ON ' || migration_schema || '.asset_call_number ( record,owning_lib,label );' );
@@ -1158,3 +1159,29 @@ BEGIN
 END;
 
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION migration_tools.zip_to_city_state_county (TEXT) RETURNS TEXT[] AS $$
+
+	my $input = $_[0];
+	my %zipdata;
+
+	open (FH, '<', '/openils/var/data/zips.txt') or return ('No File Found', 'No File Found', 'No File Found');
+
+	while (<FH>) {
+		chomp;
+		my ($junk, $state, $city, $zip, $foo, $bar, $county, $baz, $morejunk) = split(/\|/);
+		$zipdata{$zip} = [$city, $state, $county];
+	}
+
+	if (defined $zipdata{$input}) {
+		my ($city, $state, $county) = @{$zipdata{$input}};
+		return [$city, $state, $county];
+	} elsif (defined $zipdata{substr $input, 0, 5}) {
+		my ($city, $state, $county) = @{$zipdata{substr $input, 0, 5}};
+		return [$city, $state, $county];
+	} else {
+		return ['ZIP not found', 'ZIP not found', 'ZIP not found'];
+	}
+  
+$$ LANGUAGE PLPERLU STABLE;
+
