@@ -1185,7 +1185,6 @@ CREATE OR REPLACE FUNCTION migration_tools.zip_to_city_state_county (TEXT) RETUR
   
 $$ LANGUAGE PLPERLU STABLE;
 
-
 CREATE OR REPLACE FUNCTION migration_tools.check_ou_depth ( ) RETURNS VOID AS $$
 
 DECLARE
@@ -1198,25 +1197,62 @@ DECLARE
 	parent_shortname TEXT;
 	ou_type_name TEXT;
 	parent_type TEXT;
+	type_id INT;
+	type_depth INT;
+	type_parent INT;
+	type_parent_depth INT;
+	proper_parent TEXT;
 
 BEGIN
 
 	errors_found := FALSE;
 
-  FOR ou IN EXECUTE ('SELECT DISTINCT id FROM actor.org_unit ORDER BY 1;') LOOP
+-- Checking actor.org_unit_type
+
+	FOR type_id IN EXECUTE ('SELECT id FROM actor.org_unit_type ORDER BY id;') LOOP
+
+		SELECT depth FROM actor.org_unit_type WHERE id = type_id INTO type_depth;
+		SELECT parent FROM actor.org_unit_type WHERE id = type_id INTO type_parent;
+
+		IF type_parent IS NOT NULL THEN
+
+			SELECT depth FROM actor.org_unit_type WHERE id = type_parent INTO type_parent_depth;
+
+			IF type_depth - type_parent_depth <> 1 THEN
+				SELECT name FROM actor.org_unit_type WHERE id = type_id INTO ou_type_name;
+				SELECT name FROM actor.org_unit_type WHERE id = type_parent INTO parent_type;
+				RAISE INFO 'The % org unit type has a depth of %, but its parent org unit type, %, has a depth of %.',
+					ou_type_name, type_depth, parent_type, type_parent_depth;
+				errors_found := TRUE;
+
+			END IF;
+
+		END IF;
+
+	END LOOP;
+
+-- Checking actor.org_unit
+
+  FOR ou IN EXECUTE ('SELECT id FROM actor.org_unit ORDER BY shortname;') LOOP
 
 		SELECT parent_ou FROM actor.org_unit WHERE id = ou INTO ou_parent;
-		SELECT depth FROM actor.org_unit_type WHERE id = ou INTO org_unit_depth;
-		SELECT depth FROM actor.org_unit_type WHERE id = ou_parent INTO parent_depth;
+		SELECT t.depth FROM actor.org_unit_type t, actor.org_unit o WHERE o.ou_type = t.id and o.id = ou INTO org_unit_depth;
+		SELECT t.depth FROM actor.org_unit_type t, actor.org_unit o WHERE o.ou_type = t.id and o.id = ou_parent INTO parent_depth;
+		SELECT shortname FROM actor.org_unit WHERE id = ou INTO ou_shortname;
+		SELECT shortname FROM actor.org_unit WHERE id = ou_parent INTO parent_shortname;
+		SELECT t.name FROM actor.org_unit_type t, actor.org_unit o WHERE o.ou_type = t.id and o.id = ou INTO ou_type_name;
+		SELECT t.name FROM actor.org_unit_type t, actor.org_unit o WHERE o.ou_type = t.id and o.id = ou_parent INTO parent_type;
 
-		IF ou_parent IS NOT NULL AND org_unit_depth - parent_depth <> 1 THEN
-			SELECT shortname FROM actor.org_unit WHERE id = ou INTO ou_shortname;
-			SELECT shortname FROM actor.org_unit WHERE id = ou_parent INTO parent_shortname;
-			SELECT t.name FROM actor.org_unit_type t, actor.org_unit o WHERE o.ou_type = t.id and o.id = ou INTO ou_type_name;
-			SELECT t.name FROM actor.org_unit_type t, actor.org_unit o WHERE o.ou_type = t.id and o.id = ou_parent INTO parent_type;
-			RAISE INFO '% (org unit %) is a % (depth %) but its parent, % (org unit %), is a % (depth %).', 
-				ou_shortname, ou, ou_type_name, org_unit_depth, parent_shortname, ou_parent, parent_type, parent_depth;
-			errors_found := TRUE;
+		IF ou_parent IS NOT NULL THEN
+
+			IF	(org_unit_depth - parent_depth <> 1) OR (
+				(SELECT parent FROM actor.org_unit_type WHERE name = ou_type_name) <> (SELECT id FROM actor.org_unit_type WHERE name = parent_type)
+			) THEN
+				RAISE INFO '% (org unit %) is a % (depth %) but its parent, % (org unit %), is a % (depth %).', 
+					ou_shortname, ou, ou_type_name, org_unit_depth, parent_shortname, ou_parent, parent_type, parent_depth;
+				errors_found := TRUE;
+			END IF;
+
 		END IF;
 
   END LOOP;
