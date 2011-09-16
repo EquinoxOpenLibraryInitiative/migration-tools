@@ -9,22 +9,22 @@
 UPDATE permission.grp_tree SET description = oils_i18n_gettext(10, 'Can do anything at the Branch level', 'pgt', 'description') WHERE id = 10;
 
 INSERT INTO permission.grp_tree (id, name, parent, description, perm_interval, usergroup, application_perm) VALUES
-	(8, oils_i18n_gettext(8, 'Cataloging Administrator', 'pgt', 'name'), 3, NULL, '3 years', TRUE, 'group_application.user.staff.cat_admin');
+	(100, oils_i18n_gettext(100, 'Cataloging Administrator', 'pgt', 'name'), 3, NULL, '3 years', TRUE, 'group_application.user.staff.cat_admin');
 INSERT INTO permission.grp_tree (id, name, parent, description, perm_interval, usergroup, application_perm) VALUES
-	(9, oils_i18n_gettext(9, 'Circulation Administrator', 'pgt', 'name'), 3, NULL, '3 years', TRUE, 'group_application.user.staff.circ_admin');
+	(101, oils_i18n_gettext(101, 'Circulation Administrator', 'pgt', 'name'), 3, NULL, '3 years', TRUE, 'group_application.user.staff.circ_admin');
 INSERT INTO permission.grp_tree (id, name, parent, description, perm_interval, usergroup, application_perm) VALUES
-	(11, oils_i18n_gettext(11, 'Serials', 'pgt', 'name'), 3, 
-	oils_i18n_gettext(11, 'Serials (includes admin features)', 'pgt', 'description'), '3 years', TRUE, 'group_application.user.staff.serials');
+	(102, oils_i18n_gettext(102, 'Serials', 'pgt', 'name'), 3, 
+	oils_i18n_gettext(102, 'Serials (includes admin features)', 'pgt', 'description'), '3 years', TRUE, 'group_application.user.staff.serials');
 INSERT INTO permission.grp_tree (id, name, parent, description, perm_interval, usergroup, application_perm) VALUES
-	(12, oils_i18n_gettext(12, 'System Administrator', 'pgt', 'name'), 3, 
-	oils_i18n_gettext(12, 'Can do anything at the System level', 'pgt', 'description'), '3 years', TRUE, 'group_application.user.staff.admin.system_admin');
+	(103, oils_i18n_gettext(103, 'System Administrator', 'pgt', 'name'), 3, 
+	oils_i18n_gettext(103, 'Can do anything at the System level', 'pgt', 'description'), '3 years', TRUE, 'group_application.user.staff.admin.system_admin');
 INSERT INTO permission.grp_tree (id, name, parent, description, perm_interval, usergroup, application_perm) VALUES
-	(13, oils_i18n_gettext(13, 'Global Administrator', 'pgt', 'name'), 3, 
-	oils_i18n_gettext(13, 'Can do anything at the Consortium level', 'pgt', 'description'), '3 years', TRUE, 'group_application.user.staff.admin.global_admin');
+	(104, oils_i18n_gettext(104, 'Global Administrator', 'pgt', 'name'), 3, 
+	oils_i18n_gettext(104, 'Can do anything at the Consortium level', 'pgt', 'description'), '3 years', TRUE, 'group_application.user.staff.admin.global_admin');
 INSERT INTO permission.grp_tree (id, name, parent, description, perm_interval, usergroup, application_perm) VALUES
-	(14, oils_i18n_gettext(14, 'Data Review', 'pgt', 'name'), 3, NULL, '3 years', TRUE, 'group_application.user.staff.data_review');
+	(105, oils_i18n_gettext(105, 'Data Review', 'pgt', 'name'), 3, NULL, '3 years', TRUE, 'group_application.user.staff.data_review');
 INSERT INTO permission.grp_tree (id, name, parent, description, perm_interval, usergroup, application_perm) VALUES
-	(15, oils_i18n_gettext(15, 'Volunteers', 'pgt', 'name'), 3, NULL, '3 years', TRUE, 'group_application.user.staff.volunteers');
+	(106, oils_i18n_gettext(106, 'Volunteers', 'pgt', 'name'), 3, NULL, '3 years', TRUE, 'group_application.user.staff.volunteers');
 
 SELECT SETVAL('permission.grp_tree_id_seq'::TEXT, (SELECT MAX(id) FROM permission.grp_tree));
 
@@ -32,7 +32,6 @@ SELECT SETVAL('permission.grp_tree_id_seq'::TEXT, (SELECT MAX(id) FROM permissio
 -- Wipe out existing permissions
 
 DELETE FROM permission.usr_grp_map WHERE usr <> 1;
-
 
 -- Add basic user permissions to the Users group
 
@@ -44,6 +43,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Users' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -66,6 +66,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Data Review' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -91,6 +92,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Data Review' AND
 		aout.name = 'System' AND
 		perm.code IN (
@@ -114,6 +116,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Staff' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -153,6 +156,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Staff' AND
 		aout.name = 'System' AND
 		perm.code IN (
@@ -174,6 +178,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Staff' AND
 		aout.name = 'Branch' AND
 		perm.code IN (
@@ -200,6 +205,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Catalogers' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -232,6 +238,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Catalogers' AND
 		aout.name = 'System' AND
 		perm.code IN (
@@ -275,6 +282,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Cataloging Admin' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -305,6 +313,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Cataloging Admin' AND
 		aout.name = 'System' AND
 		perm.code IN (
@@ -329,6 +338,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Circulators' AND
 		aout.name = 'Branch' AND
 		perm.code IN (
@@ -376,6 +386,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Circulators' AND
 		aout.name = 'System' AND
 		perm.code IN (
@@ -421,6 +432,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Circulation Admin' AND
 		aout.name = 'Branch' AND
 		perm.code IN (
@@ -434,6 +446,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Circulation Admin' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -453,6 +466,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Circulation Admin' AND
 		aout.name = 'System' AND
 		perm.code IN (
@@ -531,6 +545,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Local Administrator' AND
 		aout.name = 'Branch' AND
 		perm.code IN (
@@ -547,6 +562,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'System Administrator' AND
 		aout.name = 'System' AND
 		perm.code IN (
@@ -560,6 +576,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'System Administrator' AND
 		aout.name = 'Consortium' AND
 		perm.code ~ '^VIEW_TRIGGER';
@@ -575,6 +592,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Global Administrator' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -593,6 +611,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Acquisitions' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -664,6 +683,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Acquisitions Administrator' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
@@ -719,6 +739,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Serials' AND
 		aout.name = 'System' AND
 		perm.code IN (
@@ -741,6 +762,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Volunteers' AND
 		aout.name = 'Branch' AND
 		perm.code IN (
@@ -766,6 +788,7 @@ INSERT INTO permission.grp_perm_map (grp, perm, depth, grantable)
 		permission.perm_list perm,
 		actor.org_unit_type aout
 	WHERE
+		pgt.id NOT IN (SELECT grp FROM permission.grp_perm_map m WHERE m.perm = perm.id ORDER BY 1) AND
 		pgt.name = 'Volunteers' AND
 		aout.name = 'Consortium' AND
 		perm.code IN (
