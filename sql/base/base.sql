@@ -1266,3 +1266,33 @@ BEGIN
 END;
 
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION migration_tools.refresh_opac_visible_copies ( ) RETURNS VOID AS $$
+
+BEGIN	
+
+	TRUNCATE asset.opac_visible_copies;
+
+	INSERT INTO asset.opac_visible_copies (id, circ_lib, record)
+		SELECT
+			cp.id, cp.circ_lib, cn.record
+		FROM
+			asset.copy cp
+			JOIN asset.call_number cn ON (cn.id = cp.call_number)
+			JOIN actor.org_unit a ON (cp.circ_lib = a.id)
+			JOIN asset.copy_location cl ON (cp.location = cl.id)
+			JOIN config.copy_status cs ON (cp.status = cs.id)
+			JOIN biblio.record_entry b ON (cn.record = b.id)
+		WHERE 
+			NOT cp.deleted AND
+			NOT cn.deleted AND
+			NOT b.deleted AND
+			cs.opac_visible AND
+			cl.opac_visible AND
+			cp.opac_visible AND
+			a.opac_visible;
+
+END;
+
+$$ LANGUAGE plpgsql;
