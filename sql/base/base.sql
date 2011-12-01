@@ -1272,7 +1272,7 @@ CREATE OR REPLACE FUNCTION migration_tools.refresh_opac_visible_copies ( ) RETUR
 
 BEGIN	
 
-	TRUNCATE asset.opac_visible_copies;
+	DELETE FROM asset.opac_visible_copies;
 
 	INSERT INTO asset.opac_visible_copies (id, circ_lib, record)
 		SELECT
