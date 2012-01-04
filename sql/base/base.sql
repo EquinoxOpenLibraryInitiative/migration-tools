@@ -1052,7 +1052,7 @@ DECLARE
   
 BEGIN
 
-	EXECUTE ('TRUNCATE ' || c || ';');
+	EXECUTE ('DELETE FROM ' || c || ';');
 	EXECUTE ('INSERT INTO ' || c || ' (usr, barcode) SELECT id, usrname FROM ' || u || ';');
 	EXECUTE ('UPDATE ' || u || ' u SET card = c.id FROM ' || c || ' c WHERE c.usr = u.id;');
 
