@@ -1275,7 +1275,7 @@ BEGIN
 	DELETE FROM asset.opac_visible_copies;
 
 	INSERT INTO asset.opac_visible_copies (id, circ_lib, record)
-		SELECT
+		SELECT DISTINCT
 			cp.id, cp.circ_lib, cn.record
 		FROM
 			asset.copy cp
@@ -1291,7 +1291,8 @@ BEGIN
 			cs.opac_visible AND
 			cl.opac_visible AND
 			cp.opac_visible AND
-			a.opac_visible;
+			a.opac_visible AND
+			cp.id NOT IN (SELECT id FROM asset.opac_visible_copies);
 
 END;
 
