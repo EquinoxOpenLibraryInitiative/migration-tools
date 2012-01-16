@@ -256,7 +256,7 @@ sub generate {
               { push @{$map->{mods}}, $tok }
             elsif ($tok =~ m/^f:/)
               { push @{$map->{filt}}, $tok }
-            elsif ($tok =~ m/^[a-z0-9]$/)
+            elsif ($tok =~ m/^[a-zA-Z0-9]$/)
               { $map->{sub} = $tok }
             elsif ($tok =~ /^c:(.*)$/)
               { $map->{sep} = $1 }
