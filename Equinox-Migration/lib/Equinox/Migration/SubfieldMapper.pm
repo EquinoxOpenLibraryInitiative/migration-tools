@@ -245,7 +245,7 @@ sub generate {
         $map->{tag}   = shift @tokens;
         while (defined (my $tok = shift @tokens)) {
             last if ($tok =~ m/^#/);
-            if ($tok =~ m/^[a-z]:'/ and $tok !~ /^'$/) {
+            if ($tok =~ m/^[a-zA-Z]:'/ and $tok !~ /^'$/) {
                 $tok .= ' ' . shift @tokens
                   until ($tokens[0] =~ m/'$/);
                 $tok .= ' ' . shift @tokens;
