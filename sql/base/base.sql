@@ -1078,7 +1078,7 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_856_9 (TEXT, TEXT) RETURNS TEX
     my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
 
     foreach my $field ( $marc->field('856') ) {
-      if ( scalar(grep( /(netlibrary|overdrive)\.com/i, $field->subfield('u'))) > 0 &&
+      if ( scalar(grep( /(contentreserve|netlibrary|overdrive)\.com/i, $field->subfield('u'))) > 0 &&
            ! ( $field->as_string('9') =~ m/$shortname/ ) ) {
         $field->add_subfields( '9' => $shortname );
 				$field->update( ind2 => '0');
