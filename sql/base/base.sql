@@ -939,6 +939,219 @@ END;
 
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION migration_tools.apply_circ_matrix_before_20( tablename TEXT ) RETURNS VOID AS $$
+
+-- Usage:
+--
+--   First make sure the circ matrix is loaded and the circulations
+--   have been staged to the extent possible (but at the very least
+--   circ_lib, target_copy, usr, and *_renewal).  User profiles and
+--   circ modifiers must also be in place.
+--
+--   SELECT migration_tools.apply_circ_matrix('m_pioneer.action_circulation');
+--
+
+DECLARE
+  circ_lib             INT;
+  target_copy          INT;
+  usr                  INT;
+  is_renewal           BOOLEAN;
+  this_duration_rule   INT;
+  this_fine_rule       INT;
+  this_max_fine_rule   INT;
+  rcd                  config.rule_circ_duration%ROWTYPE;
+  rrf                  config.rule_recurring_fine%ROWTYPE;
+  rmf                  config.rule_max_fine%ROWTYPE;
+  circ                 INT;
+  n                    INT := 0;
+  n_circs              INT;
+  
+BEGIN
+
+  EXECUTE 'SELECT COUNT(*) FROM ' || tablename || ';' INTO n_circs;
+
+  FOR circ IN EXECUTE ('SELECT id FROM ' || tablename) LOOP
+
+    -- Fetch the correct rules for this circulation
+    EXECUTE ('
+      SELECT
+        circ_lib,
+        target_copy,
+        usr,
+        CASE
+          WHEN phone_renewal OR desk_renewal OR opac_renewal THEN TRUE
+          ELSE FALSE
+        END
+      FROM ' || tablename || ' WHERE id = ' || circ || ';')
+      INTO circ_lib, target_copy, usr, is_renewal ;
+    SELECT
+      INTO this_duration_rule,
+           this_fine_rule,
+           this_max_fine_rule
+      duration_rule,
+      recuring_fine_rule,
+      max_fine_rule
+      FROM action.find_circ_matrix_matchpoint(
+        circ_lib,
+        target_copy,
+        usr,
+        is_renewal
+        );
+    SELECT INTO rcd * FROM config.rule_circ_duration
+      WHERE id = this_duration_rule;
+    SELECT INTO rrf * FROM config.rule_recurring_fine
+      WHERE id = this_fine_rule;
+    SELECT INTO rmf * FROM config.rule_max_fine
+      WHERE id = this_max_fine_rule;
+
+    -- Apply the rules to this circulation
+    EXECUTE ('UPDATE ' || tablename || ' c
+    SET
+      duration_rule = rcd.name,
+      recuring_fine_rule = rrf.name,
+      max_fine_rule = rmf.name,
+      duration = rcd.normal,
+      recuring_fine = rrf.normal,
+      max_fine =
+        CASE rmf.is_percent
+          WHEN TRUE THEN (rmf.amount / 100.0) * ac.price
+          ELSE rmf.amount
+        END,
+      renewal_remaining = rcd.max_renewals
+    FROM
+      config.rule_circ_duration rcd,
+      config.rule_recuring_fine rrf,
+      config.rule_max_fine rmf,
+                        asset.copy ac
+    WHERE
+      rcd.id = ' || this_duration_rule || ' AND
+      rrf.id = ' || this_fine_rule || ' AND
+      rmf.id = ' || this_max_fine_rule || ' AND
+                        ac.id = c.target_copy AND
+      c.id = ' || circ || ';');
+
+    -- Keep track of where we are in the process
+    n := n + 1;
+    IF (n % 100 = 0) THEN
+      RAISE INFO '%', n || ' of ' || n_circs
+        || ' (' || (100*n/n_circs) || '%) circs updated.';
+    END IF;
+
+  END LOOP;
+
+  RETURN;
+END;
+
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION migration_tools.apply_circ_matrix_after_20( tablename TEXT ) RETURNS VOID AS $$
+
+-- Usage:
+--
+--   First make sure the circ matrix is loaded and the circulations
+--   have been staged to the extent possible (but at the very least
+--   circ_lib, target_copy, usr, and *_renewal).  User profiles and
+--   circ modifiers must also be in place.
+--
+--   SELECT migration_tools.apply_circ_matrix('m_pioneer.action_circulation');
+--
+
+DECLARE
+  circ_lib             INT;
+  target_copy          INT;
+  usr                  INT;
+  is_renewal           BOOLEAN;
+  this_duration_rule   INT;
+  this_fine_rule       INT;
+  this_max_fine_rule   INT;
+  rcd                  config.rule_circ_duration%ROWTYPE;
+  rrf                  config.rule_recurring_fine%ROWTYPE;
+  rmf                  config.rule_max_fine%ROWTYPE;
+  circ                 INT;
+  n                    INT := 0;
+  n_circs              INT;
+  
+BEGIN
+
+  EXECUTE 'SELECT COUNT(*) FROM ' || tablename || ';' INTO n_circs;
+
+  FOR circ IN EXECUTE ('SELECT id FROM ' || tablename) LOOP
+
+    -- Fetch the correct rules for this circulation
+    EXECUTE ('
+      SELECT
+        circ_lib,
+        target_copy,
+        usr,
+        CASE
+          WHEN phone_renewal OR desk_renewal OR opac_renewal THEN TRUE
+          ELSE FALSE
+        END
+      FROM ' || tablename || ' WHERE id = ' || circ || ';')
+      INTO circ_lib, target_copy, usr, is_renewal ;
+    SELECT
+      INTO this_duration_rule,
+           this_fine_rule,
+           this_max_fine_rule
+      (matchpoint).duration_rule,
+      (matchpoint).recurring_fine_rule,
+      (matchpoint).max_fine_rule
+      FROM action.find_circ_matrix_matchpoint(
+        circ_lib,
+        target_copy,
+        usr,
+        is_renewal
+        );
+    SELECT INTO rcd * FROM config.rule_circ_duration
+      WHERE id = this_duration_rule;
+    SELECT INTO rrf * FROM config.rule_recurring_fine
+      WHERE id = this_fine_rule;
+    SELECT INTO rmf * FROM config.rule_max_fine
+      WHERE id = this_max_fine_rule;
+
+    -- Apply the rules to this circulation
+    EXECUTE ('UPDATE ' || tablename || ' c
+    SET
+      duration_rule = rcd.name,
+      recurring_fine_rule = rrf.name,
+      max_fine_rule = rmf.name,
+      duration = rcd.normal,
+      recurring_fine = rrf.normal,
+      max_fine =
+        CASE rmf.is_percent
+          WHEN TRUE THEN (rmf.amount / 100.0) * ac.price
+          ELSE rmf.amount
+        END,
+      renewal_remaining = rcd.max_renewals
+    FROM
+      config.rule_circ_duration rcd,
+      config.rule_recurring_fine rrf,
+      config.rule_max_fine rmf,
+                        asset.copy ac
+    WHERE
+      rcd.id = ' || this_duration_rule || ' AND
+      rrf.id = ' || this_fine_rule || ' AND
+      rmf.id = ' || this_max_fine_rule || ' AND
+                        ac.id = c.target_copy AND
+      c.id = ' || circ || ';');
+
+    -- Keep track of where we are in the process
+    n := n + 1;
+    IF (n % 100 = 0) THEN
+      RAISE INFO '%', n || ' of ' || n_circs
+        || ' (' || (100*n/n_circs) || '%) circs updated.';
+    END IF;
+
+  END LOOP;
+
+  RETURN;
+END;
+
+$$ LANGUAGE plpgsql;
+
+
+
+
 CREATE OR REPLACE FUNCTION migration_tools.stage_not_applicable_asset_stat_cats( schemaname TEXT ) RETURNS VOID AS $$
 
 -- USAGE: Make sure the stat_cat and stat_cat_entry tables are populated, including exactly one 'Not Applicable' entry per stat cat.
