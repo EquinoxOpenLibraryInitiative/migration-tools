@@ -1625,4 +1625,23 @@ END;
 
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION migration_tools.marc_parses( TEXT ) RETURNS BOOLEAN AS $func$
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'UTF-8');
+use MARC::Charset;
+
+MARC::Charset->assume_unicode(1);
+
+my $xml = shift;
+
+eval { my $r = MARC::Record->new_from_xml( $xml ); };
+if ($@) {
+    return 0;
+} else {
+    return 1;
+}
+
+$func$ LANGUAGE PLPERLU;
+COMMENT ON FUNCTION migration_tools.marc_parses(TEXT) IS 'Return boolean indicating if MARCXML string is parseable by MARC::File::XML';
 
