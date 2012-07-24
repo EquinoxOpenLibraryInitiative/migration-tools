@@ -622,7 +622,7 @@ CREATE OR REPLACE FUNCTION migration_tools.expand_barcode (TEXT, TEXT, INTEGER, 
     return $barcode if (length($prefix) + length($new_barcode) + length($suffix)) > $maxlen;
 
     return "$prefix$new_barcode$suffix";
-$$ LANGUAGE PLPERL STABLE;
+$$ LANGUAGE PLPERLU STABLE;
 
 CREATE OR REPLACE FUNCTION migration_tools.attempt_cast (TEXT,TEXT,TEXT) RETURNS RECORD AS $$
     DECLARE
@@ -729,7 +729,7 @@ CREATE OR REPLACE FUNCTION migration_tools.add_codabar_checkdigit (TEXT) RETURNS
     my $remainder = $total % 10;
     my $checkdigit = ($remainder == 0) ? $remainder : 10 - $remainder;
     return $barcode . $checkdigit; 
-$$ LANGUAGE PLPERL STRICT STABLE;
+$$ LANGUAGE PLPERLU STRICT STABLE;
 
 CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEXT AS $$
   DECLARE
