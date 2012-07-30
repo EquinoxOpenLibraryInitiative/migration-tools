@@ -316,7 +316,7 @@ sub buildrecord {
     my $istrash = 0;
     my $trash = $c->{trash};
 
-    $l = <MARC> while (defined $l and $l !~ /<record>/);
+    $l = <MARC> while (defined $l and $l !~ /<record/);
     return $l unless defined $l;
     $c->{ricount}++;
 
