@@ -38,9 +38,8 @@ open XF, '>', $conf->{exception} or die "$0: cannot open exception file $conf->{
 
 for my $file (@ARGV) {
     print XF "Processing $file\n";
-    my $batch = undef; my $record = undef;
 
-    $batch = MARC::Batch->new($conf->{marctype}, $file);
+    my $batch = MARC::Batch->new($conf->{marctype}, $file);
     $batch->strict_off();
     $batch->warnings_off();
 
@@ -609,7 +608,7 @@ Options
   --tag=N           -t  Which tag to use (default 903)
   --subfield=X      -s  Which subfield to use (default 'a')
   --quiet           -q  Don't write status messages to STDOUT
-  --ignoresubtitle  -i  Ignore 245$b and construct the title from 245$a alone.
+  --ignoresubtitle  -i  Ignore 245\$b and construct the title from 245\$a alone.
 
   --fingerprints=LIST  Fingerprints to generate, comma separated
                        Default: oclc,isbn,edition,issn,lccn,accomp,authpub
