@@ -1138,7 +1138,8 @@ BEGIN
           WHEN TRUE THEN (rmf.amount / 100.0) * ac.price
           ELSE rmf.amount
         END,
-      renewal_remaining = rcd.max_renewals
+      renewal_remaining = rcd.max_renewals,
+      grace_period = rrf.grace_period
     FROM
       config.rule_circ_duration rcd,
       config.rule_recurring_fine rrf,
