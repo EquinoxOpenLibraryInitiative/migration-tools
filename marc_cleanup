@@ -93,7 +93,7 @@ while ( buildrecord() ) {
     until ($ptr == $#record) {
         # get datafield/tag data if we have it
         $rc = stow_record_data() if ($c->{'renumber-from'} and $c->{'original-tag'});
-        return $rc if $rc;
+        next if $rc;
 
         # naked ampersands
         if ($record[$ptr] =~ /&/ && $record[$ptr] !~ /&\w+?;/)
