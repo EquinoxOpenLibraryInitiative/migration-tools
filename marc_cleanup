@@ -193,6 +193,12 @@ sub do_automated_cleanups {
             message("Dollar sign corrected");
         }
 
+        # excessive trailing whitespace in subfield contents
+        if ($record[$ptr] =~ m|\s{10,}</subfield>|) {
+            $record[$ptr] =~ s|\s{10,}</subfield>|</subfield>|;
+            message("Trailing whitespace trimmed from subfield contents");
+        }
+
         # automatable subfield maladies
         $record[$ptr] =~ s/code=" ">c/code="c">/;
         $record[$ptr] =~ s/code=" ">\$/code="c">\$/;
