@@ -1669,6 +1669,10 @@ BEGIN
    EXECUTE $$COPY (SELECT owning_lib, label, label_sortkey FROM asset.call_number_suffix WHERE owning_lib IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
            $$) TO '$$ ||  dir || $$/asset_call_number_suffix'$$;
+   EXECUTE $$COPY config.rule_circ_duration TO '$$ ||  dir || $$/config_rule_circ_duration'$$;
+   EXECUTE $$COPY config.rule_age_hold_protect TO '$$ ||  dir || $$/config_age_hold_protect'$$;
+   EXECUTE $$COPY config.rule_max_fine TO '$$ ||  dir || $$/config_rule_max_fine'$$;
+   EXECUTE $$COPY config.rule_recurring_fine TO '$$ ||  dir || $$/config_rule_recurring_fine'$$;
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
@@ -1681,6 +1685,41 @@ BEGIN
    EXECUTE $$COPY permission.grp_penalty_threshold (grp, org_unit, penalty, threshold) FROM '$$ ||  dir || $$/permission_grp_penalty_threshold'$$;
    EXECUTE $$COPY asset.call_number_prefix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_prefix'$$;
    EXECUTE $$COPY asset.call_number_suffix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_suffix'$$;
+
+   -- import any new circ rules
+   PERFORM migration_tools.simple_import_new_rows_by_value(cir, 'config', 'rule_circ_duration', 'id', 'name');
+   PERFORM migration_tools.simple_import_new_rows_by_value(cir, 'config', 'rule_age_hold_protect', 'id', 'name');
+   PERFORM migration_tools.simple_import_new_rows_by_value(cir, 'config', 'rule_max_fine', 'id', 'name');
+   PERFORM migration_tools.simple_import_new_rows_by_value(cir, 'config', 'rule_recurring_fine', 'id', 'name');
+
+END;
+$FUNC$ LANGUAGE PLPGSQL;
+
+
+CREATE OR REPLACE FUNCTION migration_tools.simple_import_new_rows_by_value(dir TEXT, schemaname TEXT, tablename TEXT, idcol TEXT, matchcol TEXT) RETURNS VOID AS $FUNC$
+DECLARE
+    name TEXT;
+    loopq TEXT;
+    existsq TEXT;
+    ct INTEGER;
+    cols TEXT[];
+    copyst TEXT;
+BEGIN
+    EXECUTE $$DROP TABLE IF EXISTS tmp_$$ || tablename;
+    EXECUTE $$CREATE TEMPORARY TABLE tmp_$$ || tablename || $$ AS SELECT * FROM $$ || schemaname || '.' || tablename || $$ LIMIT 0$$;
+    EXECUTE $$COPY tmp_$$ || tablename || $$ FROM '$$ ||  dir || '/' || schemaname || '_' || tablename || $$'$$;
+    loopq := 'SELECT ' || matchcol || ' FROM tmp_' || tablename || ' ORDER BY ' || idcol;
+    existsq := 'SELECT COUNT(*) FROM ' || schemaname || '.' || tablename || ' WHERE ' || matchcol || ' = $1';
+    SELECT ARRAY_AGG(column_name::TEXT) INTO cols FROM information_schema.columns WHERE table_schema = schemaname AND table_name = tablename AND column_name <> idcol;
+    FOR name IN EXECUTE loopq LOOP
+       EXECUTE existsq INTO ct USING name;
+       IF ct = 0 THEN
+           RAISE NOTICE 'inserting %.% row for %', schemaname, tablename, name;
+           copyst := 'INSERT INTO ' || schemaname || '.' || tablename || ' (' || ARRAY_TO_STRING(cols, ',') || ') SELECT ' || ARRAY_TO_STRING(cols, ',') || 
+                     ' FROM tmp_' || tablename || ' WHERE ' || matchcol || ' = $1';
+           EXECUTE copyst USING name;
+       END IF;
+    END LOOP;
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
