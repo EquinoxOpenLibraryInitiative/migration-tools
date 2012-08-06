@@ -1670,7 +1670,7 @@ BEGIN
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
            $$) TO '$$ ||  dir || $$/asset_call_number_suffix'$$;
    EXECUTE $$COPY config.rule_circ_duration TO '$$ ||  dir || $$/config_rule_circ_duration'$$;
-   EXECUTE $$COPY config.rule_age_hold_protect TO '$$ ||  dir || $$/config_age_hold_protect'$$;
+   EXECUTE $$COPY config.rule_age_hold_protect TO '$$ ||  dir || $$/config_rule_age_hold_protect'$$;
    EXECUTE $$COPY config.rule_max_fine TO '$$ ||  dir || $$/config_rule_max_fine'$$;
    EXECUTE $$COPY config.rule_recurring_fine TO '$$ ||  dir || $$/config_rule_recurring_fine'$$;
    EXECUTE $$COPY permission.grp_tree TO '$$ ||  dir || $$/permission_grp_tree'$$;
