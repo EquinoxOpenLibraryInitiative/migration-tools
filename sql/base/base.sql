@@ -1660,6 +1660,9 @@ BEGIN
    EXECUTE $$COPY (SELECT name, owning_lib, holdable, hold_verify, opac_visible, circulate FROM asset.copy_location WHERE owning_lib IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
            $$) TO '$$ ||  dir || $$/asset_copy_location'$$;
+   EXECUTE $$COPY (SELECT grp, org_unit, penalty, threshold FROM permission.grp_penalty_threshold WHERE org_unit IN ($$ ||
+           ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
+           $$) TO '$$ ||  dir || $$/permission_grp_penalty_threshold'$$;
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
