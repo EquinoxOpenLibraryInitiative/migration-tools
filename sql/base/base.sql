@@ -1687,10 +1687,10 @@ BEGIN
    EXECUTE $$COPY asset.call_number_suffix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_suffix'$$;
 
    -- import any new circ rules
-   PERFORM migration_tools.simple_import_new_rows_by_value(cir, 'config', 'rule_circ_duration', 'id', 'name');
-   PERFORM migration_tools.simple_import_new_rows_by_value(cir, 'config', 'rule_age_hold_protect', 'id', 'name');
-   PERFORM migration_tools.simple_import_new_rows_by_value(cir, 'config', 'rule_max_fine', 'id', 'name');
-   PERFORM migration_tools.simple_import_new_rows_by_value(cir, 'config', 'rule_recurring_fine', 'id', 'name');
+   PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_circ_duration', 'id', 'name');
+   PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_age_hold_protect', 'id', 'name');
+   PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_max_fine', 'id', 'name');
+   PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_recurring_fine', 'id', 'name');
 
 END;
 $FUNC$ LANGUAGE PLPGSQL;
