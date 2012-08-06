@@ -1727,3 +1727,52 @@ BEGIN
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
+CREATE OR REPLACE FUNCTION migration_tools.merge_marc_fields( TEXT, TEXT, TEXT[] ) RETURNS TEXT AS $func$
+
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'UTF-8');
+use MARC::Charset;
+
+MARC::Charset->assume_unicode(1);
+
+my $target_xml = shift;
+my $source_xml = shift;
+my $tags = shift;
+
+my $target;
+my $source;
+
+eval { $target = MARC::Record->new_from_xml( $target_xml ); };
+if ($@) {
+    return;
+}
+eval { $source = MARC::Record->new_from_xml( $source_xml ); };
+if ($@) {
+    return;
+}
+
+my $source_id = $source->subfield('901', 'c');
+my $target_id = $target->subfield('901', 'c');
+
+my %existing_fields;
+foreach my $tag (@$tags) {
+    my %existing_fields = map { $_->as_formatted() => 1 } $target->field($tag);
+    my @to_add = grep { not exists $existing_fields{$_->as_formatted()} } $source->field($tag);
+    $target->insert_fields_ordered(map { $_->clone() } @to_add);
+    if (@to_add) {
+        elog(NOTICE, "Merged $tag tag(s) from $source_id to $target_id");
+    }
+}
+
+my $xml = $target->as_xml_record;
+$xml =~ s/^<\?.+?\?>$//mo;
+$xml =~ s/\n//sgo;
+$xml =~ s/>\s+</></sgo;
+
+return $xml;
+
+$func$ LANGUAGE PLPERLU;
+COMMENT ON FUNCTION migration_tools.merge_marc_fields( TEXT, TEXT, TEXT[] ) IS 'Given two MARCXML strings and an array of tags, returns MARCXML representing the merge of the specified fields from the second MARCXML record into the first.';
