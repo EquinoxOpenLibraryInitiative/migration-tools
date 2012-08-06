@@ -1646,3 +1646,20 @@ if ($@) {
 $func$ LANGUAGE PLPERLU;
 COMMENT ON FUNCTION migration_tools.marc_parses(TEXT) IS 'Return boolean indicating if MARCXML string is parseable by MARC::File::XML';
 
+CREATE OR REPLACE FUNCTION migration_tools.simple_export_library_config(dir TEXT, orgs INT[]) RETURNS VOID AS $FUNC$
+BEGIN
+   EXECUTE $$COPY (SELECT * FROM actor.hours_of_operation WHERE id IN ($$ ||
+           ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
+           $$) TO '$$ ||  dir || $$/actor_hours_of_operation'$$;
+   EXECUTE $$COPY (SELECT org_unit, close_start, close_end, reason FROM actor.org_unit_closed WHERE org_unit IN ($$ ||
+           ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
+           $$) TO '$$ ||  dir || $$/actor_org_unit_closed'$$;
+   EXECUTE $$COPY (SELECT org_unit, name, value FROM actor.org_unit_setting WHERE org_unit IN ($$ ||
+           ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
+           $$) TO '$$ ||  dir || $$/actor_org_unit_setting'$$;
+   EXECUTE $$COPY (SELECT name, owning_lib, holdable, hold_verify, opac_visible, circulate FROM asset.copy_location WHERE owning_lib IN ($$ ||
+           ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
+           $$) TO '$$ ||  dir || $$/asset_copy_location'$$;
+END;
+$FUNC$ LANGUAGE PLPGSQL;
+
