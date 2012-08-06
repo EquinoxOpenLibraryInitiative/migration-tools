@@ -1663,6 +1663,12 @@ BEGIN
    EXECUTE $$COPY (SELECT grp, org_unit, penalty, threshold FROM permission.grp_penalty_threshold WHERE org_unit IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
            $$) TO '$$ ||  dir || $$/permission_grp_penalty_threshold'$$;
+   EXECUTE $$COPY (SELECT owning_lib, label, label_sortkey FROM asset.call_number_prefix WHERE owning_lib IN ($$ ||
+           ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
+           $$) TO '$$ ||  dir || $$/asset_call_number_prefix'$$;
+   EXECUTE $$COPY (SELECT owning_lib, label, label_sortkey FROM asset.call_number_suffix WHERE owning_lib IN ($$ ||
+           ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
+           $$) TO '$$ ||  dir || $$/asset_call_number_suffix'$$;
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
@@ -1673,6 +1679,8 @@ BEGIN
    EXECUTE $$COPY actor.org_unit_setting (org_unit, name, value) FROM '$$ ||  dir || $$/actor_org_unit_setting'$$;
    EXECUTE $$COPY asset.copy_location (name, owning_lib, holdable, hold_verify, opac_visible, circulate) FROM '$$ ||  dir || $$/asset_copy_location'$$;
    EXECUTE $$COPY permission.grp_penalty_threshold (grp, org_unit, penalty, threshold) FROM '$$ ||  dir || $$/permission_grp_penalty_threshold'$$;
+   EXECUTE $$COPY asset.call_number_prefix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_prefix'$$;
+   EXECUTE $$COPY asset.call_number_suffix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_suffix'$$;
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
