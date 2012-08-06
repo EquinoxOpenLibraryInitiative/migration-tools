@@ -1673,6 +1673,7 @@ BEGIN
    EXECUTE $$COPY config.rule_age_hold_protect TO '$$ ||  dir || $$/config_age_hold_protect'$$;
    EXECUTE $$COPY config.rule_max_fine TO '$$ ||  dir || $$/config_rule_max_fine'$$;
    EXECUTE $$COPY config.rule_recurring_fine TO '$$ ||  dir || $$/config_rule_recurring_fine'$$;
+   EXECUTE $$COPY permission.grp_tree TO '$$ ||  dir || $$/permission_grp_tree'$$;
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
@@ -1691,6 +1692,9 @@ BEGIN
    PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_age_hold_protect', 'id', 'name');
    PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_max_fine', 'id', 'name');
    PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_recurring_fine', 'id', 'name');
+
+   -- and permission groups
+   PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'permission', 'grp_tree', 'id', 'name');
 
 END;
 $FUNC$ LANGUAGE PLPGSQL;
