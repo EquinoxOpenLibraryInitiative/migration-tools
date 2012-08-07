@@ -37,9 +37,10 @@ our $VERSION = '1.005';
 
 my $dstore;
 my $sfmap;
-my @modlist = qw( multi ignoremulti bib required first concatenate );
+my @modlist = qw( multi ignoremulti bib required first concatenate parallel );
 my %allmods = ();
 my $multis = {};
+my $parallel_fields = {};
 my $reccount;
 my $verbose = 0;
 
@@ -70,7 +71,9 @@ sub new {
 
     $verbose = 1 if $args{verbose};
 
-    my $self = bless { multis => \$multis,
+    my $self = bless {
+                        multis => \$multis,
+                        parallel_fields => \$parallel_fields,
                      }, $class;
 
     # initialize map and taglist
@@ -118,7 +121,13 @@ sub parse_record {
                 my $fieldname = $sfmap->field($mappedtag, $mappedsub);
                 my $mods = $sfmap->mods($fieldname);
                 next if $mods->{multi};
-                $crec->{tags}[-1]{uni}{$mappedsub} = '';
+                if ($mods->{parallel}) {
+                    push @{ $crec->{tags}[-1]{parallel}{$mappedsub} }, '';
+                    $crec->{tags}[-1]{uni} = undef;
+                } else {
+                    $crec->{tags}[-1]{uni}{$mappedsub} = '';
+                    $crec->{tags}[-1]{parallel} = undef;
+                }
                 $crec->{tags}[-1]{multi} = undef;
                 $crec->{tags}[-1]{tag} = $mappedtag;
             }
@@ -155,7 +164,7 @@ sub process_field {
         return;
     }
     if ($sfmap->has($tag)) {
-        push @{$crec->{tags}}, { tag => $tag, uni => undef, multi => undef };
+        push @{$crec->{tags}}, { tag => $tag, uni => undef, multi => undef, parallel => undef };
         push @{$crec->{tmap}{$tag}}, (@{$crec->{tags}} - 1);
         my @subs = $field->children('subfield');
         for my $sub (@subs)
@@ -166,8 +175,13 @@ sub process_field {
             my $fieldname = $sfmap->field($tag, $mappedsub);
             my $mods = $sfmap->mods($fieldname);
             next if $mods->{multi};
-            $crec->{tags}[-1]{uni}{$mappedsub} = ''
-              unless defined $crec->{tags}[-1]{uni}{$mappedsub};
+            if ($mods->{parallel}) {
+                push @{ $crec->{tags}[-1]{parallel}{$mappedsub} }, ''
+                    unless defined $crec->{tags}[-1]{parallel}{$mappedsub};
+            } else {
+                $crec->{tags}[-1]{uni}{$mappedsub} = ''
+                    unless defined $crec->{tags}[-1]{uni}{$mappedsub};
+            }
         }
     }
 }
@@ -189,6 +203,12 @@ sub process_subs {
     # test filters
     for my $filter ( @{$sfmap->filters($field)} ) {
         return if ($sub->text =~ /$filter/i);
+    }
+
+    if ($mods->{parallel}) {
+        $parallel_fields->{$tag}{$code} = 1;
+        push @{$dataf->{parallel}{$code}}, $sub->text;
+        return;
     }
 
     # handle multi modifier
@@ -287,6 +307,17 @@ Returns hashref of C<{tag}{code}> for all mapped multi fields
 sub get_multis {
     my ($self) = @_;
     return $multis;
+}
+
+=head2 get_parallel_fields
+
+Returns hashref of C<{tag}{code}> for all mapped parallel fields
+
+=cut
+
+sub get_parallel_fields {
+    my ($self) = @_;
+    return $parallel_fields;
 }
 
 =head1 MODIFIERS

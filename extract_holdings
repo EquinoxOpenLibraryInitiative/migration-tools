@@ -62,6 +62,8 @@ sub extract_holdings {
           { open my $fh, ">", ($c->{prefix} . "-HOLDINGS-MULT-$t$s.pg"); $MULTIFILE{"$t$s"} = $fh }
     }
 
+    my $parallel_fields = $m->get_parallel_fields;
+
     my $i = 0; # record counter
     my $j = 0; # holdings counter
 
@@ -102,6 +104,22 @@ sub extract_holdings {
                     push @out, '';
                     next;
                 }
+
+                # handle parallel fields
+                if (exists($parallel_fields->{$othertag})) {
+                    my $num_fields = $#{ $rec->{tmap}{$othertag} };
+                    my $tag_idx;
+                    if ($holdidx > $num_fields) {
+                        $tag_idx = -1;
+                    } else {
+                        $tag_idx = $rec->{tmap}{$othertag}[$holdidx];
+                    }
+                    for my $sub ( sort keys %{ $parallel_fields->{$othertag } } ) {
+                        push @out, $tag_idx > -1 ? $rec->{tags}[$tag_idx]{parallel}{$sub}->[0] : '';
+                        print HOLDINGS "l_", $m->name($rec->{tags}[$tag_idx]{tag}, $sub), ", " unless $j;
+                    }
+                }
+
                 # handle only first other tag unless it is known to be multi
                 my $limit = 0;
                 if (exists($multis->{$othertag})) {
