@@ -32,11 +32,7 @@ while (<FP>) {
     chomp;
     my ($lead,$sub) = split /\t/;
     $sub =~ s/\s//g; # any whitespace is extraneous
-    if ($conf->{reverse}) {
-        $exclude{$lead}  = 1 unless ($lead < $conf->{lowerbound});
-    } else {
-        $exclude{$sub}   = 1 unless ($sub  < $conf->{lowerbound});
-    }
+    $exclude{$sub}  = 1 unless ($sub < $conf->{lowerbound});
 }
 close FP;
 
@@ -45,7 +41,11 @@ open MI, '<', $conf->{input} or die "Can't open input file: $!\n";
 open MO, '>', $conf->{output} or die "Can't open output file: $!\n";
 while (<MI>) {
     m/tag="$conf->{tag}".+?<subfield code="$conf->{subfield}">(\d+)</;
-    print MO unless $exclude{$1};
+    if ($conf->{reverse}) {
+        print MO if     $exclude{$1};
+    } else {
+        print MO unless $exclude{$1};
+    }
 }
 
 
