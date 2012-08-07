@@ -1755,7 +1755,9 @@ if ($@) {
 }
 
 my $source_id = $source->subfield('901', 'c');
+$source_id = $source->subfield('903', 'a') unless $source_id;
 my $target_id = $target->subfield('901', 'c');
+$target_id = $target->subfield('903', 'a') unless $target_id;
 
 my %existing_fields;
 foreach my $tag (@$tags) {
