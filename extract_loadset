@@ -41,6 +41,7 @@ open MI, '<', $conf->{input} or die "Can't open input file: $!\n";
 open MO, '>', $conf->{output} or die "Can't open output file: $!\n";
 while (<MI>) {
     m/tag="$conf->{tag}".+?<subfield code="$conf->{subfield}">(\d+)</;
+    next unless defined $1;
     if ($conf->{reverse}) {
         print MO if     $exclude{$1};
     } else {
