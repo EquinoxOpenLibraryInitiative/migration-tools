@@ -32,7 +32,11 @@ while (<FP>) {
     chomp;
     my ($lead,$sub) = split /\t/;
     $sub =~ s/\s//g; # any whitespace is extraneous
-    $exclude{$sub}  = 1 unless ($sub < $conf->{lowerbound});
+    if ($conf->{reverse}) {
+        $exclude{$lead}  = 1 unless ($lead < $conf->{lowerbound});
+    } else {
+        $exclude{$sub}   = 1 unless ($sub  < $conf->{lowerbound});
+    }
 }
 close FP;
 
@@ -58,6 +62,7 @@ sub initialize {
                          'output|o=s',
                          'tag|t=i',
                          'subfield|s=s',
+                         'reverse|r',
                          'help|h',
                        );
     show_help() unless $rc;
@@ -85,6 +90,7 @@ Usage is: extract_loadset -l BOUND -i INPUTXML -o OUTPUTXML MATCHSET
   --output      -o  MARCXML output file
   --tag         -t  MARC tag to use as identifier (default: 903)
   --subfield    -s  Subfield of --tag argument (default: 'a')
+  --reverse     -r  Output subordinate bibs rather than lead bibs
 HELP
 exit;
 }
