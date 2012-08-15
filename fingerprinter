@@ -373,11 +373,11 @@ sub dump_fingerprints {
         }
     }
 
-    if ($conf->{fingerprints}{edition} and $marc->{edition}) {
+    if ($conf->{fingerprints}{edition} and $marc->{edition} and $marc->{author}) {
         print OF join("\t", $marc->{score}, $marc->{id}, "edition",
                       $marc->{item_form}, $marc->{date1},
                       $marc->{record_type}, $marc->{bib_lvl},
-                      $marc->{title}, $marc->{edition}), "\n";
+                      $marc->{title}, $marc->{author}, $marc->{edition}), "\n";
     }
 
     if ($conf->{fingerprints}{issn} and $marc->{issn}) {
