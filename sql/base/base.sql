@@ -902,7 +902,7 @@ BEGIN
       duration_rule,
       recurring_fine_rule,
       max_fine_rule
-      FROM action.find_circ_matrix_matchpoint(
+      FROM action.item_user_circ_test(
         circ_lib,
         target_copy,
         usr,
