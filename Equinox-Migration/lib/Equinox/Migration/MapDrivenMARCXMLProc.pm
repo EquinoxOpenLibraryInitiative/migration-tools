@@ -37,7 +37,7 @@ our $VERSION = '1.005';
 
 my $dstore;
 my $sfmap;
-my @modlist = qw( multi ignoremulti bib required first concatenate parallel );
+my @modlist = qw( multi ignoremulti required first concatenate parallel );
 my %allmods = ();
 my $multis = {};
 my $parallel_fields = {};
