@@ -1778,3 +1778,58 @@ return $xml;
 
 $func$ LANGUAGE PLPERLU;
 COMMENT ON FUNCTION migration_tools.merge_marc_fields( TEXT, TEXT, TEXT[] ) IS 'Given two MARCXML strings and an array of tags, returns MARCXML representing the merge of the specified fields from the second MARCXML record into the first.';
+
+CREATE OR REPLACE FUNCTION migration_tools.make_stub_bib (text[], text[]) RETURNS TEXT AS $func$
+
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'UTF-8');
+use Text::CSV;
+
+my $in_tags = shift;
+my $in_values = shift;
+
+# hack-and-slash parsing of array-passed-as-string;
+# this can go away once everybody is running Postgres 9.1+
+my $csv = Text::CSV->new({binary => 1});
+$in_tags =~ s/^{//;
+$in_tags =~ s/}$//;
+my $status = $csv->parse($in_tags);
+my $tags = [ $csv->fields() ];
+$in_values =~ s/^{//;
+$in_values =~ s/}$//;
+$status = $csv->parse($in_values);
+my $values = [ $csv->fields() ];
+
+my $marc = MARC::Record->new();
+
+$marc->leader('00000nam a22000007  4500');
+$marc->append_fields(MARC::Field->new('008', '000000s                       000   eng d'));
+
+foreach my $i (0..$#$tags) {
+    my ($tag, $sf);
+    if ($tags->[$i] =~ /^(\d{3})([0-9a-z])$/) {
+        $tag = $1;
+        $sf = $2;
+        $marc->append_fields(MARC::Field->new($tag, ' ', ' ', $sf => $values->[$i])) if $values->[$i] !~ /^\s*$/ and $values->[$i] ne 'NULL';
+    } elsif ($tags->[$i] =~ /^(\d{3})$/) {
+        $tag = $1;
+        $marc->append_fields(MARC::Field->new($tag, $values->[$i])) if $values->[$i] !~ /^\s*$/ and $values->[$i] ne 'NULL';
+    }
+}
+
+my $xml = $marc->as_xml_record;
+$xml =~ s/^<\?.+?\?>$//mo;
+$xml =~ s/\n//sgo;
+$xml =~ s/>\s+</></sgo;
+
+return $xml;
+
+$func$ LANGUAGE PLPERLU;
+COMMENT ON FUNCTION migration_tools.make_stub_bib (text[], text[]) IS $$Simple function to create a stub MARCXML bib from a set of columns.
+The first argument is an array of tag/subfield specifiers, e.g., ARRAY['001', '245a', '500a'].
+The second argument is an array of text containing the values to plug into each field.  
+If the value for a given field is NULL or the empty string, it is not inserted.
+$$;
