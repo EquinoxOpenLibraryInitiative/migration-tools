@@ -1325,7 +1325,7 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_856_9 (TEXT, TEXT) RETURNS TEX
 
 $$ LANGUAGE PLPERLU STABLE;
 
-CREATE OR REPLACE FUNCTION migration_tools.change_call_number(copy_id BIGINT, new_label TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION migration_tools.change_call_number(copy_id BIGINT, new_label TEXT, cn_class BIGINT) RETURNS VOID AS $$
 
 DECLARE
   old_volume   BIGINT;
@@ -1367,8 +1367,8 @@ BEGIN
 
   -- Create destination volume if needed
   IF NOT FOUND THEN
-    INSERT INTO asset.call_number (creator, editor, record, owning_lib, label) 
-      VALUES (1, 1, bib, owner, new_label);
+    INSERT INTO asset.call_number (creator, editor, record, owning_lib, label, label_class) 
+      VALUES (1, 1, bib, owner, new_label, label_class);
     SELECT id INTO new_volume FROM asset.call_number
       WHERE 
         record = bib AND
