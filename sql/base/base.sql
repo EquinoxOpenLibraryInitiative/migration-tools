@@ -1368,7 +1368,7 @@ BEGIN
   -- Create destination volume if needed
   IF NOT FOUND THEN
     INSERT INTO asset.call_number (creator, editor, record, owning_lib, label, label_class) 
-      VALUES (1, 1, bib, owner, new_label, label_class);
+      VALUES (1, 1, bib, owner, new_label, cn_class);
     SELECT id INTO new_volume FROM asset.call_number
       WHERE 
         record = bib AND
