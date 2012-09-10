@@ -1833,3 +1833,43 @@ The first argument is an array of tag/subfield specifiers, e.g., ARRAY['001', '2
 The second argument is an array of text containing the values to plug into each field.  
 If the value for a given field is NULL or the empty string, it is not inserted.
 $$;
+
+CREATE OR REPLACE FUNCTION migration_tools.set_indicator (TEXT, TEXT, INTEGER, CHAR(1)) RETURNS TEXT AS $func$
+
+my ($marcxml, $tag, $pos, $value) = @_;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'UTF-8');
+use MARC::Charset;
+use strict;
+
+MARC::Charset->assume_unicode(1);
+
+elog(ERROR, 'indicator position must be either 1 or 2') unless $pos =~ /^[12]$/;
+elog(ERROR, 'MARC tag must be numeric') unless $tag =~ /^\d{3}$/;
+elog(ERROR, 'MARC tag must not be control field') if $tag =~ /^00/;
+elog(ERROR, 'Value must be exactly one character') unless $value =~ /^.$/;
+
+my $xml = $marcxml;
+eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+
+    foreach my $field ($marc->field($tag)) {
+        $field->update("ind$pos" => $value);
+    }
+    $xml = $marc->as_xml_record;
+    $xml =~ s/^<\?.+?\?>$//mo;
+    $xml =~ s/\n//sgo;
+    $xml =~ s/>\s+</></sgo;
+};
+return $xml;
+
+$func$ LANGUAGE PLPERLU;
+
+COMMENT ON FUNCTION migration_tools.set_indicator(TEXT, TEXT, INTEGER, CHAR(1)) IS $$Set indicator value of a specified MARC field.
+The first argument is a MARCXML string.
+The second argument is a MARC tag.
+The third argument is the indicator position, either 1 or 2.
+The fourth argument is the character to set the indicator value to.
+All occurences of the specified field will be changed.
+The function returns the revised MARCXML string.$$;
