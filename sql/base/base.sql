@@ -1873,3 +1873,22 @@ The third argument is the indicator position, either 1 or 2.
 The fourth argument is the character to set the indicator value to.
 All occurences of the specified field will be changed.
 The function returns the revised MARCXML string.$$;
+
+CREATE OR REPLACE FUNCTION migration_tools.create_staff_user(
+    username TEXT,
+    password TEXT,
+    org TEXT,
+    perm_group TEXT,
+    first_name TEXT DEFAULT '',
+    last_name TEXT DEFAULT ''
+) RETURNS VOID AS $func$
+BEGIN
+    RAISE NOTICE '%', org ;
+    INSERT INTO actor.usr (usrname, passwd, ident_type, first_given_name, family_name, home_ou, profile)
+    SELECT username, password, 1, first_name, last_name, aou.id, pgt.id
+    FROM   actor.org_unit aou, permission.grp_tree pgt
+    WHERE  aou.shortname = org
+    AND    pgt.name = perm_group;
+END
+$func$
+LANGUAGE PLPGSQL;
