@@ -1636,7 +1636,10 @@ MARC::Charset->assume_unicode(1);
 
 my $xml = shift;
 
-eval { my $r = MARC::Record->new_from_xml( $xml ); };
+eval {
+    my $r = MARC::Record->new_from_xml( $xml );
+    my $output_xml = $r->as_xml_record();
+};
 if ($@) {
     return 0;
 } else {
