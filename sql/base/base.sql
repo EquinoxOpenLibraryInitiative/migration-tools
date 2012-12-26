@@ -624,25 +624,18 @@ CREATE OR REPLACE FUNCTION migration_tools.expand_barcode (TEXT, TEXT, INTEGER, 
     return "$prefix$new_barcode$suffix";
 $$ LANGUAGE PLPERLU STABLE;
 
-CREATE OR REPLACE FUNCTION migration_tools.attempt_cast (TEXT,TEXT,TEXT) RETURNS RECORD AS $$
+-- remove previous version of this function
+DROP FUNCTION IF EXISTS migration_tools.attempt_cast(TEXT, TEXT, TEXT);
+
+CREATE OR REPLACE FUNCTION migration_tools.attempt_cast (TEXT, TEXT) RETURNS TEXT AS $$
     DECLARE
         attempt_value ALIAS FOR $1;
         datatype ALIAS FOR $2;
-        fail_value ALIAS FOR $3;
-        output RECORD;
     BEGIN
-        FOR output IN
-            EXECUTE 'SELECT ' || quote_literal(attempt_value) || '::' || datatype || ' AS a;'
-        LOOP
-            RETURN output;
-        END LOOP;
+        EXECUTE 'SELECT ' || quote_literal(attempt_value) || '::' || datatype || ' AS a;';
+        RETURN attempt_value;
     EXCEPTION
-        WHEN OTHERS THEN
-            FOR output IN
-                EXECUTE 'SELECT ' || quote_literal(fail_value) || '::' || datatype || ' AS a;'
-            LOOP
-                RETURN output;
-            END LOOP;
+        WHEN OTHERS THEN RETURN NULL;
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
