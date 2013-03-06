@@ -1,0 +1,162 @@
+#!/usr/bin/perl
+
+# Copyright 2013, Equinox Software, Inc.
+
+# Author: Galen Charlton <gmc@esilibrary.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+use strict;
+use warnings;
+
+use Carp;
+use DBI;
+use Getopt::Long;
+
+my $host = 'localhost';
+my $sid = $ENV{ORACLE_SID};
+my $user;
+my $pw;
+my $out;
+my $sql;
+my $table;
+my $pg_table;
+my $base_table;
+my $column_prefix = '';
+my $show_help;
+
+my $result = GetOptions(
+    'sid=s'             => \$sid,
+    'host=s'            => \$host,
+    'user=s'            => \$user,
+    'pw=s'              => \$pw,
+    'out=s'             => \$out,
+    'sql=s'             => \$sql,
+    'table=s'           => \$table,
+    'pg-table=s'        => \$pg_table,
+    'column-prefix=s'   => \$column_prefix,
+    'inherits-from=s'   => \$base_table,
+    'help'              => \$show_help,
+);
+
+if ($show_help || !$result || !$out || !$sql || !$user || !$pw || !$table || !$pg_table) {
+    print <<_USAGE_;
+$0: dump contents of Oracle table to file for loading into PostgreSQL
+
+Usage: $0 \\
+    [--sid oracle_sid] [--host oracle_host] --user oracle_user --pw oracle_password \\
+    --table oracle_table_name \\
+    --pg-table destination_pg_table_name \\
+    --out output_tsv_file --sql output_table_create_sql_file \\
+    [--column-prefix column_prefix] [--inherits-from base_pg_table] [--help]
+            
+_USAGE_
+    exit 1;
+}
+
+my $dbh = DBI->connect("dbi:Oracle:host=$host;sid=$sid", $user, $pw) or croak "Cannot connect to the database";
+$dbh->do("ALTER SESSION SET NLS_DATE_FORMAT='yyyy-mm-dd hh24:mi:ss'");
+
+open my $outfh, '>', $out or croak "Cannot open output file $out: $!\n";
+binmode $outfh, ':raw';
+open my $sqlfh, '>', $sql or croak "Cannot open output file $sql: $!\n";
+binmode $sqlfh, ':raw';
+
+export_table(uc $table, $outfh, $sqlfh, $out);
+
+close $outfh;
+close $sqlfh;
+
+exit 0;
+
+sub export_table {
+    my $table = shift;
+    my $fh = shift;
+    my $sqlfh = shift;
+    my $out = shift;
+    my $cols = get_columns($table);
+    my $query = 'SELECT ' . join(', ', map { $_->{name} } @$cols) . " FROM $table";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my $row = $sth->fetchrow_arrayref()) {
+        my @data = map { normalize_value_for_tsv($_) } @$row;
+        my $str = join("\t", @data);
+        $str =~ s/\0//g;
+        print $fh "$str\n";
+    }
+    $sth->finish();
+
+    print $sqlfh "CREATE TABLE $pg_table (\n";
+    print $sqlfh join(",\n", map { $column_prefix . lc($_->{name}) . " $_->{type}" } @$cols);
+    print $sqlfh "\n)";
+    print $sqlfh " INHERITS (${base_table})" if $base_table;
+    print $sqlfh ";\n";
+    my $out2 = $out;
+    $out2 =~ s!.*/!!;
+    print $sqlfh "\\COPY $pg_table (" . join(", ", map { $column_prefix . lc($_->{name}) } @$cols) . ") FROM '$out'\n";
+    return;
+}
+
+sub normalize_value_for_tsv {
+    my $val = shift;
+    if (defined $val) {
+        $val =~ s/\\/\\\\/g;
+        $val =~ s/\0//g;     # FIXME: not dealing with BLOBs for now
+        $val =~ s/[\b]/\\b/g;
+        $val =~ s/\f/\\f/g;
+        $val =~ s/\r/\\r/g;
+        $val =~ s/\n/\\n/g;
+        $val =~ s/\t/\\t/g;
+        $val =~ s/\v/\\v/g;
+        return $val;
+    } else {
+        return '\N';
+    }
+}
+
+sub get_columns {
+    my $table = shift;
+    my $sth_cols = $dbh->prepare('
+        SELECT column_name, data_type, data_precision, data_scale, nullable 
+        FROM user_tab_columns WHERE table_name = ? ORDER BY column_id
+    ');
+    $sth_cols->execute($table);
+    my @cols = map { { name => $_->{COLUMN_NAME}, type => get_pg_column_type($_) } }
+               @{ $sth_cols->fetchall_arrayref({}) };
+    $sth_cols->finish();
+    return \@cols;
+}
+
+sub get_pg_column_type {
+    my $column_def = shift;
+    my $type;
+    if ($column_def->{DATA_TYPE} =~ /VARCHAR/) {
+        $type = 'TEXT';
+    } elsif ($column_def->{DATA_TYPE} eq 'DATE') {
+        $type = 'TIMESTAMP';
+    } elsif ($column_def->{DATA_TYPE} eq 'NUMBER') {
+        if ($column_def->{DATA_SCALE} == 0) {
+            $type = 'INTEGER';
+        } else {
+            $type = "NUMBER($column_def->{DATA_PRECISION},$column_def->{DATA_SCALE})";
+        }
+    }
+    if (defined $type) {
+        $type .= " NOT NULL" if $column_def->{NULLABLE} eq 'N';
+        return $type;
+    } else {
+        return 'UNKNOWN';
+    }
+}
