@@ -150,7 +150,7 @@ sub get_pg_column_type {
         if ($column_def->{DATA_SCALE} == 0) {
             $type = 'INTEGER';
         } else {
-            $type = "NUMBER($column_def->{DATA_PRECISION},$column_def->{DATA_SCALE})";
+            $type = "NUMERIC($column_def->{DATA_PRECISION},$column_def->{DATA_SCALE})";
         }
     }
     if (defined $type) {
