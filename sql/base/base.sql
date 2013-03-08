@@ -365,9 +365,9 @@ CREATE OR REPLACE FUNCTION migration_tools.address_parse_out_citystatezip (TEXT)
             state := REGEXP_REPLACE( city_state_zip, E'^(.*),(.*)$', E'\\2');
             city := REGEXP_REPLACE( city_state_zip, E'^(.*),(.*)$', E'\\1');
         ELSE
-            IF city_state_zip ~ E'\\s+[A-Z][A-Z]\\s*' THEN
-                state := REGEXP_REPLACE( city_state_zip, E'^.*,?\\s+([A-Z][A-Z])\\s*.*$', E'\\1' );
-                city := REGEXP_REPLACE( city_state_zip, E'^(.*?),?\\s+[A-Z][A-Z](\\s*.*)$', E'\\1\\2' );
+            IF city_state_zip ~ E'\\s+[A-Z][A-Z]\\s*$' THEN
+                state := REGEXP_REPLACE( city_state_zip, E'^.*,?\\s+([A-Z][A-Z])\\s*$', E'\\1' );
+                city := REGEXP_REPLACE( city_state_zip, E'^(.*?),?\\s+[A-Z][A-Z](\\s*)$', E'\\1\\2' );
             ELSE
                 IF city_state_zip ~ E'^\\S+$'  THEN
                     city := city_state_zip;
