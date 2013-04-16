@@ -24,6 +24,7 @@ use warnings;
 use Carp;
 use DBI;
 use Getopt::Long;
+use Encode;
 
 my $host = 'localhost';
 my $sid = $ENV{ORACLE_SID};
@@ -36,6 +37,7 @@ my $pg_table;
 my $base_table;
 my $column_prefix = '';
 my $show_help;
+my $src_charset;
 
 my $result = GetOptions(
     'sid=s'             => \$sid,
@@ -48,6 +50,7 @@ my $result = GetOptions(
     'pg-table=s'        => \$pg_table,
     'column-prefix=s'   => \$column_prefix,
     'inherits-from=s'   => \$base_table,
+    'source-charset=s'  => \$src_charset,
     'help'              => \$show_help,
 );
 
@@ -94,7 +97,7 @@ sub export_table {
         my @data = map { normalize_value_for_tsv($_) } @$row;
         my $str = join("\t", @data);
         $str =~ s/\0//g;
-        print $fh "$str\n";
+        print $fh encode('utf8', "$str\n");
     }
     $sth->finish();
 
@@ -120,7 +123,11 @@ sub normalize_value_for_tsv {
         $val =~ s/\n/\\n/g;
         $val =~ s/\t/\\t/g;
         $val =~ s/\v/\\v/g;
-        return $val;
+        if ($src_charset) {
+            return decode($src_charset, $val);
+        } else {
+            return $val;
+        }
     } else {
         return '\N';
     }
