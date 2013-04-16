@@ -129,7 +129,7 @@ sub normalize_value_for_tsv {
 sub get_columns {
     my $table = shift;
     my $sth_cols = $dbh->prepare('
-        SELECT column_name, data_type, data_precision, data_scale, nullable 
+        SELECT column_name, data_type, data_precision, data_scale, data_length, nullable 
         FROM user_tab_columns WHERE table_name = ? ORDER BY column_id
     ');
     $sth_cols->execute($table);
@@ -147,11 +147,13 @@ sub get_pg_column_type {
     } elsif ($column_def->{DATA_TYPE} eq 'DATE') {
         $type = 'TIMESTAMP';
     } elsif ($column_def->{DATA_TYPE} eq 'NUMBER') {
-        if ($column_def->{DATA_SCALE} == 0) {
+        if (!defined($column_def->{DATA_SCALE}) || $column_def->{DATA_SCALE} == 0) {
             $type = 'INTEGER';
         } else {
             $type = "NUMERIC($column_def->{DATA_PRECISION},$column_def->{DATA_SCALE})";
         }
+    } elsif ($column_def->{DATA_TYPE} eq 'CHAR') {
+        $type = "CHAR($column_def->{DATA_LENGTH})";
     }
     if (defined $type) {
         $type .= " NOT NULL" if $column_def->{NULLABLE} eq 'N';
