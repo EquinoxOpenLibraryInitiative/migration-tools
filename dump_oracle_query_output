@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+
+# Copyright 2013, Equinox Software, Inc.
+
+# Author: Galen Charlton <gmc@esilibrary.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+use strict;
+use warnings;
+
+use Carp;
+use DBI;
+use Getopt::Long;
+use Encode;
+
+my $host = 'localhost';
+my $sid = $ENV{ORACLE_SID};
+my $user;
+my $pw;
+my $out;
+my $query,
+my $show_help;
+my $src_charset;
+
+my $result = GetOptions(
+    'sid=s'             => \$sid,
+    'host=s'            => \$host,
+    'user=s'            => \$user,
+    'pw=s'              => \$pw,
+    'out=s'             => \$out,
+    'query=s'           => \$query,
+    'source-charset=s'  => \$src_charset,
+    'help'              => \$show_help,
+);
+
+if ($show_help || !$result || !$out || !$query || !$user || !$pw) {
+    print <<_USAGE_;
+$0: dump results of query on Oracle database to file for loading into PostgreSQL
+
+Usage: $0 \\
+    [--sid oracle_sid] [--host oracle_host] --user oracle_user --pw oracle_password \\
+    --query sql_query \\
+    --out output_tsv_file [--help]
+            
+_USAGE_
+    exit 1;
+}
+
+my $dbh = DBI->connect("dbi:Oracle:host=$host;sid=$sid", $user, $pw) or croak "Cannot connect to the database";
+$dbh->do("ALTER SESSION SET NLS_DATE_FORMAT='yyyy-mm-dd hh24:mi:ss'");
+
+open my $outfh, '>', $out or croak "Cannot open output file $out: $!\n";
+binmode $outfh, ':raw';
+
+dump_query_output($query, $outfh);
+
+close $outfh;
+
+exit 0;
+
+sub dump_query_output {
+    my $query = shift;
+    my $fh = shift;
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my $row = $sth->fetchrow_arrayref()) {
+        my @data = map { normalize_value_for_tsv($_) } @$row;
+        my $str = join("\t", @data);
+        $str =~ s/\0//g;
+        print $fh encode('utf8', "$str\n");
+    }
+    $sth->finish();
+}
+
+sub normalize_value_for_tsv {
+    my $val = shift;
+    if (defined $val) {
+        $val =~ s/\\/\\\\/g;
+        $val =~ s/\0//g;     # FIXME: not dealing with BLOBs for now
+        $val =~ s/[\b]/\\b/g;
+        $val =~ s/\f/\\f/g;
+        $val =~ s/\r/\\r/g;
+        $val =~ s/\n/\\n/g;
+        $val =~ s/\t/\\t/g;
+        $val =~ s/\v/\\v/g;
+        if ($src_charset) {
+            return decode($src_charset, $val);
+        } else {
+            return $val;
+        }
+    } else {
+        return '\N';
+    }
+}
