@@ -25,6 +25,7 @@ use Carp;
 use DBI;
 use Getopt::Long;
 use Encode;
+use MARC::Charset qw/marc8_to_utf8/;
 
 my $host = 'localhost';
 my $sid = $ENV{ORACLE_SID};
@@ -124,7 +125,11 @@ sub normalize_value_for_tsv {
         $val =~ s/\t/\\t/g;
         $val =~ s/\v/\\v/g;
         if ($src_charset) {
-            return decode($src_charset, $val);
+            if ($src_charset eq 'marc8') {
+                return marc8_to_utf8($val);
+            } else {
+                return decode($src_charset, $val);
+            }
         } else {
             return $val;
         }
