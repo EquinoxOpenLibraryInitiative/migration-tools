@@ -1,4 +1,4 @@
--- Copyright 2009-2012, Equinox Software, Inc.
+-- Copyright 2009-2013, Equinox Software, Inc.
 --
 -- This program is free software; you can redistribute it and/or
 -- modify it under the terms of the GNU General Public License
@@ -14,23 +14,40 @@
 -- along with this program; if not, write to the Free Software
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-alter table actor.usr disable rule protect_user_delete;
-begin;
-delete from actor.usr where usrname !~ 'admin';
-delete from actor.usr_note where usr not in (select id from actor.usr);
-delete from actor.usr_address where usr not in (select id from actor.usr);
-delete from actor.card where usr not in (select id from actor.usr);
-delete from action.circulation;
-delete from action.hold_request;
-delete from money.billing;
-delete from money.grocery;
-delete from action.non_cataloged_circulation;
-delete from action.in_house_use;
-delete from reporter.template_folder where owner not in (select id from actor.usr);
-delete from reporter.report_folder where owner not in (select id from actor.usr);
-delete from reporter.output_folder where owner not in (select id from actor.usr);
-delete from reporter.template where owner not in (select id from actor.usr);
-delete from reporter.report where owner not in (select id from actor.usr);
-delete from reporter.schedule where runner not in (select id from actor.usr);
-commit;
-alter table actor.usr enable rule protect_user_delete;
+ALTER TABLE actor.usr DISABLE RULE protect_user_delete;
+BEGIN;
+
+-- get transactions out of the way first
+TRUNCATE TABLE action.circulation CASCADE;
+TRUNCATE TABLE action.hold_request CASCADE;
+TRUNCATE TABLE money.payment CASCADE;
+TRUNCATE TABLE money.billing CASCADE;
+TRUNCATE TABLE money.grocery CASCADE;
+TRUNCATE TABLE money.materialized_billable_xact_summary CASCADE;
+TRUNCATE TABLE action.non_cataloged_circulation CASCADE;
+TRUNCATE TABLE action.in_house_use CASCADE;
+
+-- This statement is meant to be customized
+DELETE FROM actor.usr WHERE usrname !~ 'admin' 
+AND profile NOT IN (SELECT id FROM permission.grp_tree WHERE name IN ('SIP', 'Unique Mgmt'));
+
+\echo List of patrons that are left
+SELECT id, usrname FROM actor.usr;
+
+DELETE FROM actor.usr_note WHERE usr NOT IN (SELECT id FROM actor.usr);
+DELETE FROM actor.usr_address WHERE usr NOT IN (SELECT id FROM actor.usr);
+DELETE FROM actor.card WHERE usr NOT IN (SELECT id FROM actor.usr);
+DELETE FROM money.collections_tracker WHERE usr NOT IN (SELECT id FROM actor.usr);
+DELETE FROM reporter.template_folder WHERE owner NOT IN (SELECT id FROM actor.usr);
+DELETE FROM reporter.report_folder WHERE owner NOT IN (SELECT id FROM actor.usr);
+DELETE FROM reporter.output_folder WHERE owner NOT IN (SELECT id FROM actor.usr);
+DELETE FROM reporter.template WHERE owner NOT IN (SELECT id FROM actor.usr);
+DELETE FROM reporter.report WHERE owner NOT IN (SELECT id FROM actor.usr);
+DELETE FROM reporter.schedule WHERE runner NOT IN (SELECT id FROM actor.usr);
+
+\echo If you are happy with the purge, please run the following:
+\echo
+\echo COMMIT;
+\echo ALTER TABLE actor.usr ENABLE RULE protect_user_delete;
+\echo
+\echo Finally, please do a VACUUM ANALYZE
