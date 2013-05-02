@@ -30,13 +30,24 @@ CREATE TABLE biblio.record_entry_temp AS (
 TRUNCATE
   action.circulation,
   asset.copy,
+  asset.opac_visible_copies,
   biblio.record_entry,
   asset.call_number,
   metabib.metarecord_source_map,
-  metabib.metarecord
+  metabib.metarecord,
+  metabib.facet_entry,
+  metabib.browse_entry,
+  authority.record_entry,
+  authority.full_rec,
+  authority.rec_descriptor
 CASCADE;
 
 INSERT INTO asset.call_number SELECT * FROM asset.call_number_temp;
 INSERT INTO biblio.record_entry SELECT * FROM biblio.record_entry_temp;
 
+DROP TABLE asset.call_number_temp;
+DROP TABLE biblio.record_entry_temp;
+
+\echo If the purge looks good, please COMMIT
+\echo You should also follow with a VACUUM ANALYZE or the like.
 
