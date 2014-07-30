@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright 2009-2012, Equinox Software, Inc.
+# Copyright 2011-2014, Equinox Software, Inc.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -30,21 +30,48 @@ multiple merge maps.
 
 =cut
 
-my %bad_subs = ();
-my %map = ();
+my %leads = ();
+
+# load merge map
 while (<>) {
     chomp;
     my ($lead, $sub) = split /\t/, $_, -1;
-    next if exists $bad_subs{$sub};
-    if (exists $map{$sub}) {
-        $bad_subs{$sub}++;
-        delete $map{$sub};
-        next;
+    $leads{$sub}->{$lead}++; 
+}
+
+# run this twice to ensure that cycles are
+# excluded
+cleanup_map() foreach (1..2);
+
+foreach my $sub (sort numerically keys %leads) {
+    if (1 == keys(%{ $leads{$sub} })) {
+        print join("\t", keys($leads{$sub}), $sub), "\n";
     }
-    $map{$sub} = $lead;
-}
-foreach my $sub (sort keys %map) {
-    print "$map{$sub}\t$sub\n";
 }
 
+sub cleanup_map {
+    foreach my $sub (keys %leads) {
+        my @leads_to_prune = ();
+        my @leads_to_add = ();
+        foreach my $lead (keys %{ $leads{$sub} }) {
+            if (exists($leads{$lead})) {
+                # lead bib itself is slated to be merged,
+                # so it's no longer going to be the direct
+                # lead for the current sub
+                push @leads_to_prune, $lead;
 
+                # the current sub gets potential
+                # leads from its previous lead
+                foreach my $second_lead (keys %{ $leads{$lead} }) {
+                    push @leads_to_add, $second_lead unless exists($leads{$sub}->{$second_lead});
+                }
+            }
+        }
+        delete($leads{$sub}->{$_}) foreach @leads_to_prune;
+        $leads{$sub}->{$_}++ foreach @leads_to_add;
+    }
+}
+
+sub numerically {
+    return $a <=> $b;
+}
