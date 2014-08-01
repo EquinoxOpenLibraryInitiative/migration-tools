@@ -45,7 +45,7 @@ cleanup_map() foreach (1..2);
 
 foreach my $sub (sort numerically keys %leads) {
     if (1 == keys(%{ $leads{$sub} })) {
-        print join("\t", keys($leads{$sub}), $sub), "\n";
+        print join("\t", keys(%{ $leads{$sub} }), $sub), "\n";
     }
 }
 
