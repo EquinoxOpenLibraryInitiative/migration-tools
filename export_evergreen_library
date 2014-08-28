@@ -1,0 +1,187 @@
+#!/bin/bash
+
+# Copyright 2014, Equinox Software, Inc.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+# Simple script to export records belonging to a specific Evergreen OU
+# and its descendents.
+#
+# Usage: export_evergreen_library shortname scratch_dir output_dir db_conn_params
+#
+# For example:
+#
+# $ mkdir inter out
+# $ ./export_evergreen_library SYS1 inter out '-U evergreen'
+#
+# The script emits MARC bibs, undeleted patrons, all items for the OU, all loans
+# for the OU's patrons and items, current hold requests, and patron billings.
+#
+# The script expects to be run on a box that can access the Evergreen database
+# via psql and an OpenSRF stack.
+
+baseo=u$1
+workdir=$2
+outdir=$3
+dbconn=$4
+
+export PATH=/openils/bin:$PATH
+
+function select_bibs {
+    echo Selecting bib IDs for $baseou
+    psql $dbconn -A -t -vbaseou=$baseou > $workdir/bib_ids <<_END_
+SELECT DISTINCT bre.id
+FROM biblio.record_entry bre
+JOIN asset.call_number acn ON (bre.id = acn.record)
+WHERE NOT acn.deleted
+AND acn.owning_lib IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou')
+ORDER BY 1;
+_END_
+}
+
+function export_marc_bibs {
+    echo Exporting bibs in MARC format
+    cat $workdir/bib_ids | marc_export --format USMARC --encoding UTF-8 > $outdir/${baseou}_bibs.mrc
+}
+
+function export_table_description {
+    local table=$1
+    local subdir=$2
+    psql $dbconn -c "\\d $table"   >  $subdir/$table.description
+    psql $dbconn -c "\\dt+ $table" >> $subdir/$table.description
+}
+
+function export_entire_table {
+    local table=$1
+    local subdir=$2
+    echo Exporting table $table
+    export_table_description $table $subdir
+    psql $dbconn -A -t -c "\\COPY $table TO $subdir/$table.tsv"
+}
+
+function export_table_ou_subset {
+    local table=$1
+    local limitcol=$2
+    local subdir=$3
+    local clause=$4
+    echo "Exporting table $table (limited to OU $baseou)"
+    export_table_description $table $subdir
+    psql $dbconn -A -t -c "\\COPY (SELECT * FROM $table WHERE $limitcol IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou') $clause) TO $subdir/$table.tsv"
+}
+
+function export_table_item_subset {
+    local table=$1
+    local limitcol=$2
+    local subdir=$3
+    local clause=$4
+    echo "Exporting table $table (limited by items)"
+    export_table_description $table $subdir
+    psql $dbconn -A -t -c "\\COPY (SELECT * FROM $table WHERE $limitcol IN (SELECT id FROM asset.copy WHERE circ_lib IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou')) $clause) TO $subdir/$table.tsv"
+}
+
+function export_table_patron_subset {
+    local table=$1
+    local limitcol=$2
+    local subdir=$3
+    local clause=$4
+    echo "Exporting table $table (limited by patrons)"
+    export_table_description $table $subdir
+    psql $dbconn -A -t -c "\\COPY (SELECT * FROM $table WHERE $limitcol IN (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou') AND NOT deleted) $clause) TO $subdir/$table.tsv"
+}
+
+function export_table_patron_item_subset {
+    local table=$1
+    local limitcol1=$2
+    local limitcol2=$3
+    local subdir=$4
+    local clause=$5
+    echo "Exporting table $table (limited by patrons and items)"
+    export_table_description $table $subdir
+    psql $dbconn -A -t -c "\\COPY (SELECT * FROM $table WHERE $limitcol1 IN (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou') AND NOT deleted) AND $limitcol2 IN (SELECT id FROM asset.copy WHERE circ_lib IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou')) $clause) TO $subdir/$table.tsv"
+}
+
+function export_table_xact_subset {
+    local table=$1
+    local limitcol=$2
+    local subdir=$3
+    local clause=$4
+    echo "Exporting table $table (limited by xacts)"
+    export_table_description $table $subdir
+    psql $dbconn -A -t -c "\\COPY (SELECT * FROM $table WHERE $limitcol IN (SELECT id FROM money.billable_xact WHERE usr IN (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou') AND NOT deleted)) $clause) TO $subdir/$table.tsv"
+}
+
+function export_items {
+    mkdir -p $outdir/items
+    export_entire_table config.copy_status $outdir/items
+    export_entire_table config.circ_modifier $outdir/items
+    export_entire_table config.floating_group $outdir/items
+    export_entire_table config.floating_group_member $outdir/items
+    export_entire_table config.rule_age_hold_protect $outdir/items
+    export_entire_table config.rule_circ_duration $outdir/items
+    export_entire_table config.rule_max_fine $outdir/items
+    export_entire_table config.rule_recurring_fine $outdir/items
+    export_entire_table asset.call_number_prefix $outdir/items
+    export_entire_table asset.call_number_suffix $outdir/items
+    export_entire_table asset.stat_cat $outdir/items
+    export_entire_table asset.stat_cat_entry $outdir/items
+    export_table_ou_subset actor.org_unit id $outdir/items
+    export_table_ou_subset asset.copy_location owning_lib $outdir/items
+    export_table_ou_subset asset.copy circ_lib $outdir/items
+    export_table_ou_subset asset.call_number owning_lib $outdir/items
+    export_table_item_subset asset.copy_note owning_copy $outdir/items
+    export_table_item_subset asset.stat_cat_entry_copy_map owning_copy $outdir/items
+}
+
+function export_patrons {
+    mkdir -p $outdir/patrons
+    export_entire_table config.net_access_level $outdir/patrons
+    export_entire_table config.standing_penalty $outdir/patrons
+    export_entire_table actor.stat_cat $outdir/patrons
+    export_entire_table actor.stat_cat_entry $outdir/patrons
+    export_table_ou_subset actor.usr home_ou $outdir/patrons "AND NOT deleted"
+    export_table_patron_subset actor.card usr $outdir/patrons
+    export_table_patron_subset actor.usr_setting usr $outdir/patrons
+    export_table_patron_subset actor.usr_standing_penalty usr $outdir/patrons
+    export_table_patron_subset actor.usr_note usr $outdir/patrons
+    export_table_patron_subset actor.usr_address usr $outdir/patrons
+    export_table_patron_subset actor.usr_saved_search owner $outdir/patrons
+    export_table_patron_subset actor.stat_cat_entry_usr_map target_usr $outdir/patrons
+}
+
+function export_loans {
+    mkdir -p $outdir/loans
+    export_table_patron_item_subset action.circulation usr target_copy $outdir/loans
+}
+
+function export_hold_requests {
+    mkdir -p $outdir/current_hold_requests
+    export_table_patron_subset action.hold_request usr $outdir/current_hold_requests 'AND cancel_time IS NULL AND fulfillment_time IS NULL AND (expire_time IS NULL OR expire_time > NOW())'
+}
+
+function export_billings {
+    mkdir -p $outdir/patron_bills
+    export_entire_table config.billing_type $outdir/patron_bills
+    export_table_xact_subset money.billing xact $outdir/patron_bills
+    export_table_xact_subset money.payment xact $outdir/patron_bills
+    export_table_patron_subset money.grocery usr $outdir/patron_bills
+}
+
+select_bibs
+export_marc_bibs
+export_items
+export_patrons
+export_loans
+export_hold_requests
+export_billings
