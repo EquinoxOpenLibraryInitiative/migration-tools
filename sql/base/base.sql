@@ -724,6 +724,31 @@ CREATE OR REPLACE FUNCTION migration_tools.add_codabar_checkdigit (TEXT) RETURNS
     return $barcode . $checkdigit; 
 $$ LANGUAGE PLPERLU STRICT STABLE;
 
+-- add_code39mod43_checkdigit
+--   $barcode      source barcode
+--
+-- If the source string is 13 or 14 characters long and contains only valid
+-- Code 39 mod 43 characters, adds or replaces the 14th
+-- character with a checkdigit computed according to the usual algorithm for library barcodes
+-- using the Code 39 mod 43 symbology - see <http://en.wikipedia.org/wiki/Code_39#Code_39_mod_43>.  If the
+-- input string does not meet those requirements, it is returned unchanged.
+--
+CREATE OR REPLACE FUNCTION migration_tools.add_code39mod43_checkdigit (TEXT) RETURNS TEXT AS $$
+    my $barcode = shift;
+
+    return $barcode if $barcode !~ /^[0-9A-Z. $\/+%-]{13,14}$/;
+    $barcode = substr($barcode, 0, 13); # ignore 14th character
+
+    my @valid_chars = split //, '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%';
+    my %nums = map { $valid_chars[$_] => $_ } (0..42);
+
+    my $total = 0;
+    $total += $nums{$_} foreach split(//, $barcode);
+    my $remainder = $total % 43;
+    my $checkdigit = $valid_chars[$remainder];
+    return $barcode . $checkdigit;
+$$ LANGUAGE PLPERLU STRICT STABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEXT AS $$
   DECLARE
     phone TEXT := $1;
