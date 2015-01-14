@@ -702,6 +702,27 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_money (TEXT,TEXT) RETURNS NUM
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.attempt_money6 (TEXT,TEXT) RETURNS NUMERIC(6,2) AS $$
+    DECLARE
+        attempt_value ALIAS FOR $1;
+        fail_value ALIAS FOR $2;
+        output NUMERIC(6,2);
+    BEGIN
+        FOR output IN
+            EXECUTE 'SELECT ' || quote_literal(REPLACE(attempt_value,'$','')) || '::NUMERIC(6,2) AS a;'
+        LOOP
+            RETURN output;
+        END LOOP;
+    EXCEPTION
+        WHEN OTHERS THEN
+            FOR output IN
+                EXECUTE 'SELECT ' || quote_literal(fail_value) || '::NUMERIC(6,2) AS a;'
+            LOOP
+                RETURN output;
+            END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
 -- add_codabar_checkdigit
 --   $barcode      source barcode
 --
