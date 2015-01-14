@@ -688,7 +688,7 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_money (TEXT,TEXT) RETURNS NUM
         output NUMERIC(8,2);
     BEGIN
         FOR output IN
-            EXECUTE 'SELECT ' || quote_literal(attempt_value) || '::NUMERIC(8,2) AS a;'
+            EXECUTE 'SELECT ' || quote_literal(REPLACE(attempt_value,'$','')) || '::NUMERIC(8,2) AS a;'
         LOOP
             RETURN output;
         END LOOP;
