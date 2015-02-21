@@ -2124,3 +2124,18 @@ CREATE OR REPLACE FUNCTION migration_tools.duplicate_template (INTEGER, INTEGER[
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.get_marc_tag (TEXT, TEXT, TEXT) RETURNS TEXT AS $$
+    my ($marcxml, $tag, $subfield) = @_;
+
+    use MARC::Record;
+    use MARC::File::XML;
+    use MARC::Field;
+
+    my $field;
+    eval {
+        my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+        $field = $marc->field($tag);
+    };
+    return $field->as_string($subfield);
+$$ LANGUAGE PLPERLU STABLE;
+
