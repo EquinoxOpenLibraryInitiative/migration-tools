@@ -2159,3 +2159,27 @@ CREATE OR REPLACE FUNCTION migration_tools.get_marc_tags (TEXT, TEXT, TEXT, TEXT
     return \@texts;
 $$ LANGUAGE PLPERLU STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.find_hold_matrix_matchpoint (INTEGER) RETURNS INTEGER AS $$
+    SELECT action.find_hold_matrix_matchpoint(
+        (SELECT pickup_lib FROM action.hold_request WHERE id = $1),
+        (SELECT request_lib FROM action.hold_request WHERE id = $1),
+        (SELECT current_copy FROM action.hold_request WHERE id = $1),
+        (SELECT usr FROM action.hold_request WHERE id = $1),
+        (SELECT requestor FROM action.hold_request WHERE id = $1)
+    );
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION migration_tools.find_circ_matrix_matchpoint (INTEGER) RETURNS SETOF action.found_circ_matrix_matchpoint AS $$
+    SELECT action.find_circ_matrix_matchpoint(
+        (SELECT circ_lib FROM action.circulation WHERE id = $1),
+        (SELECT target_copy FROM action.circulation WHERE id = $1),
+        (SELECT usr FROM action.circulation WHERE id = $1),
+        (SELECT COALESCE(
+                NULLIF(phone_renewal,false),
+                NULLIF(desk_renewal,false),
+                NULLIF(opac_renewal,false),
+                false
+            ) FROM action.circulation WHERE id = $1
+        )
+    );
+$$ LANGUAGE SQL;
