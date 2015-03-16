@@ -1253,10 +1253,10 @@ BEGIN
       INTO this_duration_rule,
            this_fine_rule,
            this_max_fine_rule
-      duration_rule,
-      recurring_fine_rule,
-      max_fine_rule
-      FROM action.item_user_circ_test(
+      (matchpoint).duration_rule,
+      (matchpoint).recurring_fine_rule,
+      (matchpoint).max_fine_rule
+      FROM action.find_circ_matrix_matchpoint(
         circ_lib,
         target_copy,
         usr,
@@ -1282,7 +1282,8 @@ BEGIN
           WHEN TRUE THEN (rmf.amount / 100.0) * ac.price
           ELSE rmf.amount
         END,
-      renewal_remaining = rcd.max_renewals
+      renewal_remaining = rcd.max_renewals,
+      grace_period = rrf.grace_period
     FROM
       config.rule_circ_duration rcd,
       config.rule_recurring_fine rrf,
