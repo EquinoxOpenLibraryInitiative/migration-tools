@@ -646,7 +646,7 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_date (TEXT,TEXT) RETURNS DATE
         output DATE;
     BEGIN
         FOR output IN
-            EXECUTE 'SELECT ' || quote_literal(attempt_value) || '::date AS a;'
+            EXECUTE 'SELECT ' || quote_literal(REGEXP_REPLACE(attempt_value,'^(\d\d)(\d\d)(\d\d)$','\1-\2-\3')) || '::date AS a;'
         LOOP
             RETURN output;
         END LOOP;
