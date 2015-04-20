@@ -1437,7 +1437,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION migration_tools.insert_856_9 (TEXT, TEXT) RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION migration_tools.insert_856_9_conditional (TEXT, TEXT) RETURNS TEXT AS $$
 
   ## USAGE: UPDATE biblio.record_entry SET marc = migration_tools.insert_856_9(marc, 'ABC') WHERE [...];
 
@@ -1468,6 +1468,37 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_856_9 (TEXT, TEXT) RETURNS TEX
   return $xml;
 
 $$ LANGUAGE PLPERLU STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.insert_856_9 (TEXT, TEXT) RETURNS TEXT AS $$
+
+  ## USAGE: UPDATE biblio.record_entry SET marc = migration_tools.insert_856_9(marc, 'ABC') WHERE [...];
+
+  my ($marcxml, $shortname) = @_;
+
+  use MARC::Record;
+  use MARC::File::XML;
+
+  my $xml = $marcxml;
+
+  eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+
+    foreach my $field ( $marc->field('856') ) {
+      if ( ! $field->as_string('9') ) {
+        $field->add_subfields( '9' => $shortname );
+      }
+    }
+
+    $xml = $marc->as_xml_record;
+    $xml =~ s/^<\?.+?\?>$//mo;
+    $xml =~ s/\n//sgo;
+    $xml =~ s/>\s+</></sgo;
+  };
+
+  return $xml;
+
+$$ LANGUAGE PLPERLU STABLE;
+
 
 CREATE OR REPLACE FUNCTION migration_tools.change_call_number(copy_id BIGINT, new_label TEXT, cn_class BIGINT) RETURNS VOID AS $$
 
