@@ -723,6 +723,54 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_money6 (TEXT,TEXT) RETURNS NU
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.attempt_money_from_pennies (TEXT,TEXT) RETURNS NUMERIC(8,2) AS $$
+    DECLARE
+        attempt_value ALIAS FOR $1;
+        fail_value ALIAS FOR $2;
+        output NUMERIC(8,2);
+    BEGIN
+        IF length(regexp_replace(attempt_value,'^0+','')) > 10 THEN
+            RAISE EXCEPTION 'too many digits';
+        END IF;
+        FOR output IN
+            EXECUTE 'SELECT ' || quote_literal((left(lpad(regexp_replace(attempt_value,'^0+',''),10,'0'),-2) || '.' || right(lpad(regexp_replace(attempt_value,'^0+',''),10,'0'),2))::numeric(8,2)) || '::NUMERIC(8,2) AS a;'
+        LOOP
+            RETURN output;
+        END LOOP;
+    EXCEPTION
+        WHEN OTHERS THEN
+            FOR output IN
+                EXECUTE 'SELECT ' || quote_literal(fail_value) || '::NUMERIC(8,2) AS a;'
+            LOOP
+                RETURN output;
+            END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.attempt_money_from_pennies6 (TEXT,TEXT) RETURNS NUMERIC(6,2) AS $$
+    DECLARE
+        attempt_value ALIAS FOR $1;
+        fail_value ALIAS FOR $2;
+        output NUMERIC(6,2);
+    BEGIN
+        IF length(regexp_replace(attempt_value,'^0+','')) > 8 THEN
+            RAISE EXCEPTION 'too many digits';
+        END IF;
+        FOR output IN
+            EXECUTE 'SELECT ' || quote_literal((left(lpad(regexp_replace(attempt_value,'^0+',''),8,'0'),-2) || '.' || right(lpad(regexp_replace(attempt_value,'^0+',''),8,'0'),2))::numeric(6,2)) || '::NUMERIC(6,2) AS a;'
+        LOOP
+            RETURN output;
+        END LOOP;
+    EXCEPTION
+        WHEN OTHERS THEN
+            FOR output IN
+                EXECUTE 'SELECT ' || quote_literal(fail_value) || '::NUMERIC(6,2) AS a;'
+            LOOP
+                RETURN output;
+            END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
 -- add_codabar_checkdigit
 --   $barcode      source barcode
 --
