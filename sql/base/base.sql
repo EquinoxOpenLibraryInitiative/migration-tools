@@ -2334,6 +2334,16 @@ CREATE OR REPLACE FUNCTION migration_tools.find_hold_matrix_matchpoint (INTEGER)
     );
 $$ LANGUAGE SQL;
 
+CREATE OR REPLACE FUNCTION migration_tools.find_hold_matrix_matchpoint2 (INTEGER) RETURNS SETOF action.matrix_test_result AS $$
+    SELECT action.hold_request_permit_test(
+        (SELECT pickup_lib FROM action.hold_request WHERE id = $1),
+        (SELECT request_lib FROM action.hold_request WHERE id = $1),
+        (SELECT current_copy FROM action.hold_request WHERE id = $1),
+        (SELECT usr FROM action.hold_request WHERE id = $1),
+        (SELECT requestor FROM action.hold_request WHERE id = $1)
+    );
+$$ LANGUAGE SQL;
+
 CREATE OR REPLACE FUNCTION migration_tools.find_circ_matrix_matchpoint (INTEGER) RETURNS SETOF action.found_circ_matrix_matchpoint AS $$
     SELECT action.find_circ_matrix_matchpoint(
         (SELECT circ_lib FROM action.circulation WHERE id = $1),
