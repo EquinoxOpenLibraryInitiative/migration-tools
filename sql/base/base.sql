@@ -410,8 +410,8 @@ CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_last_first_middle_and_
         END IF;
 
         family_name := BTRIM( REGEXP_REPLACE(temp,E'^(\\S+).*$',E'\\1') );
-        first_given_name := BTRIM( REGEXP_REPLACE(temp,E'^\\S+\\s+(\\S+).*$',E'\\1') );
-        second_given_name := BTRIM( REGEXP_REPLACE(temp,E'^\\S+\\s+\\S+\\s*(.*)$',E'\\1') );
+        first_given_name := CASE WHEN temp ~ E'^\\S+$' THEN 'N/A' ELSE BTRIM( REGEXP_REPLACE(temp,E'^\\S+\\s+(\\S+).*$',E'\\1') ) END;
+        second_given_name := CASE WHEN temp ~ E'^\\S+$' THEN '' ELSE BTRIM( REGEXP_REPLACE(temp,E'^\\S+\\s+\\S+\\s*(.*)$',E'\\1') ) END;
 
         RETURN ARRAY[ family_name, prefix, first_given_name, second_given_name, suffix ];
     END;
