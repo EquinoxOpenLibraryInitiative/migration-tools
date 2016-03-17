@@ -26,8 +26,10 @@
 # $ mkdir inter out
 # $ ./export_evergreen_library SYS1 inter out '-U evergreen'
 #
-# The script emits MARC bibs, undeleted patrons, all items for the OU, all loans
-# for the OU's patrons and items, current hold requests, and patron billings.
+# The script emits MARC bibs, bibs + MFHDs, undeleted patrons, all items
+# for the OU, all loans for the OU's patrons and items, current hold
+# requests, and patron billings. It also exports all serials for the
+# entire consortium.
 #
 # The script expects to be run on a box that can access the Evergreen database
 # via psql and an OpenSRF stack.
@@ -54,6 +56,28 @@ _END_
 function export_marc_bibs {
     echo Exporting bibs in MARC format
     cat $workdir/bib_ids | marc_export --format USMARC --encoding UTF-8 > $outdir/${baseou}_bibs.mrc
+}
+
+function select_bibs_with_mfhds {
+    echo Selecting MFHD IDs for $baseou
+    psql $dbconn -A -t -vbaseou=$baseou > $workdir/bibs_with_serial_ids <<_END_
+SELECT DISTINCT sre.record
+FROM serial.record_entry sre
+WHERE NOT deleted
+AND sre.owning_lib IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou')
+ORDER BY 1;
+_END_
+}
+
+function export_bibs_with_mfhds {
+    echo Exporting MFHDs in MARC format
+    if [[ ! -s $workdir/bibs_with_serial_ids ]];
+    then
+        # work-around for marc_export
+        cat /dev/null $outdir/${baseou}_bibs_and_mfhds
+    else
+        cat $workdir/bibs_with_serial_ids | marc_export --format USMARC --encoding UTF-8 --mfhd > $outdir/${baseou}_bibs_and_mfhds.mrc
+    fi
 }
 
 function export_table_description {
@@ -178,6 +202,25 @@ function export_billings {
     export_table_patron_subset money.grocery usr $outdir/patron_bills
 }
 
+function export_serials {
+    mkdir -p $outdir/serials
+    export_entire_table serial.basic_summary $outdir/serials
+    export_entire_table serial.index_summary $outdir/serials
+    export_entire_table serial.supplement_summary $outdir/serials
+    export_entire_table serial.caption_and_pattern $outdir/serials
+    export_entire_table serial.distribution $outdir/serials
+    export_entire_table serial.distribution_note $outdir/serials
+    export_entire_table serial.issuance $outdir/serials
+    export_entire_table serial.item $outdir/serials
+    export_entire_table serial.item_note $outdir/serials
+    export_entire_table serial.materialized_holding_code $outdir/serials
+    export_entire_table serial.stream $outdir/serials
+    export_entire_table serial.unit $outdir/serials
+    export_entire_table serial.routing_list_user $outdir/serials
+    export_entire_table serial.subscription $outdir/serials
+    export_entire_table serial.subscription_note $outdir/serials
+}
+
 select_bibs
 export_marc_bibs
 export_items
@@ -185,3 +228,7 @@ export_patrons
 export_loans
 export_hold_requests
 export_billings
+
+select_bibs_with_mfhds
+export_bibs_with_mfhds
+export_serials
