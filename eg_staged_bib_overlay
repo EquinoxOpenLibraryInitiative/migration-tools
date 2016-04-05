@@ -1,0 +1,299 @@
+#!/usr/bin/perl
+
+# Copyright (c) 2016 Equinox Software, Inc.
+# Author: Galen Charlton <gmc@esilibrary.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+use DBI;
+use OpenILS::Application::AppUtils;
+
+my $action;
+my $schema = 'bib_loads';
+my $db;
+my $dbuser;
+my $dbpw;
+my $dbhost;
+my $batch;
+my $cutoff;
+my $wait = 1;
+
+my $ret = GetOptions(
+    'action:s'      => \$action,
+    'schema:s'      => \$schema,
+    'db:s'          => \$db,
+    'dbuser:s'      => \$dbuser,
+    'dbhost:s'      => \$dbhost,
+    'dbpw:s'        => \$dbpw,
+    'batch:s'       => \$batch,
+    'cutoff:s'      => \$cutoff,
+    'wait:i'        => \$wait,
+);
+
+abort('must specify --action') unless defined $action;
+abort('must specify --schema') unless defined $schema;
+abort('must specify --db') unless defined $db;
+abort('must specify --dbuser') unless defined $dbuser;
+abort('must specify --dbhost') unless defined $dbhost;
+abort('must specify --dbpw') unless defined $dbpw;
+abort('must specify --batch') unless defined $batch;
+
+abort('--action must be "stage_bibs" or "filter_bibs" or "load_bibs"') unless
+    $action eq 'filter_bibs' or
+    $action eq 'stage_bibs' or
+    $action eq 'load_bibs';
+
+my $dbh = connect_db($db, $dbuser, $dbpw, $dbhost);
+
+if ($action eq 'stage_bibs') {
+    abort('must specify at least one input file') unless @ARGV;
+    handle_stage_bibs($dbh, $schema, $batch);
+}
+
+if ($action eq 'filter_bibs') {
+    abort('must specify cutoff date when filtering') unless defined $cutoff;
+    handle_filter_bibs($dbh, $schema, $batch, $cutoff);
+}
+
+if ($action eq 'load_bibs' ) {
+    handle_load_bibs($dbh, $schema, $batch, $wait);
+}
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    print_usage();
+    exit 1;
+}
+
+sub print_usage {
+    print <<_USAGE_;
+
+Utility to stage and overlay bib records in an Evergreen database. This
+expects that the incoming records will have been previously exported
+from that Evergreen database and modified in some fashion (e.g., for
+authority record processing) and that the bib ID can be found in the
+901\$c subfield.
+
+This program has several modes controlled by the --action switch:
+
+  --action stage_bibs  - load MARC bib records into a staging table
+  --action filter_bibs - mark previously staged bibs that should
+                         be excluded from a subsequent load, either
+                         because the target bib is deleted in Evergreen
+                         or the record was modified after a date
+                         specified by the --cutoff switch
+  --action load_bibs   - overlay bib records using a previously staged
+                         batch, one at a time. After each bib, it will
+                         wait the number of seconds specified by the
+                         --wait switch.
+
+Several switches are used regardless of the specified action:
+
+  --schema  - Pg schema in which staging table will live; should be
+              created beforehand
+  --batch   - name of bib batch; will also be used as the name
+              of the staging table
+  --db      - database name
+  --dbuser  - database user
+  --dbpw    - database password
+  --dbhost  - database host
+
+Examples:
+
+$0 --schema bib_load --batch bibs_2016_01 --db evergreen \\
+   --dbuser evergreen --dbpw evergreen --dbhost localhost \\
+   --action stage_bibs -- file1.mrc file2.mrc [...]
+
+$0 --schema bib_load --batch bibs_2016_01 --db evergreen \\
+   --dbuser evergreen --dbpw evergreen --dbhost localhost \\
+   --action filter_bibs --cutoff 2016-01-02
+
+$0 --schema bib_load --batch bibs_2016_01 --db evergreen \\
+   --dbuser evergreen --dbpw evergreen --dbhost localhost \\
+   --action load_bibs
+
+_USAGE_
+}
+
+
+sub report_progress {
+    my ($msg, $counter) = @_;
+    if (defined $counter) {
+        print STDERR "$msg: $counter\n";
+    } else {
+        print STDERR "$msg\n";
+    }
+}
+
+sub connect_db {
+    my ($db, $dbuser, $dbpw, $dbhost) = @_;
+
+    my $dsn = "dbi:Pg:host=$dbhost;dbname=$db;port=5432";
+
+    my $attrs = {
+        ShowErrorStatement => 1,
+        RaiseError => 1,
+        PrintError => 1,
+        pg_enable_utf8 => 1,
+    };
+    my $dbh = DBI->connect($dsn, $dbuser, $dbpw, $attrs);
+
+    return $dbh;
+}
+
+sub handle_stage_bibs {
+    my $dbh = shift;
+    my $schema = shift;
+    my $batch = shift;
+
+    $dbh->do(qq{
+        DROP TABLE IF EXISTS $schema.$batch;
+    });
+    $dbh->do(qq{
+        CREATE TABLE $schema.$batch (
+            id          SERIAL,
+            marc        TEXT,
+            bib_id      BIGINT,
+            imported    BOOLEAN DEFAULT FALSE,
+            to_import   BOOLEAN DEFAULT TRUE,
+            skip_reason TEXT
+        )
+    });
+
+    local $/ = "\035";
+    my $i = 0;
+    binmode STDIN, ':utf8';
+    my $ins = $dbh->prepare("INSERT INTO $schema.$batch (marc, bib_id) VALUES (?, ?)");
+    $dbh->begin_work;
+    while (<>) {
+        $i++;
+        if (0 == $i % 100) {
+            report_progress("Records staged", $i);
+            $dbh->commit;
+            $dbh->begin_work;
+        }
+        my $marc = MARC::Record->new_from_usmarc($_);
+        my $bibid = $marc->subfield('901', 'c');
+        if ($bibid !~ /^\d+$/) {
+            print STDERR "Record $i is suspect; skipping\n";
+            next;
+        }
+        my $xml = OpenILS::Application::AppUtils->entityize($marc->as_xml_record());
+        $ins->execute($xml, $bibid);
+    }
+    $dbh->commit;
+    report_progress("Records staged", $i) if 0 != $i % 100;
+    $dbh->do(qq/
+        CREATE INDEX ${batch}_bib_id_idx ON
+            $schema.$batch (bib_id);
+    /);
+    $dbh->do(qq/
+        CREATE INDEX ${batch}_id_idx ON
+            $schema.$batch (id);
+    /);
+}
+
+sub handle_filter_bibs {
+    my $dbh = shift;
+    my $schema = shift;
+    my $batch = shift;
+    my $cutoff = shift;
+
+    my $sth1 = $dbh->prepare(qq{
+        UPDATE $schema.$batch
+        SET to_import = FALSE,
+            skip_reason = 'deleted'
+        WHERE bib_id IN (
+            SELECT id
+            FROM biblio.record_entry
+            WHERE deleted
+        )
+    });
+    $sth1->execute();
+    my $ct = $sth1->rows;
+    report_progress("Filtering out $ct records that are currently deleted");
+
+    my $sth2 = $dbh->prepare(qq{
+        UPDATE $schema.$batch
+        SET to_import = FALSE,
+            skip_reason = 'edited after cutoff of $cutoff'
+        WHERE bib_id IN (
+            SELECT id
+            FROM biblio.record_entry
+            WHERE edit_date >= ?
+        )
+        AND to_import;
+    });
+    $sth2->execute($cutoff);
+    $ct = $sth2->rows;
+    report_progress("Filtering out $ct records edited after cutoff date of $cutoff");
+}
+
+sub handle_load_bibs {
+    my $dbh = shift;
+    my $schema = shift;
+    my $batch = shift;
+    my $wait = shift;
+
+    my $getct = $dbh->prepare(qq{
+        SELECT COUNT(*)
+        FROM  $schema.$batch
+        WHERE to_import
+        AND NOT imported
+    });
+    $getct->execute();
+    my $max = $getct->fetchrow_arrayref()->[0];
+
+    report_progress('Number of bibs to update', $max);
+    for (my $i = 1; $i <= $max; $i++) {
+        report_progress('... bibs updated', $i) if 0 == $i % 10 or $i == $max;
+        $dbh->begin_work;
+        $dbh->do(qq{
+            UPDATE biblio.record_entry a
+            SET marc = b.marc
+            FROM $schema.$batch b
+            WHERE a.id = b.bib_id
+            AND bib_id IN (
+                SELECT bib_id
+                FROM $schema.$batch
+                WHERE to_import
+                AND NOT imported
+                ORDER BY id
+                LIMIT 1
+            )
+        });
+        $dbh->do(qq{
+            UPDATE $schema.$batch
+            SET imported = TRUE
+            WHERE bib_id IN (
+                SELECT bib_id
+                FROM $schema.$batch
+                WHERE to_import
+                AND NOT imported
+                ORDER BY id
+                LIMIT 1
+            )
+        });
+        $dbh->commit;
+        sleep $wait;
+    }
+    
+}
