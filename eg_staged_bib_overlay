@@ -128,7 +128,7 @@ $0 --schema bib_load --batch bibs_2016_01 --db evergreen \\
 
 $0 --schema bib_load --batch bibs_2016_01 --db evergreen \\
    --dbuser evergreen --dbpw evergreen --dbhost localhost \\
-   --action load_bibs
+   --action load_bibs --wait 2
 
 _USAGE_
 }
