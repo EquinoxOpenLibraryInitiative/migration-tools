@@ -226,6 +226,8 @@ sub handle_filter_bibs {
             FROM biblio.record_entry
             WHERE deleted
         )
+        AND to_import
+        AND NOT imported
     });
     $sth1->execute();
     my $ct = $sth1->rows;
@@ -240,11 +242,24 @@ sub handle_filter_bibs {
             FROM biblio.record_entry
             WHERE edit_date >= ?
         )
-        AND to_import;
+        AND to_import
+        AND NOT imported
     });
     $sth2->execute($cutoff);
     $ct = $sth2->rows;
     report_progress("Filtering out $ct records edited after cutoff date of $cutoff");
+
+    my $sth3 = $dbh->prepare(qq{
+        UPDATE $schema.$batch
+        SET to_import = FALSE,
+            skip_reason = 'XML is not well-formed'
+        WHERE NOT xml_is_well_formed(marc)
+        AND to_import
+        AND NOT imported
+    });
+    $sth3->execute();
+    $ct = $sth3->rows;
+    report_progress("Filtering out $ct records whose XML is not well-formed");
 }
 
 sub handle_load_bibs {
