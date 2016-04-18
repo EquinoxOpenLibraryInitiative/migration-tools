@@ -67,7 +67,8 @@ abort(q{--action must be "stage_bibs", "filter_bibs", "load_bibs", "stage_auths"
     $action eq 'overlay_auths_stage1' or
     $action eq 'overlay_auths_stage2' or
     $action eq 'overlay_auths_stage3' or
-    $action eq 'link_auth_auth'
+    $action eq 'link_auth_auth' or
+    $action eq 'link_auth_bib'
 ;
 
 my $dbh = connect_db($db, $dbuser, $dbpw, $dbhost);
@@ -111,6 +112,9 @@ if ($action eq 'overlay_auths_stage3') {
 
 if ($action eq 'link_auth_auth') {
     handle_link_auth_auth($dbh, $schema, $batch);
+}
+if ($action eq 'link_auth_bib') {
+    handle_link_auth_bib($dbh, $schema, $batch);
 }
 
 sub abort {
@@ -161,6 +165,9 @@ This program has several modes controlled by the --action switch:
   --action link_auth_auth       - run authority_authority_linker.pl for
                                   the authorities that were overlaid
                                   or added in this batch.
+  --action link_auth_bib        - run authority_control_fields.pl for
+                                  the bibs that were overlaid in this
+                                  batch.
 
 Several switches are used regardless of the specified action:
 
@@ -764,4 +771,27 @@ sub handle_link_auth_auth {
         UPDATE config.internal_flag SET enabled = FALSE
         WHERE name = 'ingest.disable_authority_auto_update';
     });
+}
+
+sub handle_link_auth_bib {
+    my $dbh = shift;
+    my $schema = shift;
+    my $batch = shift;
+
+    my $sth = $dbh->prepare(qq{
+        SELECT bib_id AS id
+        FROM $schema.$batch
+        WHERE imported
+        ORDER BY 1
+    });
+    $sth->execute();
+    my @ids = map { $_->{id} } @{ $sth->fetchall_arrayref({}) };
+    my $i = 0;
+    report_progress(scalar(@ids) . " records to do auth-bib linking");
+    foreach my $id (@ids) {
+        $i++;
+        report_progress('... auth-bib linkings processed', $i) if 0 == $i % 10 or $i == scalar(@ids);
+        system "/openils/bin/authority_control_fields.pl --record $id -c /openils/conf/opensrf_core.xml";
+    }
+
 }
