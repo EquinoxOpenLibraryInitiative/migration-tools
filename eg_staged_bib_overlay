@@ -155,10 +155,10 @@ This program has several modes controlled by the --action switch:
                                   main heading.
   --action load_new_auths       - load new (unmatched) authorities
   --action overlay_auths_stage1 - overlay based on LCCN where
-                                  heading has not change; this step
+                                  heading has NOT changed; this step
                                   disables propagation to bib records
   --action overlay_auths_stage2 - overlay based on LCCN where heading
-                                  has NOT changed; propagates changes
+                                  HAS changed; propagates changes
                                   to bib records
   --action overlay_auths_stage3 - overlay for records where a cancelled
                                   LCCN is replaced with a new one
