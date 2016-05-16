@@ -34,6 +34,7 @@ my $dbhost;
 my $batch;
 my $cutoff;
 my $wait = 1;
+my $output;
 
 my $ret = GetOptions(
     'action:s'      => \$action,
@@ -45,6 +46,7 @@ my $ret = GetOptions(
     'batch:s'       => \$batch,
     'cutoff:s'      => \$cutoff,
     'wait:i'        => \$wait,
+    'output:s'      => \$output,
 );
 
 abort('must specify --action') unless defined $action;
@@ -57,7 +59,8 @@ abort('must specify --batch') unless defined $batch;
 
 abort(q{--action must be "stage_bibs", "filter_bibs", "load_bibs", "stage_auths",
 "match_auths", "load_new_auths", "overlay_auths_stage1",
-"overlay_auths_stage2", "overlay_auths_stage3", "link_auth_auth"}) unless
+"overlay_auths_stage2", "overlay_auths_stage3", "link_auth_auth",
+"link_auth_bib", "export_skipped_bibs", or "export_skipped_auths"}) unless
     $action eq 'filter_bibs' or
     $action eq 'stage_bibs' or
     $action eq 'load_bibs' or
@@ -68,7 +71,9 @@ abort(q{--action must be "stage_bibs", "filter_bibs", "load_bibs", "stage_auths"
     $action eq 'overlay_auths_stage2' or
     $action eq 'overlay_auths_stage3' or
     $action eq 'link_auth_auth' or
-    $action eq 'link_auth_bib'
+    $action eq 'link_auth_bib' or
+    $action eq 'export_skipped_bibs' or
+    $action eq 'export_skipped_auths'
 ;
 
 my $dbh = connect_db($db, $dbuser, $dbpw, $dbhost);
@@ -115,6 +120,15 @@ if ($action eq 'link_auth_auth') {
 }
 if ($action eq 'link_auth_bib') {
     handle_link_auth_bib($dbh, $schema, $batch);
+}
+
+if ($action eq 'export_skipped_bibs') {
+    abort('must specify output file') unless defined $output;
+    handle_export_skipped_bibs($dbh, $schema, $batch, $output);
+}
+if ($action eq 'export_skipped_auths') {
+    abort('must specify output file') unless defined $output;
+    handle_export_skipped_auths($dbh, $schema, $batch, $output);
 }
 
 sub abort {
@@ -168,6 +182,13 @@ This program has several modes controlled by the --action switch:
   --action link_auth_bib        - run authority_control_fields.pl for
                                   the bibs that were overlaid in this
                                   batch.
+  --action export_skipped_bibs  - export to ISO2709 file whose name is
+                                  specified by --output those bibs
+                                  that had been edited after the cutoff.
+  --action export_skipped_auths - export to ISO2709 file whose name is
+                                  specified by --output those authorities
+                                  that could not be definitively
+                                  handled as updates or adds.
 
 Several switches are used regardless of the specified action:
 
@@ -794,4 +815,54 @@ sub handle_link_auth_bib {
         system "/openils/bin/authority_control_fields.pl --record $id -c /openils/conf/opensrf_core.xml";
     }
 
+}
+
+sub handle_export_skipped_bibs {
+    my $dbh = shift;
+    my $schema = shift;
+    my $batch = shift;
+    my $output = shift;
+
+    my $outfh;
+    open($outfh, '>', $output) or die("Could not open input file $output: $!\n");
+    binmode $outfh, ':utf8';
+
+    my $sth = $dbh->prepare(qq{
+        SELECT marc
+        FROM $schema.$batch
+        WHERE skip_reason ~ '^edit'
+        ORDER BY id
+    });
+    $sth->execute();
+   
+    while (my $row  = $sth->fetchrow_hashref()) {
+        my $marc = MARC::Record->new_from_xml($row->{marc});
+        print $outfh $marc->as_usmarc();
+    }
+    $outfh->close();
+}
+
+sub handle_export_skipped_auths {
+    my $dbh = shift;
+    my $schema = shift;
+    my $batch = shift;
+    my $output = shift;
+
+    my $outfh;
+    open($outfh, '>', $output) or die("Could not open input file $output: $!\n");
+    binmode $outfh, ':utf8';
+
+    my $sth = $dbh->prepare(qq{
+        SELECT marc
+        FROM $schema.auths_$batch
+        WHERE NOT imported
+        ORDER BY id
+    });
+    $sth->execute();
+   
+    while (my $row  = $sth->fetchrow_hashref()) {
+        my $marc = MARC::Record->new_from_xml($row->{marc});
+        print $outfh $marc->as_usmarc();
+    }
+    $outfh->close();
 }
