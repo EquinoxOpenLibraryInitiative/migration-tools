@@ -35,6 +35,7 @@ my $batch;
 my $cutoff;
 my $wait = 1;
 my $output;
+my $link_skipped;
 
 my $ret = GetOptions(
     'action:s'      => \$action,
@@ -47,6 +48,7 @@ my $ret = GetOptions(
     'cutoff:s'      => \$cutoff,
     'wait:i'        => \$wait,
     'output:s'      => \$output,
+    'link-skipped'  => \$link_skipped,
 );
 
 abort('must specify --action') unless defined $action;
@@ -119,7 +121,7 @@ if ($action eq 'link_auth_auth') {
     handle_link_auth_auth($dbh, $schema, $batch);
 }
 if ($action eq 'link_auth_bib') {
-    handle_link_auth_bib($dbh, $schema, $batch);
+    handle_link_auth_bib($dbh, $schema, $batch, $link_skipped);
 }
 
 if ($action eq 'export_skipped_bibs') {
@@ -181,7 +183,11 @@ This program has several modes controlled by the --action switch:
                                   or added in this batch.
   --action link_auth_bib        - run authority_control_fields.pl for
                                   the bibs that were overlaid in this
-                                  batch.
+                                  batch.  Add --link-skipped to specify
+                                  that bibs that were matched but
+                                  skipped due to having be edited after
+                                  the cutoff should be linked (rather
+                                  than linking the imported bibs)
   --action export_skipped_bibs  - export to ISO2709 file whose name is
                                   specified by --output those bibs
                                   that had been edited after the cutoff.
@@ -798,13 +804,27 @@ sub handle_link_auth_bib {
     my $dbh = shift;
     my $schema = shift;
     my $batch = shift;
+    my $link_skipped = shift;
 
-    my $sth = $dbh->prepare(qq{
-        SELECT bib_id AS id
-        FROM $schema.$batch
-        WHERE imported
-        ORDER BY 1
-    });
+    my $query;
+    if ($link_skipped) {
+        $query = qq{
+            SELECT bib_id AS id
+            FROM $schema.$batch
+            WHERE NOT imported
+            AND skip_reason ~ '^edit'
+            ORDER BY 1
+        };
+    } else {
+        $query = qq{
+            SELECT bib_id AS id
+            FROM $schema.$batch
+            WHERE imported
+            ORDER BY 1
+        };
+    }
+
+    my $sth = $dbh->prepare($query);
     $sth->execute();
     my @ids = map { $_->{id} } @{ $sth->fetchall_arrayref({}) };
     my $i = 0;
