@@ -23,7 +23,7 @@
 -- SELECT migration_tools.build('foo');
 -- SELECT * FROM foo.fields_requiring_mapping;
 -- \d foo.actor_usr
--- create some incoming ILS specific staging tables, like CREATE foo.legacy_items ( l_barcode TEXT, .. ) INHERITS foo.asset_copy;
+-- create some incoming ILS specific staging tables, like CREATE foo.legacy_items ( l_barcode TEXT, .. ) INHERITS (foo.asset_copy);
 -- Do some mapping, like UPDATE foo.legacy_items SET barcode = TRIM(BOTH ' ' FROM l_barcode);
 -- Then, to move into production, do: select migration_tools.insert_base_into_production('foo')
 
