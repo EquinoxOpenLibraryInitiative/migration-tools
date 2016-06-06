@@ -115,7 +115,7 @@ while ( buildrecord() ) {
                 next;
             }
         }
-        # subfields can't be non-alphanumeric
+        # subfields can't be larger than 1 char (technically you could make the MARC format accomodate that:)
         if ($record[$ptr] =~ /<subfield code="(\w{2,})"/) {
             edit("Subfield code larger than 1 char");
             next;
@@ -202,6 +202,12 @@ sub do_automated_cleanups {
         # automatable subfield maladies
         $record[$ptr] =~ s/code=" ">c/code="c">/;
         $record[$ptr] =~ s/code=" ">\$/code="c">\$/;
+
+        if ($c->{'fix-subfield'}) {
+            $record[$ptr] =~ s/code="&amp;">/code="$c->{'fix-subfield'}">/;
+            $record[$ptr] =~ s/code="\P{IsAlnum}">/code="$c->{'fix-subfield'}">/;
+            $record[$ptr] =~ s/code="">/code="$c->{'fix-subfield'}">/;
+        }
     }
     return 0;
 }
@@ -615,6 +621,7 @@ sub initialize {
                          'renumber-subfield|rs=s',
                          'original-tag|ot=i',
                          'original-subfield|os=s',
+                         'fix-subfield|fs=s',
                          'script',
                          'no-strip9',
                          'trashfile|t=s',
@@ -678,13 +685,15 @@ Options
                            and renumbering is in effect, an old-to-new mapping
                            file (old2new.map) will be generated.
 
-  --autoscrub  -a  Automatically remove non-numeric tags in data
-  --nocollapse -n  Don't compress records to one line on output
-  --no-strip9      Don't autoremove 901/903 tags in data
-  --trashfile  -t  File containing trash tag data (see --trashhelp)
+  --autoscrub         -a   Automatically remove non-numeric tags in data
+  --fix-subfield      -fs  Subfield code to use in place of non-alphanumeric
+                           or empty subfield codes
+  --nocollapse        -n   Don't compress records to one line on output
+  --no-strip9              Don't autoremove 901/903 tags in data
+  --trashfile         -t   File containing trash tag data (see --trashhelp)
 
-  --fullauto       No manual edits. All problematic records dumped to
-                   exception file.
+  --fullauto               No manual edits. All problematic records dumped to
+                           exception file.
 
 HELP
 exit;
