@@ -281,14 +281,20 @@ sub handle_stage_bibs {
             $dbh->commit;
             $dbh->begin_work;
         }
-        my $marc = MARC::Record->new_from_usmarc($_);
-        my $bibid = $marc->subfield('901', 'c');
-        if ($bibid !~ /^\d+$/) {
-            print STDERR "Record $i is suspect; skipping\n";
+        eval {
+            my $marc = MARC::Record->new_from_usmarc($_);
+            my $bibid = $marc->subfield('901', 'c');
+            if ($bibid !~ /^\d+$/) {
+                print STDERR "Record $i is suspect; skipping\n";
+                next;
+            }
+            my $xml = OpenILS::Application::AppUtils->entityize($marc->as_xml_record());
+            $ins->execute($xml, $bibid);
+        };
+        if ($@) {
+            print STDERR "Record $i is bad; skipping\n";
             next;
         }
-        my $xml = OpenILS::Application::AppUtils->entityize($marc->as_xml_record());
-        $ins->execute($xml, $bibid);
     }
     $dbh->commit;
     report_progress("Records staged", $i) if 0 != $i % 100;
@@ -445,25 +451,31 @@ sub handle_stage_auths {
             $dbh->commit;
             $dbh->begin_work;
         }
-        my $marc = MARC::Record->new_from_usmarc($_);
-        my $authid = $marc->subfield('901', 'c');
-        if (defined($authid) && $authid !~ /^\d+$/) {
-            undef $authid;
+        eval {
+            my $marc = MARC::Record->new_from_usmarc($_);
+            my $authid = $marc->subfield('901', 'c');
+            if (defined($authid) && $authid !~ /^\d+$/) {
+                undef $authid;
+            }
+            my $lccn = $marc->subfield('010', 'a');
+            if (defined $lccn) {
+                $lccn =~ s/^\s+//;
+                $lccn =~ s/\s+$//;
+                $lccn =~ s/\s+/ /g;
+            }
+            my $cancelled_lccn = $marc->subfield('010', 'z');
+            if (defined $cancelled_lccn) {
+                $cancelled_lccn =~ s/^\s+//;
+                $cancelled_lccn =~ s/\s+$//;
+                $cancelled_lccn =~ s/\s+/ /g;
+            }
+            my $xml = OpenILS::Application::AppUtils->entityize($marc->as_xml_record());
+            $ins->execute($xml, $authid, $lccn, $cancelled_lccn, $xml);
+        };
+        if ($@) {
+            print STDERR "Record $i is bad; skipping\n";
+            next;
         }
-        my $lccn = $marc->subfield('010', 'a');
-        if (defined $lccn) {
-            $lccn =~ s/^\s+//;
-            $lccn =~ s/\s+$//;
-            $lccn =~ s/\s+/ /g;
-        }
-        my $cancelled_lccn = $marc->subfield('010', 'z');
-        if (defined $cancelled_lccn) {
-            $cancelled_lccn =~ s/^\s+//;
-            $cancelled_lccn =~ s/\s+$//;
-            $cancelled_lccn =~ s/\s+/ /g;
-        }
-        my $xml = OpenILS::Application::AppUtils->entityize($marc->as_xml_record());
-        $ins->execute($xml, $authid, $lccn, $cancelled_lccn, $xml);
     }
     $dbh->commit;
     report_progress("Records staged", $i) if 0 != $i % 100;
