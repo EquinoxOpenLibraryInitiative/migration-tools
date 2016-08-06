@@ -33,7 +33,7 @@ my $dbpw;
 my $dbhost;
 my $batch;
 my $cutoff;
-my $wait = 1;
+my $wait = 0;
 my $output;
 my $link_skipped;
 
@@ -404,7 +404,7 @@ sub handle_load_bibs {
             )
         });
         $dbh->commit;
-        sleep $wait;
+        sleep $wait if ($wait);
     }
 }
 
