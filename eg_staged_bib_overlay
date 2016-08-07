@@ -285,14 +285,13 @@ sub handle_stage_bibs {
             my $marc = MARC::Record->new_from_usmarc($_);
             my $bibid = $marc->subfield('901', 'c');
             if ($bibid !~ /^\d+$/) {
-                print STDERR "Record $i is suspect; skipping\n";
-                next;
+                 die('Subfield 901$c is not numeric or missing.');
             }
             my $xml = OpenILS::Application::AppUtils->entityize($marc->as_xml_record());
             $ins->execute($xml, $bibid);
         };
         if ($@) {
-            print STDERR "Record $i is bad; skipping\n";
+            warn("Record $i is bad: $@; skipping.");
             next;
         }
     }
@@ -473,7 +472,7 @@ sub handle_stage_auths {
             $ins->execute($xml, $authid, $lccn, $cancelled_lccn, $xml);
         };
         if ($@) {
-            print STDERR "Record $i is bad; skipping\n";
+            warn("Record $i is bad: $@; skipping.");
             next;
         }
     }
