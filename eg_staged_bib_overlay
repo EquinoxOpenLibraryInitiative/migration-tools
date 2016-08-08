@@ -285,7 +285,7 @@ sub handle_stage_bibs {
             my $marc = MARC::Record->new_from_usmarc($_);
             my $bibid = $marc->subfield('901', 'c');
             if ($bibid !~ /^\d+$/) {
-                 die('Subfield 901$c is not numeric or missing.');
+                die('Subfield 901$c is not numeric or missing.');
             }
             my $xml = OpenILS::Application::AppUtils->entityize($marc->as_xml_record());
             $ins->execute($xml, $bibid);
