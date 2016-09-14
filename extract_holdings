@@ -91,7 +91,9 @@ sub extract_holdings {
             for my $sub ( sort keys %{$multis->{$tagid}} ) {
                 for my $value ( @{$rec->{tags}[$holdidx]{multi}{$sub}} ) {
                   my $fh = $MULTIFILE{"$tagid$sub"};
-                  print $fh join("\t", $rec->{egid}, $j, $value), "\n";
+                  my $clean_value = $value;
+                  $clean_value =~ s/\t//g;
+                  print $fh join("\t", $rec->{egid}, $j, $clean_value), "\n";
               }
             }
 
@@ -140,7 +142,9 @@ sub extract_holdings {
                         next if $m->first_only($rec->{tags}[$tag_idx]{tag}, $sub) and ($k > 1);
                         for my $value ( @{$rec->{tags}[$tag_idx]{multi}{$sub}} ) {
                             my $fh = $MULTIFILE{"$othertag$sub"};
-                            print $fh normalize_output(join("\t", $rec->{egid}, $j, $value)), "\n";
+                            my $clean_value = $value;
+                            $clean_value =~ s/\t//g;
+                            print $fh normalize_output(join("\t", $rec->{egid}, $j, $clean_value)), "\n";
                         }
                     }
                 }
