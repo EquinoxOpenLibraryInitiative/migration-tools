@@ -92,7 +92,7 @@ sub extract_holdings {
                 for my $value ( @{$rec->{tags}[$holdidx]{multi}{$sub}} ) {
                   my $fh = $MULTIFILE{"$tagid$sub"};
                   my $clean_value = $value;
-                  $clean_value =~ s/\t//g;
+                  $clean_value =~ s/[\r\n\t]//g;
                   print $fh join("\t", $rec->{egid}, $j, $clean_value), "\n";
               }
             }
@@ -143,7 +143,7 @@ sub extract_holdings {
                         for my $value ( @{$rec->{tags}[$tag_idx]{multi}{$sub}} ) {
                             my $fh = $MULTIFILE{"$othertag$sub"};
                             my $clean_value = $value;
-                            $clean_value =~ s/\t//g;
+                            $clean_value =~ s/[\r\n\t]//g;
                             print $fh normalize_output(join("\t", $rec->{egid}, $j, $clean_value)), "\n";
                         }
                     }
