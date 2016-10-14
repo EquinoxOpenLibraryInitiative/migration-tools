@@ -1,0 +1,20 @@
+This is a set of SQL scripts to be run, in order, to completely
+remove data belonging to an OU and its descendants in an Evergreen
+database.  Each script uses a variable called ou_to_del that should
+be set to the shortname of the OU to remove.
+
+Generate script to delete users:
+
+SELECT 'DELETE FROM actor.usr WHERE id = ' || id || ';'
+FROM actor.usr WHERE home_ou IN (
+    SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit
+    WHERE shortname = 'EXAMPLE'
+);
+
+After running through the scripts, it should be possible to
+remove the actor.org_unit entries themselves.
+
+TODO:
+
+-- remove event output that is no longer associated with any events
+-- remvoe user address auditor entries
