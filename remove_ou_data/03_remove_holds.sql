@@ -41,6 +41,9 @@ DELETE FROM action.aged_hold_request WHERE request_lib IN
 DELETE FROM action.hold_request WHERE requestor IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
+DELETE FROM action.hold_request WHERE fulfillment_lib IN 
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+
 COMMIT;
 
 ALTER TABLE action.hold_request ENABLE TRIGGER action_hold_request_aging_tgr;
