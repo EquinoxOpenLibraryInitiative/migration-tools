@@ -16,6 +16,7 @@
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 \set ou_to_del ''''EXAMPLE''''
+\set vol_del_table ORGUNIT_volume_bibs
 \set ECHO all
 \timing
 
@@ -24,7 +25,7 @@ ALTER TABLE biblio.record_entry DISABLE TRIGGER audit_biblio_record_entry_update
 BEGIN;
 
 DELETE FROM biblio.record_entry WHERE id IN (
-    SELECT record FROM esi.albemarle_volume_bibs x 
+    SELECT record FROM esi.:vol_del_table x 
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 

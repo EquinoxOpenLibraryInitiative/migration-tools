@@ -16,9 +16,11 @@
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 \set ou_to_del ''''EXAMPLE''''
+\set vol_del_table ORGUNIT_volume_bibs
 \set ECHO all
 \timing
 
+DROP TABLE IF EXISTS esi.:vol_del_table;
 
 ALTER TABLE asset.call_number DISABLE RULE protect_cn_delete;
 ALTER TABLE asset.call_number DISABLE TRIGGER audit_asset_call_number_update_trigger;
@@ -30,7 +32,7 @@ DELETE FROM asset.uri_call_number_map WHERE call_number IN (
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
 );
 
-CREATE TABLE esi.albemarle_volume_bibs AS SELECT DISTINCT record
+CREATE TABLE esi.:vol_del_table AS SELECT DISTINCT record
 FROM asset.call_number WHERE owning_lib IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
@@ -43,4 +45,4 @@ COMMIT;
 ALTER TABLE asset.call_number ENABLE RULE protect_cn_delete;
 ALTER TABLE asset.call_number ENABLE TRIGGER audit_asset_call_number_update_trigger;
 
-CREATE INDEX alb_vol_bib_idx ON esi.albemarle_volume_bibs(record);
+CREATE INDEX org_vol_bib_idx ON esi.:vol_del_table(record);

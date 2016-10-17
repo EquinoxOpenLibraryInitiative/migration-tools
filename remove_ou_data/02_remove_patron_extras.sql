@@ -21,6 +21,7 @@
 
 ALTER TABLE actor.usr_address DISABLE TRIGGER audit_actor_usr_address_update_trigger;
 ALTER TABLE actor.usr DISABLE TRIGGER audit_actor_usr_update_trigger;
+ALTER TABLE actor.usr_message DISABLE RULE protect_usr_message_delete;
 
 CREATE INDEX tmp_addr_replaces ON actor.usr_address(replaces);
 BEGIN;
@@ -59,8 +60,12 @@ DELETE FROM actor.usr_address WHERE usr IN
 UPDATE actor.usr SET mailing_address = NULL, billing_address = NULL
 WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
+DELETE FROM actor.usr_message WHERE usr IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
 COMMIT;
 
 DROP INDEX actor.tmp_addr_replaces;
 ALTER TABLE actor.usr_address ENABLE TRIGGER audit_actor_usr_address_update_trigger;
 ALTER TABLE actor.usr ENABLE TRIGGER audit_actor_usr_update_trigger;
+ALTER TABLE actor.usr_message ENABLE RULE protect_usr_message_delete;

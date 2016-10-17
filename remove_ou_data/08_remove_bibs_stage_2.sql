@@ -16,6 +16,7 @@
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 \set ou_to_del ''''EXAMPLE''''
+\set vol_del_table ORGUNIT_volume_bibs
 \set ECHO all
 \timing
 
@@ -23,38 +24,38 @@ BEGIN;
 
 DELETE FROM authority.bib_linking WHERE bib IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
 DELETE FROM metabib.browse_entry_def_map WHERE source IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
 DELETE FROM acq.lineitem WHERE eg_bib_id IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
 DELETE FROM biblio.monograph_part WHERE record IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
 DELETE FROM biblio.peer_bib_copy_map WHERE peer_record IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
 DELETE FROM acq.lineitem WHERE queued_record IN (
     SELECT id FROM vandelay.queued_bib_record WHERE imported_as IN
     (
-        SELECT record FROM esi.albemarle_volume_bibs x
+        SELECT record FROM esi.:vol_del_table x
         WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
     )
 );
@@ -62,32 +63,32 @@ DELETE FROM acq.lineitem WHERE queued_record IN (
 DELETE FROM acq.acq_lineitem_history WHERE queued_record IN (
     SELECT id FROM vandelay.queued_bib_record WHERE imported_as IN
     (
-        SELECT record FROM esi.albemarle_volume_bibs x
+        SELECT record FROM esi.:vol_del_table x
         WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
     )
 );
 
 DELETE FROM vandelay.queued_bib_record WHERE imported_as IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
 DELETE FROM metabib.record_attr_vector_list WHERE source IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
 DELETE FROM metabib.record_sorter WHERE source IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
 DELETE FROM booking.resource_type WHERE record IN 
 (
-    SELECT record FROM esi.albemarle_volume_bibs x
+    SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
