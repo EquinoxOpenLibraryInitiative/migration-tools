@@ -30,6 +30,8 @@ DELETE FROM action.hold_request WHERE current_shelf_lib IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM action.hold_request WHERE pickup_lib IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+DELETE FROM action.hold_request WHERE request_lib IN
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
 DELETE FROM action.aged_hold_request WHERE pickup_lib IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
