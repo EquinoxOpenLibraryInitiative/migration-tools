@@ -47,8 +47,9 @@ DELETE FROM action.aged_circulation WHERE copy_owning_lib IN
 DELETE FROM action.non_cat_in_house_use WHERE org_unit IN 
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
-DELETE FROM action.non_cat_in_house_use WHERE staff IN
-(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+UPDATE action.non_cat_in_house_use SET staff = 1 WHERE staff IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del))
+AND org_unit IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
 COMMIT;
 
