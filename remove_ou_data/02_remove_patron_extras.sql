@@ -63,6 +63,18 @@ WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit
 DELETE FROM actor.usr_message WHERE usr IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
+DELETE FROM actor.stat_cat_entry_usr_map WHERE target_usr IN 
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+DELETE FROM actor.stat_cat_entry_usr_map WHERE stat_cat IN 
+(SELECT id from actor.stat_cat WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+DELETE FROM actor.stat_cat_entry WHERE stat_cat IN 
+(SELECT id from actor.stat_cat WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+DELETE FROM actor.stat_cat WHERE id IN 
+(SELECT id from actor.stat_cat WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
 COMMIT;
 
 DROP INDEX actor.tmp_addr_replaces;
