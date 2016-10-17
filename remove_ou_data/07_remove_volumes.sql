@@ -39,6 +39,14 @@ FROM asset.call_number WHERE owning_lib IN
 DELETE FROM asset.call_number WHERE owning_lib IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
+UPDATE asset.call_number acn SET owning_lib = ac.circ_lib 
+FROM asset.copy ac 
+WHERE ac.call_number = acn.id
+AND acn.owning_lib IN
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
+AND acn.id IN
+(SELECT call_number FROM asset.copy WHERE circ_lib NOT IN 
+    (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
 COMMIT;
 
