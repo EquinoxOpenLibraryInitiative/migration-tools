@@ -38,8 +38,8 @@ DELETE FROM auditor.asset_call_number_history WHERE owning_lib IN (
     WHERE shortname = :ou_to_del
 );
 DELETE FROM auditor.actor_usr_address_history WHERE usr IN (
-    SELECT au.id
+    SELECT id
     FROM actor.usr
-    WHERE home_ou = :ou_to_del
+    WHERE home_ou = (SELECT id FROM actor.org_unit WHERE shortname = :ou_to_del)
 );
 COMMIT;
