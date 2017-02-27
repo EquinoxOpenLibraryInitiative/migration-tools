@@ -25,5 +25,7 @@ DELETE FROM action.non_cataloged_circulation WHERE patron IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 DELETE FROM action.non_cataloged_circulation WHERE staff IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM action.usr_circ_history WHERE usr IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
 COMMIT;
