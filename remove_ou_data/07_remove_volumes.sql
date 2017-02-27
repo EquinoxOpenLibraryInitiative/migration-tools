@@ -39,6 +39,12 @@ FROM asset.call_number WHERE owning_lib IN
 DELETE FROM asset.call_number WHERE owning_lib IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
+DELETE FROM asset.call_number_prefix WHERE owning_lib IN
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+
+DELETE FROM asset.call_number_suffix WHERE owning_lib IN
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+
 COMMIT;
 
 ALTER TABLE asset.call_number ENABLE RULE protect_cn_delete;
