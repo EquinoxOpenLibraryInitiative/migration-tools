@@ -21,6 +21,7 @@
 
 create index tmp_idx on money.billing(btype);
 ALTER TABLE action.circulation DISABLE TRIGGER action_circulation_target_copy_trig;
+ALTER TABLE asset.copy_location DISABLE RULE protect_copy_location_delete;
 
 BEGIN;
 
@@ -68,4 +69,5 @@ DELETE FROM action_trigger.event_definition
 
 COMMIT;
 DROP INDEX money.tmp_idx;
+ALTER TABLE asset.copy_location ENABLE RULE protect_copy_location_delete;
 ALTER TABLE action.circulation ENABLE TRIGGER action_circulation_target_copy_trig;
