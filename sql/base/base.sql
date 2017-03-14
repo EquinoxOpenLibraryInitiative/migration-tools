@@ -244,7 +244,7 @@ CREATE OR REPLACE FUNCTION migration_tools.build_specific_base_staging_table (TE
     BEGIN
         base_staging_table = REPLACE( production_table, '.', '_' );
         --RAISE INFO 'In migration_tools.build_specific_base_staging_table(%,%) -> %', migration_schema, production_table, base_staging_table;
-        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.' || base_staging_table || ' ( LIKE ' || production_table || ' INCLUDING DEFAULTS EXCLUDING CONSTRAINTS );' );
+        PERFORM migration_tools.exec( $1, 'CREATE UNLOGGED TABLE ' || migration_schema || '.' || base_staging_table || ' ( LIKE ' || production_table || ' INCLUDING DEFAULTS EXCLUDING CONSTRAINTS );' );
         PERFORM migration_tools.exec( $1, '
             INSERT INTO ' || migration_schema || '.fields_requiring_mapping
                 SELECT table_schema, table_name, column_name, data_type
