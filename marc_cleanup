@@ -177,6 +177,11 @@ sub do_automated_cleanups {
                 message("Short leader padded");
             }
         }
+        if ($c->{'force-utf8'}) {
+            if ($record[$ptr] =~ m|<leader>(.........).(.+)</leader>|) {
+                $record[$ptr] = "<leader>$1a$2</leader>\n";
+            }
+        }
         if ($record[$ptr] =~ m|<controlfield tag="008">(.+?)</control|) {
             #pad short 008
             my $content = $1;
@@ -622,6 +627,7 @@ sub initialize {
                          'original-tag|ot=i',
                          'original-subfield|os=s',
                          'fix-subfield|fs=s',
+                         'force-utf8',
                          'script',
                          'no-strip9',
                          'trashfile|t=s',
@@ -685,6 +691,8 @@ Options
                            and renumbering is in effect, an old-to-new mapping
                            file (old2new.map) will be generated.
 
+  --force-utf8             Rewrite each record so that they describe themselves as
+                           UTF-8 encoded
   --autoscrub         -a   Automatically remove non-numeric tags in data
   --fix-subfield      -fs  Subfield code to use in place of non-alphanumeric
                            or empty subfield codes
