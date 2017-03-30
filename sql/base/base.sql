@@ -2449,3 +2449,21 @@ CREATE OR REPLACE FUNCTION migration_tools.find_circ_matrix_matchpoint (INTEGER)
         )
     );
 $$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        test ALIAS FOR $1;
+    BEGIN
+        ASSERT test;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN,TEXT) RETURNS VOID AS $$
+    DECLARE
+        test ALIAS FOR $1;
+        msg ALIAS FOR $2;
+    BEGIN
+        ASSERT test, msg;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
