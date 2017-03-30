@@ -2467,3 +2467,14 @@ CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN,TEXT) RETURNS VOID AS
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN,TEXT,TEXT) RETURNS TEXT AS $$
+    DECLARE
+        test ALIAS FOR $1;
+        fail_msg ALIAS FOR $2;
+        success_msg ALIAS FOR $3;
+    BEGIN
+        ASSERT test, fail_msg;
+        RETURN success_msg;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
