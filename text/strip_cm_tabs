@@ -1,0 +1,6 @@
+#!/usr/bin/perl -w
+while (my $line = <>) {
+    chomp $line;
+    $line =~ s/\x0D\x09/_/g;
+    print "$line\n";
+}

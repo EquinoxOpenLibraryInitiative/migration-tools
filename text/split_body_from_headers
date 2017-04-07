@@ -1,0 +1,13 @@
+#!/bin/bash
+START=$2
+if [ ! $START ]; then
+    START=1;
+fi
+tail -n +$START $1 | head -1 > $1.headers
+echo "wrote $1.headers (line $START)"
+tail -n +`expr $START + 1` $1 > $1.no_headers
+echo "wrote $1.no_headers (after line $START)"
+if [ "$START" -gt "1" ]; then
+    tail -n +$START $1 > $1.with_headers
+    echo "wrote $1.with_headers (starting with line $START)"
+fi

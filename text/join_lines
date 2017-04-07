@@ -1,0 +1,100 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+join_lines - program for joining adjacent lines from stdin or one or more files
+
+=head1 SYNOPSIS
+
+B<join_lines> [options...] [text files...]
+
+=head1 DESCRIPTION
+
+B<join_lines> is used to join adjacent lines from stdin or one or more files,
+trimming trailing line feeds and carriage returns, and sending the output to
+stdout. Arguments are used to define the criteria and exact behavior.
+
+=head1 OVERVIEW
+
+B<join_lines> understands the following optional arguments:
+
+=over 15
+
+=item --help
+
+Show this documentation.
+
+=item --delimiter=<d>
+
+B<join_lines> will use the specified delimiter <d> to separate joined lines. The
+default is to use no delmiter when joining lines.
+
+=item --lines=<n>
+
+This will cause B<join_lines> to join every <n> lines into one line.
+
+=item --record-separator=<s>
+
+This will cause B<join_lines> to immediately start a new line when it encounters
+a line solely containing <s>. That line itself will not otherwise be used. This
+argument may be used in conjunction with --lines, but probably should not be. :)
+
+=item --record-separator-empty-line
+
+This works like --record-separator, but is a way to define an "empty" line as
+being the record separator.
+
+=back
+
+=cut
+###############################################################################
+
+use strict;
+use Pod::Usage;
+use Getopt::Long;
+
+my $help;
+my $delimiter;
+my $linecount;
+my $record_separator;
+my $record_separator_empty_line;
+
+GetOptions(
+	'delimiter=s' => \$delimiter,
+	'lines=s' => \$linecount,
+	'record-separator=s' => \$record_separator,
+	'record-separator-empty-line' => \$record_separator_empty_line,
+	'help|?' => \$help
+);
+pod2usage(-verbose => 2) if $help; 
+
+my $count = 0;
+my @lines = ();
+
+sub join_lines {
+    print join($delimiter || '', @lines) . "\n";
+    @lines = ();
+    $count = 0;
+}
+
+while (my $line = <>) {
+    $count++;
+    $line =~ s/[\r\n]+$//g;
+    if (defined $record_separator_empty_line && $line eq '') {
+        join_lines();
+    } elsif (defined $record_separator && $line eq $record_separator) {
+        join_lines();
+    } elsif (defined $linecount && $count == $linecount) {
+        push @lines, $line;
+        join_lines();
+    } elsif (! defined $linecount && ! defined $record_separator && ! defined $record_separator_empty_line) {
+        print "$line\n"; # passthru when given no arguments
+    } else {
+        push @lines, $line;
+    }
+}
+if (scalar(@lines) > 0) {
+    print join($delimiter || '', @lines) . "\n";
+}

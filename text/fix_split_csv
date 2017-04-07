@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+
+my $delimiter = "\t";
+my $colcount = 11;
+
+my $running_field_count = 0;
+
+while (my $line = <>) {
+	chomp $line;
+	print $line;
+	my @f = split /$delimiter/, $line;
+	if (scalar(@f) != 1) {
+		$running_field_count += scalar(@f);
+	}
+	if ($running_field_count >= $colcount) {
+		$running_field_count = 0;
+		print "\n";
+	}
+}
+

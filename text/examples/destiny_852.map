@@ -1,0 +1,12 @@
+price           852 9
+library         852 a
+location        852 b
+call_number     852 h
+cn_item_number  852 i
+cn_prefix       852 k
+cn_suffix       852 m
+barcode         852 p
+copy_number     852 t
+item_note       852 x m:multi
+extra1          926 a
+extra2          926 b

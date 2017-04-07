@@ -1,0 +1,161 @@
+#!/usr/bin/perl -w
+use Getopt::Long;
+use Text::CSV::Auto;
+use Data::Dumper;
+use DBI;
+use File::Basename;
+
+my $dbh;
+my $cfg;
+my $csv_config;
+
+sub init {
+	our %config;
+	do '/openils/conf/offline-config.pl';
+	$dbh = DBI->connect( $config{dsn}, $config{usr}, $config{pw} ) or die $DBI::errstr;
+	$cfg = {
+		schema => 'm_foo',
+		auto_options => {
+		}
+	};
+	our %CSV_options = (
+	    binary => 1,
+	    auto_diag => 1,
+	    diag_verbose => 1,
+	);
+	$cfg->{auto_options}->{csv_options} = \%CSV_options;
+
+	GetOptions(
+		'config=s' => \$csv_config,
+		'no-legacy-prefix' => \($cfg->{no_legacy_prefix}),
+		'use-no-headers-file' => \($cfg->{use_no_headers_file}),
+		'add-x-migrate' => \($cfg->{add_x_migrate}),
+        'outfile=s' => \($cfg->{outfile}),
+		'schema=s' => \($cfg->{schema}),
+		'parent=s' => \($cfg->{parent}),
+		'help|?' => \$help
+	);
+	if ($help || ((@ARGV == 0) && (-t STDIN))) {
+		die qq^\n\t$0 [--config <CONFIG>] [--add-x-migrate] [--no-legacy-prefix] [--schema <schema>] [--parent <base table>] [--outfile <file to create>] <"clean" file from clean_csv script>\n\n^;
+	}
+	if ($csv_config && ! -e $csv_config) {
+		die "$csv_config does not exist\n";
+	}
+	if ($csv_config && -e $csv_config) {
+		do $csv_config;
+	}
+	if (! -e $ARGV[0]) {
+		die "$ARGV[0] does not exist\n";
+	}
+}
+
+sub write_sql_sample {
+	my $cfg = shift;
+	my $info = shift;
+	my $fn = $cfg->{outfile} || $cfg->{auto_options}->{file} . '.sql';
+
+	print "\twriting $fn\n";
+	local *SQL;
+	open SQL, ">$fn";
+	print SQL "-- $cfg->{auto_options}->{file}\n/*\n";
+	open IN, $cfg->{auto_options}->{file};
+	foreach (1..5) {
+		my $line = <IN>;
+		print SQL $line;
+	}
+	close IN;
+	print SQL "*/\n";
+	return *SQL;
+}
+
+sub write_sql_table {
+	my $sql = shift;
+	my $cfg = shift;
+	my $info = shift;
+	my $fn = $cfg->{auto_options}->{file};
+	my @indices = ();
+
+	print "\twriting table definition\n";
+    if ($cfg->{parent}) {
+        $cfg->{table_name} = $cfg->{parent} . '_legacy';
+    } else {
+	    $cfg->{table_name} = lc(basename($fn)); $cfg->{table_name} =~ s/[\-\. ]/_/g;
+    }
+	print $sql "DROP TABLE IF EXISTS $cfg->{schema}.$cfg->{table_name};\n";
+	print $sql "CREATE UNLOGGED TABLE $cfg->{schema}.$cfg->{table_name} (\n";
+	my $idx = 0;
+	if ($cfg->{add_x_migrate}) {
+		print $sql "    x_migrate BOOLEAN\n";
+		$idx++;
+		push @indices, 'x_migrate';
+	}
+	foreach my $column (@{ $info }) {
+		my $cn = $column->{'header'};
+		if ($cn =~ /^x_/) {
+			push @indices, $cn;
+		}
+		my $col_info = Dumper($column);
+		$col_info =~ s/^\$VAR1 = //;
+		print $sql "   " . ($idx++ ? ',' : ' ');
+		print $sql "l_" unless $cfg->{no_legacy_prefix} or $column->{'header'} =~ /^x_/ or $column->{'header'} =~ /^l_/;
+        print $sql "$cn " . ($cn eq 'x_eg_bib_id' ? 'BIGINT' : 'TEXT');
+        print $sql " /*\n         $col_info   */\n";
+	}
+    if ($cfg->{parent}) {
+	    print $sql ') INHERITS (' . $cfg->{schema} . '.' . $cfg->{parent} . ");\n";
+    } else {
+	    print $sql ");\n";
+    }
+	foreach my $cn (@indices) {
+		print $sql "CREATE INDEX ON $cfg->{schema}.$cfg->{table_name} ($cn);\n";
+	}
+}
+
+sub write_sql_loader {
+	my $sql = shift;
+	my $cfg = shift;
+	my $auto = shift;
+	my $info = shift;
+	my $fn = $cfg->{auto_options}->{file} . ($cfg->{use_no_headers_file} ? '.no_headers' : '');
+
+	print "\twriting copy statement\n";
+	print $sql "\n\\COPY $cfg->{schema}.$cfg->{table_name} (";
+    my $idx = 0;
+    foreach my $column (@{ $info }) {
+        print $sql ($idx++ ? ',' : '');
+        print $sql "l_" unless $cfg->{no_legacy_prefix} or $column->{'header'} =~ /^x_/ or $column->{'header'} =~ /^l_/;
+        print $sql $column->{'header'};
+    }
+    print $sql ") FROM '$fn'";
+    if ($auto->csv->sep_char eq chr(9) && ! defined $auto->csv->quote_char && ! defined $auto->csv->escape_char) {
+        # true .tsv, don't treat as csv
+    } elsif ($auto->csv->sep_char eq chr(9)) {
+        # probably good enough .tsv, don't treat as csv
+    } else {
+        print $sql " WITH csv " . ($cfg->{use_no_headers_file} ? "" : "header");
+        print $sql " delimiter " . $dbh->quote( $auto->csv->sep_char ) unless $dbh->quote( $auto->csv->sep_char ) eq 'NULL';
+        print $sql " quote " . $dbh->quote( $auto->csv->quote_char ) unless $dbh->quote( $auto->csv->quote_char ) eq 'NULL';
+        print $sql " escape " . $dbh->quote( $auto->csv->escape_char ) unless $dbh->quote( $auto->csv->escape_char ) eq 'NULL';
+    }
+	print $sql "\n";
+}
+
+sub main {
+	init();
+	foreach my $fn (@ARGV) {
+		print "processing $fn\n";
+		$cfg->{auto_options}->{file} = $fn;
+		my $auto = Text::CSV::Auto->new($cfg->{auto_options});
+
+		my $info = $auto->analyze();
+		my $sql = write_sql_sample($cfg,$info);
+		write_sql_table($sql,$cfg,$info);
+		write_sql_loader($sql,$cfg,$auto,$info);
+		close $sql;
+
+		print "\tdone.\n";
+	}
+}
+
+main();
+

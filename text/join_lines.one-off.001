@@ -1,0 +1,6 @@
+#!/usr/bin/perl -w
+# so we're wanting our lines to end in <13><10>, ideally, and this is catching lines where isolated <10>'s cause a premature linebreak
+while (my $line = <>) {
+    $line =~ s/([^\x0D])\x0A$/$1/;
+    print $line;
+}

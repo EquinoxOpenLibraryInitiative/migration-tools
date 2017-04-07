@@ -1,0 +1,286 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-quicksheet 
+
+Quickly produces a simple Excel spreadsheet based on the tracked file suitable
+for simple end-user mapping.  The new file is named after the tracked file, but
+ends in .mapping.xls
+
+=head1 SYNOPSIS
+
+B<mig-quicksheet> <file>
+
+=cut
+
+###############################################################################
+
+use strict;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use DBI;
+use Spreadsheet::WriteExcel;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+
+pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
+
+Mig::die_if_no_env_migschema();
+Mig::die_if_mig_tracking_table_does_not_exist();
+
+my $has_x_source = 0;
+my $file = abs_path($ARGV[0]);
+my $fdata;
+my $tracked_file_id = Mig::check_for_tracked_file($file);
+if ($tracked_file_id) {
+    $fdata = Mig::status_this_file($file);
+} else {
+    die "File not currently tracked: $file\n";
+}
+
+my $table = $fdata->{staged_table};
+if (!$table) {
+    die "No staged staged table for file: $file\n";
+}
+
+my $workbook = Spreadsheet::WriteExcel->new($file . '.mapping.xls');
+my @worksheets = ();
+print "Writing $file.mapping.xls\n";
+print "Sheet: Field Summary\n";
+my $first_sheet = $workbook->add_worksheet('Field Summary');
+my $bold = $workbook->add_format();
+$bold->set_bold();
+$bold->set_align('left');
+my $left = $workbook->add_format();
+$left->set_align('left');
+$first_sheet->set_column(0,6,30);
+
+my $dbh = Mig::db_connect();
+my $sth = $dbh->prepare("
+    SELECT COUNT(*)
+    FROM $MIGSCHEMA.$table
+    LIMIT 1;
+");
+my $rv = $sth->execute()
+    || die "Error retrieving data from information_schema: $!";
+
+my @cols = $sth->fetchrow_array;
+$sth->finish;
+my $count = $cols[0];
+Mig::db_disconnect($dbh);
+
+$first_sheet->write(0,0,'Source File:',$bold);
+$first_sheet->write(0,1,$file,$left);
+$first_sheet->write(1,0,'Number of Rows:',$bold);
+$first_sheet->write(1,1,$count,$left);
+
+my $sheet_row_start = 4;
+
+$first_sheet->write($sheet_row_start,0,'Legacy Column',$bold);
+$first_sheet->write($sheet_row_start,1,'Non-Empty Rows',$bold);
+$first_sheet->write($sheet_row_start,2,'Distinct Non-NULL Values',$bold);
+$first_sheet->write($sheet_row_start,3,'Min Value',$bold);
+$first_sheet->write($sheet_row_start,4,'Min Length',$bold);
+$first_sheet->write($sheet_row_start,5,'Max Value',$bold);
+$first_sheet->write($sheet_row_start,6,'Max Length',$bold);
+
+handle_columns();
+
+$workbook->close();
+
+exit 0;
+
+###############################################################################
+
+sub handle_columns {
+    my $dbh = Mig::db_connect();
+    my $sth = $dbh->prepare("
+        SELECT *
+        FROM information_schema.columns
+        WHERE table_schema = " . $dbh->quote($MIGSCHEMA) . "
+        AND table_name = " . $dbh->quote($table) . "
+        ORDER BY dtd_identifier::INTEGER ASC;
+    ");
+    my $rv = $sth->execute()
+        || die "Error retrieving data from information_schema: $!";
+
+    my $sheet_row_offset = 0;
+
+    while (my $data = $sth->fetchrow_hashref) {
+        my $column = $data->{column_name};
+        if ($column eq 'x_source') {
+            $has_x_source = 1;
+        }
+        if ($column =~ /^l_/
+            || ($column =~ /^x_/
+                && (   $column ne 'x_migrate'
+                    && $column ne 'x_source'
+                    && $column ne 'x_egid'
+                    && $column ne 'x_hseq'
+                )
+            )
+        ) {
+            $sheet_row_offset++;
+            my $cdata = column_summary($column);
+            $first_sheet->write($sheet_row_start + $sheet_row_offset,0,$column,$left);
+            $first_sheet->write($sheet_row_start + $sheet_row_offset,1,$cdata->{non_empty_count},$left);
+            $first_sheet->write($sheet_row_start + $sheet_row_offset,2,$cdata->{distinct_value_count},$left);
+            $first_sheet->write($sheet_row_start + $sheet_row_offset,3,$cdata->{min_value},$left);
+            $first_sheet->write($sheet_row_start + $sheet_row_offset,4,$cdata->{min_length},$left);
+            $first_sheet->write($sheet_row_start + $sheet_row_offset,5,$cdata->{max_value},$left);
+            $first_sheet->write($sheet_row_start + $sheet_row_offset,6,$cdata->{max_length},$left);
+            if ($cdata->{distinct_value_count} > 1 && $cdata->{distinct_value_count} <= 500) {
+                group_by($column);
+            }
+        }
+    }
+    $sth->finish;
+    Mig::db_disconnect($dbh);
+}
+
+sub column_summary {
+
+    my $column = shift;
+
+    my $dbh = Mig::db_connect();
+
+    ### non_empty_count
+    my $sth = $dbh->prepare("
+        SELECT COUNT(*)
+        FROM $MIGSCHEMA.$table
+        WHERE $column IS NOT NULL AND BTRIM($column) <> '';
+    ");
+    my $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    my @cols = $sth->fetchrow_array;
+    $sth->finish;
+    my $non_empty_count = $cols[0];
+ 
+    ### distinct_value_count
+    $sth = $dbh->prepare("
+        SELECT COUNT(DISTINCT $column)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    my $distinct_value_count = $cols[0];
+
+    ### min_value
+    $sth = $dbh->prepare("
+        SELECT MIN($column)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    my $min_value = $cols[0];
+
+    ### min_length
+    $sth = $dbh->prepare("
+        SELECT MIN(LENGTH($column))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    my $min_length = $cols[0];
+
+    ### max_value
+    $sth = $dbh->prepare("
+        SELECT MAX($column)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    my $max_value = $cols[0];
+
+    ### max_length
+    $sth = $dbh->prepare("
+        SELECT MAX(LENGTH($column))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    my $max_length = $cols[0];
+
+    return {
+         non_empty_count        => $non_empty_count
+        ,distinct_value_count   => $distinct_value_count
+        ,min_value              => defined $min_value ? $min_value : '<NULL>'
+        ,min_length             => defined $min_length ? $min_length : '<NULL>'
+        ,max_value              => defined $max_value ? $max_value : '<NULL>'
+        ,max_length             => defined $max_length ? $max_length : '<NULL>'
+    };
+}
+
+sub group_by {
+    my ($column,$option) = (shift,"GROUP BY 2 ORDER BY 2");
+
+    print "Sheet: $column\n";
+    my $col_sheet = $workbook->add_worksheet(substr($column,0,31));
+    push @worksheets, $col_sheet;
+    $col_sheet->set_column(0,6,30);
+
+    my $col_sheet_row_start = 0;
+    my $col_sheet_row_offset = 0;
+
+    $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,0,'Count',$bold);
+    if ($has_x_source) {
+        $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,'Source',$bold);
+        $option = "GROUP BY 2,3 ORDER BY 2,3";
+    }
+    $col_sheet->write(
+        $col_sheet_row_start + $col_sheet_row_offset
+        ,$has_x_source ? 2 : 1
+        ,"Legacy Value for $column"
+        ,$bold
+    );
+
+    my $dbh = Mig::db_connect();
+    my $sth;
+    my $rv;
+
+    $sth = $dbh->prepare("
+        SELECT COUNT(*), " . ($has_x_source ? 'x_source, ' : '') . "$column
+        FROM $MIGSCHEMA.$table
+        $option;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+
+    while (my @cols = $sth->fetchrow_array) {
+        $col_sheet_row_offset++;
+        my $count = $cols[0];
+        $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,0,$count,$left);
+        my $value;
+        if ($has_x_source) {
+            my $source = defined $cols[1] ? $cols[1] : '<NULL>';
+            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,$source,$left);
+            $value = defined $cols[2] ? $cols[2] : '<NULL>';
+            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,2,$value,$left);
+        } else {
+            $value = defined $cols[1] ? $cols[1] : '<NULL>';
+            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,$value,$left);
+        }
+    }
+    $sth->finish;
+}
+

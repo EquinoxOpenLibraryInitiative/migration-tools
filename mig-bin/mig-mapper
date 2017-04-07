@@ -1,0 +1,778 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-mapper 
+
+Interactive session for analyzing, flagging, and mapping legacy field data to
+Evergreen fields.
+
+Upon exit, generate either [file].clean.map.sql or <parent table>_map.sql. The
+SQL generated will be UPDATE's for setting the Evergreen-specific columns for a
+given file's staging tables, and TRUNCATE's and INSERT's for auxilary tables.
+The files will have \include hooks for pulling in additional mapping files
+(for example, end-user mappings for circ modifiers, etc.)
+
+=head1 SYNOPSIS
+
+B<mig-mapper> <file>
+
+=cut
+
+###############################################################################
+
+use strict;
+use Term::ReadLine;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use DBI;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+
+pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
+
+Mig::die_if_no_env_migschema();
+Mig::die_if_mig_tracking_table_does_not_exist();
+
+my $column_filter = 1; # show all fields
+my $file = abs_path($ARGV[0]);
+my $fdata;
+my $tracked_file_id = Mig::check_for_tracked_file($file);
+if ($tracked_file_id) {
+    $fdata = Mig::status_this_file($file);
+} else {
+    die "File not currently tracked: $file\n";
+}
+
+my $table = $fdata->{staged_table};
+if (!$table) {
+    die "No staged staged table for file: $file\n";
+}
+
+my $loop = 1;
+my $term = Term::ReadLine->new('mapper');
+my $prompt;
+my $OUT = $term->OUT || \*STDOUT;
+my @dtd_identifiers;
+
+table_menu();
+$prompt = "$fdata->{staged_table}: ";
+while ( $loop && defined (my $cmd = $term->readline($prompt)) ) {
+top:
+    $cmd =~ s/^\s+//;
+    $cmd =~ s/\s+$//;
+    $term->addhistory($cmd) if $cmd =~ /\S/;
+    if ($cmd =~ /^\d+$/) {
+        my $ret = column_menu($cmd);
+        if ($ret) {
+            $cmd = $ret;
+            goto top;
+        }
+    } else {
+        switch($cmd) {
+            case /^(ls|\?|\.|;)$/ {
+                table_menu();
+            }
+            case '' {
+                table_menu();
+            }
+            case 'l' {
+                list_ten();
+            }
+            case 'f1' {
+                $column_filter = 1;
+                table_menu();
+            }
+            case 'f2' {
+                $column_filter = 2;
+                table_menu();
+            }
+            case 'f3' {
+                $column_filter = 3;
+                table_menu();
+            }
+        }
+    }
+    $loop = 0 if $cmd =~ /^q/io;
+}
+
+exit 0;
+
+###############################################################################
+
+sub table_menu {
+    print "\n=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+    print "$table";
+    print "\n=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+    print "\n";
+    print " l) SELECT * FROM $fdata->{staged_table} LIMIT 10;\n";
+    print "f1) show all fields (default)\n";
+    print "f2) show legacy fields\n";
+    print "f3) show EG fields\n";
+    print " q) quit\n\n";
+    printf "%-36s", "Columns (* for required)";
+    printf "%-30s", "Target";
+    printf "%-30s", "Transform";
+    printf "%-30s", "First Row";
+    printf "%-30s", "Migration Note";
+    print "\n";
+    printf "%-36s", "-------";
+    printf "%-30s", "------";
+    printf "%-30s", "---------";
+    printf "%-30s", "---------";
+    printf "%-30s", "--------------";
+    print "\n";
+    my $dbh = Mig::db_connect();
+    my $sth = $dbh->prepare("
+        SELECT *
+        FROM information_schema.columns
+        WHERE table_schema = " . $dbh->quote($MIGSCHEMA) . "
+        AND table_name = " . $dbh->quote($table) . "
+        ORDER BY dtd_identifier::INTEGER ASC;
+    ");
+    my $rv = $sth->execute()
+        || die "Error retrieving data from information_schema: $!";
+    my $sth2 = $dbh->prepare("
+        SELECT *
+        FROM $MIGSCHEMA.$table
+        LIMIT 1;
+    ");
+    my $rv2 = $sth2->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    my $row = $sth2->fetchrow_hashref;
+
+    open LESS, "|less -F";
+    @dtd_identifiers = ();
+    while (my $data = $sth->fetchrow_hashref) {
+        my $column = $data->{column_name};
+        if ($column_filter == 2 && !($column =~ /^[xl]_/)) {
+            next;
+        }
+        if ($column_filter == 3 && ($column =~ /^[xl]_/)) {
+            next;
+        }
+        my $cdata = status_this_column($column);
+        printf LESS $cdata->{required} ? '*' : ' ';
+        printf LESS "%3s)  ", $data->{dtd_identifier};
+        push @dtd_identifiers, $data->{dtd_identifier};
+        printf LESS "%-30s", $column;
+        printf LESS "%-30s", defined $cdata->{target_table}
+            ?  ( $cdata->{target_table} ne $table ? $cdata->{target_table} . '.' : '') . $cdata->{target_column}
+            : '';
+        printf LESS "%-30s", defined $cdata->{transform} ? $cdata->{transform} : '';
+        printf LESS "%-30s", defined $$row{$column} ? $$row{$column} : '';
+        printf LESS "%-30s", defined $cdata->{comment} ? $cdata->{comment} : '';
+        print LESS "\n";
+    }
+    close LESS;
+    print "\n";
+    $sth->finish;
+    $sth2->finish;
+    Mig::db_disconnect($dbh);
+}
+
+sub column_menu {
+    my $dtd_identifier = shift;
+    my $dbh = Mig::db_connect();
+    my $sth = $dbh->prepare("
+        SELECT *
+        FROM information_schema.columns
+        WHERE table_schema = " . $dbh->quote($MIGSCHEMA) . "
+        AND table_name = " . $dbh->quote($table) . "
+        AND dtd_identifier = " . $dbh->quote($dtd_identifier) . ";
+    ");
+    my $rv = $sth->execute()
+        || die "Error retrieving data from information_schema: $!";
+    my $data = $sth->fetchrow_hashref;
+    $sth->finish;
+    Mig::db_disconnect($dbh);
+
+    my $column = $data->{column_name};
+
+    my $prompt = "$table.$column: ";
+
+    sub print_menu {
+        my $column = shift;
+        my $cdata = status_this_column($column);
+        print "\n=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+        print "$column";
+        print "\n-------------------------------------------------------------------------------------------------\n";
+        print "   target: " . (
+            defined $cdata->{target_table}
+            ?  ( $cdata->{target_table} ne $table ? $cdata->{target_table} . '.' : '') . $cdata->{target_column}
+            : ''
+        ) . "\n";
+        print "transform: " . (defined $cdata->{transform} ? $cdata->{transform} : '') . "\n";
+        print "  comment: " . (defined $cdata->{comment} ? $cdata->{comment} : '') . "\n";
+        print "\n=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+        print "\n";
+        print " l) SELECT $column FROM $fdata->{staged_table} LIMIT 10;\n";
+        print " s) summarize\n" if $column ne 'x_migrate';
+        print " g) group browse\n";
+        print "g2) group browse (order by count desc)\n";
+        print " c) comment\n";
+        print " f) flag for end-user mapping\n";
+        print " t) target\n";
+        print " e) eval/transform\n";
+        print " n) next column\n";
+        print " p) prev column\n";
+        print " q) quit back to table menu\n";
+        print "\n";
+    }
+    print_menu($column);
+
+    my $loop = 1;
+    while ( $loop && defined (my $cmd = $term->readline($prompt)) ) {
+        $cmd =~ s/^\s+//;
+        $cmd =~ s/\s+$//;
+        $term->addhistory($cmd) if $cmd =~ /\S/;
+        $loop = 0 if $cmd =~ /^q/io;
+        switch($cmd) {
+            case /^(ls|\?|\.|;)$/ {
+                print_menu($column);
+            }
+            case '' {
+                print_menu($column);
+            }
+            case 'l' {
+                list_ten($column);
+            }
+            case 's' {
+                summarize($column);
+            }
+            case 'g' {
+                group_browse($column);
+            }
+            case 'g2' {
+                group_browse($column,'GROUP BY 1 ORDER BY 2 DESC');
+            }
+            case /^c/io {
+                if ($cmd =~ /^c\s+(.+)$/) {
+                    set_comment($column,$1);
+                }
+            }
+            case /^t/io {
+                if ($cmd =~ /^t\s+(.+)$/) {
+                    set_target($column,$1);
+                }
+            }
+            case /^e/io {
+                if ($cmd =~ /^e\s+(.+)$/) {
+                    set_transform($column,$1);
+                }
+            }
+            case 'n' {
+                my( $index )= grep { $dtd_identifiers[$_] eq $dtd_identifier } 0..$#dtd_identifiers;
+                return $dtd_identifiers[$index + 1];
+            }
+            case 'p' {
+                my( $index )= grep { $dtd_identifiers[$_] eq $dtd_identifier } 0..$#dtd_identifiers;
+                return $dtd_identifiers[$index - 1];
+            }
+        }
+    }
+}
+
+sub list_ten {
+    my $column = shift;
+
+    my $dbh = Mig::db_connect();
+    my $sth;
+    my $rv;
+    my @cols;
+
+    $sth = $dbh->prepare(Mig::sql("
+        SELECT " . (defined $column ? $column : '*') . "
+        FROM $MIGSCHEMA.$table
+        LIMIT 10;
+    "));
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    print "\n";
+    while (@cols = $sth->fetchrow_array) {
+        print "\t" . join(',',map {defined $_ ? $_ : ''} @cols) . "\n";
+    }
+    print "\n";
+    $sth->finish;
+}
+
+sub summarize {
+    my $column = shift;
+
+    my $count;
+    my $non_empty_count;
+    my $distinct_value_count;
+    my $distinct_integer_value_count;
+    my $distinct_money6_value_count;
+    my $distinct_money8_value_count;
+    my $distinct_date_value_count;
+    my $distinct_timestamptz_value_count;
+
+    my $min_value;
+    my $min_length;
+    my $min_length_min_value;
+    my $max_value;
+    my $max_length;
+    my $max_length_max_value;
+
+    my $min_value_as_integer;
+    my $max_value_as_integer;
+
+    my $min_value_as_money6;
+    my $max_value_as_money6;
+
+    my $min_value_as_money8;
+    my $max_value_as_money8;
+
+    my $min_value_as_date;
+    my $max_value_as_date;
+
+    my $min_value_as_timestamptz;
+    my $max_value_as_timestamptz;
+
+    my $dbh = Mig::db_connect();
+    my $sth;
+    my $rv;
+    my @cols;
+
+    ### count
+    $sth = $dbh->prepare("
+        SELECT COUNT(*)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $count = $cols[0];
+
+    ### non_empty_count
+    $sth = $dbh->prepare("
+        SELECT COUNT(*)
+        FROM $MIGSCHEMA.$table
+        WHERE $column IS NOT NULL AND BTRIM($column) <> '';
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $non_empty_count = $cols[0];
+ 
+    ### distinct_value_count
+    $sth = $dbh->prepare("
+        SELECT COUNT(DISTINCT $column)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $distinct_value_count = $cols[0];
+
+    ### distinct_integer_value_count
+    $sth = $dbh->prepare("
+        SELECT COUNT(DISTINCT migration_tools.attempt_cast($column,'INTEGER')::INTEGER)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $distinct_integer_value_count = $cols[0];
+
+    ### distinct_money6_value_count
+    $sth = $dbh->prepare("
+        SELECT COUNT(DISTINCT NULLIF(migration_tools.attempt_money6($column,'-0.01'),-0.01))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $distinct_money6_value_count = $cols[0];
+
+    ### distinct_money8_value_count
+    $sth = $dbh->prepare("
+        SELECT COUNT(DISTINCT NULLIF(migration_tools.attempt_money($column,'-0.01'),-0.01))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $distinct_money8_value_count = $cols[0];
+
+    ### distinct_date_value_count
+    $sth = $dbh->prepare("
+        SELECT COUNT(DISTINCT NULLIF(migration_tools.attempt_date($column,'1969-06-09'),'1969-06-09'::DATE))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $distinct_date_value_count = $cols[0];
+
+    ### distinct_timestamptz_value_count
+    $sth = $dbh->prepare("
+        SELECT COUNT(DISTINCT NULLIF(migration_tools.attempt_timestamptz($column,'1969-06-09'),'1969-06-09'::TIMESTAMPTZ))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $distinct_timestamptz_value_count = $cols[0];
+
+    ### min_value
+    $sth = $dbh->prepare("
+        SELECT MIN($column)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $min_value = $cols[0];
+
+    ### min_length
+    $sth = $dbh->prepare("
+        SELECT MIN(LENGTH($column))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $min_length = $cols[0];
+
+    ### min_length_min_value
+    $sth = $dbh->prepare("
+        SELECT MIN($column)
+        FROM $MIGSCHEMA.$table
+        WHERE LENGTH($column) = $min_length;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $min_length_min_value = $cols[0];
+
+    ### min_value_as_integer
+    $sth = $dbh->prepare("
+        SELECT MIN(migration_tools.attempt_cast($column,'INTEGER')::INTEGER)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $min_value_as_integer = $cols[0];
+
+    ### min_value_as_money6
+    $sth = $dbh->prepare("
+        SELECT MIN(NULLIF(migration_tools.attempt_money6($column,'-0.01'),-0.01))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $min_value_as_money6 = $cols[0];
+
+    ### min_value_as_money8
+    $sth = $dbh->prepare("
+        SELECT MIN(NULLIF(migration_tools.attempt_money($column,'-0.01'),-0.01))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $min_value_as_money8 = $cols[0];
+
+    ### min_value_as_date
+    $sth = $dbh->prepare("
+        SELECT MIN(NULLIF(migration_tools.attempt_date($column,'1969-06-09'),'1969-06-09'::DATE))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $min_value_as_date = $cols[0];
+
+    ### min_value_as_timestamptz
+    $sth = $dbh->prepare("
+        SELECT MIN(NULLIF(migration_tools.attempt_timestamptz($column,'1969-06-09'),'1969-06-09'::TIMESTAMPTZ))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $min_value_as_timestamptz = $cols[0];
+
+    ### max_value
+    $sth = $dbh->prepare("
+        SELECT MAX($column)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $max_value = $cols[0];
+
+    ### max_length
+    $sth = $dbh->prepare("
+        SELECT MAX(LENGTH($column))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $max_length = $cols[0];
+
+    ### max_length_max_value
+    $sth = $dbh->prepare("
+        SELECT MAX($column)
+        FROM $MIGSCHEMA.$table
+        WHERE LENGTH($column) = $max_length;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $max_length_max_value = $cols[0];
+
+    ### max_value_as_integer
+    $sth = $dbh->prepare("
+        SELECT MAX(migration_tools.attempt_cast($column,'INTEGER')::INTEGER)
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $max_value_as_integer = $cols[0];
+
+    ### max_value_as_money6
+    $sth = $dbh->prepare("
+        SELECT MAX(NULLIF(migration_tools.attempt_money6($column,'-0.01'),-0.01))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $max_value_as_money6 = $cols[0];
+
+    ### max_value_as_money8
+    $sth = $dbh->prepare("
+        SELECT MAX(NULLIF(migration_tools.attempt_money($column,'-0.01'),-0.01))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $max_value_as_money8 = $cols[0];
+
+    ### max_value_as_date
+    $sth = $dbh->prepare("
+        SELECT MAX(NULLIF(migration_tools.attempt_date($column,'1969-06-09'),'1969-06-09'::DATE))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $max_value_as_date = $cols[0];
+
+    ### max_value_as_timestamptz
+    $sth = $dbh->prepare("
+        SELECT MAX(NULLIF(migration_tools.attempt_timestamptz($column,'1969-06-09'),'1969-06-09'::TIMESTAMPTZ))
+        FROM $MIGSCHEMA.$table;
+    ");
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+    @cols = $sth->fetchrow_array;
+    $sth->finish;
+    $max_value_as_timestamptz = $cols[0];
+
+    Mig::db_disconnect($dbh);
+
+    print "\n";
+    print "# of rows                             = $count\n";
+    print "# of non-empty rows                   = $non_empty_count\n";
+    print "# of distinct values (as text)        = $distinct_value_count\n";
+    print "# of distinct values (as integer)     = $distinct_integer_value_count\n";
+    print "# of distinct values (as money6)      = $distinct_money6_value_count\n";
+    print "# of distinct values (as money8)      = $distinct_money8_value_count\n";
+    print "# of distinct values (as date)        = $distinct_date_value_count\n";
+    print "# of distinct values (as timestamptz) = $distinct_timestamptz_value_count\n";
+    print "\n";
+    print "minimum value (as text)               = $min_value\n";
+    print "maximum value (as text)               = $max_value\n";
+    print "\n";
+    print "minimum value length (as text)        = $min_length (min value: $min_length_min_value)\n";
+    print "maximum value length (as text)        = $max_length (max value: $max_length_max_value)\n";
+    print "\n";
+    print "minimum value (as integer)            = " . ($min_value_as_integer ? $min_value_as_integer : '') . "\n";
+    print "maximum value (as integer)            = " . ($max_value_as_integer ? $max_value_as_integer : '') . "\n";
+    print "\n";
+    print "minimum value (as money6)             = " . ($min_value_as_money6 ? $min_value_as_money6 : '') . "\n";
+    print "maximum value (as money6)             = " . ($max_value_as_money6 ? $max_value_as_money6 : '') . "\n";
+    print "\n";
+    print "minimum value (as money8)             = " . ($min_value_as_money8 ? $min_value_as_money8 : '') . "\n";
+    print "maximum value (as money8)             = " . ($max_value_as_money8 ? $max_value_as_money8 : '') . "\n";
+    print "\n";
+    print "minimum value (as date)               = " . ($min_value_as_date ? $min_value_as_date : '') . "\n";
+    print "maximum value (as date)               = " . ($max_value_as_date ? $max_value_as_date : '') . "\n";
+    print "\n";
+    print "minimum value (as timestamptz)        = " . ($min_value_as_timestamptz ? $min_value_as_timestamptz : '') . "\n";
+    print "maximum value (as timestamptz)        = " . ($max_value_as_timestamptz ? $max_value_as_timestamptz : '') . "\n";
+    print "\n";
+}
+
+sub group_browse {
+    my ($column,$option) = (shift,shift||"GROUP BY 1 ORDER BY 1");
+
+    my $dbh = Mig::db_connect();
+    my $sth;
+    my $rv;
+
+    $sth = $dbh->prepare(Mig::sql("
+        SELECT $column, COUNT(*)
+        FROM $MIGSCHEMA.$table
+        $option;
+    "));
+    $rv = $sth->execute()
+        || die "Error retrieving data from $MIGSCHEMA.$table: $!";
+
+    print "\n";
+    open LESS, "|less -F";
+    printf LESS "%-30s", "Value:";
+    print LESS "Count:\n\n";
+    while (my @cols = $sth->fetchrow_array) {
+        my $value = $cols[0];
+        my $count = $cols[1];
+        printf LESS "%-30s", defined $value ? $value : '<NULL>';
+        print LESS "$count\n";
+    }
+    close LESS;
+    print "\n";
+    $sth->finish;
+}
+
+###############################################################################
+
+sub add_this_column {
+    my $column = shift;
+    if (!Mig::check_for_tracked_column($table,$column)) {
+        my $dbh = Mig::db_connect();
+        my $rv = $dbh->do("
+            INSERT INTO $MIGSCHEMA.tracked_column (
+                 base_filename
+                ,parent_table
+                ,staged_table
+                ,staged_column
+            ) VALUES (
+                 " . $dbh->quote($file) . "
+                ," . $dbh->quote($fdata->{parent_table}) . "
+                ," . $dbh->quote($table) . "
+                ," . $dbh->quote($column) . "
+            );
+        ") || die "Error inserting into table $MIGSCHEMA.tracked_column: $!\n";
+        Mig::db_disconnect($dbh);
+    }
+}
+
+sub status_this_column {
+    my $column = shift;
+    my $data = Mig::status_this_column($table,$column);
+    if (!$data) {
+        add_this_column($column);
+        $data = Mig::status_this_column($table,$column);
+    }
+    if ($$data{parent_table}) {
+        my $dbh = Mig::db_connect();
+        my $sth = $dbh->prepare("
+            SELECT *
+            FROM $MIGSCHEMA.fields_requiring_mapping
+            WHERE table_name = " . $dbh->quote( $$data{parent_table} ) . "
+            AND column_name = " . $dbh->quote( $column ) . ";"
+        );
+        my $rv = $sth->execute()
+            || die "Error checking table (tracked_column) for $table.$column: $!";
+        my $data2 = $sth->fetchrow_hashref;
+        if ($data2) {
+            $$data{required} = 1;
+        } else {
+            $$data{required} = 0;
+        }
+        $sth->finish;
+        Mig::db_disconnect($dbh);
+    }
+    return $data;
+}
+
+sub set_comment {
+    my ($column,$comment) = (shift,shift);
+    if ($comment) {
+        my $data = status_this_column($column);
+        my $dbh = Mig::db_connect();
+        my $rv = $dbh->do("
+            UPDATE $MIGSCHEMA.tracked_column
+            SET comment = " . $dbh->quote($comment) . "
+            WHERE id = " . $dbh->quote($data->{id}) . ";
+        ") || die "Error updating table $MIGSCHEMA.tracked_column: $!\n";
+        Mig::db_disconnect($dbh);
+    }
+}
+
+sub set_transform {
+    my ($column,$transform) = (shift,shift);
+    if ($transform) {
+        my $data = status_this_column($column);
+        my $dbh = Mig::db_connect();
+        my $rv = $dbh->do("
+            UPDATE $MIGSCHEMA.tracked_column
+            SET transform = " . $dbh->quote($transform) . "
+            WHERE id = " . $dbh->quote($data->{id}) . ";
+        ") || die "Error updating table $MIGSCHEMA.tracked_column: $!\n";
+        Mig::db_disconnect($dbh);
+    }
+}
+
+sub set_target {
+    my ($column,$target) = (shift,shift);
+    my $target_table = $table;
+    my $target_column = $target;
+    if ($target) {
+        if ($target =~ /^(.+)\.(.+)$/) {
+            $target_table = $1;
+            $target_column = $2;
+        }
+        my $data = status_this_column($column);
+        my $dbh = Mig::db_connect();
+        my $rv = $dbh->do("
+            UPDATE $MIGSCHEMA.tracked_column
+            SET target_table = " . $dbh->quote($target_table) . "
+            ,target_column = " . $dbh->quote($target_column) . "
+            WHERE id = " . $dbh->quote($data->{id}) . ";
+        ") || die "Error updating table $MIGSCHEMA.tracked_column: $!\n";
+        Mig::db_disconnect($dbh);
+    }
+}

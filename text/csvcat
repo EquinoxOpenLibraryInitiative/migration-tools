@@ -1,0 +1,71 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+
+my $help;
+my $headers = 1;
+my $sourcecolumn = 1;
+my $sourcetype = 'partial';
+my $first_headers;
+my $use_tab = 1;
+my $use_comma = 0;
+
+GetOptions(
+    'headers!' => \$headers,
+    'source!' => \$sourcecolumn,
+    'source-type=s' => \$sourcetype,
+    'use-tab' => \$use_tab,
+    'use-comma' => \$use_comma,
+    'help|?' => \$help
+);
+if ($use_comma) {
+    $use_tab = 0;
+}
+if ($help || @ARGV == 0 || ($sourcetype ne 'partial' && $sourcetype ne 'full')) {
+    print "$0 <--headers|--noheaders> <--source|--nosource> <--source-type=full|--source-type=partial> <--use-tab|--use-comma> [file1] [file2] <fileN...>\n";
+    exit 0;
+}
+
+sub munged_source {
+    my $fn = shift;
+    my $s = $fn;
+    if ($sourcetype eq 'partial') {
+        my @f = split(/\//, $fn);
+        $s = $f[0];
+    }
+    return "$s" . ($use_tab ? "\t" : ',');
+}
+
+sub cat_file {
+    my $fn = shift;
+    open FILE, "$fn";
+    if ($headers) {
+        if ($fn ne $ARGV[0]) {
+            my $check = <FILE>; # check and throw away headers for subsequent files
+            if ($check ne $first_headers) {
+                print STDERR "Mismatched headers between $ARGV[0] and $fn\n";
+                print STDERR "$first_headers\n$check\n";
+                exit 1;
+            }
+        } else {
+            print "x_source" . ($use_tab ? "\t" : ',') if $sourcecolumn; # potential column header
+            $first_headers = <FILE>;
+            print $first_headers;
+        }
+    }
+    while (my $line = <FILE>) {
+        print munged_source($fn) if $sourcecolumn;
+        print $line;
+    }
+    close FILE;
+}
+
+my @files = @ARGV;
+foreach my $file (@files) {
+    cat_file($file);
+}
+
+
+
+

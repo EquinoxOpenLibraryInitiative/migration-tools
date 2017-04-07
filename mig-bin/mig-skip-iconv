@@ -1,0 +1,85 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-skip-iconv 
+
+Allows you to either use an existing file named <file>.utf8 or a named
+[utf8 file] as if it were the one created by mig-iconv
+
+=head1 SYNOPSIS
+
+B<mig-skip-iconv> <file> [utf8 file]
+
+=cut
+
+###############################################################################
+
+use strict;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use DBI;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+
+pod2usage(-verbose => 2) if ! ($ARGV[0]||$ARGV[1]) || $ARGV[0] eq '--help';
+
+Mig::die_if_no_env_migschema();
+Mig::die_if_mig_tracking_table_does_not_exist();
+
+my $file = abs_path($ARGV[0]);
+my $utf8_file;
+if ($ARGV[1]) {
+    $utf8_file = abs_path($ARGV[1]);
+}
+if ($utf8_file && ! $utf8_file =~ /^$MIGBASEWORKDIR/) {
+    die "File falls outside of MIGWORKDIR ($MIGWORKDIR): $utf8_file\n";
+}
+
+if ($file =~ /^$MIGBASEWORKDIR/) {
+    skip_iconv($file,$utf8_file);
+} else {
+    print "File falls outside of MIGWORKDIR ($MIGWORKDIR): $file\n";
+}
+
+exit 0;
+
+###############################################################################
+
+sub skip_iconv {
+    my $file = shift;
+    my $utf8_file = shift;
+
+    my $tracked_file_id = Mig::check_for_tracked_file($file);
+    if ($tracked_file_id) {
+        my $data = Mig::status_this_file($file);
+        print "skipping the iconv'ing of tracked file: $file\n";
+
+        my $dbh = Mig::db_connect();
+        if (! $utf8_file) {
+            $utf8_file = $file . '.utf8';
+        }
+        if (! -e $utf8_file) {
+            die "utf8 file does not exist: $utf8_file\n";
+        }
+
+        my $rv = $dbh->do("
+            UPDATE $MIGSCHEMA.tracked_file
+            SET utf8_filename = " . $dbh->quote($utf8_file) . "
+            WHERE base_filename = " . $dbh->quote($file) . "
+            ;
+        ") || die "Error inserting into table $MIGSCHEMA.tracked_file: $!\n";
+        Mig::db_disconnect($dbh);
+    } else {
+        print "File not currently tracked: $file\n";
+    }
+}

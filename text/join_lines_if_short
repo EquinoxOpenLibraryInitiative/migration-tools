@@ -1,0 +1,87 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+join_lines_if_short - program for joining some adjacent lines from stdin or one
+or more files
+
+=head1 SYNOPSIS
+
+B<join_lines_if_short> [options...] [text files...]
+
+=head1 DESCRIPTION
+
+B<join_lines_if_short> is used to join adjacent lines from stdin or one or more
+files, trimming trailing line feeds and carriage returns, and sending the output
+to stdout.  Lines are only joined if the first line is short the expected number
+of columns.
+
+=head1 OVERVIEW
+
+B<join_lines_if_short> understands the following optional arguments:
+
+=over 15
+
+=item --help
+
+Show this documentation.
+
+=item --delimiter=<d>
+
+B<join_lines_if_short> will use the specified delimiter <d> for determining the
+column count for each line.  The default is to assume tab as the delimiter.
+
+=item --join_delimiter=<d>
+
+B<join_lines_if_short> will use the specified delimiter <d> when joining lines.
+The default is to use no delimiter.
+
+=item --columns=<n>
+
+B<join_lines_if_short> will expect each line to contain <n> columns.  If a line
+has fewer than <n> columns, then this is the trigger for joining that line with
+the next line.  The new line will be reconsidered and potentially joined with
+the next line and so on.
+
+=back
+
+=cut
+###############################################################################
+
+use strict;
+use Pod::Usage;
+use Getopt::Long;
+
+my $help;
+my $delimiter = "\t";
+my $join_delimiter = "";
+my $colcount;
+
+GetOptions(
+	'delimiter=s' => \$delimiter,
+	'join_delimiter=s' => \$join_delimiter,
+	'columns=s' => \$colcount,
+	'help|?' => \$help
+);
+pod2usage(-verbose => 2) if $help || ! defined $colcount; 
+
+my $line_buffer = '';
+while (my $line = <>) {
+    chomp $line;
+    if ($line_buffer eq '') {
+        $line_buffer = $line;
+    } else {
+        $line_buffer = "$line_buffer$join_delimiter$line";
+    }
+    my @f = split /$delimiter/, $line_buffer;
+    if (scalar(@f) >= $colcount) {
+        $line_buffer =~ s/\x0D//g; # strip embedded carriage returns
+        print "$line_buffer\n";
+        $line_buffer = '';
+    }
+}
+if ($line_buffer ne '') {
+    print "$line_buffer\n";
+}

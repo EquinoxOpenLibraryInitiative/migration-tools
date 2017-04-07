@@ -1,0 +1,792 @@
+#!/usr/bin/perl -w
+use Storable;
+use Switch;
+use Getopt::Long;
+use Text::CSV_XS;
+use Text::CSV::Separator qw(get_separator);
+use Data::Dumper;
+use Term::ANSIColor;
+
+# may be manipulated with --config
+our %CSV_options = (
+    binary => 1,
+    auto_diag => 1,
+    diag_verbose => 1,
+);
+my $csv;
+our $fixes = {
+	'R' => [],
+	'I' => [],
+	'D' => []
+};
+my @parsed_rows;
+my @lines_with_errors = ();
+my %line_numbers_for_lines_with_errors = ();
+my $expected_column_count;
+my $line_no;
+
+# GetOpt variables
+my $config;
+my $id_cols;
+my $fix;
+my $nosave;
+my $apply;
+my $pad;
+my $truncate;
+my $backslash;
+my $debug;
+my $help;
+my $create_headers;
+my $headers_file;
+my @headers = ();
+
+my $pad_count = 0; my $trunc_count = 0; my $fix_count = 0; my $backslash_count = 0;
+
+################################################################## Subs
+
+sub format_for_display {
+	my $formatted_line = shift;
+	my $sep_char = $CSV_options{sep_char} || '\t';
+	my $sep = color 'bold blue';
+	$sep .= '<' . (ord($sep_char) < 32 ? ord($sep_char) : $sep_char) . '>';
+	$sep .= color 'reset';
+	my $quote_char = $CSV_options{quote_char} || '';
+	my $quote = color 'bold red';
+	$quote .= '<' . (ord($quote_char) < 32 ? ord($quote_char) : $quote_char) . '>';
+	$quote .= color 'reset';
+	my $escape_char = $CSV_options{escape_char} || '';
+	my $escape = color 'bold green';
+	$escape .= '<' . (ord($escape_char) < 32 ? ord($escape_char) : $escape_char) . '>';
+	$escape .= color 'reset';
+	my $real_escape_char = chr(27);
+	my $real_escape = color 'bold green';
+	$real_escape .= '<27>';
+	$real_escape .= color 'reset';
+
+	$formatted_line =~ s/$real_escape_char/$real_escape/g;
+	$formatted_line =~ s/$sep_char/$sep/g;
+	$formatted_line =~ s/$quote_char/$quote/g;
+	$formatted_line =~ s/$escape_char/$escape/g;
+	for (my $i = 0; $i < 32; $i++) {
+		if ($i == 27) { next; }
+		my $other_char = chr($i);
+		my $other = color 'yellow';
+		$other .= "<$i>";
+		$other .= color 'reset';
+		$formatted_line =~ s/$other_char/$other/g;
+	}
+	return "$formatted_line\n";
+}
+
+sub combine_cols {
+	my $row = shift;
+    my $status = $csv->combine(@{ $row });
+    if ($status && $csv->string) {
+        return $csv->string . "\n";
+    } else {
+        die $csv->error_input . "\n";
+    }
+}
+
+sub convert_backslashes {
+	my $line = shift;
+	my $altered_line;
+	my @count = $line =~ /\\/g;
+	if (scalar(@count) > 0) {
+		my $csv2 = Text::CSV_XS->new(\%CSV_options);
+		if ($csv2->parse($line)) {
+			my @columns = $csv2->fields();
+			foreach my $c (@columns) {
+				if ($c ne '\N') {
+					$c =~ s/\\/\//g;
+				}
+			}
+			$altered_line = combine_cols(\@columns);
+		} else {
+			$altered_line =~ s/\\/\//g;
+		}
+		if ($line ne $altered_line) {
+			$backslash_count += scalar(@count);
+			print "\nline#$line_no>> Converting " . scalar(@count) . " backslashes to forward slashes\n";
+			print "before: " . format_for_display($line);
+			$line = $altered_line;
+			print " after: " . format_for_display($line);
+		}
+	}
+	return $line;
+}
+
+sub apply_line_fixes {
+	my $line = shift;
+	foreach my $fix ( @{$fixes->{'R'}} ) {
+		my $id_regex = $fix->[0];
+		if ($line =~ /$id_regex/) {
+			print "\nline#$line_no>> Applying regex fix for $id_regex\n";
+			$fix_count++;
+			my $regex1 = $fix->[1];
+			my $regex2 = $fix->[2];
+			my $global = $fix->[3];
+			my $ignore_case = $fix->[4];
+			print "before: " . format_for_display($line);
+			$line = fix_via_regex($id_regex,$line,$regex1,$regex2,$global,$ignore_case);
+			print " after: " . format_for_display($line);
+		}
+	}
+	return $line;
+}
+
+sub apply_insert_fixes {
+	my $line = shift;
+	my $cols = shift;
+	foreach my $fix ( @{$fixes->{'I'}} ) {
+		my $id_regex = $fix->[0];
+		my $col_count_check = $fix->[1];
+		if ($line =~ /$id_regex/ && scalar(@{$cols}) eq $col_count_check) {
+			print "\nline#$line_no>> Applying insert for $id_regex\n";
+			$fix_count++;
+			my $fix_cols = $fix->[2];
+			my $fix_value = $fix->[3];
+			print "before: " . format_for_display($line);
+			$line = fix_via_insert($id_regex,$cols,$col_count_check,$fix_cols,$fix_value);
+			print " after: " . format_for_display($line);
+		}
+	}
+	return $line;
+}
+
+sub apply_delete_fixes {
+	my $line = shift;
+	my $cols = shift;
+	foreach my $fix ( @{$fixes->{'D'}} ) {
+		my $id_regex = $fix->[0];
+		my $col_count_check = $fix->[1];
+		if ($line =~ /$id_regex/ && scalar(@{$cols}) eq $col_count_check) {
+			print "\nline#$line_no>> Applying delete for $id_regex\n";
+			$fix_count++;
+			my $fix_cols = $fix->[2];
+			print "before: " . format_for_display($line);
+			$line = fix_via_delete($id_regex,$cols,$col_count_check,$fix_cols);
+			print " after: " . format_for_display($line);
+		}
+	}
+	return $line;
+}
+
+sub apply_join_fixes {
+	my $line = shift;
+	my $cols = shift;
+	foreach my $fix ( @{$fixes->{'J'}} ) {
+		my $id_regex = $fix->[0];
+		my $col_count_check = $fix->[1];
+		if ($line =~ /$id_regex/ && scalar(@{$cols}) eq $col_count_check) {
+			print "\nline#$line_no>> Applying join for $id_regex\n";
+			$fix_count++;
+			my $fix_cols = $fix->[2];
+			print "before: " . format_for_display($line);
+			$line = fix_via_join($id_regex,$cols,$col_count_check,$fix_cols);
+			print " after: " . format_for_display($line);
+		}
+	}
+	return $line;
+}
+
+sub save_fix {
+	print "saving fix...";
+	my $type = shift;
+	my $fix = shift;
+	if ($nosave) { print "psyche!\n"; return; }
+	print "fix = " . Dumper($fix) . "\n" if $debug;
+	push @{$fixes->{$type}}, $fix;
+	store $fixes, $ARGV[0] . '.fixes';
+	print "saved\n";
+}
+
+sub id_cols_regex {
+	my $cols = shift;
+	my @f = sort(split /,/, $id_cols || '0');
+	my $regex = '';
+	for (my $i = 0; $i < scalar(@f); $i++) {
+		if ($i > 0) {
+			$regex .= '.+'; # characters between id columns
+		}
+		$regex .= '.?' . $cols->[$f[$i]] . '.?';
+	}
+	$regex .= '';
+	return $regex;
+}
+
+sub fix_via_regex {
+	my $id_regex = shift;
+	my $line = shift;
+	my $fix_regex1 = shift;
+	my $fix_regex2 = shift;
+	my $global = shift;
+	my $ignore_case = shift;
+	my $save;
+
+	if (!$fix_regex1) {
+global_prompt:
+		print "Global (aka s/match/replace/g)? <Yes/No> [n] ";
+		$global = readline(STDIN); chomp $global;
+		$global = uc(substr($global,0,1));
+		if ($global eq '') {
+			$global = 'N';
+		}
+		$global = uc(substr($global,0,1));
+		if ($global ne 'Y' && $global ne 'N') {
+			goto global_prompt;
+		}
+case_prompt:
+		print "Ignore-case (aka s/match/replace/i)? <Yes/No> [n] ";
+		$ignore_case = readline(STDIN); chomp $ignore_case;
+		$ignore_case = uc(substr($ignore_case,0,1));
+		if ($ignore_case eq '') {
+			$ignore_case = 'N';
+		}
+		$ignore_case = uc(substr($ignore_case,0,1));
+		if ($ignore_case ne 'Y' && $ignore_case ne 'N') {
+			goto case_prompt;
+		}
+
+regex1_prompt:
+		print "Enter match regex for s/match/replace/: ";
+		$fix_regex1 = readline(STDIN); chomp $fix_regex1;
+		if ($fix_regex1 eq '') {
+			goto global_prompt;
+		}
+		if (
+			($global eq 'Y' && $ignore_case eq 'Y' && $line =~ /$fix_regex1/gi) 
+			|| ($global eq 'Y' && $ignore_case eq 'N' && $line =~ /$fix_regex1/g) 
+			|| ($global eq 'N' && $ignore_case eq 'N' && $line =~ /$fix_regex1/i) 
+		) {
+			print "Regex matches line.\n";
+		} else {
+			print "Regex does not match line.\n";
+			goto regex1_prompt;
+		}
+regex2_prompt:
+		print "Enter replace regex for s/match/replace/: ";
+		$fix_regex2 = readline(STDIN); chomp $fix_regex2;
+		if (substr($fix_regex1,-1) eq '$') {
+			print "Adding new line to end of /$fix_regex2/ based on \$ in /$fix_regex1/\n";
+			$fix_regex2 .= "\n";
+		}
+		# TODO - how to do we handle backreferences with this?
+		$save = 1;
+	}
+
+	switch ($global . $ignore_case) {
+		case 'YY'	{ $line =~ s/$fix_regex1/$fix_regex2/gi; }
+		case 'YN'	{ $line =~ s/$fix_regex1/$fix_regex2/g; }
+		case 'NY'	{ $line =~ s/$fix_regex1/$fix_regex2/i; }
+		case 'NN'	{ $line =~ s/$fix_regex1/$fix_regex2/; }
+	}
+
+	if ($save) {
+		save_fix('R',[
+			$id_regex,
+			$fix_regex1,
+			$fix_regex2,
+			$global,
+			$ignore_case
+		]);
+	}
+
+	return $line;
+}
+
+sub fix_via_insert {
+	my $id_regex = shift;
+	my $cols = shift;
+	my $col_count_check = shift;
+	my $fix_cols = shift;
+	my $fix_value = shift;
+	my $line;
+	my $save;
+
+	if (!$fix_cols) {
+		$col_count_check = scalar(@{$cols});
+		print "This fix will only trigger when the number of columns is $col_count_check.\n";
+		print "Enter value to insert: [] ";
+		$fix_value = readline(STDIN); chomp $fix_value;
+		print "Enter comma-separated list of column positions (0-based) for insertion: ";
+		$fix_cols = readline(STDIN); chomp $fix_cols;
+		$save = 1;
+	}
+
+	if ($col_count_check != scalar(@{$cols})) {
+		print "WARNING: Insert column fix with ID regex $id_regex expected $col_count_check but found " . scalar(@{$cols}) . ".  Skipping.\n";
+		return $line;
+	}
+	
+	my @f = sort(split /,/, $fix_cols);
+	for (my $i = 0; $i < scalar(@f); $i++) {
+		splice @{ $cols }, $f[$i] + $i, 0, $fix_value;
+	}
+
+	eval {
+		$line = combine_cols($cols);
+	};
+	if ($@) {
+		print "fix_via_insert error:\n";
+		die $@;
+	}
+
+	if ($save) {
+		save_fix('I',[
+			$id_regex,
+			$col_count_check,
+			$fix_cols,
+			$fix_value
+		]);
+	}
+
+	return $line;
+}
+
+sub fix_via_delete {
+	my $id_regex = shift;
+	my $cols = shift;
+	my $col_count_check = shift;
+	my $fix_cols = shift;
+	my $line;
+	my $save;
+
+	if (!$fix_cols) {
+		$col_count_check = scalar(@{$cols});
+		print "This fix will only trigger when the number of columns is $col_count_check.\n";
+		print "Enter comma-separated list of column positions (0-based) to delete: ";
+		$fix_cols = readline(STDIN); chomp $fix_cols;
+		$save = 1;
+	}
+
+	if ($col_count_check != scalar(@{$cols})) {
+		print "WARNING: Delete column fix with ID regex $id_regex expected $col_count_check but found " . scalar(@{$cols}) . ".  Skipping.\n";
+		return $line;
+	}
+	
+	my @f = sort(split /,/, $fix_cols);
+	for (my $i = 0; $i < scalar(@f); $i++) {
+		splice @{ $cols }, $f[$i] - $i, 1;
+	}
+
+	eval {
+		$line = combine_cols($cols);
+	};
+	if ($@) {
+		print "fix_via_delete error:\n";
+		die $@;
+	}
+
+	if ($save) {
+		save_fix('D',[
+			$id_regex,
+			$col_count_check,
+			$fix_cols
+		]);
+	}
+
+	return $line;
+}
+
+sub fix_via_join {
+	my $id_regex = shift;
+	my $cols = shift;
+	my $col_count_check = shift;
+	my $fix_cols = shift;
+	my $line;
+	my $save;
+
+	if (!$fix_cols) {
+		$col_count_check = scalar(@{$cols});
+		print "This fix will only trigger when the number of columns is $col_count_check.\n";
+		print "Enter comma-separated list of column positions (0-based) to join: ";
+		$fix_cols = readline(STDIN); chomp $fix_cols;
+		$save = 1;
+	}
+
+	if ($col_count_check != scalar(@{$cols})) {
+		print "WARNING: Join column fix with ID regex $id_regex expected $col_count_check but found " . scalar(@{$cols}) . ".  Skipping.\n";
+		return $line;
+	}
+
+	# gather
+	my $fix_value = '';
+	my @f = sort { $a <=> $b } (split /,/, $fix_cols);
+	for (my $i = 0; $i < scalar(@f); $i++) {
+		$fix_value .= @{ $cols }[$f[$i]];
+	}
+
+	# delete	
+	for (my $i = 0; $i < scalar(@f); $i++) {
+		splice @{ $cols }, $f[$i] - $i, 1;
+	}
+
+	# insert
+	splice @{ $cols }, $f[0], 0, $fix_value;
+
+	eval {
+		$line = combine_cols($cols);
+	};
+	if ($@) {
+		print "fix_via_join error:\n";
+		die $@;
+	}
+
+	if ($save) {
+		save_fix('J',[
+			$id_regex,
+			$col_count_check,
+			$fix_cols
+		]);
+	}
+
+	return $line;
+}
+
+
+sub manual_fix {
+	my $line = shift;
+	my $cols = shift;
+	my $insert_delete_allowed = shift;
+	my $col_count = scalar(@{$cols}) > scalar(@headers) ? scalar(@{$cols}) : scalar(@headers);
+	my $max_header_length = 0;
+
+	# display columns nice and formatted
+	for (my $i = 0; $i < scalar(@headers); $i++) {
+		if (length($headers[$i]) > $max_header_length) {
+			$max_header_length = length($headers[$i]);
+		}
+	}
+	for (my $i = 0; $i < $col_count; $i++) {
+		printf "#% d ", $i;
+		if (defined $headers[$i]) {
+			print " " x ($max_header_length - length($headers[$i]));
+			print $headers[$i];
+		} else {
+			print " " x $max_header_length;
+		}
+		print ": ";
+		if (defined $cols->[$i]) {
+			print "<" . $cols->[$i] . ">";
+		}
+		print "\n";
+	}
+
+	# prompt for type of fix
+fix_prompt:
+	print "\n" . format_for_display($line) . "\nFix line#$line_no? <Regex" . ($insert_delete_allowed ? '|Insert|Delete|Join' : '') . "|No> [n] ";
+	my $ans = readline(STDIN); chomp $ans;
+	$ans = uc(substr($ans,0,1));
+	if ($ans eq '') {
+		$ans = 'N';
+	}
+	if ($insert_delete_allowed ? index("RIDJN",$ans)==-1 : index("RN",$ans)==-1) {
+		goto fix_prompt;
+	}
+
+	# prompt for matching condition
+	my $id_regex;
+	if ($ans ne 'N') {
+		my $default_id_regex = id_cols_regex($cols);
+match_prompt:
+		print "If matching the end of the string, you may need to use \\s*\$ instead of \$\n";
+		print "Insert/Delete/Join fixes will also filter on column count.\n";
+		print "Identify this line (and optionally similar lines) with regex: [$default_id_regex] ";
+		$id_regex = readline(STDIN); chomp $id_regex;
+		if ($id_regex eq '') {
+			$id_regex = $default_id_regex;
+		}
+		if ($line =~ /$id_regex/) {
+			print "Regex matches line.\n";
+		} else {
+			print "Regex does not match line.\n";
+			goto match_prompt;
+		}
+	}
+
+	# prompt and perform actual fixes
+	switch($ans) {
+		case 'R'	{ $line = fix_via_regex($id_regex,$line); }
+		case 'I'	{ $line = fix_via_insert($id_regex,$cols); }
+		case 'D'	{ $line = fix_via_delete($id_regex,$cols); }
+		case 'J'	{ $line = fix_via_join($id_regex,$cols); }
+		case 'N'	{ }
+		else		{ $ans = 'N'; }
+	}
+
+	if ($ans ne 'N') {
+		print "\nNew line#$line_no: $line";
+	}
+	return ( $ans, $line );
+}
+
+################################################################## Init
+GetOptions(
+	'config=s' => \$config,
+	'idcols=s' => \$id_cols,
+	'create-headers' => \$create_headers,
+	'use-headers=s' => \$headers_file,
+	'fix' => \$fix,
+	'nosave' => \$nosave,
+	'apply' => \$apply,
+	'pad' => \$pad,
+	'truncate' => \$truncate,
+	'backslash' => \$backslash,
+	'debug' => \$debug,
+	'help|?' => \$help
+);
+if ($help || ((@ARGV == 0) && (-t STDIN))) {
+	die "\n\t$0 [--config <CONFIG>] [--idcols <idx1,idx2,...>] [--fix] [--apply] [--pad] [--truncate] <FILE>\n\n"
+		. "\tExpects <FILE> to be a CSV-like UTF-8 encoded file.\n"
+		. "\tWill produce <FILE>.clean and <FILE>.error versions of said file.\n\n"
+		. "\t--config <CONFIG> will read the Perl file <CONFIG> for settings information.  See 'Example Config' below\n\n"
+		. "\t--create-headers will generate headers like so: col1, col2, col3, etc.\n"
+		. "\t--use-headers <HFILE> will generate headers based on the specified <HFILE>, which must contain one column header per line.\n"
+		. "\t(if neither --create-headers nor --use-headers are specified, then the first line in <FILE> is assumed to contain the column headers)\n\n"
+		. "\t--fix will prompt for whether and how to fix broken records, and save those fixes in <FILE>.fixes\n"
+		. "\t--idcols <idx1,idx2,...> takes a comma-separated list of column indexes (starting with 0) to use as matchpoint suggestions for fixes\n"
+		. "\t--nosave will prevent new fixes from being saved in <FILE>.fixes\n"
+		. "\t--apply will apply previously recorded fixes from <FILE>.fixes\n\n"
+		. "\t--pad will fill in missing columns at the end if needed for otherwise unbroken records\n"
+		. "\t--truncate will strip extra columns from the end if needed for otherwise unbroken records\n"
+		. "\t--backslash will convert backslashes into forward slashes\n\n"
+		. "\t Example Config:\n\n"
+		. "\t\t\$CSV_options{quote_char} = '\"';\n"
+		. "\t\t\$CSV_options{escape_char} = '\"';\n"
+		. "\t\t\$CSV_options{sep_char} = ',';\n"
+		. "\t\t\$CSV_options{eol} = \$\\;\n"
+		. "\t\t\$CSV_options{always_quote} = 0;\n"
+		. "\t\t\$CSV_options{quote_space} = 1;\n"
+		. "\t\t\$CSV_options{quote_null} = 1;\n"
+		. "\t\t\$CSV_options{quote_binary} = 1;\n"
+		. "\t\t\$CSV_options{binary} = 0;\n"
+		. "\t\t\$CSV_options{decode_utf8} = 1;\n"
+		. "\t\t\$CSV_options{keep_meta_info} = 0;\n"
+		. "\t\t\$CSV_options{allow_loose_quotes} = 0;\n"
+		. "\t\t\$CSV_options{allow_loose_escapes} = 0;\n"
+		. "\t\t\$CSV_options{allow_unquoted_escape} = 0;\n"
+		. "\t\t\$CSV_options{allow_whitespace} = 0;\n"
+		. "\t\t\$CSV_options{blank_is_undef} = 0;\n"
+		. "\t\t\$CSV_options{empty_is_undef} = 0;\n"
+		. "\t\t\$CSV_options{verbatim} = 0;\n"
+		. "\n\n";
+}
+if (! -e $ARGV[0]) {
+	die "$ARGV[0] does not exist\n";
+}
+if ($config && ! -e $config) {
+	die "$config does not exist\n";
+}
+if ($apply && -e $ARGV[0] . '.fixes') {
+	$fixes = retrieve($ARGV[0] . '.fixes');
+}
+
+################################################################## CSV Setup
+$CSV_options{sep_char} = get_separator( path => $ARGV[0], lucky => 1 );
+if ($config && -e $config) {
+	do $config;
+}
+$csv = Text::CSV_XS->new(\%CSV_options);
+$csv->callbacks(
+    error => sub {
+        my ($err, $msg, $pos, $recno) = @_;
+        return if ($err == 2012);
+		$line_numbers_for_lines_with_errors{$line_no} = 1;
+        print "\nline#$line_no * $err : $msg -> (pos#$pos,rec#$recno)\n";
+        if ($csv->error_input) {
+            print $csv->error_input;
+            print "-" x ($pos - 1);
+            print "^\n";
+        }
+        $csv->SetDiag(0);
+        return;
+    }
+);
+
+################################################################## Reading
+
+if ($headers_file) {
+	print "_.,-~= reading $headers_file\n";
+	open my $hfile, "<:encoding(utf8)", $headers_file or die "$headers_file: $!";
+	while (my $line = <$hfile>) {
+		chomp $line;
+		$line =~ s/\s+$//;
+		$line =~ s/^\s+//;
+		push @headers, $line;
+	}
+	close $hfile;
+	$expected_column_count = scalar(@headers);
+	print "Expected column count set to $expected_column_count based on headers.\n";
+}
+
+print "_.,-~= reading $ARGV[0]\n";
+open my $in, "<:encoding(utf8)", $ARGV[0] or die "$ARGV[0]: $!";
+$line_no = 1; 
+while (my $line = <$in>) {
+	print ">>> main loop (#$line_no): $line" if $debug;
+	if ($backslash) {
+		$line = convert_backslashes($line);
+	}
+	if ($apply) {
+		$line = apply_line_fixes($line);
+	}
+	if ($csv->parse($line)) {
+		my @columns = $csv->fields();
+		if (! $expected_column_count) {
+			$expected_column_count = scalar(@columns);
+			print "Expected column count set to $expected_column_count based on first row.\n";
+			for (my $i = 0; $i < scalar(@columns) ; $i++) {
+				if ($create_headers) {
+					push @headers, "col" . ($i+1);
+				} else {
+					push @headers, $columns[$i];
+				}
+			}
+		}
+		if (defined $line_numbers_for_lines_with_errors{$line_no}) {
+			if ($fix) {
+				my $fix_status;
+				($fix_status,$line) = manual_fix($line,\@columns,0); # Regex only
+				if ($fix_status ne 'N') {
+					delete $line_numbers_for_lines_with_errors{$line_no};
+					$fix_count++;
+					redo;
+				}
+			}
+		} else {
+			if (scalar(@columns) < $expected_column_count) {
+				if ($apply) {
+					my $new_line = apply_insert_fixes($line,\@columns);
+					if ($line ne $new_line) {
+						$line = $new_line;
+						redo;
+					}
+				}
+				if ($pad) {
+					$pad_count++;
+					print "\nline#$line_no>> padding line, from " . scalar(@columns) . " columns ";
+					my $col_count = scalar(@columns);
+					for (my $i = 0; $i < $expected_column_count - $col_count; $i++) {
+						push @columns, '#pad#';
+					}
+					print "to " . scalar(@columns) . " columns.\n";
+					eval {
+						print "before: " . format_for_display($line);
+						$line = combine_cols(\@columns);
+						print " after: " . format_for_display($line);
+					};
+					if ($@) {
+						print "padding error:\n";
+						die $@;
+					}
+					redo;
+				}
+			}
+			if (scalar(@columns) > $expected_column_count) {
+				if ($apply) {
+					my $new_line = apply_delete_fixes($line,\@columns);
+					if ($line ne $new_line) {
+						$line = $new_line;
+						redo;
+					}
+					$new_line = apply_join_fixes($line,\@columns);
+					if ($line ne $new_line) {
+						$line = $new_line;
+						redo;
+					}
+				}
+				if ($truncate) {
+					$trunc_count++;
+					print "\nline#$line_no>> truncating line, from " . scalar(@columns) . " columns ";
+					splice @columns, $expected_column_count;
+					print "to " . scalar(@columns) . " columns.\n";
+					eval {
+						print "before: " . format_for_display($line);
+						$line = combine_cols(\@columns);
+						print " after: " . format_for_display($line);
+					};
+					if ($@) {
+						print "truncating error:\n";
+						die $@;
+					}
+					redo;
+				}
+			}
+			if (scalar(@columns) != $expected_column_count) {
+				# so broken, but parseable, and thus not handled by the error callback
+				print "\nline#$line_no * Expected $expected_column_count columns but found " . scalar(@columns) . "\n$line";
+				print "-" x length($line) . "\n";
+				$line_numbers_for_lines_with_errors{$line_no} = 1;
+				if ($fix) {
+					my $fix_status;
+					($fix_status,$line) = manual_fix($line,\@columns,1); # Insert/Delete allowed
+					if ($fix_status ne 'N') {
+						delete $line_numbers_for_lines_with_errors{$line_no};
+						$fix_count++;
+						redo;
+					}
+				}
+			}
+		}
+		if (defined $line_numbers_for_lines_with_errors{$line_no}) {
+			print "\tIncrementing errors with line# $line_no\n" if $debug;
+			push @lines_with_errors, $line;
+		} else {
+			print "\tIncrementing clean with line# $line_no\n" if $debug;
+			push @parsed_rows, \@columns;
+		}
+		$line_no++;
+	} else {
+		die "Parsing error:\n" . $csv->error_input . "\n";
+	}
+}
+close $in;
+print "_.,-~= read " . ($line_no-1) . " records ";
+print "(" . scalar(@lines_with_errors) . " with errors, $pad_count auto-padded, $trunc_count auto-truncated, $backslash_count backslashes converted, $fix_count manual fixes)\n";
+
+
+################################################################## Writing good CSV
+
+print "_.,-~= writing $ARGV[0].clean\n";
+open my $out, ">:encoding(utf8)", "$ARGV[0].clean" or die "$ARGV[0].clean: $!";
+$line_no = 1;
+$actual_count = 0;
+if ($create_headers || $headers_file) {
+	unshift @parsed_rows, \@headers;
+}
+foreach my $row (@parsed_rows) {
+	eval {
+		$line = combine_cols($row);
+		print $out $line;
+	};
+	if ($@) {
+		print "error:\n";
+		die $@;
+	}
+	$actual_count++;
+}
+close $out;
+print "_.,-~= wrote " . ($actual_count) . " records\n";
+
+
+################################################################## Writing broken CSV
+
+print "_.,-~= writing $ARGV[0].error\n";
+open my $out2, ">:encoding(utf8)", "$ARGV[0].error" or die "$ARGV[0].error: $!";
+foreach my $row (@lines_with_errors) {
+	print $out2 $row;
+}
+close $out2;
+print "_.,-~= wrote " . (scalar @lines_with_errors) . " records\n";
+
+
+################################################################## .no_headers version
+
+print "_.,-~= creating $ARGV[0].clean.no_headers\n";
+
+print `tail -n +2 $ARGV[0].clean > $ARGV[0].clean.no_headers`;
+
+################################################################## Finished
+
+print "_.,-~= finished\n";

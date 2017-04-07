@@ -1,0 +1,121 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-init - This will add or recreate tracking tables for the B<mig> toolset to
+the migration schema specified by the MIGSCHEMA environment variable, in the
+PostgreSQL database specified by various PG environment variables.
+
+In practice, you should invoke 'mig env use schema_name' prior to calling
+B<init>
+
+=head1 SYNOPSIS
+
+B<mig-init>
+
+B<mig-init> <help>
+
+=cut
+
+###############################################################################
+
+use strict;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use DBI;
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+
+pod2usage(-verbose => 2) if $ARGV[0];
+
+Mig::die_if_no_env_migschema();
+
+if (! Mig::check_for_db_migschema()) {
+    try_to_create_schema();
+}
+
+if (! Mig::check_db_migschema_for_migration_tables()) {
+    try_to_init_schema_with_migration_tools();
+}
+vivicate_mig_tracking_tables();
+
+exit 0;
+
+###############################################################################
+
+sub try_to_create_schema {
+    if ($MIGSCHEMA =~ /[^\w_]/) {
+        die "$MIGSCHEMA is not suitable for a schema name in PostgreSQL\n";
+    }
+    my $dbh = Mig::db_connect();
+    my $rv = $dbh->do("CREATE SCHEMA $MIGSCHEMA;")
+        || die "Error creating migration schema ($MIGSCHEMA): $!\n";
+    print "Created schema $MIGSCHEMA\n";
+    Mig::db_disconnect($dbh);
+}
+
+sub try_to_init_schema_with_migration_tools {
+    Mig::die_if_no_migration_tools();
+    print "Calling migration_tools.init() and .build()\n";
+    my $dbh = Mig::db_connect();
+    my $rv = $dbh->do("SELECT migration_tools.init(" . $dbh->quote($MIGSCHEMA) . ");")
+        || die "Error running migration_tools.init($MIGSCHEMA): $!\n";
+    print "migration_tools.init() finished\n";
+    my $rv2 = $dbh->do("SELECT migration_tools.build(" . $dbh->quote($MIGSCHEMA) . ");")
+        || die "Error running migration_tools.build($MIGSCHEMA): $!\n";
+    print "migration_tools.build() finished\n";
+    Mig::db_disconnect($dbh);
+}
+
+sub vivicate_mig_tracking_tables {
+    Mig::die_if_mig_tracking_table_exists();
+    print "Creating table $MIGSCHEMA.tracked_file...\n";
+    my $dbh = Mig::db_connect();
+    my $rv = $dbh->do("
+        CREATE TABLE $MIGSCHEMA.tracked_file (
+             id                 serial
+            ,base_filename      TEXT UNIQUE
+            ,has_headers        BOOLEAN
+            ,headers_file       TEXT
+            ,utf8_filename      TEXT
+            ,clean_filename     TEXT
+            ,stage_sql_filename TEXT
+            ,map_sql_filename   TEXT
+            ,prod_sql_filename  TEXT
+            ,parent_table       TEXT
+            ,staged_table       TEXT
+        );
+    ") || die "Error creating table $MIGSCHEMA.tracked_file: $!\n";
+    Mig::die_if_mig_column_tracking_table_exists();
+    my $rv2 = $dbh->do("
+        CREATE TABLE $MIGSCHEMA.tracked_column (
+             id                 serial
+            ,base_filename      TEXT
+            ,parent_table       TEXT
+            ,staged_table       TEXT
+            ,staged_column      TEXT
+            ,comment            TEXT
+            ,target_table       TEXT
+            ,target_column      TEXT
+            ,transform          TEXT
+            ,summarize          BOOLEAN
+        );
+    ") || die "Error creating table $MIGSCHEMA.tracked_column: $!\n";
+    my $rv3 = $dbh->do("
+        CREATE INDEX ON $MIGSCHEMA.tracked_column(target_table,target_column);
+    ") || die "Error creating index on $MIGSCHEMA.tracked_column: $!\n";
+    my $rv4 = $dbh->do("
+        CREATE INDEX ON $MIGSCHEMA.tracked_column(base_filename);
+    ") || die "Error creating index on $MIGSCHEMA.tracked_column: $!\n";
+    Mig::db_disconnect($dbh);
+}
+
+
