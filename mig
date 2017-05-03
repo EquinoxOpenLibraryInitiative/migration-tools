@@ -226,6 +226,10 @@ or for all mapped files if no file is specified.
 Generates <parent table>_prod.sql for the specified linked and mapped file, or
 all such files if no file is specified.
 
+=item B<sql> [arguments...]
+
+A wrapper around the psql command.  At some point the plan is to shove mig-tracked variables into psql sessions.
+
 =back
 
 =cut
@@ -314,6 +318,10 @@ switch($ARGV[0]) {
         standard_invocation(@ARGV);
     }
     case "quicksheet" {
+        Mig::die_if_no_env_migschema();
+        standard_invocation(@ARGV);
+    }
+    case "sql" {
         Mig::die_if_no_env_migschema();
         standard_invocation(@ARGV);
     }
