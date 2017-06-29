@@ -21,6 +21,7 @@ use Switch;
 use Env qw(
     HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
     MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    BIBSTART
 );
 use Pod::Usage;
 use DBI;
@@ -33,7 +34,8 @@ use Mig;
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 
 system(
-    'psql', 
+    'psql',
+    '-vbibstart=' . $BIBSTART,
     # TODO inject mig-tracked variables here
     @ARGV
 );
