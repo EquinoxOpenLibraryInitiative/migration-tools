@@ -111,7 +111,7 @@ while ( buildrecord() ) {
         # subfields can't be non-alphanumeric
         if ($record[$ptr] =~ /<subfield code="(.*?)"/) {
             if ($1 =~ /\P{IsAlnum}/ or $1 eq '') {
-                edit("Junk in subfield code/Null subfield code");
+                edit("Junk in subfield code/Null subfield code ($1)");
                 next;
             }
         }
@@ -205,13 +205,28 @@ sub do_automated_cleanups {
         }
 
         # automatable subfield maladies
-        $record[$ptr] =~ s/code=" ">c/code="c">/;
-        $record[$ptr] =~ s/code=" ">\$/code="c">\$/;
+        if ($record[$ptr] =~ /code=" ">c/) {
+            message('Fixing probable subfield c, scenario 1');
+            $record[$ptr] =~ s/code=" ">c/code="c">/;
+        }
+        if ($record[$ptr] =~ /code=" ">\$/) {
+            message('Fixing probable subfield c, scenario 2');
+            $record[$ptr] =~ s/code=" ">\$/code="c">\$/;
+        }
 
         if ($c->{'fix-subfield'}) {
-            $record[$ptr] =~ s/code="&amp;">/code="$c->{'fix-subfield'}">/;
-            $record[$ptr] =~ s/code="\P{IsAlnum}">/code="$c->{'fix-subfield'}">/;
-            $record[$ptr] =~ s/code="">/code="$c->{'fix-subfield'}">/;
+            if ($record[$ptr] =~ /code="&amp;">/) {
+                message('Fixing &amp; for subfield code');
+                $record[$ptr] =~ s/code="&amp;">/code="$c->{'fix-subfield'}">/;
+            }
+            if ($record[$ptr] =~ /code="(.*?\P{IsAlnum}.*?)">/) {
+                message("Fixing non-alphanumeric subfield code: $1 -> " . $c->{'fix-subfield'});
+                $record[$ptr] =~ s/code=".*?\P{IsAlnum}.*?">/code="$c->{'fix-subfield'}">/;
+            }
+            if ($record[$ptr] =~ /code="">/) {
+                message('Fixing null subfield code');
+                $record[$ptr] =~ s/code="">/code="$c->{'fix-subfield'}">/;
+            }
         }
     }
     return 0;
