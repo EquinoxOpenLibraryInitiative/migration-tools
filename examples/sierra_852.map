@@ -1,0 +1,20 @@
+holdings_checkin_record_no    001
+bib_record_no                 004
+oclc_control_no_no_prefix     014
+oclc_control_no_w_prefix      035
+isbn                          020
+issn                          022
+xxxn                          024
+oan                           025
+fpi                           026
+strn                          027
+pn                            028
+oscn                          029
+holdings_identity_field       843
+holdings_lib_has_field        866
+holdings_symbol_code          852 a
+location                      852 b
+call_number1                  852 h
+call_number2                  852 i
+internal_note                 852 x
+note                          852 z
