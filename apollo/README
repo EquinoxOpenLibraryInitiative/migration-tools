@@ -1,0 +1,11 @@
+apollo_exporter.pl exports from the XML based Apollo LDF format to postgres staging stages.  
+
+To Do:
+
+authorities
+holidays (we usually se those manually)
+locations (we've only had single locations to test with so far)
+patron attributes not seen in export and not supported here - vacations, wish list, photos, phone carriers
+seen in extract and not migrated Purchase Request, Passwords (bcrypted and salted), Call Range, inventoryHolding, problems (notes/Holding), booklists
+user defined values are set manually here and should be done programatically so they don't have to be set manually each time probably to a distinct
+table rather than in patrons
