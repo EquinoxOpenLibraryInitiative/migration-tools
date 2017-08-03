@@ -75,6 +75,15 @@ DELETE FROM actor.stat_cat_entry WHERE stat_cat IN
 DELETE FROM actor.stat_cat WHERE id IN 
 (SELECT id from actor.stat_cat WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
+DELETE FROM action.survey_response WHERE usr IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+DELETE FROM action.survey_question WHERE survey IN 
+(SELECT id FROM action.survey WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+DELETE FROM action.survey WHERE owner IN 
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+
 COMMIT;
 
 DROP INDEX actor.tmp_addr_replaces;
