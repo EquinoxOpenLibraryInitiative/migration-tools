@@ -84,6 +84,12 @@ DELETE FROM action.survey_question WHERE survey IN
 DELETE FROM action.survey WHERE owner IN 
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
+DELETE FROM permission.usr_perm_map WHERE usr IN 
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+DELETE FROM permission.usr_grp_map WHERE usr IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
 COMMIT;
 
 DROP INDEX actor.tmp_addr_replaces;
