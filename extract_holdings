@@ -53,13 +53,13 @@ sub extract_holdings {
 
     print "Writing holdings to output file(s)...\n";
     # open main holdings file
-    open HOLDINGS, '>', ($c->{prefix} . "-HOLDINGS.pg");
+    open HOLDINGS, '>', ($c->{prefix} . "-" . $c->{suffix} . ".pg");
     # create multi files
     my $multis = $m->get_multis;
     my %MULTIFILE = ();
     for my $t ( keys %{$multis} ) {
         for my $s ( keys %{$multis->{$t}}) 
-          { open my $fh, ">", ($c->{prefix} . "-HOLDINGS-MULT-$t$s.pg"); $MULTIFILE{"$t$s"} = $fh }
+          { open my $fh, ">", ($c->{prefix} . "-" . $c->{suffix} . "-MULT-$t$s.pg"); $MULTIFILE{"$t$s"} = $fh }
     }
 
     my $parallel_fields = $m->get_parallel_fields;
@@ -188,7 +188,7 @@ sub dump_sample_detail {
     my $count = $s->{data}{rcnt};
     my $scnt  = $s->{data}{scnt};
 
-    open DETAIL, '>', ($c->{prefix} . "-HOLDINGS-DETAIL.txt");
+    open DETAIL, '>', ($c->{prefix} . "-" . $c->{suffix} . "-DETAIL.txt");
     select DETAIL;
     for my $tag (sort keys %{ $tags }) {
         print ">>>>> TAG $tag\n\n";
@@ -200,7 +200,7 @@ sub dump_sample_detail {
         print "\n";
     }
     close DETAIL;
-    open SCOUNT, '>', ($c->{prefix} . "-HOLDINGS-SUBCOUNTS.txt");
+    open SCOUNT, '>', ($c->{prefix} . "-" . $c->{suffix} . "-SUBCOUNTS.txt");
     select SCOUNT;
     for my $tag (sort keys %{ $scnt }) {
         print ">>>>> TAG $tag\n\n";
@@ -209,8 +209,8 @@ sub dump_sample_detail {
         print "\n";
     }
     select STDOUT;
-    print "Saved results as ", ($c->{prefix} . "-HOLDINGS-DETAIL.txt"), " and ",
-        ($c->{prefix} . "-HOLDINGS-SUBCOUNTS.txt"), "\n";
+    print "Saved results as ", ($c->{prefix} . "-" . $c->{suffix} . "-DETAIL.txt"), " and ",
+        ($c->{prefix} . "-" . $c->{suffix} . "-SUBCOUNTS.txt"), "\n";
 }
 
 sub dump_sample_overview {
@@ -221,7 +221,7 @@ sub dump_sample_overview {
     my @tagsbyname  = sort keys %{$tags};
     my @tagsbycount = reverse sort { $tags->{$a} <=> $tags->{$b} } keys %{$tags};
 
-    open SAMPLE, '>', ($c->{prefix} . "-HOLDINGS-OVERVIEW.txt");
+    open SAMPLE, '>', ($c->{prefix} . "-" . $c->{suffix} . "-OVERVIEW.txt");
     select SAMPLE;
     print "SAMPLE REPORT FOR ", $c->{prefix},": $count records\n\n";
     print "FOUND TAGS (BY TAG)           FOUND TAGS (BY COUNT)\n";
@@ -236,7 +236,7 @@ sub dump_sample_overview {
         print " (", sprintf("%03d", int($tags->{ $tagsbycount[$i] } / $count * 100)), "%)\n";
     }
     select STDOUT;
-    print "Saved results as ", ($c->{prefix} . "-HOLDINGS-OVERVIEW.txt"), "\n";
+    print "Saved results as ", ($c->{prefix} . "-" . $c->{suffix} . "-OVERVIEW.txt"), "\n";
     close SAMPLE;
 }
 
@@ -258,6 +258,7 @@ sub initialize {
                          'holdings|h=i',
                          'copyid|c=s',
                          'prefix|p=s',
+                         'suffix|o=s',
                          'disable-pg-normalization',
                          'version|v',
                          'help',
@@ -270,6 +271,9 @@ sub initialize {
       if ($c->{map} and !($c->{holdings} and $c->{copyid}));
     show_version() if $c->{version};
 
+    if (! $c->{suffix}) {
+        $c->{suffix} = 'HOLDINGS';
+    }
     if ($c->{prefix} and !$c->{marcfile}) {
         $c->{marcfile} = $c->{prefix} . ".clean.marc.xml";
     }
@@ -300,6 +304,7 @@ Usage is: extract_holdings --prefix PREFIX --marcfile MARCFILE [ARGUMENTS]
 
 REQUIRED ARGUMENTS
   --prefix   -p  Prefix string for output filenames
+  --suffix   -o  Suffix string for output filenames (defaults to HOLDINGS)
   --marcfile     MARCXML to use as source data
                  Defaults to 'PREFIX.clean.marc.xml'
 
