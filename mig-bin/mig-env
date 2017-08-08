@@ -227,6 +227,7 @@ sub mig_env_create {
     print FILE "export PGPORT=$PGPORT\n";
     print FILE "export PGDATABASE=$PGDATABASE\n";
     print FILE "export PGUSER=$PGUSER\n";
+    print FILE "export PGOPTIONS='-c search_path=$migration_schema,public,evergreen'\n";
     print FILE "export MIGENVPROMPT=$migration_schema\n";
     print FILE "export MIGSCHEMA=$migration_schema\n";
     print FILE "export MIGBASEWORKDIR=$MIGBASEWORKDIR\n";
