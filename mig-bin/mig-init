@@ -31,6 +31,7 @@ use Pod::Usage;
 use DBI;
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
+my $mig_sql = $mig_bin . "../mig-sql/";
 use lib "$FindBin::Bin/";
 use Mig;
 
@@ -45,7 +46,9 @@ if (! Mig::check_for_db_migschema()) {
 if (! Mig::check_db_migschema_for_migration_tables()) {
     try_to_init_schema_with_migration_tools();
 }
-vivicate_mig_tracking_tables();
+Mig::die_if_mig_tracking_table_exists();
+Mig::die_if_mig_column_tracking_table_exists();
+loop_through_mig_sql_templates();
 
 exit 0;
 
@@ -75,47 +78,16 @@ sub try_to_init_schema_with_migration_tools {
     Mig::db_disconnect($dbh);
 }
 
-sub vivicate_mig_tracking_tables {
-    Mig::die_if_mig_tracking_table_exists();
-    print "Creating table $MIGSCHEMA.tracked_file...\n";
-    my $dbh = Mig::db_connect();
-    my $rv = $dbh->do("
-        CREATE TABLE $MIGSCHEMA.tracked_file (
-             id                 serial
-            ,base_filename      TEXT UNIQUE
-            ,has_headers        BOOLEAN
-            ,headers_file       TEXT
-            ,utf8_filename      TEXT
-            ,clean_filename     TEXT
-            ,stage_sql_filename TEXT
-            ,map_sql_filename   TEXT
-            ,prod_sql_filename  TEXT
-            ,parent_table       TEXT
-            ,staged_table       TEXT
-        );
-    ") || die "Error creating table $MIGSCHEMA.tracked_file: $!\n";
-    Mig::die_if_mig_column_tracking_table_exists();
-    my $rv2 = $dbh->do("
-        CREATE TABLE $MIGSCHEMA.tracked_column (
-             id                 serial
-            ,base_filename      TEXT
-            ,parent_table       TEXT
-            ,staged_table       TEXT
-            ,staged_column      TEXT
-            ,comment            TEXT
-            ,target_table       TEXT
-            ,target_column      TEXT
-            ,transform          TEXT
-            ,summarize          BOOLEAN
-        );
-    ") || die "Error creating table $MIGSCHEMA.tracked_column: $!\n";
-    my $rv3 = $dbh->do("
-        CREATE INDEX ON $MIGSCHEMA.tracked_column(target_table,target_column);
-    ") || die "Error creating index on $MIGSCHEMA.tracked_column: $!\n";
-    my $rv4 = $dbh->do("
-        CREATE INDEX ON $MIGSCHEMA.tracked_column(base_filename);
-    ") || die "Error creating index on $MIGSCHEMA.tracked_column: $!\n";
-    Mig::db_disconnect($dbh);
+sub loop_through_mig_sql_templates {
+    print "Looping through mig-sql/ templates\n";
+    opendir my $dir, $mig_sql or die "Cannot open directory: $!";
+    my @files = sort readdir $dir;
+    closedir $dir;
+    foreach my $file (@files) {
+        if ($file =~ /.sql$/) {
+            print "executing $file:\n";
+            system( $mig_bin . "mig-sql", ('-f',$file) )
+        }
+    }
 }
-
 
