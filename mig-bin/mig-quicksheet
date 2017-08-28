@@ -10,9 +10,12 @@ Quickly produces a simple Excel spreadsheet based on the tracked file suitable
 for simple end-user mapping.  The new file is named after the tracked file, but
 ends in .mapping.xls
 
+Multiple files may be specified, in which case all of the results are
+concatenated into one spreadsheet named <migration_schema>.mapping.xls
+
 =head1 SYNOPSIS
 
-B<mig-quicksheet> <file>
+B<mig-quicksheet> <file> [<file>...]
 
 =cut
 
@@ -38,65 +41,108 @@ pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 Mig::die_if_no_env_migschema();
 Mig::die_if_mig_tracking_table_does_not_exist();
 
-my $has_x_source = 0;
-my $file = abs_path($ARGV[0]);
-my $fdata;
-my $tracked_file_id = Mig::check_for_tracked_file($file);
-if ($tracked_file_id) {
-    $fdata = Mig::status_this_file($file);
-} else {
-    die "File not currently tracked: $file\n";
-}
-
-my $table = $fdata->{staged_table};
-if (!$table) {
-    die "No staged staged table for file: $file\n";
-}
-
-my $workbook = Spreadsheet::WriteExcel->new($file . '.mapping.xls');
+my $workbook;
 my @worksheets = ();
-print "Writing $file.mapping.xls\n";
-print "Sheet: Field Summary\n";
-my $first_sheet = $workbook->add_worksheet('Field Summary');
-my $bold = $workbook->add_format();
-$bold->set_bold();
-$bold->set_align('left');
-my $left = $workbook->add_format();
-$left->set_align('left');
-$first_sheet->set_column(0,6,30);
-
-my $dbh = Mig::db_connect();
-my $sth = $dbh->prepare("
-    SELECT COUNT(*)
-    FROM $MIGSCHEMA.$table
-    LIMIT 1;
-");
-my $rv = $sth->execute()
-    || die "Error retrieving data from information_schema: $!";
-
-my @cols = $sth->fetchrow_array;
-$sth->finish;
-my $count = $cols[0];
-Mig::db_disconnect($dbh);
-
-$first_sheet->write(0,0,'Source File:',$bold);
-$first_sheet->write(0,1,$file,$left);
-$first_sheet->write(1,0,'Number of Rows:',$bold);
-$first_sheet->write(1,1,$count,$left);
-
+my $first_sheet;
+my $toc;
+my $sheet_row_offset = 0;
 my $sheet_row_start = 4;
+my $table;
+my $file;
+my $outfile;
+my $fdata;
+my $has_x_source = 0;
+my $bold;
+my $left;
+my $counter = 0;
 
-$first_sheet->write($sheet_row_start,0,'Legacy Column',$bold);
-$first_sheet->write($sheet_row_start,1,'Non-Empty Rows',$bold);
-$first_sheet->write($sheet_row_start,2,'Distinct Non-NULL Values',$bold);
-$first_sheet->write($sheet_row_start,3,'Min Value',$bold);
-$first_sheet->write($sheet_row_start,4,'Min Length',$bold);
-$first_sheet->write($sheet_row_start,5,'Max Value',$bold);
-$first_sheet->write($sheet_row_start,6,'Max Length',$bold);
+init_workbook();
+foreach my $f (@ARGV) {
+    $file = abs_path($f);
+    $counter++;
+    if ($toc) {
+        $toc->write($counter,0,$counter);
+        $toc->write($counter,1,$f);
+    }
+    handle_file();
+    write_worksheets();
+}
+close_workbook();
 
-handle_columns();
+sub handle_file {
+    my $tracked_file_id = Mig::check_for_tracked_file($file);
+    if ($tracked_file_id) {
+        $fdata = Mig::status_this_file($file);
+    } else {
+        die "File not currently tracked: $file\n";
+    }
+    $table = $fdata->{staged_table};
+    if (!$table) {
+        die "No staged staged table for file: $file\n";
+    }
+}
 
-$workbook->close();
+sub init_workbook {
+    if (scalar(@ARGV) > 1) {
+        $outfile = $MIGSCHEMA . '.mapping.xls';
+    } else {
+        $outfile = abs_path($ARGV[0]) . '.mapping.xls';
+    }
+    print "Writing $outfile\n";
+    $workbook = Spreadsheet::WriteExcel->new( $outfile );
+    $bold = $workbook->add_format();
+    $bold->set_bold();
+    $bold->set_align('left');
+    $left = $workbook->add_format();
+    $left->set_align('left');
+    if (scalar(@ARGV) > 1) {
+        $toc = $workbook->add_worksheet('Files');
+    }
+}
+
+sub write_worksheets {
+    if ($toc) {
+        print 'File #' . $counter . "\n";
+    }
+    print "Sheet: Field Summary\n";
+    $first_sheet = $workbook->add_worksheet( ($toc ? $counter . ') ' : '') . 'Field Summary');
+    $first_sheet->set_column(0,6,30);
+
+    my $dbh = Mig::db_connect();
+    my $sth = $dbh->prepare("
+        SELECT COUNT(*)
+        FROM $MIGSCHEMA.$table
+        LIMIT 1;
+    ");
+    my $rv = $sth->execute()
+        || die "Error retrieving data from information_schema: $!";
+
+    my @cols = $sth->fetchrow_array;
+    $sth->finish;
+    my $count = $cols[0];
+    Mig::db_disconnect($dbh);
+
+    $first_sheet->write(0,0,'Source File:',$bold);
+    $first_sheet->write(0,1,$file,$left);
+    $first_sheet->write(1,0,'Number of Rows:',$bold);
+    $first_sheet->write(1,1,$count,$left);
+
+    $sheet_row_start = 4;
+
+    $first_sheet->write($sheet_row_start,0,'Legacy Column',$bold);
+    $first_sheet->write($sheet_row_start,1,'Non-Empty Rows',$bold);
+    $first_sheet->write($sheet_row_start,2,'Distinct Non-NULL Values',$bold);
+    $first_sheet->write($sheet_row_start,3,'Min Value',$bold);
+    $first_sheet->write($sheet_row_start,4,'Min Length',$bold);
+    $first_sheet->write($sheet_row_start,5,'Max Value',$bold);
+    $first_sheet->write($sheet_row_start,6,'Max Length',$bold);
+
+    handle_columns();
+}
+
+sub close_workbook {
+    $workbook->close();
+}
 
 exit 0;
 
@@ -114,7 +160,7 @@ sub handle_columns {
     my $rv = $sth->execute()
         || die "Error retrieving data from information_schema: $!";
 
-    my $sheet_row_offset = 0;
+    $sheet_row_offset = 0;
 
     while (my $data = $sth->fetchrow_hashref) {
         my $column = $data->{column_name};
@@ -235,7 +281,7 @@ sub group_by {
     my ($column,$option) = (shift,"GROUP BY 2 ORDER BY 2");
 
     print "Sheet: $column\n";
-    my $col_sheet = $workbook->add_worksheet(substr($column,0,31));
+    my $col_sheet = $workbook->add_worksheet( ($toc ? $counter . ') ' : '') . substr($column,0,31));
     push @worksheets, $col_sheet;
     $col_sheet->set_column(0,6,30);
 
