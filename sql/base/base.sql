@@ -452,6 +452,74 @@ CREATE OR REPLACE FUNCTION migration_tools.address_parse_out_citystatezip (TEXT)
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- try to parse data like this: 100 MAIN ST$COVINGTON, GA 30016
+CREATE OR REPLACE FUNCTION migration_tools.parse_out_address (TEXT) RETURNS TEXT[] AS $$
+    DECLARE
+        fullstring TEXT := $1;
+        address1 TEXT := '';
+        address2 TEXT := '';
+        scratch1 TEXT := '';
+        scratch2 TEXT := '';
+        city TEXT := '';
+        state TEXT := '';
+        zip TEXT := '';
+    BEGIN
+        zip := CASE
+            WHEN fullstring ~ E'\\d\\d\\d\\d\\d'
+            THEN REGEXP_REPLACE( fullstring, E'^.*(\\d\\d\\d\\d\\d-?\\d*).*$', E'\\1' )
+            ELSE ''
+        END;
+        fullstring := REGEXP_REPLACE( fullstring, E'^(.*)\\d\\d\\d\\d\\d-?\\d*(.*)$', E'\\1\\2');
+
+        IF fullstring ~ ',' THEN
+            state := REGEXP_REPLACE( fullstring, E'^(.*),(.*)$', E'\\2');
+            scratch1 := REGEXP_REPLACE( fullstring, E'^(.*),(.*)$', E'\\1');
+        ELSE
+            IF fullstring ~ E'\\s+[A-Z][A-Z]\\s*$' THEN
+                state := REGEXP_REPLACE( fullstring, E'^.*,?\\s+([A-Z][A-Z])\\s*$', E'\\1' );
+                scratch1 := REGEXP_REPLACE( fullstring, E'^(.*?),?\\s+[A-Z][A-Z](\\s*)$', E'\\1\\2' );
+            ELSE
+                IF fullstring ~ E'^\\S+$'  THEN
+                    scratch1 := fullstring;
+                    state := 'N/A';
+                ELSE
+                    state := REGEXP_REPLACE( fullstring, E'^(.*?),?\\s*(\\S+)\\s*$', E'\\2');
+                    scratch1 := REGEXP_REPLACE( fullstring, E'^(.*?),?\\s*(\\S+)\\s*$', E'\\1');
+                END IF;
+            END IF;
+        END IF;
+
+        IF scratch1 ~ '[\$]' THEN
+            scratch2 := REGEXP_REPLACE( scratch1, E'^(.+)[\$](.+?)$', E'\\1');
+            city := REGEXP_REPLACE( scratch1, E'^(.+)[\$](.+?)$', E'\\2');
+        ELSE
+            IF scratch1 ~ '\s' THEN
+                scratch2 := REGEXP_REPLACE( scratch1, E'^(.+)\\s+(.+?)$', E'\\1');
+                city := REGEXP_REPLACE( scratch1, E'^(.+)\\s+(.+?)$', E'\\2');
+            ELSE
+                scratch2 := 'N/A';
+                city := scratch1;
+            END IF;
+        END IF;
+
+        IF scratch2 ~ '^\d' THEN
+            address1 := scratch2;
+            address2 := '';
+        ELSE
+            address1 := REGEXP_REPLACE( scratch2, E'^(.+?)(\\d.+)$', E'\\1');
+            address2 := REGEXP_REPLACE( scratch2, E'^(.+?)(\\d.+)$', E'\\2');
+        END IF;
+
+        RETURN ARRAY[
+             TRIM(BOTH ' ' FROM address1)
+            ,TRIM(BOTH ' ' FROM address2)
+            ,TRIM(BOTH ' ' FROM city)
+            ,TRIM(BOTH ' ' FROM state)
+            ,TRIM(BOTH ' ' FROM zip)
+        ];
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
 CREATE OR REPLACE FUNCTION migration_tools.rebarcode (o TEXT, t BIGINT) RETURNS TEXT AS $$
     DECLARE
         n TEXT := o;
