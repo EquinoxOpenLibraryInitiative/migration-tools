@@ -840,6 +840,24 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_hz_date (TEXT,TEXT) RETURNS D
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.attempt_sierra_timestamp (TEXT,TEXT) RETURNS TIMESTAMP AS $$
+    DECLARE
+        attempt_value ALIAS FOR $1;
+        fail_value ALIAS FOR $2;
+        output TIMESTAMP;
+    BEGIN
+            output := REGEXP_REPLACE(attempt_value,E'^(..)(..)(..)(..)(..)$',E'20\\1-\\2-\\3 \\4:\\5')::TIMESTAMP;
+            RETURN output;
+    EXCEPTION
+        WHEN OTHERS THEN
+            FOR output IN
+                EXECUTE 'SELECT ' || quote_literal(fail_value) || '::TIMESTAMP AS a;'
+            LOOP
+                RETURN output;
+            END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.attempt_money (TEXT,TEXT) RETURNS NUMERIC(8,2) AS $$
     DECLARE
         attempt_value ALIAS FOR $1;
