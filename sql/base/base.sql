@@ -2570,6 +2570,7 @@ CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN,TEXT,TEXT) RETURNS TE
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- push bib sequence and return starting value for reserved range
 CREATE OR REPLACE FUNCTION migration_tools.push_bib_sequence(INTEGER) RETURNS BIGINT AS $$
     DECLARE
         bib_count ALIAS FOR $1;
