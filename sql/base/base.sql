@@ -2570,3 +2570,17 @@ CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN,TEXT,TEXT) RETURNS TE
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.push_bib_sequence(INTEGER) RETURNS BIGINT AS $$
+    DECLARE
+        bib_count ALIAS FOR $1;
+        output BIGINT;
+    BEGIN
+        PERFORM setval('biblio.record_entry_id_seq',(SELECT MAX(id) FROM biblio.record_entry) + bib_count + 2000);
+        FOR output IN
+            SELECT CEIL(MAX(id)/1000)*1000+1000 FROM biblio.record_entry WHERE id < (SELECT last_value FROM biblio.record_entry_id_seq)
+        LOOP
+            RETURN output;
+        END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
