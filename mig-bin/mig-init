@@ -86,7 +86,7 @@ sub loop_through_mig_sql_templates {
     foreach my $file (@files) {
         if ($file =~ /.sql$/) {
             print "executing $file:\n";
-            system( $mig_bin . "mig-sql", ('-f',$file) )
+            system( $mig_bin . "mig-sql", ('-f',$mig_sql . $file) )
         }
     }
 }
