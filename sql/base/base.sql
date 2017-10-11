@@ -431,67 +431,82 @@ CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_fuller_last_first_midd
         suffix TEXT := '';
         prefix TEXT := '';
     BEGIN
-        temp := full_name;
+        temp := BTRIM(full_name);
         -- Use values, not structure, for prefix/suffix, unless we come up with a better idea
+        --IF temp ~ '^\S{2,}\.' THEN
+        --    prefix := REGEXP_REPLACE(temp, '^(\S{2,}\.).*$','\1');
+        --    temp := BTRIM(REGEXP_REPLACE(temp, '^\S{2,}\.(.*)$','\1'));
+        --END IF;
+        --IF temp ~ '\S{2,}\.$' THEN
+        --    suffix := REGEXP_REPLACE(temp, '^.*(\S{2,}\.)$','\1');
+        --    temp := REGEXP_REPLACE(temp, '^(.*)\S{2,}\.$','\1');
+        --END IF;
         IF temp ilike '%MR.%' THEN
             prefix := 'Mr.';
-            temp := REGEXP_REPLACE( temp, E'MR\.\\s*', '', 'i' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'MR\.\\s*', '', 'i' ));
         END IF;
         IF temp ilike '%MRS.%' THEN
             prefix := 'Mrs.';
-            temp := REGEXP_REPLACE( temp, E'MRS\.\\s*', '', 'i' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'MRS\.\\s*', '', 'i' ));
         END IF;
         IF temp ilike '%MS.%' THEN
             prefix := 'Ms.';
-            temp := REGEXP_REPLACE( temp, E'MS\.\\s*', '', 'i' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'MS\.\\s*', '', 'i' ));
         END IF;
         IF temp ilike '%DR.%' THEN
             prefix := 'Dr.';
-            temp := REGEXP_REPLACE( temp, E'DR\.\\s*', '', 'i' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'DR\.\\s*', '', 'i' ));
         END IF;
         IF temp ilike '%JR.%' THEN
             suffix := 'Jr.';
-            temp := REGEXP_REPLACE( temp, E'JR\.\\s*', '', 'i' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'JR\.\\s*', '', 'i' ));
         END IF;
         IF temp ilike '%JR,%' THEN
             suffix := 'Jr.';
-            temp := REGEXP_REPLACE( temp, E'JR,\\s*', ',', 'i' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'JR,\\s*', ',', 'i' ));
         END IF;
         IF temp ilike '%SR.%' THEN
             suffix := 'Sr.';
-            temp := REGEXP_REPLACE( temp, E'SR\.\\s*', '', 'i' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'SR\.\\s*', '', 'i' ));
         END IF;
         IF temp ilike '%SR,%' THEN
             suffix := 'Sr.';
-            temp := REGEXP_REPLACE( temp, E'SR,\\s*', ',', 'i' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'SR,\\s*', ',', 'i' ));
         END IF;
         IF temp like '%III%' THEN
             suffix := 'III';
-            temp := REGEXP_REPLACE( temp, E'III', '' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'III', '' ));
         END IF;
         IF temp like '%II%' THEN
             suffix := 'II';
-            temp := REGEXP_REPLACE( temp, E'II', '' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'II', '' ));
         END IF;
         IF temp like '%IV%' THEN
             suffix := 'IV';
-            temp := REGEXP_REPLACE( temp, E'IV', '' );
+            temp := BTRIM(REGEXP_REPLACE( temp, E'IV', '' ));
         END IF;
 
-
         IF temp ~ ',' THEN
-            family_name = BTRIM(REGEXP_REPLACE(temp,E'^(.*?,).*$',E'\\1'));
-            temp := REPLACE( temp, family_name, '' );
+            family_name = BTRIM(REGEXP_REPLACE(temp,'^(.*?,).*$','\1'));
+            temp := BTRIM(REPLACE( temp, family_name, '' ));
             family_name := REPLACE( family_name, ',', '' );
-            first_given_name := BTRIM( REGEXP_REPLACE(temp,E'^(\\S+).*?$',E'\\1') );
-            temp := REPLACE( temp, first_given_name, '' );
-            second_given_name := BTRIM(temp);
+            IF temp ~ ' ' THEN
+                first_given_name := BTRIM( REGEXP_REPLACE(temp,'^(.+)\s(.+)$','\1') );
+                second_given_name := BTRIM( REGEXP_REPLACE(temp,'^(.+)\s(.+)$','\2') );
+            ELSE
+                first_given_name := temp;
+                second_given_name := '';
+            END IF;
         ELSE
-            first_given_name := BTRIM( REGEXP_REPLACE(temp,E'^(\\S+).*?$',E'\\1') );
-            temp := REPLACE( temp, first_given_name, '' );
-            family_name := BTRIM( REGEXP_REPLACE(temp,E'^.*?(\\S+)$',E'\\1') );
-            temp := REPLACE( temp, family_name, '' );
-            second_given_name := BTRIM(temp);
+            IF temp ~ '^\S+\s+\S+\s+\S+$' THEN
+                first_given_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)\s*(\S+)$','\1') );
+                second_given_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)\s*(\S+)$','\2') );
+                family_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)\s*(\S+)$','\3') );
+            ELSE
+                first_given_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)$','\1') );
+                second_given_name := temp;
+                family_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)$','\2') );
+            END IF;
         END IF;
 
         RETURN ARRAY[ family_name, prefix, first_given_name, second_given_name, suffix ];
