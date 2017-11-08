@@ -481,10 +481,6 @@ CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_fuller_last_first_midd
             suffix := 'II';
             temp := BTRIM(REGEXP_REPLACE( temp, E'II', '' ));
         END IF;
-        IF temp like '%IV%' THEN
-            suffix := 'IV';
-            temp := BTRIM(REGEXP_REPLACE( temp, E'IV', '' ));
-        END IF;
 
         IF temp ~ ',' THEN
             family_name = BTRIM(REGEXP_REPLACE(temp,'^(.*?,).*$','\1'));
