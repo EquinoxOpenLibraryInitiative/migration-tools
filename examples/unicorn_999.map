@@ -1,0 +1,22 @@
+call_number       999 a
+copy_number       999 c
+last_activity     999 d
+last_charged      999 e
+last_inventoried  999 f
+times_inventoried 999 g
+barcode           999 i
+num_of_pieces     999 j
+item_status       999 k
+location          999 l
+library           999 m
+item_note         999 o m:multi
+num_circs         999 n
+price             999 p
+in_house_circs    999 q
+circulate         999 r
+permanent         999 s
+item_type         999 t
+acq_date          999 u
+call_number_type  999 w
+item_category_1   999 x
+item_category_2   999 z
