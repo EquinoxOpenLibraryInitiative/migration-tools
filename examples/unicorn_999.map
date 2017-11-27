@@ -1,4 +1,5 @@
 call_number       999 a
+volume_info       999 v
 copy_number       999 c
 last_activity     999 d
 last_charged      999 e
