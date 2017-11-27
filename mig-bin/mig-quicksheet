@@ -185,9 +185,9 @@ sub handle_columns {
             $first_sheet->write($sheet_row_start + $sheet_row_offset,4,$cdata->{min_length},$left);
             $first_sheet->write($sheet_row_start + $sheet_row_offset,5,$cdata->{max_value},$left);
             $first_sheet->write($sheet_row_start + $sheet_row_offset,6,$cdata->{max_length},$left);
-            if ($cdata->{distinct_value_count} > 1 && $cdata->{distinct_value_count} <= 500) {
+            #if ($cdata->{distinct_value_count} > 1 && $cdata->{distinct_value_count} <= 500) {
                 group_by($column);
-            }
+            #}
         }
     }
     $sth->finish;
