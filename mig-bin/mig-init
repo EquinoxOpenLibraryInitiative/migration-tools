@@ -31,7 +31,7 @@ use Pod::Usage;
 use DBI;
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
-my $mig_sql = $mig_bin . "../mig-sql/";
+my $mig_sql = $mig_bin . "../mig-sql/init/";
 use lib "$FindBin::Bin/";
 use Mig;
 
@@ -79,7 +79,7 @@ sub try_to_init_schema_with_migration_tools {
 }
 
 sub loop_through_mig_sql_templates {
-    print "Looping through mig-sql/ templates\n";
+    print "Looping through mig-sql/init/ templates\n";
     opendir my $dir, $mig_sql or die "Cannot open directory: $!";
     my @files = sort readdir $dir;
     closedir $dir;
