@@ -6,16 +6,34 @@
 
 mig-quicksheet 
 
-Quickly produces a simple Excel spreadsheet based on the tracked file suitable
+By default:
+
+Quickly produces an Excel spreadsheet based on the tracked file suitable
 for simple end-user mapping.  The new file is named after the tracked file, but
 ends in .mapping.xls
 
 Multiple files may be specified, in which case all of the results are
 concatenated into one spreadsheet named <migration_schema>.mapping.xls
 
+If using --outfile:
+
+This specifies the exact name to use for the Excel file.  If not specified, and
+there is also no --outtable, then the naming convention will be as specified
+above.
+
+If using --outtable:
+
+This specifies a summary table and prefix to use within the migration schema for
+recording the output either in addition to or instead of the Excel file.  Unless
+--force is specified, it will not overwrite existing tables.
+
+If using --drop with --outable:
+
+This will delete the summary table specified and all related sub-tables.
+
 =head1 SYNOPSIS
 
-B<mig-quicksheet> <file> [<file>...]
+B<mig-quicksheet> [--force|--drop|--outfile <file>|--outtable <table_name>] <file> [<file>...]
 
 =cut
 
@@ -27,7 +45,9 @@ use Env qw(
     HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
     MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
+use Try::Tiny;
 use Pod::Usage;
+use Getopt::Long;
 use DBI;
 use Spreadsheet::WriteExcel;
 use Cwd 'abs_path';
@@ -36,7 +56,28 @@ my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
 use Mig;
 
-pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
+my $outtable = '';
+my $outfile = '';
+my $force;
+my $drop;
+my $help;
+
+GetOptions(
+	'outtable=s' => \$outtable,
+	'outfile=s' => \$outfile,
+	'force' => \$force,
+	'drop' => \$drop,
+	'help|?' => \$help
+);
+pod2usage(-verbose => 2) if $help || ! $ARGV[0];
+
+if (! $outtable && ! $outfile) {
+    if (scalar(@ARGV) > 1) {
+        $outfile = $MIGSCHEMA . '.mapping.xls';
+    } else {
+        $outfile = abs_path($ARGV[0]) . '.mapping.xls';
+    }
+}
 
 Mig::die_if_no_env_migschema();
 Mig::die_if_mig_tracking_table_does_not_exist();
@@ -44,30 +85,36 @@ Mig::die_if_mig_tracking_table_does_not_exist();
 my $workbook;
 my @worksheets = ();
 my $first_sheet;
+my $first_table;
 my $toc;
 my $sheet_row_offset = 0;
 my $sheet_row_start = 4;
 my $table;
 my $file;
-my $outfile;
 my $fdata;
 my $has_x_source = 0;
 my $bold;
 my $left;
 my $counter = 0;
 
-init_workbook();
-foreach my $f (@ARGV) {
-    $file = abs_path($f);
-    $counter++;
-    if ($toc) {
-        $toc->write($counter,0,$counter);
-        $toc->write($counter,1,$f);
+if (!$drop) {
+    init_workbook();
+    foreach my $f (@ARGV) {
+        $file = abs_path($f);
+        $counter++;
+        if ($toc) {
+            $toc->write($counter,0,$counter);
+            $toc->write($counter,1,$f);
+        }
+        handle_file();
+        write_worksheets();
     }
-    handle_file();
-    write_worksheets();
+    close_workbook();
+} else {
+    if (Mig::check_db_migschema_for_specific_table($outtable)) {
+        drop_existing_outtable();
+    }
 }
-close_workbook();
 
 sub handle_file {
     my $tracked_file_id = Mig::check_for_tracked_file($file);
@@ -83,30 +130,122 @@ sub handle_file {
 }
 
 sub init_workbook {
-    if (scalar(@ARGV) > 1) {
-        $outfile = $MIGSCHEMA . '.mapping.xls';
-    } else {
-        $outfile = abs_path($ARGV[0]) . '.mapping.xls';
+    if ($outfile) {
+        print "Writing $outfile\n";
+        $workbook = Spreadsheet::WriteExcel->new( $outfile );
+        $bold = $workbook->add_format();
+        $bold->set_bold();
+        $bold->set_align('left');
+        $left = $workbook->add_format();
+        $left->set_align('left');
+        if (scalar(@ARGV) > 1) {
+            $toc = $workbook->add_worksheet('Files');
+        }
     }
-    print "Writing $outfile\n";
-    $workbook = Spreadsheet::WriteExcel->new( $outfile );
-    $bold = $workbook->add_format();
-    $bold->set_bold();
-    $bold->set_align('left');
-    $left = $workbook->add_format();
-    $left->set_align('left');
-    if (scalar(@ARGV) > 1) {
-        $toc = $workbook->add_worksheet('Files');
+    if ($outtable) {
+        if (Mig::check_db_migschema_for_specific_table($outtable)) {
+            if ($force) {
+                drop_existing_outtable();
+            } else {
+                die "$outtable already exists.  Use --force to wipe and redo tables.\n";
+            }
+        }
+        create_new_outtable();
     }
 }
 
+sub drop_existing_outtable {
+
+    # we want a transaction for this one
+    my $dbh = Mig::db_connect();
+    $dbh->{AutoCommit} = 0;
+    $dbh->{RaiseError} = 1;
+
+    try {
+        # gather subordinate tables
+
+        my @tables = ();
+        my $sth = $dbh->prepare("
+            SELECT summary_table
+            FROM $MIGSCHEMA.$outtable
+            ORDER BY 1;"
+        );
+        my $rv = $sth->execute();
+        my $rows = $sth->fetchall_arrayref;
+        for my $row ( @$rows ) {
+            push @tables, $row->[0]
+        }
+
+        # drop them
+
+        foreach my $table (@tables) {
+            print "Dropping $MIGSCHEMA.$table\n";
+            $dbh->do("DROP TABLE $MIGSCHEMA.\"$table\";");
+        }
+
+        # drop master table
+
+        print "Dropping $MIGSCHEMA.$outtable\n";
+        $dbh->do("DROP TABLE $MIGSCHEMA.$outtable;");
+
+        $dbh->commit;
+    } catch {
+        warn "Transaction aborted because $_\n";
+        eval { $dbh->rollback };
+        die "Aborting mig-quicksheet\n";
+    };
+
+    Mig::db_disconnect($dbh);
+}
+
+sub create_new_outtable {
+    my $dbh = Mig::db_connect();
+    print "Creating table $MIGSCHEMA.$outtable\n";
+    my $rv = $dbh->do("
+        CREATE UNLOGGED TABLE $MIGSCHEMA.$outtable (
+            file TEXT,
+            summary_table TEXT UNIQUE
+        );
+    ") || die "Error creating outtable ($MIGSCHEMA.$outtable): $!\n";
+    Mig::db_disconnect($dbh);
+}
+
+sub create_new_subtable {
+    my $subtable = shift;
+    my $dbh = Mig::db_connect();
+    $dbh->{AutoCommit} = 0;
+    $dbh->{RaiseError} = 1;
+
+    try {
+        print "Creating table $MIGSCHEMA.\"$subtable\"\n";
+        my $rv = $dbh->do("
+            CREATE UNLOGGED TABLE $MIGSCHEMA.\"$subtable\" ();
+        ") || die "Error creating subtable ($MIGSCHEMA.\"$subtable\"): $!\n";
+        $rv = $dbh->do("
+            INSERT INTO $MIGSCHEMA.$outtable (file,summary_table) VALUES (" . $dbh->quote($file) . ',' . $dbh->quote($subtable) . ");
+        ") || die "Error inserting into outtable ($MIGSCHEMA.$outtable): $!\n";
+        $dbh->commit;
+    } catch {
+        warn "Transaction aborted because $_\n";
+        eval { $dbh->rollback };
+        die "Aborting mig-quicksheet\n";
+    };
+
+    Mig::db_disconnect($dbh);
+}
+
 sub write_worksheets {
-    if ($toc) {
-        print 'File #' . $counter . "\n";
-    }
+    print 'File #' . $counter . "\n";
     print "Sheet: Field Summary\n";
-    $first_sheet = $workbook->add_worksheet( ($toc ? $counter . ') ' : '') . 'Field Summary');
-    $first_sheet->set_column(0,6,30);
+    my $tab_name = (scalar(@ARGV) > 1 ? $counter . ') ' : '') . 'Field Summary';
+    if ($outfile) {
+        $first_sheet = $workbook->add_worksheet( $tab_name );
+        $first_sheet->set_column(0,6,30);
+    }
+    if ($outtable) {
+        $first_table = "$outtable $tab_name";
+        create_new_subtable( $first_table );
+    }
 
     my $dbh = Mig::db_connect();
     my $sth = $dbh->prepare("
@@ -120,28 +259,59 @@ sub write_worksheets {
     my @cols = $sth->fetchrow_array;
     $sth->finish;
     my $count = $cols[0];
-    Mig::db_disconnect($dbh);
 
-    $first_sheet->write(0,0,'Source File:',$bold);
-    $first_sheet->write(0,1,$file,$left);
-    $first_sheet->write(1,0,'Number of Rows:',$bold);
-    $first_sheet->write(1,1,$count,$left);
+    $sheet_row_start = 0;
 
-    $sheet_row_start = 4;
-
-    $first_sheet->write($sheet_row_start,0,'Legacy Column',$bold);
-    $first_sheet->write($sheet_row_start,1,'Non-Empty Rows',$bold);
-    $first_sheet->write($sheet_row_start,2,'Distinct Non-NULL Values',$bold);
-    $first_sheet->write($sheet_row_start,3,'Min Value',$bold);
-    $first_sheet->write($sheet_row_start,4,'Min Length',$bold);
-    $first_sheet->write($sheet_row_start,5,'Max Value',$bold);
-    $first_sheet->write($sheet_row_start,6,'Max Length',$bold);
+    if ($outfile) {
+        $first_sheet->write($sheet_row_start,0,'Legacy Column',$bold);
+        $first_sheet->write($sheet_row_start,1,'Non-Empty Rows',$bold);
+        $first_sheet->write($sheet_row_start,2,'Distinct Non-NULL Values',$bold);
+        $first_sheet->write($sheet_row_start,3,'Min Value',$bold);
+        $first_sheet->write($sheet_row_start,4,'Min Length',$bold);
+        $first_sheet->write($sheet_row_start,5,'Max Value',$bold);
+        $first_sheet->write($sheet_row_start,6,'Max Length',$bold);
+    }
+    if ($outtable) {
+        try { 
+            $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$first_table"^ . ' ADD COLUMN "Legacy Column" TEXT;');
+            $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$first_table"^ . ' ADD COLUMN "Non-Empty Rows" TEXT;');
+            $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$first_table"^ . ' ADD COLUMN "Distinct Non-NULL Values" TEXT;');
+            $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$first_table"^ . ' ADD COLUMN "Min Value" TEXT;');
+            $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$first_table"^ . ' ADD COLUMN "Min Length" TEXT;');
+            $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$first_table"^ . ' ADD COLUMN "Max Value" TEXT;');
+            $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$first_table"^ . ' ADD COLUMN "Max Length" TEXT;');
+        } catch {
+            die "Error modifying subtable ($MIGSCHEMA.$first_table): $_\n";
+        };
+    }
 
     handle_columns();
+
+    if ($outfile) {
+        $first_sheet->write($count + 3,0,'Source File:',$bold);
+        $first_sheet->write($count + 3,1,$file,$left);
+        $first_sheet->write($count + 4,0,'Number of Rows:',$bold);
+        $first_sheet->write($count + 4,1,$count,$left);
+    }
+    if ($outtable) {
+        try {
+            $rv = $dbh->do('INSERT INTO ' . qq^$MIGSCHEMA."$first_table"^ . ' ("Legacy Column") VALUES (NULL);');
+            $rv = $dbh->do('INSERT INTO ' . qq^$MIGSCHEMA."$first_table"^ .
+                ' ("Legacy Column","Non-Empty Rows") ' . "VALUES ('Source File:'," . $dbh->quote($file) . ");");
+            $rv = $dbh->do('INSERT INTO ' . qq^$MIGSCHEMA."$first_table"^ .
+                ' ("Legacy Column","Non-Empty Rows") ' . "VALUES ('Number of Rows:',$count);");
+        } catch {
+            die "Error inserting into subtable ($MIGSCHEMA.$first_table): $_\n";
+        };
+    }
+
+    Mig::db_disconnect($dbh);
 }
 
 sub close_workbook {
-    $workbook->close();
+    if ($outfile) {
+        $workbook->close();
+    }
 }
 
 exit 0;
@@ -161,6 +331,7 @@ sub handle_columns {
         || die "Error retrieving data from information_schema: $!";
 
     $sheet_row_offset = 0;
+    $has_x_source = 0;
 
     while (my $data = $sth->fetchrow_hashref) {
         my $column = $data->{column_name};
@@ -178,13 +349,25 @@ sub handle_columns {
         ) {
             $sheet_row_offset++;
             my $cdata = column_summary($column);
-            $first_sheet->write($sheet_row_start + $sheet_row_offset,0,$column,$left);
-            $first_sheet->write($sheet_row_start + $sheet_row_offset,1,$cdata->{non_empty_count},$left);
-            $first_sheet->write($sheet_row_start + $sheet_row_offset,2,$cdata->{distinct_value_count},$left);
-            $first_sheet->write($sheet_row_start + $sheet_row_offset,3,$cdata->{min_value},$left);
-            $first_sheet->write($sheet_row_start + $sheet_row_offset,4,$cdata->{min_length},$left);
-            $first_sheet->write($sheet_row_start + $sheet_row_offset,5,$cdata->{max_value},$left);
-            $first_sheet->write($sheet_row_start + $sheet_row_offset,6,$cdata->{max_length},$left);
+            if ($outfile) {
+                $first_sheet->write($sheet_row_start + $sheet_row_offset,0,$column,$left);
+                $first_sheet->write($sheet_row_start + $sheet_row_offset,1,$cdata->{non_empty_count},$left);
+                $first_sheet->write($sheet_row_start + $sheet_row_offset,2,$cdata->{distinct_value_count},$left);
+                $first_sheet->write($sheet_row_start + $sheet_row_offset,3,$cdata->{min_value},$left);
+                $first_sheet->write($sheet_row_start + $sheet_row_offset,4,$cdata->{min_length},$left);
+                $first_sheet->write($sheet_row_start + $sheet_row_offset,5,$cdata->{max_value},$left);
+                $first_sheet->write($sheet_row_start + $sheet_row_offset,6,$cdata->{max_length},$left);
+            }
+            if ($outtable) {
+                $rv = $dbh->do(qq^INSERT INTO $MIGSCHEMA."$first_table" VALUES (^ . join(','
+                    ,$cdata->{non_empty_count}
+                    ,$cdata->{distinct_value_count}
+                    ,$dbh->quote($cdata->{min_value})
+                    ,$cdata->{min_length}
+                    ,$dbh->quote($cdata->{max_value})
+                    ,$cdata->{max_length}
+                ) . ');') || die "Error inserting into subtable $MIGSCHEMA.\"$first_table\": $!";
+            }
             if ($cdata->{distinct_value_count} > 1 && $cdata->{distinct_value_count} <= 500) {
                 group_by($column);
             }
@@ -280,29 +463,50 @@ sub column_summary {
 sub group_by {
     my ($column,$option) = (shift,"GROUP BY 2 ORDER BY 2");
 
-    print "Sheet: $column\n";
-    my $col_sheet = $workbook->add_worksheet( ($toc ? $counter . ') ' : '') . substr($column,0,31));
-    push @worksheets, $col_sheet;
-    $col_sheet->set_column(0,6,30);
-
-    my $col_sheet_row_start = 0;
-    my $col_sheet_row_offset = 0;
-
-    $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,0,'Count',$bold);
-    if ($has_x_source) {
-        $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,'Source',$bold);
-        $option = "GROUP BY 2,3 ORDER BY 2,3";
-    }
-    $col_sheet->write(
-        $col_sheet_row_start + $col_sheet_row_offset
-        ,$has_x_source ? 2 : 1
-        ,"Legacy Value for $column"
-        ,$bold
-    );
-
     my $dbh = Mig::db_connect();
     my $sth;
     my $rv;
+
+    my $col_sheet_row_start = 0;
+    my $col_sheet_row_offset = 0;
+    my $col_sheet;
+    my $col_table;
+
+    my $sheet_name = (scalar(@ARGV) > 1 ? $counter . ') ' : '') . substr($column,0,31);
+
+    print "Sheet: $sheet_name\n";
+    if ($has_x_source) {
+        $option = "GROUP BY 2,3 ORDER BY 2,3";
+    }
+
+    if ($outfile) {
+        $col_sheet = $workbook->add_worksheet( $sheet_name );
+        push @worksheets, $col_sheet;
+        $col_sheet->set_column(0,6,30);
+        $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,0,'Count',$bold);
+        if ($has_x_source) {
+            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,'Source',$bold);
+        }
+        $col_sheet->write(
+            $col_sheet_row_start + $col_sheet_row_offset
+            ,$has_x_source ? 2 : 1
+            ,"Legacy Value for $column"
+            ,$bold
+        );
+    }
+
+    if ($outtable) {
+        $col_table = "$outtable $sheet_name";
+        create_new_subtable( $col_table );
+        $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$col_table"^ . ' ADD COLUMN "Count" TEXT;')
+            || die qq^Error altering subtable $MIGSCHEMA."$col_table": $!\n^;
+        if ($has_x_source) {
+            $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$col_table"^ . ' ADD COLUMN "Source" TEXT;')
+                || die qq^Error altering subtable $MIGSCHEMA."$col_table": $!\n^;
+        }
+        $rv = $dbh->do('ALTER TABLE ' . qq^$MIGSCHEMA."$col_table"^ . ' ADD COLUMN "' . $dbh->quote("Legacy value for $column") . '" TEXT;')
+            || die qq^Error altering subtable $MIGSCHEMA."$col_table": $!\n^;
+    }
 
     $sth = $dbh->prepare("
         SELECT COUNT(*), " . ($has_x_source ? 'x_source, ' : '') . "$column
@@ -315,16 +519,31 @@ sub group_by {
     while (my @cols = $sth->fetchrow_array) {
         $col_sheet_row_offset++;
         my $count = $cols[0];
-        $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,0,$count,$left);
+        $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,0,$count,$left) if $outfile;
         my $value;
+        my $source;
         if ($has_x_source) {
-            my $source = defined $cols[1] ? $cols[1] : '<NULL>';
-            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,$source,$left);
+            $source = defined $cols[1] ? $cols[1] : '<NULL>';
+            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,$source,$left) if $outfile;
             $value = defined $cols[2] ? $cols[2] : '<NULL>';
-            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,2,$value,$left);
+            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,2,$value,$left) if $outfile;
         } else {
             $value = defined $cols[1] ? $cols[1] : '<NULL>';
-            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,$value,$left);
+            $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,1,$value,$left) if $outfile;
+        }
+        if ($outtable) {
+            if ($has_x_source) {
+                $rv = $dbh->do(qq^INSERT INTO $MIGSCHEMA."$col_table" VALUES (^ . join(','
+                    ,$count
+                    ,$dbh->quote($source)
+                    ,$dbh->quote($value)
+                ) . ');') || die "Error inserting into subtable $MIGSCHEMA.\"$col_table\": $!";
+            } else {
+                $rv = $dbh->do(qq^INSERT INTO $MIGSCHEMA."$col_table" VALUES (^ . join(','
+                    ,$count
+                    ,$dbh->quote($value)
+                ) . ');') || die "Error inserting into subtable $MIGSCHEMA.\"$col_table\": $!";
+            }
         }
     }
     $sth->finish;
