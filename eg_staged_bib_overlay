@@ -404,7 +404,7 @@ sub handle_load_bibs {
             )
         });
         $dbh->commit;
-        sleep $wait if ($wait);
+        sleep $wait;
     }
 }
 
@@ -594,6 +594,7 @@ sub handle_load_new_auths {
             )
         });
         $dbh->commit;
+        sleep $wait;
     }
 }
 
