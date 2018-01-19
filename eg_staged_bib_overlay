@@ -387,7 +387,7 @@ sub handle_load_bibs {
                 FROM $schema.$batch
                 WHERE to_import
                 AND NOT imported
-                ORDER BY id
+                ORDER BY bib_id DESC
                 LIMIT 1
             )
         });
