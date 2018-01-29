@@ -40,6 +40,8 @@ my $file = abs_path($ARGV[0]);
 my $utf8_file;
 if ($ARGV[1]) {
     $utf8_file = abs_path($ARGV[1]);
+} else {
+    $utf8_file = $file;
 }
 if ($utf8_file && ! $utf8_file =~ /^$MIGBASEWORKDIR/) {
     die "File falls outside of MIGWORKDIR ($MIGWORKDIR): $utf8_file\n";
