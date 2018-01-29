@@ -43,6 +43,8 @@ my $file = abs_path($ARGV[0]);
 my $clean_file;
 if ($ARGV[1]) {
     $clean_file = abs_path($ARGV[1]);
+} else {
+    $clean_file = $file;
 }
 if ($clean_file && ! $clean_file =~ /^$MIGBASEWORKDIR/) {
     die "File falls outside of MIGWORKDIR ($MIGWORKDIR): $clean_file\n";
