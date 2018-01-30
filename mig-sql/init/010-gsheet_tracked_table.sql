@@ -6,5 +6,6 @@ CREATE TABLE gsheet_tracked_table (
     ,tab_name                   TEXT
     ,created                    TIMESTAMP
     ,last_pulled                TIMESTAMP
+    ,UNIQUE(worksheet_name,tab_name)
 );
 
