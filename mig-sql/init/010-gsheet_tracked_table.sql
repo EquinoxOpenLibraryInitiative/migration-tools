@@ -1,5 +1,5 @@
 CREATE TABLE gsheet_tracked_table (
-    id                          SERIAL
+    id                          SERIAL PRIMARY KEY
     ,worksheet_name             TEXT NOT NULL
     ,worksheet_key              TEXT
     ,table_name                 TEXT NOT NULL
