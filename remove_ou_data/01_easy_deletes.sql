@@ -80,5 +80,7 @@ DELETE FROM vandelay.import_bib_trash_group WHERE owner IN (SELECT (actor.org_un
 DELETE FROM vandelay.import_item_attr_definition WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM vandelay.match_set WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM vandelay.merge_profile WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
-
+DELETE FROM asset.copy_tag_copy_map WHERE copy IN (SELECT id FROM asset.copy WHERE circ_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM asset.copy_tag WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+DELETE FROM config.copy_tag_type WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 COMMIT;
