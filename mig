@@ -63,6 +63,8 @@ Using B<mig> should go something like this:
 
 =item mig write_prod patrons.tsv # creates a .sql file for pushing the staging data into production
 
+=item mig reporter --analyst "Foo Fooer" --report_title "Foo Load Analysis" #creates an asciidoc report
+
 =back
 
 =head1 COMMANDS
@@ -229,6 +231,27 @@ all such files if no file is specified.
 =item B<sql> [arguments...]
 
 A wrapper around the psql command.  At some point the plan is to shove mig-tracked variables into psql sessions.
+
+=item B<reporter> --analyst "Analyst Name" --report_title "Report Title"
+
+Generates an asciidoc file in the git working directory that can be converted to 
+any appropriate format.  The analyst and report parameters are required.
+
+Optional parameters are : 
+
+--added_page_title and --added_page_file 
+
+If one is used both must be.  The added page file can be plain text or asciidoc.  This
+adds an extra arbitrary page of notes to the report.
+
+--tags
+
+This will define a set of tags to use, if not set it will default to Circs, 
+Holds, Actors, Bibs, Assets & Money. 
+
+--reports_xml 
+
+Allows you to override the default evergreen_staged_report.xml in the mig-xml folder.
 
 =back
 
