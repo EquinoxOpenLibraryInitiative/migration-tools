@@ -242,7 +242,7 @@ Optional parameters are :
 --added_page_title and --added_page_file 
 
 If one is used both must be.  The added page file can be plain text or asciidoc.  This
-adds an extra arbitrary page of notes to the report.
+adds an extra arbitrary page of notes to the report.  Mig assumes the page file is in the mig git directory.
 
 --tags
 

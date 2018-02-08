@@ -107,6 +107,7 @@ my $dom = $parser->parse_file($reports_xml);
 if (defined $added_page_file or defined $added_page_title) {
     abort('must specify --added_page_file and --added_page_title') unless defined $added_page_file and defined $added_page_title;
     }
+if (defined $added_page_file) { $added_page_file = $MIGGITDIR . $added_page_file; }
 if ($MIGSCHEMA eq 'full') { $MIGSCHEMA = ''; }
 
 my $dbh = Mig::db_connect();
