@@ -19,24 +19,11 @@
 \set ECHO all
 \timing
 
--- creates an output file for serially deleting users, 
--- makes it easier than finding each problem stopping a batch 
--- creates a stage 2 inbetween 1 and 3
-
-\t
-\psql format unaligned
-\o 16_delete_usrs_stage_2.sql
-
-SELECT 'ALTER TABLE actor.usr DISABLE RULE protect_user_delete;';
-SELECT 'DELETE FROM actor.usr WHERE id = ' || id || ';'
+SELECT id
 FROM actor.usr WHERE home_ou IN (
     SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit
-    WHERE shortname = :ou_to_del
+    WHERE shortname IN (SELECT shortname FROM esi.ous_to_del)
 );
-SELECT 'ALTER TABLE actor.usr ENABLE RULE protect_user_delete;';
-
-\o
-\pset format aligned
-\t
 
 
+-- find the problems and clear them up
