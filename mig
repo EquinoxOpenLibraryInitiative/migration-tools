@@ -65,6 +65,8 @@ Using B<mig> should go something like this:
 
 =item mig reporter --analyst "Foo Fooer" --report_title "Foo Load Analysis" #creates an asciidoc report
 
+=item mig gsheet --pull foo_tab_name OR --push foo_pg_table_name 
+
 =back
 
 =head1 COMMANDS
@@ -253,6 +255,13 @@ Holds, Actors, Bibs, Assets & Money.
 
 Allows you to override the default evergreen_staged_report.xml in the mig-xml folder.
 
+=item B<gsheet> --pull spreadsheet_tab or --push postgres_table
+
+This uses the gsheet_tracked_table and gsheet_tracked column tables to map a Google Docs Spreadsheet tabs
+with Postgres tables in the mig schema.  Multiple spreadsheets can be used but tab names must be unique.  
+Each spreadsheet column needs a header that matches the column name in the matching table.  An oauth 
+session key is also needed for your Google account and mig gsheet will look for it in the .mig directory.
+
 =back
 
 =cut
@@ -301,6 +310,10 @@ switch($ARGV[0]) {
         standard_invocation(@ARGV);
     }
     case "reporter" {
+        Mig::die_if_no_env_migschema();
+        standard_invocation(@ARGV);
+    }
+    case "gsheet" {
         Mig::die_if_no_env_migschema();
         standard_invocation(@ARGV);
     }
