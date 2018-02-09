@@ -19,6 +19,9 @@
 \set ECHO all
 \timing
 
+INSERT INTO reporter.template_folder (owner,name) values (1,'saved_cons_templates');
+INSERT INTO reporter.output_folder (owner,name) values (1,'saved_cons_output');
+
 BEGIN;
 
 DELETE FROM vandelay.queue WHERE owner IN
@@ -32,6 +35,17 @@ DELETE FROM reporter.report WHERE owner IN
 
 DELETE FROM reporter.output_folder WHERE owner IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+UPDATE reporter.template a SET owner = 1, folder = (SELECT id FROM reporter.template_folder WHERE name ~* 'saved_cons_templates' and owner = 1) 
+FROM (SELECT id, template FROM reporter.report WHERE owner = 1) x 
+WHERE x.template = a.id AND a.owner IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+UPDATE reporter.schedule SET folder = (SELECT id FROM reporter.output_folder WHERE owner = 1 AND name = 'saved_cons_output') WHERE folder IN
+(SELECT id FROM reporter.output_folder WHERE share_with IN 
+    (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM reporter.output_folder WHERE share_with IN
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
 DELETE FROM reporter.schedule WHERE runner IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
