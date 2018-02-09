@@ -55,4 +55,10 @@ DELETE FROM reporter.template WHERE owner IN
 DELETE FROM reporter.template_folder WHERE owner IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
+UPDATE reporter.report_folder SET share_with = NULL WHERE share_with IN 
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+
+UPDATE reporter.template_folder SET share_with = NULL WHERE share_with IN 
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+
 COMMIT;
