@@ -1,0 +1,410 @@
+#!/usr/bin/perl
+
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Net::Google::Spreadsheets;
+use Net::Google::DataAPI::Auth::OAuth2;
+use Net::OAuth2::AccessToken;
+use Storable;
+use DBI;
+use FindBin;
+use lib "$FindBin::Bin/";
+use Mig;
+use strict;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    );
+use Switch;
+use Cwd 'abs_path';
+use Pod::Usage;
+use Data::Dumper;
+
+my $mig_bin = "$FindBin::Bin/";
+
+Mig::die_if_no_env_migschema();
+die_if_gsheet_tracked_table_does_not_exist();
+die_if_gsheet_tracked_column_does_not_exist();
+
+my $cmd_push;
+my $next_arg_is_push;
+my $cmd_pull;
+my $next_arg_is_pull;
+my @worksheet_names;
+my $cmd_export = 0;
+my @table_names;
+my $sql;
+my $sth;
+my @ws;
+my @tracked_ws_names;
+
+foreach my $arg (@ARGV) {
+    if ($arg eq '--push') {
+        $next_arg_is_push = 1;
+        next;
+    }
+    if ($next_arg_is_push) {
+        $cmd_push = $arg;
+        $next_arg_is_push = 0;
+        next;
+    }
+    if ($arg eq '--pull') {
+        $next_arg_is_pull = 1;
+        next;
+    }
+    if ($next_arg_is_pull) {
+        $cmd_pull = $arg;
+        $next_arg_is_pull = 0;
+        next;
+    }
+    if ($arg eq '--export') {
+        $cmd_export = 1;
+        next;
+    }
+}
+
+abort('invalid value for --export') unless ($cmd_export eq 'on' or $cmd_export eq 'off');
+abort('must specify --push or --pull') unless (defined $cmd_push or defined $cmd_pull);
+if (defined $cmd_push and defined $cmd_pull) { abort('you can not specify both a --push and --pull on the same command'); }
+
+my $dbh = Mig::db_connect();
+my $spreadsheet = connect_gsheet();
+abort('could not connect to google sheet') unless (defined $spreadsheet);
+
+$sql = 'SELECT tab_name FROM ' . $MIGSCHEMA . '.gsheet_tracked_table;';
+$sth = $dbh->prepare($sql);
+my $ra = $sth->execute();
+while (my @row = $sth->fetchrow_array) {
+    push @tracked_ws_names, $row[0];
+}
+
+if (defined $cmd_pull) {
+    print "Pulling ";
+    if ($cmd_pull eq 'all') {
+        print "all worksheets.\n";
+        @ws = $spreadsheet->worksheets;
+        foreach my $wsn (@ws) { push @worksheet_names, $wsn->title; }
+    } else {
+        print "only worksheet $cmd_pull.\n";
+        if (!defined $cmd_pull) { abort('command incomplete'); } 
+        push @worksheet_names, $cmd_pull;
+    }
+    my @m = array_match(\@worksheet_names,\@tracked_ws_names);
+    foreach my $w (@m) { 
+        my $pull_ws = $spreadsheet->worksheet( {title => $w} ); 
+        my $push_tb = get_table_name($MIGSCHEMA,$w,$dbh);
+        my @rows = $pull_ws->rows;
+        my @content;
+        map { $content[$_->row - 1][$_->col - 1] = $_->content } $pull_ws->cells;
+        #print Dumper($pull_ws->cells);
+        #print Dumper(@content);
+        my @tab_headers = shift @content;
+        my $tab_headers_length = $#{ $tab_headers[0] };
+        my @pg_headers;
+        for my $i ( 0 .. $tab_headers_length ) {
+            push @pg_headers, $tab_headers[0][$i];
+        }
+        shift @content;
+        #todo: check for clean headers at some point ...
+        truncate_table($MIGSCHEMA,$push_tb,$dbh);
+        print "Inserting from $w to $push_tb.\n";
+        for my $j (@content) {
+            insert_row($MIGSCHEMA,$push_tb,$dbh,\@pg_headers,$j);
+        }
+        timestamp($MIGSCHEMA,$push_tb,$dbh,'pull');
+    }
+}
+
+if (defined $cmd_push) {
+    print "Pushing ";
+    if ($cmd_push eq 'all') {
+        print "all tables.\n";
+        $sql = 'SELECT table_name FROM ' . $MIGSCHEMA . '.gsheet_tracked_table';
+        $sth = $dbh->prepare($sql);
+        $ra = $sth->execute();
+        while (my @row = $sth->fetchrow_array) {
+            push @table_names, $row[0];
+        }
+    } else {
+        print "only table $cmd_push.\n";
+        if (!defined $cmd_push) { abort('command incomplete'); }
+        push @table_names, $cmd_push;
+    }
+    foreach my $t (@table_names) {
+        my $pull_tb = $MIGSCHEMA . "." . $t;;
+        my @table_headers = get_pg_column_headers($t,$MIGSCHEMA);
+        my $push_ws_name = get_worksheet_name($MIGSCHEMA,$t,$dbh);
+        my $push_ws = $spreadsheet->worksheet( {title => $push_ws_name} );
+        if (!defined $push_ws) { next; }
+        my @rows;
+        my $i = 0;
+        foreach my $rth (@table_headers) { $rows[0][$i] = $rth; $i++; }         
+        $sql = "SELECT * FROM $pull_tb;";
+        $sth = $dbh->prepare($sql);
+        $sth->execute();
+        my $grabhash = $sth->fetchall_arrayref({});
+        erase_sheet($push_ws,$push_ws_name);
+
+        #get from postgres the headers to use in the sheet from tracked columns
+        $sql = 'SELECT column_name FROM ' . $MIGSCHEMA . '.gsheet_tracked_column WHERE table_id = (SELECT id FROM ' . $MIGSCHEMA . '.gsheet_tracked_table WHERE table_name = \'' . $t . '\')';
+        $sth = $dbh->prepare($sql);
+        $sth->execute();
+        my $sheet_headers = $sth->fetchall_arrayref();
+        my $sheet_headers_length = @$sheet_headers;
+        #now I need to do new rows using those headers
+        my @content;
+        foreach my $row ( @{$grabhash} ) {
+            my $record = {};
+            for my $column ( sort keys %{ $row } ) {
+                print Dumper(@$sheet_headers);
+                print "column: $column\n";
+                my $clean_column = $column;
+                $clean_column =~ s/_//g;
+                print "clean column: $clean_column\n";
+                if ( $column ~~ @$sheet_headers ) {
+                    $record->{$clean_column} = $row->{$column}; 
+                }
+            }
+            push @content, $record;
+        }
+
+        #print Dumper(@content); 
+        foreach my $fillsheet (@content) {
+            my $new_row = $push_ws->add_row (
+                $fillsheet
+            );
+        }
+        timestamp($MIGSCHEMA,$pull_tb,$dbh,'push');
+    }
+}   
+
+sub die_if_gsheet_tracked_table_does_not_exist {
+    if (!check_for_gsheet_tracked_table()) {
+        die "Table $MIGSCHEMA.gsheet_tracked_table does not exist.  Bailing...\n";
+    }
+}
+
+sub array_match {
+    my ($xa,$xb) = @_;
+    my @a = @{ $xa };
+    my @b = @{ $xb };
+    my @r;
+
+    foreach my $av (@a) {
+        foreach my $bv (@b) {
+            if ($av eq $bv) { push @r, $bv; }
+        }
+    }    
+    return @r;
+}
+
+sub get_pg_column_headers {
+    my $table_name = shift;
+    my $schema_name = shift;
+    my @headers;
+    my $dbh = Mig::db_connect();
+    $sql = 'SELECT column_name FROM information_schema.columns WHERE table_schema = ' . $dbh->quote( $schema_name ) . ' AND table_name = ' . $dbh->quote( $table_name ) . ';';
+    $sth = $dbh->prepare($sql);
+    $ra = $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        push @headers, $row[0];
+    }
+    return @headers;
+}
+
+sub erase_sheet {
+    my $ws = shift;
+    my $ws_name = shift;
+
+    print "Erasing $ws_name.\n";
+    my @rows = $ws->rows;
+    my $i;
+    my $j = @rows;
+    $j = int(($j / 2))-1;
+    if ($j < 2) { $j = 2; }
+    while ($j > 0) {
+        #bodge until I figure out why google sheets is only deleting even numbered rows
+        $i = 1;
+        foreach my $row (@rows) {
+            if ($i != 1) { $row->delete; }
+            $i++;
+        };
+        $j--;
+    };
+    return;
+}
+
+sub check_for_gsheet_tracked_table {
+    my $dbh = Mig::db_connect();
+    my $sth = $dbh->prepare("
+        SELECT EXISTS(
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = " . $dbh->quote( $MIGSCHEMA ) . "
+            AND table_name = 'gsheet_tracked_table'
+        );"
+    );
+    my $rv = $sth->execute()
+        || die "Error checking for table (tracked_gsheet_table): $!";
+    my @cols = $sth->fetchrow_array;
+    $sth->finish;
+    Mig::db_disconnect($dbh);
+    return $cols[0];
+}
+
+sub die_if_gsheet_tracked_column_does_not_exist {
+    if (!check_for_gsheet_tracked_column()) {
+        die "Table $MIGSCHEMA.gsheet_tracked_column does not exist.  Bailing...\n";
+    }
+}
+
+sub get_table_name {
+    my $migs = shift;
+    my $worksheet = shift;
+    my $dbh = shift;
+
+    my $sql = 'SELECT table_name FROM ' . $migs . '.gsheet_tracked_table WHERE tab_name = \'' . $worksheet . '\';';
+    my $sth = $dbh->prepare($sql);
+    my $xs = $sth->execute();
+    my $table_name;
+    while (my @row = $sth->fetchrow_array) {
+        $table_name = $row[0];
+    }
+
+    return $table_name;
+}
+
+sub get_worksheet_name {
+    my $migs = shift;
+    my $table = shift;
+    my $dbh = shift;
+
+    my $sql = 'SELECT tab_name FROM ' . $migs . '.gsheet_tracked_table WHERE table_name = \'' . $table . '\';';
+    my $sth = $dbh->prepare($sql);
+    my $xs = $sth->execute();
+    my $worksheet_name;
+    while (my @row = $sth->fetchrow_array) {
+        $worksheet_name = $row[0];
+    }
+
+    return $worksheet_name;
+}
+
+
+sub check_for_gsheet_tracked_column {
+    my $dbh = Mig::db_connect();
+    my $sth = $dbh->prepare("
+        SELECT EXISTS(
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = " . $dbh->quote( $MIGSCHEMA ) . "
+            AND table_name = 'gsheet_tracked_column'
+        );"
+    );
+    my $rv = $sth->execute()
+        || die "Error checking for table (gsheet_tracked_column): $!";
+    my @cols = $sth->fetchrow_array;
+    $sth->finish;
+    Mig::db_disconnect($dbh);
+    return $cols[0];
+}
+
+sub insert_row {
+    my ($schema, $table, $dbh, $headers_ref, $row_ref) = @_;
+    my @headers = @{ $headers_ref };
+    my @row_data = @{ $row_ref };
+
+    my $header_string = '(' . join(",", @headers) . ')';
+    map {s/\'/\'\'/g; } @row_data;
+    my $row_string = '(' . join(",", map {qq/'$_'/} @row_data) . ')';
+    print "INSERT INTO $schema.$table $header_string VALUES $row_string\n"; 
+    $dbh->do(qq/
+        INSERT INTO $schema.$table $header_string VALUES $row_string ;
+    /);
+    
+    print "Row pushed to $table in schema $schema.\n";
+}
+
+sub timestamp {
+    my ($schema, $table, $dbh, $action) = @_;
+
+    my $column;
+    if ($action eq 'pull') { $column = 'last_pulled' }
+        else { $column = 'last_pushed' }; 
+
+    $dbh->do(qq/
+        UPDATE $schema.gsheet_tracked_table SET $column = NOW() WHERE table_name = '$table';
+    /);
+
+}
+
+
+sub truncate_table {
+    my $schema = shift;
+    my $table = shift;
+    my $dbh = shift;
+
+    $dbh->do(qq/
+        TRUNCATE TABLE $schema.$table;;
+    /);
+    print "Table $schema.$table truncated.\n";
+}
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    print_usage();
+    exit 1;
+}
+
+sub connect_gsheet {
+    if (!defined $ENV{'CLIENTID'}) {
+        exec '/bin/bash', '--init-file', '~/.mig/oauth.env';
+        print "Open Authentication settings were not loaded, please re-run.\n";
+    }
+    my $session_filename = $ENV{SESSIONFILE};
+    my $oauth2 = Net::Google::DataAPI::Auth::OAuth2->new(
+        client_id => $ENV{CLIENTID},
+        client_secret => $ENV{CLIENTSECRET},
+        scope => ['http://spreadsheets.google.com/feeds/'],
+        redirect_uri => 'https://developers.google.com/oauthplayground',
+    );
+    my $session = retrieve($session_filename);
+    my $restored_token = Net::OAuth2::AccessToken->session_thaw(
+        $session,
+        auto_refresh => 1,
+        profile => $oauth2->oauth2_webserver,
+    );
+    $oauth2->access_token($restored_token);
+    my $service = Net::Google::Spreadsheets->new(auth => $oauth2);
+
+    my $spreadsheet = $service->spreadsheet(
+        {  
+            title => $MIGSCHEMA
+        }
+    );
+    return $spreadsheet;
+}
+
+sub print_usage {
+    print <<_USAGE_;
+
+Mig gsheet is for synchronizing data between migration postgresql tables 
+and Google Sheets.  It accepts the following command line arguments:
+
+--push table_name or all
+
+--pull worksheet_name or all
+
+Either --push or --pull must be present and it must be one or the other.
+
+--export on or off  
+
+Export will default to off if not declared.  If on it will export to tab 
+separated tables the tables being pushed or worksheets being pulled with 
+timestamps.
+
+_USAGE_
+}
