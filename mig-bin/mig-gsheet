@@ -11,6 +11,7 @@ use Storable;
 use DBI;
 use FindBin;
 use lib "$FindBin::Bin/";
+my $mig_bin = "$FindBin::Bin/";
 use Mig;
 use strict;
 use Env qw(
@@ -22,7 +23,7 @@ use Cwd 'abs_path';
 use Pod::Usage;
 use Data::Dumper;
 
-my $mig_bin = "$FindBin::Bin/";
+pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 
 Mig::die_if_no_env_migschema();
 die_if_gsheet_tracked_table_does_not_exist();
@@ -65,7 +66,6 @@ foreach my $arg (@ARGV) {
     }
 }
 
-abort('invalid value for --export') unless ($cmd_export eq 'on' or $cmd_export eq 'off');
 abort('must specify --push or --pull') unless (defined $cmd_push or defined $cmd_pull);
 if (defined $cmd_push and defined $cmd_pull) { abort('you can not specify both a --push and --pull on the same command'); }
 
@@ -355,7 +355,6 @@ sub truncate_table {
 sub abort {
     my $msg = shift;
     print STDERR "$0: $msg", "\n";
-    print_usage();
     exit 1;
 }
 
@@ -388,23 +387,4 @@ sub connect_gsheet {
     return $spreadsheet;
 }
 
-sub print_usage {
-    print <<_USAGE_;
 
-Mig gsheet is for synchronizing data between migration postgresql tables 
-and Google Sheets.  It accepts the following command line arguments:
-
---push table_name or all
-
---pull worksheet_name or all
-
-Either --push or --pull must be present and it must be one or the other.
-
---export on or off  
-
-Export will default to off if not declared.  If on it will export to tab 
-separated tables the tables being pushed or worksheets being pulled with 
-timestamps.
-
-_USAGE_
-}
