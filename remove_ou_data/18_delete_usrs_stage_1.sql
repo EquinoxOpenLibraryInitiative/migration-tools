@@ -25,7 +25,7 @@
 
 \t
 \psql format unaligned
-\o 17_delete_usrs_stage_2.sql
+\o 18_delete_usrs_stage_2.sql
 
 SELECT 'ALTER TABLE actor.usr DISABLE RULE protect_user_delete;';
 SELECT 'DELETE FROM actor.usr WHERE id = ' || id || ';'
