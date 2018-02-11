@@ -15,6 +15,7 @@
 -- along with this program; if not, write to the Free Software
 -- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+\x off
 \set ou_to_del ''''EXAMPLE''''
 \set ECHO all
 \timing
@@ -24,7 +25,7 @@
 -- creates a stage 2 inbetween 1 and 3
 
 \t
-\psql format unaligned
+\pset format unaligned
 \o 18_delete_usrs_stage_2.sql
 
 SELECT 'ALTER TABLE actor.usr DISABLE RULE protect_user_delete;';
