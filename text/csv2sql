@@ -15,11 +15,11 @@ my $csv_config;
 
 sub init {
 	our %config;
-	do '/openils/conf/offline-config.pl';
     if ($PGHOST and $PGPORT and $PGUSER and $PGDATABASE) 
     {
-        $db = connect_db($PGDATABASE,$PGUSER,undef,$PGHOST) or die $DBI::errstr;
+        $dbh = connect_db($PGDATABASE,$PGUSER,undef,$PGHOST) or die $DBI::errstr;
     } else {
+        do '/openils/conf/offline-config.pl';
         $dbh = DBI->connect( $config{dsn}, $config{usr}, $config{pw} ) or die $DBI::errstr;
     }
 
