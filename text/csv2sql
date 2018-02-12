@@ -4,6 +4,10 @@ use Text::CSV::Auto;
 use Data::Dumper;
 use DBI;
 use File::Basename;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
 
 my $dbh;
 my $cfg;
@@ -12,7 +16,13 @@ my $csv_config;
 sub init {
 	our %config;
 	do '/openils/conf/offline-config.pl';
-	$dbh = DBI->connect( $config{dsn}, $config{usr}, $config{pw} ) or die $DBI::errstr;
+    if ($PGHOST and $PGPORT and $PGUSER and $PGDATABASE) 
+    {
+        $db = connect_db($PGDATABASE,$PGUSER,undef,$PGHOST) or die $DBI::errstr;
+    } else {
+        $dbh = DBI->connect( $config{dsn}, $config{usr}, $config{pw} ) or die $DBI::errstr;
+    }
+
 	$cfg = {
 		schema => 'm_foo',
 		auto_options => {
@@ -48,6 +58,23 @@ sub init {
 		die "$ARGV[0] does not exist\n";
 	}
 }
+
+sub connect_db {
+    my ($db, $dbuser, $dbpw, $dbhost) = @_;
+
+    my $dsn = "dbi:Pg:host=$dbhost;dbname=$db;port=5432";
+
+    my $attrs = {
+        ShowErrorStatement => 1,
+        RaiseError => 1,
+        PrintError => 1,
+        pg_enable_utf8 => 1,
+    };
+    my $dbh = DBI->connect($dsn, $dbuser, $dbpw, $attrs);
+
+    return $dbh;
+}
+
 
 sub write_sql_sample {
 	my $cfg = shift;
