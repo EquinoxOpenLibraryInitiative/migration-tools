@@ -1,0 +1,529 @@
+<reports_file>
+
+    <!-- CIRC REPORTS -->
+    <report>
+        <name>circ_count</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>Open Circulations</report_title>
+        <heading>Circulation Status.Count of Circs</heading>
+        <query>SELECT 'Closed Circulations', COUNT(id) FROM action.circulation WHERE xact_finish IS NOT NULL UNION ALL SELECT 'Open Circulations', COUNT(id) FROM action.circulation WHERE xact_finish IS NULL</query>
+    </report>
+
+    <report>
+        <name>circ_by_orgunit</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>Circulations by Org Unit</report_title>
+        <heading>Circulations Count.Org Unit</heading>
+        <query>SELECT COUNT(acirc.id), aou.name FROM action.circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.xact_finish IS NULL GROUP BY 2</query>
+    </report>
+
+     <report>
+        <name>circs_by_duration</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>Circulations by Duration, Fine and Max Fine</report_title>
+        <heading>Count of Circs.Duration.Fine.Max Fine</heading>
+        <query>SELECT COUNT(id), duration, recurring_fine, max_fine FROM action.circulation GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
+    </report>
+
+     <report>
+        <name>circs_by_usrgroup</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>Circulations by Rules and Patron Group</report_title>
+        <heading>Count of Circs.Duration.Fine.Max Fine.User Group</heading>
+        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, pgt.name FROM action.circulation acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile 
+            GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+    </report>
+
+    <report>
+        <name>circs_by_circmod</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>Circulations by Rules and Circulation Modifier</report_title>
+        <heading>Count of Circs.Duration.Fine.Max Fine.Circulation Modifier</heading>
+        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, ac.circ_modifier FROM action.circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy
+             GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+    </report>
+
+     <report>
+        <name>circs_by_orgunit</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>Circulations by Rules and Org Unit</report_title>
+        <heading>Count of Circs.Duration.Fine.Max Fine.Library Branch</heading>
+        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, aou.name FROM action.circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+    </report>
+
+     <report>
+        <name>non_cat_circs</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>Non-Cataloged Circulation</report_title>
+        <heading>Circulations Count</heading>
+        <query>SELECT COUNT(id) FROM action.non_cataloged_circulation</query>
+    </report>
+
+     <report>
+        <name>in_house</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>In House Use</report_title>
+        <heading>In House Use Records</heading>
+        <query>SELECT COUNT(id) FROM action.in_house_use</query>
+    </report>
+
+     <report>
+        <name>circs_missing_rules</name>
+        <tag>Circs</tag>
+        <iteration>0</iteration>
+        <report_title>Circs Missing Rules</report_title>
+        <heading>Count.Field Missing</heading>
+        <query>SELECT COUNT(id), 'Duration Rule Value' FROM action.circulation WHERE duration IS NULL 
+            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule Value' FROM action.circulation WHERE recurring_fine IS NULL 
+            UNION ALL SELECT COUNT(id), 'Max Fine Rule Value' FROM action.circulation WHERE max_fine IS NULL
+            UNION ALL SELECT COUNT(id), 'Duration Rule' FROM action.circulation WHERE duration_rule IS NULL       
+            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule' FROM action.circulation WHERE recurring_fine_rule IS NULL      
+            UNION ALL SELECT COUNT(id), 'Max Fine Rule' FROM action.circulation WHERE max_fine_rule IS NULL
+        </query>
+    </report>
+
+    <!-- HOLDS REPORTS -->
+
+     <report>
+        <name>holds</name>
+        <tag>Holds</tag>
+        <iteration>0</iteration>
+        <report_title>Holds</report_title>
+        <heading>Hold Type.Hold Count</heading>
+        <query>SELECT 'Closed Holds', COUNT(id) FROM action.hold_request WHERE (expire_time::TIMESTAMP &lt; now()) OR cancel_time IS NOT NULL OR fulfillment_time IS NOT NULL UNION ALL SELECT 'Open Holds', COUNT(id) FROM action.hold_request WHERE (expire_time IS NULL OR expire_time::TIMESTAMP &gt; now()) AND cancel_time IS NULL AND fulfillment_time IS NULL</query>
+    </report>
+
+     <report>
+        <name>holds_bytype</name>
+        <tag>Holds</tag>
+        <iteration>0</iteration>
+        <report_title>Holds By Type</report_title>
+        <heading>Hold Type.Hold Count</heading>
+        <query>SELECT hold_type as "Hold Type", COUNT(id) FROM action.hold_request GROUP BY 1</query>
+    </report>
+
+     <report>
+        <name>transit_open_by_item_status</name>
+        <tag>Holds</tag>
+        <iteration>0</iteration>
+        <report_title>Transit Copy Records and Status of Linked Items</report_title>
+        <heading>Count.Status</heading>
+        <query>SELECT COUNT(atc.id), ccs.name FROM action.transit_copy atc JOIN asset.copy ac ON ac.id = atc.target_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE atc.id IN (SELECT id FROM action.transit_copy) AND atc.dest_recv_time IS NULL GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+     <report>
+        <name>transit_copies_by_status</name>
+        <tag>Holds</tag>
+        <iteration>0</iteration>
+        <report_title>Status of Items with Count of Open In Transits</report_title>
+        <heading>Count.Status.Count of Open Transits</heading>
+        <query>SELECT COUNT(ac.id), ccs.name, SUM(CASE WHEN atc.id IS NULL THEN 0 ELSE 1 END) FROM asset.copy ac JOIN config.copy_status ccs ON ccs.id = ac.status LEFT JOIN (SELECT * FROM action.transit_copy WHERE id IN (SELECT id FROM action.transit_copy) AND dest_recv_time IS NULL) atc ON atc.target_copy = ac.id WHERE ac.id IN (SELECT id from asset.copy) GROUP BY 2 ORDER BY 2</query>
+    </report>
+    
+     <report>
+        <name>hold_copies_by_status</name>
+        <tag>Holds</tag>
+        <iteration>0</iteration>
+        <report_title>Captured Holds with Status of Items</report_title>
+        <heading>Count of Captured Hold.Status of Item</heading>
+        <query>SELECT COUNT(ahr.id), ccs.name FROM action.hold_request ahr JOIN asset.copy ac ON ac.id = ahr.current_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE ahr.capture_time IS NOT NULL AND ahr.fulfillment_time IS NULL and ahr.cancel_time IS NULL AND ahr.id IN (SELECT id FROM action.hold_request) GROUP BY 2 ORDER By 2</query>
+    </report>
+
+    <!-- ASSET REPORTS -->
+    
+    <report>
+        <name>asset.copy_count</name>
+        <report_title>Count of Copies by Library</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Library</heading>
+        <query>SELECT COUNT(ac.id), aou.name FROM asset.copy ac JOIN actor.org_unit aou ON aou.id = ac.circ_lib GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>asset.deleted_copies</name>
+        <report_title>Deleted Copies</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Deleted</heading>
+        <query>SELECT COUNT(ac.id), ac.deleted::TEXT FROM asset.copy ac GROUP BY 2</query>
+    </report>
+
+    <report>
+        <name>asset.copies_by_status</name>
+        <report_title>Copies by Status</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Status</heading>
+        <query>SELECT COUNT(ac.id), cs.name FROM asset.copy ac JOIN config.copy_status cs ON cs.id = ac.status GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>asset.circ_mod_copies_count</name>
+        <report_title>Copies by Circulation Modifier</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Circulation Modifier</heading>
+        <query>SELECT COUNT(ac.id), ac.circ_modifier FROM asset.copy ac GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>asset.copy_notes</name>
+        <report_title>Copy Notes</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Note Count.Public</heading>
+        <query>SELECT COUNT(acnote.id), acnote.pub::TEXT FROM asset.copy_note acnote GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>asset.copy_notes</name>
+        <report_title>Copy Notes</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Note Count.Public</heading>
+        <query>SELECT COUNT(acnote.id), acnote.pub::TEXT FROM asset.copy_note acnote GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+   <report>
+        <name>asset.vols_by_lib</name>
+        <report_title>Volumes by Library</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Volume Count.Library</heading>
+        <query>SELECT COUNT(acn.id), aou.name FROM asset.call_number acn JOIN actor.org_unit aou ON aou.id = acn.owning_lib GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+   <report>
+        <name>asset.vols_by_lib</name>
+        <report_title>Volumes by Library</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Volume Count.Library</heading>
+        <query>SELECT COUNT(acn.id), aou.name FROM asset.call_number acn JOIN actor.org_unit aou ON aou.id = acn.owning_lib GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+   <report>
+        <name>asset.cops_by_loc_and_org</name>
+        <report_title>Copies by Location</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Library.Circ Library</heading>
+        <query>SELECT COUNT(ac.id), acl.name, aou.name FROM asset.copy ac JOIN asset.copy_location acl ON acl.id = ac.location JOIN actor.org_unit aou ON aou.id = ac.circ_lib GROUP BY 2, 3 ORDER BY 2, 3</query>
+    </report>
+
+    <report>
+        <name>asset.barcode_lengths</name>
+        <report_title>Barcode Lengths by Library</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Count of Barcode.Barcode Length.Library</heading>
+        <query>SELECT COUNT(ac.id), LENGTH(ac.barcode), aou.name FROM asset.copy ac JOIN actor.org_unit aou ON aou.id = ac.circ_lib GROUP BY 2, 3 ORDER BY 3, 2</query>
+    </report>
+
+   <report>
+         <name>asset.stat_cats</name>
+        <report_title>Copy Statistical Categories</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Stat Cat Count.Library.Statistical Category</heading>
+        <query>SELECT COUNT(ac_sc.id), aou.name, ac_sc.name FROM asset.stat_cat ac_sc JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
+    </report>
+
+    <report>
+         <name>asset.stat_cats</name>
+        <report_title>Copy Statistical Categories</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Stat Cat Count.Library.Statistical Category</heading>
+        <query>SELECT COUNT(ac_sc.id), aou.name, ac_sc.name FROM asset.stat_cat ac_sc JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
+    </report>
+
+    <report>
+        <name>asset.stat_cat_entries</name>
+        <report_title>Copy Stat Cat User Entries</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Stat Count.Library.Statistical Category</heading>
+        <query>SELECT COUNT(map.id), aou.name, ac_sc.name FROM asset.stat_cat_entry_copy_map map JOIN asset.stat_cat ac_sc ON ac_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
+    </report>
+
+    <report>
+        <name>asset.stat_cat_entries</name>
+        <report_title>Copy Stat Cat User Entries</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Stat Count.Library.Statistical Category</heading>
+        <query>SELECT COUNT(map.id), aou.name, ac_sc.name FROM asset.stat_cat_entry_copy_map map JOIN asset.stat_cat ac_sc ON ac_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.
+id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
+    </report>
+
+    <report>
+         <name>asset.copy_tags</name>
+        <report_title>Copy Tags</report_title>
+        <tag>Assets</tag>
+        <iteration>0</iteration>
+        <heading>Tag Count.Copy Tag Type.Copy Tag Label.Staff Note.Public</heading>
+        <query>SELECT COUNT(map.id), tag.tag_type, tag.label, tag.staff_note, tag.pub FROM asset.copy_tag tag JOIN asset.copy_tag_copy_map map ON map.tag = tag.id GROUP BY 2,3,4,5 ORDER BY 2,3</query>
+    </report>
+
+    <!-- MONEY REPORTS -->
+
+    <report>
+        <name>money.billing_voided</name>
+        <report_title>Bills Voided And Not</report_title>
+        <tag>Money</tag>
+        <iteration>0</iteration>
+        <heading>Count.Voided.Sum</heading>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money.billing a GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>money.billing_voided</name>
+        <report_title>Bills Voided And Not</report_title>
+        <tag>Money</tag>
+        <iteration>0</iteration>
+        <heading>Count.Voided.Sum</heading>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money.billing a GROUP BY 2 ORDER BY 2, 3</query>
+    </report>
+
+    <report>
+        <name>money.billing_by_type</name>
+        <report_title>Bills by Type</report_title>
+        <tag>Money</tag>
+        <iteration>0</iteration>
+        <heading>Count.Billing Type</heading>
+        <query>SELECT COUNT(a.id), a.billing_type FROM money.billing a GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>money.billing_by_type</name>
+        <report_title>Bills by Type</report_title>
+        <tag>Money</tag>
+        <iteration>0</iteration>
+        <heading>Count.Billing Type</heading>
+        <query>SELECT COUNT(a.id), a.billing_type FROM money.billing a GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>money.cash_payment</name>
+        <report_title>Cash Payments</report_title>
+        <tag>Money</tag>
+        <iteration>0</iteration>
+        <heading>Count.Voided.Sum</heading>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money.cash_payment a GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>money.cash_payment</name>
+        <report_title>Cash Payments</report_title>
+        <tag>Money</tag>
+        <iteration>0</iteration>
+        <heading>Count.Voided.Sum</heading>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money.cash_payment a GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>money.check_payment</name>
+        <report_title>Check Payments</report_title>
+        <tag>Money</tag>
+        <iteration>0</iteration>
+        <heading>Count.Voided.Sum</heading>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money.check_payment a GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>money.forgive_payment</name>
+        <report_title>Forgive Payments</report_title>
+        <tag>Money</tag>
+        <iteration>0</iteration>
+        <heading>Count.Voided.Sum</heading>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money.forgive_payment a GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <!-- BIBS REPORTS -->
+    <report>
+        <name>bibswovolumes</name>
+        <report_title>Bibliographic Records Without Volumes</report_title>
+        <tag>Bibs</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(id) FROM biblio.record_entry where id NOT IN (SELECT DISTINCT record FROM asset.call_number) AND deleted IS FALSE</query>
+    </report>
+
+    <report>
+        <name>bibs_notes</name>
+        <report_title>Bib Record Notes</report_title>
+        <tag>Bibs</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(b.id) FROM biblio.record_note b</query>
+    </report>
+
+    <report>
+        <name>bibs_peers</name>
+        <report_title>Peer Bib Copies</report_title>
+        <tag>Bibs</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(b.id) FROM biblio.peer_bib_copy_map b</query>
+    </report>
+
+    <report>
+        <name>bibs_parts</name>
+        <report_title>Monograph Parts</report_title>
+        <tag>Bibs</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(b.id) FROM biblio.monograph_part b</query>
+    </report>
+
+    <!-- ACTORS REPORTS -->
+
+    <report>
+        <name>usrsbyorg</name>
+        <report_title>Patrons by Home Org</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count.Library.Deleted</heading>
+        <query>SELECT COUNT(au.id), aou.name, au.deleted::TEXT  FROM actor.usr au JOIN actor.org_unit aou ON aou.id = au.home_ou GROUP BY 2, 3 ORDER BY 2, 3</query>
+    </report>
+
+    <report>
+        <name>usrsbypgt</name>
+        <report_title>Patrons by Permission Group</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count.Permission Group</heading>
+        <query>SELECT COUNT(au.id), pgt.name FROM actor.usr au JOIN permission.grp_tree pgt ON pgt.id = au.profile GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>active_usrs</name>
+        <report_title>Patrons by Active Status</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count of Users.Active</heading>
+        <query>SELECT COUNT(id), active::TEXT FROM actor.usr GROUP BY 2</query>
+    </report>
+
+    <report>
+        <name>active_usr_barcodes</name>
+        <report_title>Patron Barcodes by Active Status</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count of Barcodes.Active</heading>
+        <query>SELECT COUNT(id), active::TEXT FROM actor.card GROUP BY 2</query>
+    </report>
+
+   <report>
+        <name>usr_barcode_lengths</name>
+        <report_title>Barcode Lengths by Library</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count of Barcode.Barcode Length.Library</heading>
+        <query>SELECT COUNT(acard.id), LENGTH(acard.barcode), aou.name FROM actor.card acard JOIN actor.usr au ON au.id = acard.usr JOIN actor.org_unit aou ON aou.id = au.home_ou GROUP BY 2, 3 ORDER BY 3, 2</query>
+    </report>
+
+    <report>
+        <name>usr_barcode_patterns</name>
+        <report_title>Common Barcode Starting Patterns</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count of Barcodes (greater than 10).Left 60% of Characters</heading>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor.card acard GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+    </report>
+
+   <report>
+        <name>usr_addressses_status</name>
+        <report_title>Patron Addresses by Valid Status</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count.Valid</heading>
+        <query>SELECT COUNT(aua.id), valid::TEXT FROM actor.usr_address aua GROUP BY 2</query>
+    </report>
+
+   <report>
+        <name>usr_addresses_pending</name>
+        <report_title>Patron Addresses by Pending Status</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count of Addresses.Pending</heading>
+        <query>SELECT COUNT(aua.id), pending::TEXT FROM actor.usr_address aua GROUP BY 2</query>
+    </report>
+
+   <report>
+        <name>usr_messages</name>
+        <report_title>Patron Messages</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count.Deleted</heading>
+        <query>SELECT COUNT(aum.id), deleted::TEXT FROM actor.usr_message aum GROUP BY 2</query>
+    </report>
+
+   <report>
+        <name>usr_notes</name>
+        <report_title>Patron Notes</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Count.Public</heading>
+        <query>SELECT COUNT(aun.id), pub::TEXT FROM actor.usr_note aun GROUP BY 2</query>
+    </report>
+
+   <report>
+         <name>usr_stat_cats</name>
+        <report_title>Patron Statistical Categories</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Stat Cat Count.Library.Statistical Category</heading>
+        <query>SELECT COUNT(au_sc.id), aou.name, au_sc.name FROM actor.stat_cat au_sc JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3 ORDER BY 2, 3</query>
+    </report>
+
+   <report>
+        <name>usr_stat_cat_entries</name>
+        <report_title>Patron Stat Cat User Entries</report_title>
+        <tag>Actors</tag>
+        <iteration>0</iteration>
+        <heading>Patron Stat Count.Library.Statistical Category</heading>
+        <query>SELECT COUNT(map.id), aou.name, au_sc.name FROM actor.stat_cat_entry_usr_map map JOIN actor.stat_cat au_sc ON au_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3 ORDER BY 2,3</query>
+    </report>
+
+    <!-- ACQUISITIONS REPORTS -->
+   <report>                                                                        
+        <name>fund_count</name>
+        <iteration>0</iteration>
+        <tag>Acq</tag>
+        <report_title>Funds</report_title>
+        <heading>Number of Funds</heading>
+        <query>SELECT COUNT(id) FROM acq.fund;</query>
+    </report>
+
+    <report>
+        <name>invoice_count</name>
+        <iteration>0</iteration>
+        <tag>Acq</tag>
+        <report_title>Invoices</report_title>
+        <heading>Number of Funds</heading>
+        <query>SELECT COUNT(id) FROM acq.invoice;</query>
+    </report>    
+
+    <!-- SERIALS REPORTS -->
+    <report>
+        <name>serials_mfhd_count</name>
+        <tag>serials</tag>
+        <iteration>0</iteration>
+        <report_title>Serial MFHDs</report_title>
+        <heading>Number of MFHDs</heading>
+        <query>SELECT COUNT(id) FROM serial.record_entry</query>
+    </report>
+
+</reports_file>
+
