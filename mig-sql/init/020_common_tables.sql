@@ -12,19 +12,19 @@ CREATE TABLE map_create_shelving_location (
 INSERT INTO gsheet_tracked_table 
     (worksheet_name,table_name,tab_name,created)
 VALUES 
-    ('mig_schema','map_create_shelving_location','New Copy Locations',NOW())
+    (''':mig_schema''','map_create_shelving_location','New Copy Locations',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Copy Locations'),'owning_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Copy Locations'),'location_name')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Copy Locations'),'opac_visible')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Copy Locations'),'checkin_alert')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Copy Locations'),'holdable')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Copy Locations'),'circulate')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Copy Locations'),'note')
+     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Copy Locations'),'owning_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Copy Locations'),'location_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Copy Locations'),'opac_visible')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Copy Locations'),'checkin_alert')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Copy Locations'),'holdable')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Copy Locations'),'circulate')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Copy Locations'),'note')
 ;
 
 CREATE TABLE map_create_account (
@@ -46,24 +46,24 @@ CREATE TABLE map_create_account (
 INSERT INTO gsheet_tracked_table 
     (worksheet_name,table_name,tab_name,created)
 VALUES 
-    ('mig_schema','map_create_account','New Accounts',NOW())
+    (''':mig_schema''','map_create_account','New Accounts',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'usrname')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'first_name')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'family_name')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'email')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'password')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'home_library')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'profile1')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'profile2')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'profile3')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'work_ou')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'note')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'New Accounts'),'note2')
+     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'usrname')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'first_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'family_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'email')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'password')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'home_library')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'profile1')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'profile2')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'profile3')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'work_ou')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'note')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'New Accounts'),'note2')
 ;
 
 
@@ -79,17 +79,17 @@ CREATE TABLE map_threshold (
 INSERT INTO gsheet_tracked_table 
     (worksheet_name,table_name,tab_name,created)
 VALUES 
-    ('mig_schema','map_threshold','Patron Thresholds',NOW())
+    (''':mig_schema''','map_threshold','Patron Thresholds',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Patron Thresholds'),'profile')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Patron Thresholds'),'checkout_threshold')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Patron Thresholds'),'fine_threshold')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Patron Thresholds'),'overdue_threshold')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Patron Thresholds'),'note')
+     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Patron Thresholds'),'profile')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Patron Thresholds'),'checkout_threshold')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Patron Thresholds'),'fine_threshold')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Patron Thresholds'),'overdue_threshold')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Patron Thresholds'),'note')
 ;
 
 
@@ -105,17 +105,17 @@ CREATE TABLE map_misc (
 INSERT INTO gsheet_tracked_table 
     (worksheet_name,table_name,tab_name,created)
 VALUES 
-    ('mig_schema','map_misc','Miscellaneous Options',NOW())
+    (''':mig_schema''','map_misc','Miscellaneous Options',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Miscellaneous Options'),'x_count')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Miscellaneous Options'),'option')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Miscellaneous Options'),'Choice')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Miscellaneous Options'),'value')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Miscellaneous Options'),'note')
+     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Miscellaneous Options'),'x_count')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Miscellaneous Options'),'option')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Miscellaneous Options'),'Choice')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Miscellaneous Options'),'value')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Miscellaneous Options'),'note')
 ;
 
 CREATE TABLE map_org_setting (
@@ -131,16 +131,16 @@ CREATE TABLE map_org_setting (
 INSERT INTO gsheet_tracked_table 
     (worksheet_name,table_name,tab_name,created)
 VALUES 
-    ('mig_schema','map_org_setting','Org Settings',NOW())
+    (''':mig_schema''','map_org_setting','Org Settings',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Org Settings'),'name')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Org Settings'),'label')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Org Settings'),'entry_type')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Org Settings'),'org_unit')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Org Settings'),'value')
-    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = 'mig_schema' AND tab_name = 'Org Settings'),'note')
+     ((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Org Settings'),'name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Org Settings'),'label')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Org Settings'),'entry_type')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Org Settings'),'org_unit')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Org Settings'),'value')
+    ,((SELECT id FROM gsheet_tracked_table WHERE worksheet_name = ''':mig_schema''' AND tab_name = 'Org Settings'),'note')
 ;
