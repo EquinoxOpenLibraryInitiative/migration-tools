@@ -5,6 +5,10 @@ CREATE TABLE gsheet_tracked_table (
     ,created                    TIMESTAMP
     ,last_pulled                TIMESTAMP
     ,last_pushed                TIMESTAMP
-    ,UNIQUE(table_name,tab_name)
 );
 
+CREATE TABLE gsheet_tracked_column (
+    id               SERIAL
+    ,table_id        INTEGER REFERENCES gsheet_tracked_table (id)
+    ,column_name     TEXT NOT NULL  
+);
