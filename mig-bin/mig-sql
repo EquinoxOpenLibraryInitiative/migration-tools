@@ -33,6 +33,7 @@ use Mig;
 
 my @MYARGV = (
      'psql'
+    ,'--set=mig_schema=' . $MIGSCHEMA
     #,'options=--search_path=' . $MIGSCHEMA . ',public,evergreen,pg_catalog'
     ,'-vmigschema=' . $MIGSCHEMA
 );
