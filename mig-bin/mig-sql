@@ -33,7 +33,7 @@ use Mig;
 
 my @MYARGV = (
      'psql'
-    ,'options=--search_path=' . $MIGSCHEMA . ',public,evergreen,pg_catalog'
+    #,'options=--search_path=' . $MIGSCHEMA . ',public,evergreen,pg_catalog'
     ,'-vmigschema=' . $MIGSCHEMA
 );
 if (defined $BIBSTART) {
