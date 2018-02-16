@@ -238,6 +238,7 @@ sub write_worksheets {
     print 'File #' . $counter . "\n";
     print "Sheet: Field Summary\n";
     my $tab_name = (scalar(@ARGV) > 1 ? $counter . ') ' : '') . 'Field Summary';
+    $tab_name = substr($tab_name,0,31); # truncate for WriteExcel
     if ($outfile) {
         $first_sheet = $workbook->add_worksheet( $tab_name );
         $first_sheet->set_column(0,6,30);
@@ -472,7 +473,8 @@ sub group_by {
     my $col_sheet;
     my $col_table;
 
-    my $sheet_name = (scalar(@ARGV) > 1 ? $counter . ') ' : '') . substr($column,0,31);
+    my $sheet_name = (scalar(@ARGV) > 1 ? $counter . ') ' : '') . $column;
+    $sheet_name = substr($sheet_name,0,31);
 
     print "Sheet: $sheet_name\n";
     if ($has_x_source) {
