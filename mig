@@ -306,6 +306,10 @@ switch($ARGV[0]) {
         Mig::die_if_no_env_migschema();
         standard_invocation(@ARGV);
     }
+    case "quick" {
+        Mig::die_if_no_env_migschema();
+        standard_invocation(@ARGV);
+    }
     case "add" {
         Mig::die_if_no_env_migschema();
         standard_invocation(@ARGV);

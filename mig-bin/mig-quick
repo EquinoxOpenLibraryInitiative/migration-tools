@@ -1,0 +1,50 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-quick 
+
+A wrapper for running the following mig commands on the specified files:
+
+=over 15
+
+mig add
+mig skip-iconv
+mig clean
+mig convert
+mig stage
+
+=back
+
+=head1 SYNOPSIS
+
+B<mig-quick> <file1> [<file2> ...]
+
+=cut
+
+###############################################################################
+
+use strict;
+use Pod::Usage;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+
+foreach my $file (@ARGV) {
+    foreach my $cmd (('add','skip-iconv','clean','convert','stage')) {
+        print "mig $cmd $file\n";
+        my @MYARGV = (
+             'mig'
+            ,$cmd
+            ,$file
+        );
+        print "rc = " . system(@MYARGV) . "\n";
+    }
+}
+
+exit 0;
+
