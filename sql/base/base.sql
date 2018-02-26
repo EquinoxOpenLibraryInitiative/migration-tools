@@ -2819,3 +2819,44 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_circmod (TEXT,TEXT) RETURNS VO
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- convenience function for handling desired_not_migrate
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_not_migrate (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_not_migrate''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_not_migrate'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_migrate';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_migrate BOOLEAN';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_migrate = CASE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''TRUE'' THEN FALSE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''FALSE'' THEN TRUE'
+            || ' WHEN BTRIM(desired_not_migrate) = '''' THEN TRUE'
+            || ' END';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE x_migrate IS NULL),
+            ''Not all desired_not_migrate values understood'',
+            ''All desired_not_migrate values understood''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
