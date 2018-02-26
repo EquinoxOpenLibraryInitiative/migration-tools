@@ -146,8 +146,7 @@ foreach my $func ($dom->findnodes('//function')) {
     $screate->execute();
 }
 
-
-
+$tags = lc($tags);
 my @report_tags = split(/\./,$tags);
 foreach my $t (@report_tags) {
     print "\n\n=========== Starting to process tag $t\n";
