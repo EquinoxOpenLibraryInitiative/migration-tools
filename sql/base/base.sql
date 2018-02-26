@@ -2900,3 +2900,211 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_profile (TEXT,TEXT) RETURNS VO
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- convenience function for handling desired actor stat cats
+
+CREATE OR REPLACE FUNCTION migration_tools.vivicate_actor_sc_and_sce (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        field_suffix ALIAS FOR $3; -- for distinguishing between desired_sce1, desired_sce2, etc.
+        org_shortname ALIAS FOR $4;
+        proceed BOOLEAN;
+        org INTEGER;
+        org_list INTEGER[];
+        sc TEXT;
+        sce TEXT;
+    BEGIN
+
+        SELECT 'desired_sc' || field_suffix INTO sc;
+        SELECT 'desired_sce' || field_suffix INTO sce;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sc;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sc; 
+        END IF;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sce;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sce; 
+        END IF;
+
+        SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
+        IF org IS NULL THEN
+            RAISE EXCEPTION 'Cannot find org by shortname';
+        END IF;
+        SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
+
+        -- caller responsible for their own truncates though we try to prevent duplicates
+        EXECUTE 'INSERT INTO actor_stat_cat (owner, name)
+            SELECT DISTINCT
+                 $1
+                ,BTRIM('||sc||')
+            FROM 
+                ' || quote_ident(table_name) || '
+            WHERE
+                NULLIF(BTRIM('||sc||'),'''') IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM actor.stat_cat
+                    WHERE owner = ANY ($2)
+                    AND name = BTRIM('||sc||')
+                )
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM actor_stat_cat
+                    WHERE owner = ANY ($2)
+                    AND name = BTRIM('||sc||')
+                )
+            ORDER BY 2;'
+        USING org, org_list;
+
+        EXECUTE 'INSERT INTO actor_stat_cat_entry (stat_cat, owner, value)
+            SELECT DISTINCT
+                COALESCE(
+                    (SELECT id
+                        FROM actor.stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name))
+                   ,(SELECT id
+                        FROM actor_stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name))
+                )
+                ,$1
+                ,BTRIM('||sce||')
+            FROM 
+                ' || quote_ident(table_name) || '
+            WHERE
+                    NULLIF(BTRIM('||sc||'),'''') IS NOT NULL
+                AND NULLIF(BTRIM('||sce||'),'''') IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM actor.stat_cat_entry
+                    WHERE stat_cat = (
+                        SELECT id
+                        FROM actor.stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name)
+                    ) AND value = BTRIM('||sce||')
+                )
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM actor_stat_cat_entry
+                    WHERE stat_cat = (
+                        SELECT id
+                        FROM actor_stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name)
+                    ) AND value = BTRIM('||sce||')
+                )
+            ORDER BY 1,3;'
+        USING org, org_list;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_actor_sc_and_sce (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        field_suffix ALIAS FOR $3; -- for distinguishing between desired_sce1, desired_sce2, etc.
+        org_shortname ALIAS FOR $4;
+        proceed BOOLEAN;
+        org INTEGER;
+        org_list INTEGER[];
+        o INTEGER;
+        sc TEXT;
+        sce TEXT;
+    BEGIN
+        SELECT 'desired_sc' || field_suffix INTO sc;
+        SELECT 'desired_sce' || field_suffix INTO sce;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sc;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sc; 
+        END IF;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sce;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sce; 
+        END IF;
+
+        SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
+        IF org IS NULL THEN
+            RAISE EXCEPTION 'Cannot find org by shortname';
+        END IF;
+
+        SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_sc' || field_suffix;
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_sc' || field_suffix || ' INTEGER';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_sce' || field_suffix;
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_sce' || field_suffix || ' INTEGER';
+
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || '
+            SET
+                x_sc' || field_suffix || ' = id
+            FROM
+                (SELECT id, name, owner FROM actor_stat_cat
+                    UNION SELECT id, name, owner FROM actor.stat_cat) u
+            WHERE
+                    BTRIM(UPPER(u.name)) = BTRIM(UPPER(' || sc || '))
+                AND u.owner = ANY ($1);'
+        USING org_list;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || '
+            SET
+                x_sce' || field_suffix || ' = id
+            FROM
+                (SELECT id, stat_cat, owner, value FROM actor_stat_cat_entry
+                    UNION SELECT id, stat_cat, owner, value FROM actor.stat_cat_entry) u
+            WHERE
+                    u.stat_cat = x_sc' || field_suffix || '
+                AND BTRIM(UPPER(u.value)) = BTRIM(UPPER(' || sce || '))
+                AND u.owner = ANY ($1);'
+        USING org_list;
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_sc' || field_suffix || ' <> '''' AND x_sc' || field_suffix || ' IS NULL),
+            ''Cannot find a desired stat cat'',
+            ''Found all desired stat cats''
+        );';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_sce' || field_suffix || ' <> '''' AND x_sce' || field_suffix || ' IS NULL),
+            ''Cannot find a desired stat cat entry'',
+            ''Found all desired stat cat entries''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
