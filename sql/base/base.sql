@@ -2709,5 +2709,64 @@ CREATE OR REPLACE FUNCTION migration_tools.set_salted_passwd(INTEGER,TEXT) RETUR
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
 
+-- convenience functions for handling copy_location maps
 
+CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        org_shortname ALIAS FOR $3;
+        org_range ALIAS FOR $4;
+        proceed BOOLEAN;
+        org INTEGER;
+        org_list INTEGER[];
+        o INTEGER;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_shelf''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_shelf'; 
+        END IF;
+
+        SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
+        IF org IS NULL THEN
+            RAISE EXCEPTION 'Cannot find org by shortname';
+        END IF;
+
+        SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_shelf';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_shelf INTEGER';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_shelf = id FROM asset_copy_location b'
+            || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+            || ' AND b.owning_lib = $1'
+        USING org;
+
+        FOREACH o IN ARRAY org_list LOOP
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = id FROM asset.copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = $1 AND x_shelf IS NULL'
+            USING o;
+        END LOOP;
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_shelf <> '''' AND x_shelf IS NULL),
+            ''Cannot find a desired location'',
+            ''Found all desired locations''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
