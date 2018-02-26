@@ -265,11 +265,11 @@ sub check_table {
     my $i = 0;
     my $return_flag = 1;   
     my @qe = split(/ /,$query);
-    my @tables = grep /mig_schema/, @qe;
+    my @tables = grep /MIGSCHEMA/, @qe;
 
     print "checking tables ... ";
     foreach my $table (@tables) {
-        $table =~ s/mig_schema.//g;
+        $table =~ s/MIGSCHEMA.//g;
         $table =~ s/\)//g;
         $table =~ s/\<//g;
         my $sql = 'SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = \'' . $MIGSCHEMA . '\' AND table_name = \'' . $table . '\');';
@@ -292,7 +292,7 @@ sub print_query {
     my $fh = shift;
     my %report = @_;
     my $query = $report{query};
-    $query =~ s/mig_schema/$MIGSCHEMA/g;
+    $query =~ s/MIGSCHEMA/$MIGSCHEMA/g;
     $query =~ s/mig_func_schema/$mig_func_schema/g;
     my $sth = $dbh->prepare($query);
     $sth->execute();
