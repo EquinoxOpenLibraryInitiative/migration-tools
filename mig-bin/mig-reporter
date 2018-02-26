@@ -100,7 +100,8 @@ if (!defined $report_title) { abort('--report_title must be supplied'); }
 
 my $mig_path = abs_path($0);
 $mig_path =~ s|[^/]+$||;
-if (!defined $reports_xml) { $reports_xml = $mig_path . '../mig-xml/evergreen_staged_report.xml'; }
+if (!defined $reports_xml) { $reports_xml = $mig_path . '../mig-xml/evergreen_staged_report.xml'; } 
+    else { $reports_xml = $mig_path . '/../mig-xml/' . $reports_xml; }
 print "$reports_xml \n";
 my $dom = $parser->parse_file($reports_xml);
 
