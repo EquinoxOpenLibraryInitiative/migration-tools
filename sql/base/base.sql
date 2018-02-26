@@ -2770,3 +2770,52 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- convenience functions for handling circmod maps
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_circmod (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_circmod''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_circmod'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_circmod';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_circmod TEXT';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_circmod = code FROM config.circ_modifier b'
+            || ' WHERE BTRIM(UPPER(a.desired_circmod)) = BTRIM(UPPER(b.code))';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_circmod = code FROM config.circ_modifier b'
+            || ' WHERE BTRIM(UPPER(a.desired_circmod)) = BTRIM(UPPER(b.name))'
+            || ' AND x_circmod IS NULL';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_circmod = code FROM config.circ_modifier b'
+            || ' WHERE BTRIM(UPPER(a.desired_circmod)) = BTRIM(UPPER(b.description))'
+            || ' AND x_circmod IS NULL';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_circmod <> '''' AND x_circmod IS NULL),
+            ''Cannot find a desired circulation modifier'',
+            ''Found all desired circulation modifiers''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
