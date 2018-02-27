@@ -34,6 +34,7 @@ use Mig;
 my @MYARGV = (
      'psql'
     ,'-vmigschema=' . $MIGSCHEMA
+    ,'-vmigschema_text=\'' . $MIGSCHEMA . '\''
     ,'-F ' . "\t"
 );
 if (defined $BIBSTART) {
