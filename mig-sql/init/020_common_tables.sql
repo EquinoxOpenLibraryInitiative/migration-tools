@@ -1,13 +1,14 @@
 CREATE TABLE map_create_shelving_location (
-    id                  SERIAL
-    ,owning_lib         TEXT            
-    ,desired_shelf      TEXT
-    ,opac_visible       TEXT
-    ,checkin_alert      TEXT
-    ,holdable           TEXT
-    ,circulate          TEXT
-    ,note               TEXT
-);
+    l_id                  SERIAL
+    ,l_owning_lib         TEXT            
+    ,l_desired_shelf      TEXT
+    ,l_opac_visible       TEXT
+    ,l_checkin_alert      TEXT
+    ,l_holdable           TEXT
+    ,l_circulate          TEXT
+    ,l_note               TEXT
+    ,x_migrate            BOOLEAN NOT NULL DEFAULT TRUE
+) INHERITS (asset_copy_location);
 
 INSERT INTO gsheet_tracked_table 
     (table_name,tab_name,created)
@@ -18,30 +19,31 @@ VALUES
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'owning_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'desired_shelf')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'opac_visible')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'checkin_alert')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'holdable')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'circulate')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'note')
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'l_owning_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'l_desired_shelf')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'l_opac_visible')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'l_checkin_alert')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'l_holdable')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'l_circulate')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'l_note')
 ;
 
 CREATE TABLE map_create_account (
-    id                  SERIAL
-    ,usrname            TEXT            
-    ,first_name         TEXT
-    ,family_name        TEXT
-    ,email              TEXT
-    ,password           TEXT
-    ,home_library       TEXT
-    ,profile1           TEXT
-    ,profile2           TEXT
-    ,profile3           TEXT
-    ,work_ou            TEXT
-    ,note               TEXT
-    ,note2              TEXT
-);
+    l_id                  SERIAL
+    ,l_usrname            TEXT            
+    ,l_first_name         TEXT
+    ,l_family_name        TEXT
+    ,l_email              TEXT
+    ,l_password           TEXT
+    ,l_home_library       TEXT
+    ,l_profile1           TEXT
+    ,l_profile2           TEXT
+    ,l_profile3           TEXT
+    ,l_work_ou            TEXT
+    ,l_note               TEXT
+    ,l_note2              TEXT
+    ,x_migrate            BOOLEAN NOT NULL DEFAULT TRUE
+) INHERITS (actor_usr);
 
 INSERT INTO gsheet_tracked_table 
     (table_name,tab_name,created)
@@ -52,18 +54,18 @@ VALUES
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'usrname')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'first_name')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'family_name')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'email')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'password')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'home_library')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'profile1')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'profile2')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'profile3')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'work_ou')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'note')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'note2')
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_usrname')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_first_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_family_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_email')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_password')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_home_library')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_profile1')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_profile2')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_profile3')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_note')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_note2')
 ;
 
 
@@ -95,7 +97,7 @@ VALUES
 
 CREATE TABLE map_misc (
     id             SERIAL
-    ,x_count       TEXT            
+    ,count       TEXT            
     ,option        TEXT
     ,choice        TEXT
     ,value         TEXT
@@ -111,7 +113,7 @@ VALUES
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Miscellaneous Options'),'x_count')
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Miscellaneous Options'),'count')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Miscellaneous Options'),'option')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Miscellaneous Options'),'Choice')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Miscellaneous Options'),'value')
@@ -119,13 +121,13 @@ VALUES
 ;
 
 CREATE TABLE map_org_setting (
-    id             SERIAL
-    ,name          TEXT            
-    ,label         TEXT
-    ,entry_type    TEXT
-    ,org_unit      TEXT
-    ,value         TEXT
-    ,note          TEXT
+    l_id             SERIAL
+    ,l_name          TEXT            
+    ,l_label         TEXT
+    ,l_entry_type    TEXT
+    ,l_org_unit      TEXT
+    ,l_value         TEXT
+    ,l_note          TEXT
 );
 
 INSERT INTO gsheet_tracked_table 
@@ -137,10 +139,10 @@ VALUES
 INSERT INTO gsheet_tracked_column 
     (table_id,column_name) 
 VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'name')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'label')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'entry_type')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'org_unit')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'value')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'note')
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'l_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'l_label')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'l_entry_type')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'l_org_unit')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'l_value')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'l_note')
 ;
