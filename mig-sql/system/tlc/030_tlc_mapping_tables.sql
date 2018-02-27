@@ -138,10 +138,9 @@ VALUES
 CREATE TABLE map_tlc_phone (
     id                  SERIAL
     ,x_count            TEXT            
+    ,legacy_phone       TEXT
+    ,evergreen_phone    TEXT
     ,note               TEXT
-    ,migrate_available  TEXT
-    ,fill_in_method     TEXT
-    ,static_value       TEXT
 );
 
 INSERT INTO gsheet_tracked_table 

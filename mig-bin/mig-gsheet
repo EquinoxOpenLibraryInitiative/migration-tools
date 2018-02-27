@@ -98,8 +98,6 @@ if (defined $cmd_pull) {
         my @rows = $pull_ws->rows;
         my @content;
         map { $content[$_->row - 1][$_->col - 1] = $_->content } $pull_ws->cells;
-        #print Dumper($pull_ws->cells);
-        #print Dumper(@content);
         my @tab_headers = shift @content;
         my $tab_headers_length = $#{ $tab_headers[0] };
         my @pg_headers;
@@ -170,7 +168,6 @@ if (defined $cmd_push) {
             push @content, $record;
         }
 
-        #print Dumper(@content); 
         foreach my $fillsheet (@content) {
             my $new_row = $push_ws->add_row (
                 $fillsheet
