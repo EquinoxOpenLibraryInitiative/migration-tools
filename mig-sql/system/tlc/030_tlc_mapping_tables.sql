@@ -193,9 +193,11 @@ VALUES
 CREATE TABLE map_tlc_patron_gender (
     id                  SERIAL
     ,x_count            TEXT            
-    ,tlc_block_status   TEXT
-    ,block              TEXT
-    ,bar                TEXT
+    ,gender             TEXT
+    ,stat_cat           TEXT
+    ,stat_cat_entry     TEXT
+    ,show               TEXT
+    ,required           TEXT
     ,dnm                TEXT
     ,note               TEXT
 );
@@ -210,9 +212,11 @@ INSERT INTO gsheet_tracked_column
     (table_id,column_name) 
 VALUES 
      ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'x_count')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'tlc_block_status')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'block')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'bar')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'gender')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'stat_cat')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'stat_cat_entry')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'show')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'required')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'dnm')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patrons by Gender'),'note')
 ;
@@ -297,11 +301,11 @@ VALUES
 CREATE TABLE map_tlc_patron_note (
     id                  SERIAL
     ,x_count            TEXT            
-    ,legacy_mnote_type  TEXT
-    ,exception          TEXT
+    ,note_type          TEXT
+    ,subset_values      TEXT
+    ,matching_text      TEXT
     ,action             TEXT
     ,note               TEXT
-    ,circulate          TEXT
 );
 
 INSERT INTO gsheet_tracked_table 
