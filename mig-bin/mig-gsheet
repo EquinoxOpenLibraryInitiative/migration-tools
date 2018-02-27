@@ -66,7 +66,7 @@ foreach my $arg (@ARGV) {
     }
 }
 
-abort('must specify --push or --pull') unless (defined $cmd_push or defined $cmd_pull);
+abort('must specify --push (db->worksheets) or --pull (worksheets->db)') unless (defined $cmd_push or defined $cmd_pull);
 if (defined $cmd_push and defined $cmd_pull) { abort('you can not specify both a --push and --pull on the same command'); }
 
 my $dbh = Mig::db_connect();
