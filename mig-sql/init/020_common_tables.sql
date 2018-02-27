@@ -1,7 +1,7 @@
 CREATE TABLE map_create_shelving_location (
     id                  SERIAL
     ,owning_lib         TEXT            
-    ,location_name      TEXT
+    ,desired_shelf      TEXT
     ,opac_visible       TEXT
     ,checkin_alert      TEXT
     ,holdable           TEXT
@@ -19,7 +19,7 @@ INSERT INTO gsheet_tracked_column
     (table_id,column_name) 
 VALUES 
      ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'owning_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'location_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'desired_shelf')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'opac_visible')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'checkin_alert')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Copy Locations'),'holdable')
