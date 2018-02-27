@@ -2751,6 +2751,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
             || ' SET x_shelf = id FROM asset_copy_location b'
             || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
             || ' AND b.owning_lib = $1'
+            || ' AND NOT b.deleted'
         USING org;
 
         FOREACH o IN ARRAY org_list LOOP
@@ -2758,6 +2759,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
                 || ' SET x_shelf = id FROM asset.copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1 AND x_shelf IS NULL'
+                || ' AND NOT b.deleted'
             USING o;
         END LOOP;
 
