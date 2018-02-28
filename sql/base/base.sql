@@ -3159,3 +3159,82 @@ BEGIN
     RETURN NULL;
 END
 $$ LANGUAGE plpgsql;
+
+-- alternate adding subfield 9 function in that it adds them to existing tags where the 856$u matches a correct value only
+DROP FUNCTION IF EXISTS add_sf9(TEXT,TEXT,TEXT);
+CREATE OR REPLACE FUNCTION add_sf9(marc TEXT, partial_u TEXT, new_9 TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $matching_u_text = shift;
+my $new_9_to_set = shift;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return;
+}
+
+my @uris = $marc_xml->field('856');
+return unless @uris;
+
+foreach my $field (@uris) {
+    my $sfu = $field->subfield('u');
+    my $ind2 = $field->indicator('2');
+    if (!defined $ind2) { next; }
+    if ($ind2 ne '0') { next; }
+    if (!defined $sfu) { next; }
+    if ($sfu =~ m/$matching_u_text/) {
+        $field->add_subfields( '9' => $new_9_to_set );
+        last;
+    }
+}
+
+return $marc_xml->as_xml_record();
+
+$function$;
+
+DROP FUNCTION IF EXISTS add_sf9(INTEGER, TEXT, TEXT);
+CREATE OR REPLACE FUNCTION add_sf9(bib_id INTEGER, target_u_text TEXT, sf9_text TEXT)
+    RETURNS BOOLEAN AS
+$BODY$
+DECLARE
+    source_xml    TEXT;
+    new_xml       TEXT;
+    r             BOOLEAN;
+BEGIN
+
+    SELECT marc FROM biblio.record_entry WHERE id = bib_id INTO source_xml;
+
+    SELECT add_sf9(source_xml, target_u_text, sf9_text) INTO new_xml;
+
+    r = FALSE;
+
+    IF new_xml != source_xml THEN
+        UPDATE biblio.record_entry SET marc = new_xml WHERE id = bib_id;
+        r = TRUE;
+    END IF;
+
+    RETURN r;
+
+END;
+$BODY$ LANGUAGE plpgsql;
+
+
+
