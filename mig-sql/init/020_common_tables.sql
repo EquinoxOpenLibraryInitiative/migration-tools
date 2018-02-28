@@ -147,3 +147,34 @@ VALUES
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'l_value')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Org Settings'),'l_note')
 ;
+
+
+CREATE TABLE map_bib_manipulations (
+    id               SERIAL
+    ,action          TEXT
+    ,field           TEXT
+    ,subfield        TEXT
+    ,matching_value  TEXT
+    ,target_value    TEXT
+    ,note            TEXT
+);
+
+INSERT INTO gsheet_tracked_table
+    (table_name,tab_name,created)
+VALUES
+    ('map_bib_manipulations','Bib Records',NOW())
+;
+
+INSERT INTO gsheet_tracked_column
+    (table_id,column_name)
+VALUES
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Bib Records'),'name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Bib Records'),'action')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Bib Records'),'field')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Bib Records'),'subfield')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Bib Records'),'matching_value')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Bib Records'),'target_value')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Bib Records'),'note')
+;
+
+
