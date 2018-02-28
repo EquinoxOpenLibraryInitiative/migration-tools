@@ -3133,3 +3133,29 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+-- may remove later but testing using this with new migration scripts and not loading acls until go live
+
+DROP FUNCTION IF EXISTS migration_tools.find_mig_shelf(INT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.find_mig_shelf(org_id INT, shelf_name TEXT) RETURNS INTEGER AS $$
+DECLARE
+    return_id   INT;
+    d           INT;
+    cur_id      INT;
+BEGIN
+    SELECT INTO d MAX(distance) FROM actor.org_unit_ancestors_distance(org_id);
+    WHILE d >= 0
+    LOOP
+        SELECT INTO cur_id id FROM actor.org_unit_ancestor_at_depth(org_id,d);
+        
+        SELECT INTO return_id id FROM 
+            (SELECT * FROM asset.copy_location UNION ALL SELECT * FROM asset_copy_location) x
+            WHERE owning_lib = cur_id AND name ILIKE shelf_name;
+        IF return_id IS NOT NULL THEN
+                RETURN return_id;
+        END IF;
+        d := d - 1;
+    END LOOP;
+
+    RETURN NULL;
+END
+$$ LANGUAGE plpgsql;
