@@ -230,6 +230,7 @@ CREATE TABLE map_tlc_holding_code (
     ,x_count            TEXT            
     ,holding_code       TEXT
     ,shelving_location  TEXT
+    ,org_unit           TEXT
     ,circ_mod           TEXT
     ,alert              TEXT
     ,alert_message      TEXT
@@ -249,6 +250,7 @@ VALUES
      ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Holdings Code'),'x_count')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Holdings Code'),'holding_code')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Holdings Code'),'shelving_location')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Holdings Code'),'org_unit')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Holdings Code'),'circ_mod')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Holdings Code'),'alert')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Holdings Code'),'alert_message')
