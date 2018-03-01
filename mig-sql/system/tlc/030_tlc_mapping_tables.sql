@@ -135,31 +135,6 @@ VALUES
 
 -- ############################################
 
-CREATE TABLE map_tlc_phone (
-    id                  SERIAL
-    ,x_count            TEXT            
-    ,legacy_phone       TEXT
-    ,evergreen_phone    TEXT
-    ,note               TEXT
-);
-
-INSERT INTO gsheet_tracked_table 
-    (table_name,tab_name,created)
-VALUES 
-    ('map_tlc_phone','Patron Phone Numbers',NOW())
-;
-
-INSERT INTO gsheet_tracked_column 
-    (table_id,column_name) 
-VALUES 
-     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Phone Numbers'),'x_count')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Phone Numbers'),'legacy_phone')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Phone Numbers'),'evergreen_phone')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Phone Numbers'),'note')
-;
-
--- ############################################
-
 CREATE TABLE map_tlc_block_status (
     id                  SERIAL
     ,x_count            TEXT            
