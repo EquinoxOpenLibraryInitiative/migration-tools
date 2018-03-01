@@ -1,3 +1,30 @@
+CREATE TABLE map_tlc_branches (
+    id                  SERIAL
+    ,tlc_branch_id      TEXT
+    ,tlc_name           TEXT
+    ,org_unit           TEXT
+    ,note               TEXT
+    ,x_org_id           INTEGER
+);
+
+INSERT INTO gsheet_tracked_table
+    (table_name,tab_name,created)
+VALUES
+    ('map_tlc_branches','Branches Present in Extract',NOW())
+;
+
+INSERT INTO gsheet_tracked_column
+    (table_id,column_name)
+VALUES
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'x_count')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'tlc_branch_id')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'tlc_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'org_unit')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'note')
+;
+
+-- ############################################
+
 CREATE TABLE map_tlc_perm_group (
     id                  SERIAL
     ,x_count            TEXT            
