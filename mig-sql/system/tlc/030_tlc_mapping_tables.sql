@@ -270,6 +270,7 @@ CREATE TABLE map_tlc_stat_cat (
     id                  SERIAL
     ,x_count            TEXT            
     ,tlc_stat_cat       TEXT
+    ,tlc_stat_cat_value TEXT
     ,stat_cat           TEXT
     ,stat_cat_entry     TEXT
     ,show               TEXT
@@ -290,6 +291,7 @@ INSERT INTO gsheet_tracked_column
 VALUES 
      ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Stat Cats'),'x_count')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Stat Cats'),'tlc_stat_cat')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Stat Cats'),'tlc_stat_cat_value')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Stat Cats'),'stat_cat')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Stat Cats'),'stat_cat_entry')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Stat Cats'),'show')
