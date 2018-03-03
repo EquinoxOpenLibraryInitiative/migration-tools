@@ -6,7 +6,7 @@
         <tag>money</tag>  arbitrary tags, each should go in separate tag
         <report_title>Migrated Billings</report_title>  title used in the asciidoc output
         <heading column='1'>Number of Billings.Migrated.Total</heading> period delimited 
-        <query>SELECT COUNT(id),x_migrate,SUM(amount) FROM MIGSCHEMA.money_billing_legacy GROUP BY 2;</query>  query itself, MIGSCHEMA will be replaced
+        <query>SELECT COUNT(id),x_migrate,SUM(amount) FROM money_billing_legacy GROUP BY 2;</query>  query itself, will be replaced
         <note>Arbitrary note that can be included in the entries.</note>
     </report>
 -->
@@ -19,7 +19,7 @@
         <iteration>0</iteration>
         <report_title>Circulations in Extract</report_title>
         <heading>Count of Circs.Status</heading>
-        <query>SELECT COUNT(id), l_is_checked_out FROM MIGSCHEMA.asset_copy_legacy GROUP BY 2</query>
+        <query>SELECT COUNT(id), l_is_checked_out FROM asset_copy_legacy GROUP BY 2</query>
     </report>
 
 
@@ -32,7 +32,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Count.Resource Type</heading>
-        <query>SELECT COUNT(*), l_resource_type FROM MIGSCHEMA.asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_resource_type FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
      
    <report>
@@ -41,7 +41,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Count.Location</heading>
-        <query>SELECT COUNT(*), l_location FROM MIGSCHEMA.asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_location FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
     
     <report>
@@ -50,7 +50,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Count.Location</heading>
-        <query>SELECT COUNT(*), l_location FROM MIGSCHEMA.asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_location FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
     
     <report>
@@ -59,7 +59,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Count.Location</heading>
-        <query>SELECT COUNT(*), l_status FROM MIGSCHEMA.asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_status FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
 
     
@@ -72,7 +72,7 @@
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(*) FROM MIGSCHEMA.fines</query>
+        <query>SELECT COUNT(*) FROM fines</query>
     </report>
 
    <report>
@@ -81,7 +81,7 @@
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>First Name.Last Name.Fine Amount</heading>
-        <query>SELECT first_given_name, family_name, amount FROM MIGSCHEMA.fines WHERE au_id IS NULL ORDER BY 2, 1</query>
+        <query>SELECT first_given_name, family_name, amount FROM fines WHERE au_id IS NULL ORDER BY 2, 1</query>
     </report>
              
       <report>
@@ -90,7 +90,7 @@
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>First Name.Last Name.Fine Amount</heading>
-        <query>SELECT first_given_name, family_name, amount FROM MIGSCHEMA.fines WHERE multi_au IS TRUE ORDER BY 2, 1</query>
+        <query>SELECT first_given_name, family_name, amount FROM fines WHERE multi_au IS TRUE ORDER BY 2, 1</query>
     </report>
      
 
@@ -103,7 +103,7 @@
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(eg) FROM MIGSCHEMA.bib_id_map</query>
+        <query>SELECT COUNT(eg) FROM bib_id_map</query>
     </report>
 
     <!-- actors -->
@@ -114,12 +114,12 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Address Component</heading>
-        <query>SELECT COUNT(id), 'Address 1' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_address_1) > 1
-            UNION ALL SELECT COUNT(id), 'Address 2' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_address_2) > 1
-            UNION ALL SELECT COUNT(id), 'City' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_city) > 1
-            UNION ALL SELECT COUNT(id), 'State' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_state) > 1
-            UNION ALL SELECT COUNT(id), 'County' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_country) > 1
-            UNION ALL SELECT COUNT(id), 'Zip Code' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_zip_code) > 1                    
+        <query>SELECT COUNT(id), 'Address 1' FROM actor_usr_legacy WHERE LENGTH(l_address_1) > 1
+            UNION ALL SELECT COUNT(id), 'Address 2' FROM actor_usr_legacy WHERE LENGTH(l_address_2) > 1
+            UNION ALL SELECT COUNT(id), 'City' FROM actor_usr_legacy WHERE LENGTH(l_city) > 1
+            UNION ALL SELECT COUNT(id), 'State' FROM actor_usr_legacy WHERE LENGTH(l_state) > 1
+            UNION ALL SELECT COUNT(id), 'County' FROM actor_usr_legacy WHERE LENGTH(l_country) > 1
+            UNION ALL SELECT COUNT(id), 'Zip Code' FROM actor_usr_legacy WHERE LENGTH(l_zip_code) > 1                    
         </query>
     </report>
     
@@ -129,7 +129,7 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Expiration Year</heading>
-        <query>SELECT COUNT(id), RIGHT(BTRIM(l_membership_expiry),4) FROM MIGSCHEMA.actor_usr_legacy GROUP BY 2 ORDER BY 2;       
+        <query>SELECT COUNT(id), RIGHT(BTRIM(l_membership_expiry),4) FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;       
         </query>
     </report>
     
@@ -139,7 +139,7 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Barcode Length</heading>
-        <query>SELECT COUNT(id), LENGTH(l_barcode) FROM MIGSCHEMA.actor_usr_legacy GROUP BY 2 ORDER BY 2;       
+        <query>SELECT COUNT(id), LENGTH(l_barcode) FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;       
         </query>
     </report>
   
@@ -149,7 +149,7 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(id) FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_birthdate) > 1;       
+        <query>SELECT COUNT(id) FROM actor_usr_legacy WHERE LENGTH(l_birthdate) > 1;       
         </query>
     </report>
 
@@ -159,7 +159,7 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Group</heading>
-        <query>SELECT COUNT(id), l_user_group FROM MIGSCHEMA.actor_usr_legacy GROUP BY 2 ORDER BY 2;       
+        <query>SELECT COUNT(id), l_user_group FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;       
         </query>
     </report>
 
@@ -169,7 +169,7 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Access</heading>
-        <query>SELECT COUNT(id), l_access_if_applicable FROM MIGSCHEMA.actor_usr_legacy GROUP BY 2 ORDER BY 2;       
+        <query>SELECT COUNT(id), l_access_if_applicable FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;       
         </query>
     </report>
 
@@ -179,10 +179,10 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Address Component</heading>
-        <query>SELECT COUNT(id), 'email' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_e_mail) > 1
-            UNION ALL SELECT COUNT(id), 'Phone (home)' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_phone_home) > 1
-            UNION ALL SELECT COUNT(id), 'Phone (work)' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_phone_work) > 1
-            UNION ALL SELECT COUNT(id), 'Phone (cell)' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_phone_cell) > 1
+        <query>SELECT COUNT(id), 'email' FROM actor_usr_legacy WHERE LENGTH(l_e_mail) > 1
+            UNION ALL SELECT COUNT(id), 'Phone (home)' FROM actor_usr_legacy WHERE LENGTH(l_phone_home) > 1
+            UNION ALL SELECT COUNT(id), 'Phone (work)' FROM actor_usr_legacy WHERE LENGTH(l_phone_work) > 1
+            UNION ALL SELECT COUNT(id), 'Phone (cell)' FROM actor_usr_legacy WHERE LENGTH(l_phone_cell) > 1
         </query>
     </report> 
   
@@ -192,8 +192,8 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Sample</heading>
-        <query>SELECT COUNT(id), 'All Comments' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_comments) > 1
-            UNION ALL SELECT NULL, l_comments FROM  MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_comments) > 1 LIMIT 10
+        <query>SELECT COUNT(id), 'All Comments' FROM actor_usr_legacy WHERE LENGTH(l_comments) > 1
+            UNION ALL SELECT NULL, l_comments FROM  actor_usr_legacy WHERE LENGTH(l_comments) > 1 LIMIT 10
         </query>
     </report> 
     
@@ -203,8 +203,8 @@
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Sample</heading>
-        <query>SELECT COUNT(id), 'All Notes' FROM MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1
-            UNION ALL SELECT NULL, l_circulation_note FROM  MIGSCHEMA.actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1 LIMIT 10
+        <query>SELECT COUNT(id), 'All Notes' FROM actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1
+            UNION ALL SELECT NULL, l_circulation_note FROM  actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1 LIMIT 10
         </query>
     </report>       
 </reports_file>
