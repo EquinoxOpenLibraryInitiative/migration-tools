@@ -24,6 +24,7 @@ sub db_connect {
         ,$PGUSER
         ,undef
     ) || die "Unable to connect to $PGHOST:$PGPORT:$PGDATABASE:$PGUSER : $!\n";
+    $dbh->do("SET search_path TO $MIGSCHEMA, evergreen, pg_catalog, public");
     return $dbh;
 }
 sub db_disconnect {
