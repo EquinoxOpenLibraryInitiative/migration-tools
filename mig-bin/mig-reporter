@@ -109,7 +109,6 @@ if (defined $added_page_file or defined $added_page_title) {
     abort('must specify --added_page_file and --added_page_title') unless defined $added_page_file and defined $added_page_title;
     }
 if (defined $added_page_file) { $added_page_file = $MIGGITDIR . $added_page_file; }
-if ($MIGSCHEMA eq 'full') { $MIGSCHEMA = ''; }
 
 my $dbh = Mig::db_connect();
 my $report_file = create_report_name($report_title);
@@ -163,6 +162,7 @@ foreach my $t (@report_tags) {
     print Dumper(@report_names);
 
     #only has one level of failover now but could change to array of hashes and loops
+    #but this keeps it simple and in practice I haven't needed more than two
     foreach my $rname (@report_names) {
         my %report0;
         my %report1;
@@ -289,7 +289,7 @@ sub print_query {
     my $fh = shift;
     my %report = @_;
     my $query = $report{query};
-    print $query;
+    print "$query\n";
     my $sth = $dbh->prepare($query);
     $sth->execute();
 
