@@ -968,6 +968,18 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT COUNT(map.id), aou.name, au_sc.name FROM actor_stat_cat_entry_usr_map map JOIN actor_stat_cat au_sc ON au_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3 ORDER BY 2,3</query>
     </report>
 
+    <report>
+        <name>usr_thresholds</name>
+        <report_title>Patron Thresholds</report_title>
+        <tag>actors</tag>
+        <iteration>0</iteration>
+        <heading>Pateron Group.Org Unit.Penalty.Threshold</heading>
+        <query>SELECT pgt.name, aou.shortname, sp.name, p.threshold FROM permission_grp_penalty_threshold p 
+                JOIN actor.org_unit aou ON aou.id = p.org_unit JOIN permission.grp_tree pgt ON pgt.id = p.grp JOIN config.standing_penalty sp ON sp.id = p.penalty
+                ORDER BY 2, 1, 3</query>
+    </report>
+
+
     <!-- ACQUISITIONS REPORTS -->
     <report>
         <name>fund_count</name>
