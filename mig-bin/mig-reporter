@@ -159,8 +159,6 @@ foreach my $t (@report_tags) {
         }
     }
     
-    print Dumper(@report_names);
-
     #only has one level of failover now but could change to array of hashes and loops
     #but this keeps it simple and in practice I haven't needed more than two
     foreach my $rname (@report_names) {
@@ -199,7 +197,7 @@ sub find_report {
     print "iteration $iteration ";
     foreach my $node ($dom->findnodes('//report')) {
         if ($node->findvalue('./tag') =~ $tag and $node->findvalue('./iteration') eq $iteration and $node->findvalue('./name') eq $name) {
-            print "succeeded ... ";
+            print "succeeded ... \n";
             %report = (
                 name => $node->findvalue('./name'),
                 report_title => $node->findvalue('./report_title'),
@@ -212,7 +210,7 @@ sub find_report {
             return %report;
         }
     }
-    print "failed ... ";
+    print "failed ... \n";
     return %report = (
         name => "eaten by grue"
     );
@@ -259,17 +257,38 @@ sub check_table {
     my $query = shift;
     my $MIGSCHEMA = shift;
 
-    my $i = 0;
+    my $i;
     my $return_flag = 1;   
     my @qe = split(/ /,$query);
-    my @tables = grep /MIGSCHEMA/, @qe;
-
+    $i = @qe;
+    $i--;
+    my @tables;
+    while ($i > -1) {
+        if ($qe[$i] eq 'FROM' or $qe[$i] eq 'JOIN') {
+            my $q = $i + 1;
+            if ($qe[$q] ne '(SELECT') {
+                push @tables, $qe[$q];            
+            }
+        }
+        $i--;
+    }
     print "checking tables ... ";
+
+    $i = 0;
     foreach my $table (@tables) {
-        $table =~ s/MIGSCHEMA.//g;
         $table =~ s/\)//g;
         $table =~ s/\<//g;
-        my $sql = 'SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = \'' . $MIGSCHEMA . '\' AND table_name = \'' . $table . '\');';
+        my $sql;
+        my $schema;
+        if (index($table,'.') != -1) {
+            $schema = (split /\./,$table)[0];
+            $table = (split /\./,$table)[1];
+        } 
+        if (defined $schema) {
+            $sql = 'SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = \'' . $schema . '\' AND table_name = \'' . $table . '\');';
+        } else {
+            $sql = 'SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = \'' . $MIGSCHEMA . '\' AND table_name = \'' . $table . '\');';
+        }
         my $sth = $dbh->prepare($sql);
         $sth->execute();
         while (my @row = $sth->fetchrow_array) {
