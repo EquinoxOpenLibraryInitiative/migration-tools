@@ -113,6 +113,7 @@ VALUES
 CREATE TABLE map_tlc_billing_type (
     id                  SERIAL
     ,x_count            TEXT            
+    ,tlc_code           TEXT
     ,billing_type       TEXT
     ,dnm                TEXT
     ,note               TEXT
@@ -128,6 +129,7 @@ INSERT INTO gsheet_tracked_column
     (table_id,column_name) 
 VALUES 
      ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Migrating Bills by Bill Type'),'x_count')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Migrating Bills by Bill Type'),'tlc_code')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Migrating Bills by Bill Type'),'billing_type')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Migrating Bills by Bill Type'),'dnm')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Migrating Bills by Bill Type'),'note')
