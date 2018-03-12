@@ -1,0 +1,42 @@
+== Migration Deduplication Process
+
+The deduplication process covers what is considered a descriptive bibliographic record for items. Other kinds of MARC records such as authorities and MFHDs for serials are not included in the deduplication process.  This process is updated periodically as we review the best ways to do this given that metadata in Evergreen changes as do cataloging practices.  
+
+Two important terms to understand as part of the deduplication process are incumbent bibliographic records and incoming bibliographic records.  Incumbent records are defined as all the bib records in the library's database except those that are being brought in as part of the migration.  Incoming bib records are those that are being imported as part of the migration.  The migration deduplication is not tailored to a specific catalog's needs nor meant to be comprehensive of all scenarios.  It is meant to reduce duplication of bibs that have common identifiers while preventing merges of materials that should not share a common bib record.  It is not an inclusive deduplication, which is to say that duplicate incumbent items are not matched against each other - only incoming materials are matched against incumbent ones.  
+
+The process begins by creating one list of incoming bib records and one of incumbent bib records.  Each list is then assigned a set of values.  Most of these are from the first value found from a list of possible values.  
+
+* Author - derived from the 100$a, or 110$a, or 111$a, then made all lowercase and some punctuation is removed
+* Title - derived from the 245$p and $n combined, then made all lowercase and some punctuation is removed
+* Publication Date derived from the 260$c or 264$c with an indicator 2 value of '1', this tracks only the first one found even in the case of a record with multiples and all non-digit values removed
+* Identifiers - a list of all the $a & $z from the 020 and 024 with non-alphanumeric values  removed
+* Search Formats - These are values calculated by Evergreen from MARC attributes, primarily the 007 and 008s to identify kinds of materials.  Common values include: blu-ray, book, braille, casaudiiobook, casmusic, cdmusic, dvd, eaudio, electronic, equip, evideo, kit, map, music, microform, phonomusic, picture, score, serial, software and vhs.  A single bib record can have multiple search formats depending on what information is present in the bib record.  Duplicate search formats are removed, so if information is present due to multiple 008s for more than one book then book is only recorded once.  
+
+A full description of how the physical description fixed fields of the 007 and fixed length data elements of the 008 interact is beyond the scope of the deduplication description but you can find more information at the Library of Congress' web site at  https://www.loc.gov/marc/bibliographic/bd007.html and https://www.loc.gov/marc/bibliographic/bd008.html.
+
+After the lists of incumbent and incoming bibs are created they are compared and a list of potential matches are created.  To be considered a potential match the following criteria must be met:
+
+* One identifier must match between the lists.
+* The author must match exactly.
+* The title must match exactly.
+* The search formats must match.  So, for example, if a record has entries for book, large print book and dvd then it will only match to another record that has book, large print book and dvd.  If a single format is different between the two records it will not match.
+* The publication date must match.
+
+Once a list of potential matches are built, the scoring begins.  Scoring is done for each incoming bib record that there is a potential match among the incumbents for and for each incumbent that is a potential match.
+
+Scoring is done by evaluating each MARC record and giving it a score between 0 and 2 billion.  However, most records have a score between 10 and 100 with some very detailed records getting much higher scores.  
+
+A record's score is built as follows:  
+
+* 1 point for each identifier subfield from the 020, 022 and 024 MARC fields
+* 2 points for each subject subfield from the 6xx MARC fields
+* 1 point for each title subfield from the 210, 222 and 24x MARC fields as long as they are one of the following descriptive subfields: 'a','b','c','f','g','k','n','p','s', or '0'
+* 1 point for each author subfield from the 100, 110, 111 and 130 MARC fields as long as they are one of the following descriptive subfields: 'a','b','c','d','e','f','g','j','k','l','n','p','q','t', or 'u'
+* 1 point for each added entry from the 70x, 71x,72x, 73x, 74x, 75x, 80x, 81x, 83x
+
+Once the scores are created, the highest scoring incumbent bib record is selected as the one for the incoming bib matching it to be merged to, unless the incumbent's score is lower than the incoming bib's, in which case the incoming bib is retained and no merge is created.
+
+The list of merges is then run as a process.  This process is very system intensive and involves merging all of the assets associated with one bib to the other, such as notes, copies, volumes, parts, transfering title level holds and so on.  856 tags from the incoming bib are transferred to the incumbent but no other MARC data is transferred.  
+
+The process runs conservatively and varies but averages 1,000 bibs per hour.
+
