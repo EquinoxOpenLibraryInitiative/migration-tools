@@ -1029,6 +1029,12 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
 
     <!-- DEDUPE REPORTS -->
 
+    <asset>
+        <name>dedupe_explain</name>
+        <tag>dedupe</tag>
+        <file>dedupe_process.asciidoc</file> 
+    </asset>
+
     <report>
         <name>dedupe_format_count</name>
         <tag>dedupe</tag>

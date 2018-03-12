@@ -114,7 +114,7 @@ my $dbh = Mig::db_connect();
 my $report_file = create_report_name($report_title);
 $report_file = $MIGGITDIR . $report_file;
 
-open(my $fh, '>', $report_file) or die "Could not open output file!";
+open(my $fh, '>', $report_file) or abort("Could not open output file!");
 
 write_title_page($report_title,$fh,$analyst);
 
@@ -122,7 +122,7 @@ if (defined $added_page_file and defined $added_page_title) {
     print $fh "<<<\n";
     print $fh "== $added_page_title\n";
     print "$added_page_file\t$added_page_title\n";
-    open(my $an,'<:encoding(UTF-8)', $added_page_file) or die "Could not open $added_page_file !";
+    open(my $an,'<:encoding(UTF-8)', $added_page_file) or abort("Could not open $added_page_file!");
     while ( my $line = <$an> ) {
         print $fh $line;
     }
@@ -147,18 +147,41 @@ my @report_tags = split(/\./,$tags);
 foreach my $t (@report_tags) {
     print "\n\n=========== Starting to process tag $t\n";
     print   "==========================================\n";
+
+    my @asset_files;
+    foreach my $asset ($dom->findnodes('//asset')) {
+        if (index($asset->findvalue('./tag'),$t) != -1) {
+            push @asset_files, $asset->findvalue('./file');
+        }
+    }
+
+    foreach my $fname (@asset_files) {
+        my $asset_path = $mig_path . '../mig-asc/' . $fname;
+        open my $a, $asset_path or abort("Could not open $fname.");
+        while ( my $l = <$a> ) {
+            print $fh $l;
+        }
+    print $fh "<<<\n";
+    }
+
     print_section_header(ucfirst($t),$fh);
     my $linecount = $lines_per_page;
     my $r;
 
-    my @report_names;
+    my @asset_files;
+    foreach my $asset ($dom->findnodes('//asset')) {
+        if (index($asset->findvalue('./tag'),$t) != -1) {
+            push @asset_files, $asset->findvalue('./file');
+        }
+    }
 
+    my @report_names;
     foreach my $report ($dom->findnodes('//report')) {
         if (index($report->findvalue('./tag'),$t) != -1 and $report->findvalue('./iteration') eq '0') {
             push @report_names, $report->findvalue('./name');
         }
     }
-    
+
     #only has one level of failover now but could change to array of hashes and loops
     #but this keeps it simple and in practice I haven't needed more than two
     foreach my $rname (@report_names) {
