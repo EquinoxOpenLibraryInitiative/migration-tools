@@ -1024,7 +1024,52 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <iteration>0</iteration>
         <report_title>Migrated Serial MFHDs</report_title>
         <heading>Number of MFHDs</heading>
-        <query>SELECT COUNT(id) FROM seriarecord_entry</query>
+        <query>SELECT COUNT(id) FROM serial_record_entry</query>
+    </report>
+
+    <!-- DEDUPE REPORTS -->
+
+    <report>
+        <name>dedupe_format_count</name>
+        <tag>dedupe</tag>
+        <iteration>0</iteration>
+        <report_title>Count of Items Matching By Format</report_title>
+        <heading>Count.Format(s)</heading>
+        <query>SELECT COUNT(id), search_formats FROM bib_matches GROUP BY 2 ORDER BY 2;</query>
+    </report>
+    
+    <report>
+        <name>dedupe_scores</name>
+        <tag>dedupe</tag>
+        <iteration>0</iteration>
+        <report_title>Scoring Values in Matches</report_title>
+        <heading>Count.Scoring Information</heading>
+        <query>SELECT COUNT(id), 'Incumbent Records With Higher Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score &gt; incoming_bib_score
+          UNION ALL SELECT COUNT(id), 'Incumbent Records With Equal Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score = incoming_bib_score
+          UNION ALL SELECT COUNT(id), 'Incumbent Records With Lower Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score &lt; incoming_bib_score
+          ;</query>
+    </report>
+    
+    <report>
+        <name>dedupe_score_ranges</name>
+        <tag>dedupe</tag>
+        <iteration>0</iteration>
+        <report_title>Count of Items Matching By Format</report_title>
+        <heading>Lowest Record Score.Largest Record Score.Record Set</heading>
+        <query>SELECT MIN(incumbent_bib_score), MAX(incumbent_bib_score), 'Incumbent Records' FROM bib_matches 
+            UNION ALL SELECT MIN(incoming_bib_score), MAX(incoming_bib_score), 'Incoming Records' FROM bib_matches ;
+        </query>
+    </report>
+    
+    
+    <report>
+        <name>dedupe_sample_set</name>
+        <tag>dedupe</tag>
+        <iteration>0</iteration>
+        <report_title>Sample of 20 Matching Dedupe Record Sets</report_title>
+        <heading>Bib Being Merged Into.Bib Being Merged</heading>
+        <query>SELECT incumbent_bib, incoming_bib FROM bib_matches WHERE incumbent_bib_score &gt;= incoming_bib_score LIMIT 20 ;
+        </query>
     </report>
 
 </reports_file>
