@@ -22,6 +22,7 @@ use Switch;
 use Cwd 'abs_path';
 use Pod::Usage;
 use Data::Dumper;
+use DateTime;
 
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 
@@ -73,7 +74,7 @@ my $dbh = Mig::db_connect();
 my $spreadsheet = connect_gsheet();
 abort('could not connect to google sheet') unless (defined $spreadsheet);
 
-$sql = 'SELECT tab_name FROM ' . $MIGSCHEMA . '.gsheet_tracked_table;';
+$sql = 'SELECT tab_name FROM gsheet_tracked_table;';
 $sth = $dbh->prepare($sql);
 my $ra = $sth->execute();
 while (my @row = $sth->fetchrow_array) {
@@ -112,6 +113,7 @@ if (defined $cmd_pull) {
             insert_row($MIGSCHEMA,$push_tb,$dbh,\@pg_headers,$j);
         }
         timestamp($MIGSCHEMA,$push_tb,$dbh,'pull');
+        if ($cmd_export == 1) { export_table($dbh,$push_tb); }
     }
 }
 
@@ -156,11 +158,10 @@ if (defined $cmd_push) {
         foreach my $row ( @{$grabhash} ) {
             my $record = {};
             for my $column ( sort keys %{ $row } ) {
-                print Dumper(@$sheet_headers);
-                print "column: $column\n";
+                #print Dumper(@$sheet_headers);
+                #print "column: $column\n";
                 my $clean_column = $column;
                 $clean_column =~ s/_//g;
-                print "clean column: $clean_column\n";
                 if ( $column ~~ @$sheet_headers ) {
                     $record->{$clean_column} = $row->{$column}; 
                 }
@@ -174,8 +175,31 @@ if (defined $cmd_push) {
             );
         }
         timestamp($MIGSCHEMA,$pull_tb,$dbh,'push');
+        if ($cmd_export == 1) { export_table($dbh,$pull_tb); }
     }
 }   
+
+sub export_table {
+    my $dbh = shift;
+    my $table = shift;
+
+    my $dt = DateTime->now;
+    my $date = $dt->ymd;
+    my $hms = $dt->hms;
+    my $efile = $MIGGITDIR . $table . '_' . $date . '_' . $hms . '.tsv';
+    my @data;
+    my $record_count = 0;
+    $dbh->do("COPY $table TO STDOUT CSV HEADER;");
+    1 while $dbh->pg_getcopydata(\$data[$record_count++]) >= 0;
+    open (my $eout, '>', $efile) or abort("Could NOT open $efile.");
+    foreach my $d (@data) {
+        print $eout $d;
+    }
+    print "$efile written.\n";
+    close $eout;
+
+}
+
 
 sub die_if_gsheet_tracked_table_does_not_exist {
     if (!check_for_gsheet_tracked_table()) {
@@ -316,12 +340,10 @@ sub insert_row {
     my $header_string = '(' . join(",", @headers) . ')';
     map {s/\'/\'\'/g; } @row_data;
     my $row_string = '(' . join(",", map {qq/'$_'/} @row_data) . ')';
-    print "INSERT INTO $schema.$table $header_string VALUES $row_string\n"; 
+    #print "INSERT INTO $schema.$table $header_string VALUES $row_string\n"; 
     $dbh->do(qq/
         INSERT INTO $schema.$table $header_string VALUES $row_string ;
     /);
-    
-    print "Row pushed to $table in schema $schema.\n";
 }
 
 sub timestamp {
