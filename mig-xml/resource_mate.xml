@@ -58,7 +58,7 @@
         <report_title>Count of Copies in Extract by Status</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
-        <heading>Count.Location</heading>
+        <heading>Count.Status</heading>
         <query>SELECT COUNT(*), l_status FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
 
