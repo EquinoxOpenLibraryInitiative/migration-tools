@@ -95,7 +95,7 @@ if (defined $cmd_pull) {
     my @m = array_match(\@worksheet_names,\@tracked_ws_names);
     foreach my $w (@m) { 
         my $pull_ws = $spreadsheet->worksheet( {title => $w} ); 
-        my $push_tb = get_table_name($MIGSCHEMA,$w,$dbh);
+        my $push_tb = get_table_name($w,$dbh);
         my @rows = $pull_ws->rows;
         my @content;
         map { $content[$_->row - 1][$_->col - 1] = $_->content } $pull_ws->cells;
@@ -107,12 +107,12 @@ if (defined $cmd_pull) {
         }
         shift @content;
         #todo: check for clean headers at some point ...
-        truncate_table($MIGSCHEMA,$push_tb,$dbh);
+        truncate_table($push_tb,$dbh);
         print "Inserting from $w to $push_tb.\n";
         for my $j (@content) {
             insert_row($MIGSCHEMA,$push_tb,$dbh,\@pg_headers,$j);
         }
-        timestamp($MIGSCHEMA,$push_tb,$dbh,'pull');
+        timestamp($push_tb,$dbh,'pull');
         if ($cmd_export == 1) { export_table($dbh,$push_tb); }
     }
 }
@@ -121,7 +121,7 @@ if (defined $cmd_push) {
     print "Pushing ";
     if ($cmd_push eq 'all') {
         print "all tables.\n";
-        $sql = 'SELECT table_name FROM ' . $MIGSCHEMA . '.gsheet_tracked_table';
+        $sql = 'SELECT table_name FROM gsheet_tracked_table;';
         $sth = $dbh->prepare($sql);
         $ra = $sth->execute();
         while (my @row = $sth->fetchrow_array) {
@@ -132,10 +132,10 @@ if (defined $cmd_push) {
         if (!defined $cmd_push) { abort('command incomplete'); }
         push @table_names, $cmd_push;
     }
-    foreach my $t (@table_names) {
-        my $pull_tb = $MIGSCHEMA . "." . $t;;
-        my @table_headers = get_pg_column_headers($t,$MIGSCHEMA);
-        my $push_ws_name = get_worksheet_name($MIGSCHEMA,$t,$dbh);
+    foreach my $pull_tb (@table_names) {
+        my @table_headers = get_pg_column_headers($pull_tb,$MIGSCHEMA);
+        my $push_ws_name = get_worksheet_name($pull_tb,$dbh);
+        print "worksheetname: $push_ws_name\n";
         my $push_ws = $spreadsheet->worksheet( {title => $push_ws_name} );
         if (!defined $push_ws) { next; }
         my @rows;
@@ -148,7 +148,7 @@ if (defined $cmd_push) {
         erase_sheet($push_ws,$push_ws_name);
 
         #get from postgres the headers to use in the sheet from tracked columns
-        $sql = 'SELECT column_name FROM ' . $MIGSCHEMA . '.gsheet_tracked_column WHERE table_id = (SELECT id FROM ' . $MIGSCHEMA . '.gsheet_tracked_table WHERE table_name = \'' . $t . '\')';
+        $sql = 'SELECT column_name FROM gsheet_tracked_column WHERE table_id = (SELECT id FROM gsheet_tracked_table WHERE table_name = \'' . $pull_tb . '\')';
         $sth = $dbh->prepare($sql);
         $sth->execute();
         my $sheet_headers = $sth->fetchall_arrayref();
@@ -168,13 +168,13 @@ if (defined $cmd_push) {
             }
             push @content, $record;
         }
-
+        print "Writing to $push_ws_name\n";
         foreach my $fillsheet (@content) {
             my $new_row = $push_ws->add_row (
                 $fillsheet
             );
         }
-        timestamp($MIGSCHEMA,$pull_tb,$dbh,'push');
+        timestamp($pull_tb,$dbh,'push');
         if ($cmd_export == 1) { export_table($dbh,$pull_tb); }
     }
 }   
@@ -197,9 +197,8 @@ sub export_table {
     }
     print "$efile written.\n";
     close $eout;
-
+    return;
 }
-
 
 sub die_if_gsheet_tracked_table_does_not_exist {
     if (!check_for_gsheet_tracked_table()) {
@@ -241,19 +240,13 @@ sub erase_sheet {
 
     print "Erasing $ws_name.\n";
     my @rows = $ws->rows;
-    my $i;
-    my $j = @rows;
-    $j = int(($j / 2))-1;
-    if ($j < 2) { $j = 2; }
-    while ($j > 0) {
-        #bodge until I figure out why google sheets is only deleting even numbered rows
-        $i = 1;
-        foreach my $row (@rows) {
-            if ($i != 1) { $row->delete; }
-            $i++;
-        };
-        $j--;
-    };
+    splice @rows, 0, 1;
+    my $i = @rows;
+    while ($i > 0) {
+        my $row = pop @rows;
+        $row->delete;
+        $i--;
+    }
     return;
 }
 
@@ -282,11 +275,10 @@ sub die_if_gsheet_tracked_column_does_not_exist {
 }
 
 sub get_table_name {
-    my $migs = shift;
     my $worksheet = shift;
     my $dbh = shift;
 
-    my $sql = 'SELECT table_name FROM ' . $migs . '.gsheet_tracked_table WHERE tab_name = \'' . $worksheet . '\';';
+    my $sql = 'SELECT table_name FROM gsheet_tracked_table WHERE tab_name = \'' . $worksheet . '\';';
     my $sth = $dbh->prepare($sql);
     my $xs = $sth->execute();
     my $table_name;
@@ -298,11 +290,11 @@ sub get_table_name {
 }
 
 sub get_worksheet_name {
-    my $migs = shift;
     my $table = shift;
     my $dbh = shift;
 
-    my $sql = 'SELECT tab_name FROM ' . $migs . '.gsheet_tracked_table WHERE table_name = \'' . $table . '\';';
+    my $sql = 'SELECT tab_name FROM gsheet_tracked_table WHERE table_name = \'' . $table . '\';';
+    print "$sql \n";
     my $sth = $dbh->prepare($sql);
     my $xs = $sth->execute();
     my $worksheet_name;
@@ -347,28 +339,27 @@ sub insert_row {
 }
 
 sub timestamp {
-    my ($schema, $table, $dbh, $action) = @_;
+    my ($table, $dbh, $action) = @_;
 
     my $column;
     if ($action eq 'pull') { $column = 'last_pulled' }
         else { $column = 'last_pushed' }; 
 
     $dbh->do(qq/
-        UPDATE $schema.gsheet_tracked_table SET $column = NOW() WHERE table_name = '$table';
+        UPDATE gsheet_tracked_table SET $column = NOW() WHERE table_name = '$table';
     /);
 
 }
 
 
 sub truncate_table {
-    my $schema = shift;
     my $table = shift;
     my $dbh = shift;
 
     $dbh->do(qq/
-        TRUNCATE TABLE $schema.$table;;
+        TRUNCATE TABLE $table;;
     /);
-    print "Table $schema.$table truncated.\n";
+    print "Table $table truncated.\n";
 }
 
 sub abort {
