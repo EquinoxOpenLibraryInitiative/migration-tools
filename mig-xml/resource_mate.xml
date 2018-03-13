@@ -49,8 +49,8 @@
         <report_title>Count of Copies in Extract by Category</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
-        <heading>Count.Location</heading>
-        <query>SELECT COUNT(*), l_location FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <heading>Count.Category</heading>
+        <query>SELECT COUNT(*), l_category FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
     
     <report>
