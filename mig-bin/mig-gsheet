@@ -190,7 +190,7 @@ sub export_table {
     my $efile = $MIGGITDIR . $table . '_' . $date . '_' . $hms . '.tsv';
     my @data;
     my $record_count = 0;
-    $dbh->do("COPY $table TO STDOUT CSV HEADER;");
+    $dbh->do("COPY $table TO STDOUT CSV DELIMITER E'\t' HEADER;");
     1 while $dbh->pg_getcopydata(\$data[$record_count++]) >= 0;
     open (my $eout, '>', $efile) or abort("Could NOT open $efile.");
     foreach my $d (@data) {
@@ -203,7 +203,7 @@ sub export_table {
 
 sub die_if_gsheet_tracked_table_does_not_exist {
     if (!check_for_gsheet_tracked_table()) {
-        die "Table $MIGSCHEMA.gsheet_tracked_table does not exist.  Bailing...\n";
+        die "Table gsheet_tracked_table does not exist.  Bailing...\n";
     }
 }
 
