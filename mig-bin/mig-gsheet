@@ -119,22 +119,23 @@ if (defined $cmd_pull) {
 
 if (defined $cmd_push) {
     print "Pushing ";
+    my @tab_names;
     if ($cmd_push eq 'all') {
-        print "all tables.\n";
-        $sql = 'SELECT table_name FROM gsheet_tracked_table;';
+        print "all worksheets.\n";
+        $sql = 'SELECT tab_name FROM gsheet_tracked_table;';
         $sth = $dbh->prepare($sql);
         $ra = $sth->execute();
         while (my @row = $sth->fetchrow_array) {
-            push @table_names, $row[0];
+            push @tab_names, $row[0];
         }
     } else {
-        print "only table $cmd_push.\n";
+        print "only worksheet $cmd_push.\n";
         if (!defined $cmd_push) { abort('command incomplete'); }
-        push @table_names, $cmd_push;
+        push @tab_names, $cmd_push;
     }
-    foreach my $pull_tb (@table_names) {
+    foreach my $push_ws_name (@tab_names) {
+        my $pull_tb = get_table_name($push_ws_name,$dbh);
         my @table_headers = get_pg_column_headers($pull_tb,$MIGSCHEMA);
-        my $push_ws_name = get_worksheet_name($pull_tb,$dbh);
         print "worksheetname: $push_ws_name\n";
         my $push_ws = $spreadsheet->worksheet( {title => $push_ws_name} );
         if (!defined $push_ws) { next; }
@@ -289,21 +290,21 @@ sub get_table_name {
     return $table_name;
 }
 
-sub get_worksheet_name {
-    my $table = shift;
-    my $dbh = shift;
-
-    my $sql = 'SELECT tab_name FROM gsheet_tracked_table WHERE table_name = \'' . $table . '\';';
-    print "$sql \n";
-    my $sth = $dbh->prepare($sql);
-    my $xs = $sth->execute();
-    my $worksheet_name;
-    while (my @row = $sth->fetchrow_array) {
-        $worksheet_name = $row[0];
-    }
-
-    return $worksheet_name;
-}
+#sub get_worksheet_name {
+#    my $table = shift;
+#    my $dbh = shift;
+#
+#    my $sql = 'SELECT tab_name FROM gsheet_tracked_table WHERE table_name = \'' . $table . '\';';
+#    print "$sql \n";
+#    my $sth = $dbh->prepare($sql);
+#    my $xs = $sth->execute();
+#    my $worksheet_name;
+#    while (my @row = $sth->fetchrow_array) {
+#        $worksheet_name = $row[0];
+#    }
+#
+#    return $worksheet_name;
+#}
 
 
 sub check_for_gsheet_tracked_column {

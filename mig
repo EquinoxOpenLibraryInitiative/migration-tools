@@ -255,7 +255,7 @@ Holds, Actors, Bibs, Assets & Money.
 
 Allows you to override the default evergreen_staged_report.xml in the mig-xml folder.
 
-=item B<gsheet> --pull spreadsheet_tab or --push postgres_table
+=item B<gsheet> --pull or --push spreadsheet_tab
 
 This uses the gsheet_tracked_table and gsheet_tracked column tables to map a Google Docs Spreadsheet tabs
 with Postgres tables in the mig schema.  The spreadsheet is assumed to share the name as the mig schema. 
