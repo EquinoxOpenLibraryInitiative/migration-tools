@@ -1036,24 +1036,29 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </asset>
 
     <report>
+        <name>dedupe_bib_groups</name>
+        <tag>dedupe</tag>
+        <iteration>0</iteration>
+        <report_title>Scoring and Bib Record Groups</report_title>
+        <heading>Count.Bib REcord Groups</heading>
+        <query>SELECT COUNT(id), 'Total Bibs Being Evaluated' FROM biblio.record_entry WHERE deleted IS FALSE AND id IN (SELECT eg::BIGINT FROM bib_id_map)
+          UNION ALL SELECT (COUNT(DISTINCT incoming_bib), 'Incoming Bibs With Matches Found' FROM bib_matches
+          UNION ALL SELECT (COUNT(bre.id) - (SELECT COUNT(DISTINCT incoming_bib) FROM bib_matches)), 'Incoming Bibs With No Match' 
+                FROM biblio.record_entry bre WHERE bre.deleted IS FALSE AND bre.id IN (SELECT eg::BIGINT FROM bib_id_map)
+          UNION ALL SELECT COUNT(DISTINCT incoming_bib), 'Incoming Bibs Being Merged into Incumbent' FROM bib_matches WHERE incumbent_bib_score &gt;= incoming_bib_score
+          UNION ALL SELECT COUNT(id), 'Incumbent Bibs With Higher Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score &gt; incoming_bib_score
+          UNION ALL SELECT COUNT(id), 'Incumbent Bibs With Equal Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score = incoming_bib_score
+          UNION ALL SELECT COUNT(id), 'Incumbent Bibs  With Lower Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score &lt; incoming_bib_score
+          ;</query>
+    </report>
+
+    <report>
         <name>dedupe_format_count</name>
         <tag>dedupe</tag>
         <iteration>0</iteration>
         <report_title>Count of Items Matching By Format</report_title>
         <heading>Count.Format(s)</heading>
         <query>SELECT COUNT(id), search_formats FROM bib_matches GROUP BY 2 ORDER BY 2;</query>
-    </report>
-    
-    <report>
-        <name>dedupe_scores</name>
-        <tag>dedupe</tag>
-        <iteration>0</iteration>
-        <report_title>Scoring Values in Matches</report_title>
-        <heading>Count.Scoring Information</heading>
-        <query>SELECT COUNT(id), 'Incumbent Records With Higher Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score &gt; incoming_bib_score
-          UNION ALL SELECT COUNT(id), 'Incumbent Records With Equal Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score = incoming_bib_score
-          UNION ALL SELECT COUNT(id), 'Incumbent Records With Lower Scores to Incoming' FROM bib_matches WHERE incumbent_bib_score &lt; incoming_bib_score
-          ;</query>
     </report>
     
     <report>
