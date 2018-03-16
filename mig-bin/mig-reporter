@@ -102,7 +102,6 @@ my $mig_path = abs_path($0);
 $mig_path =~ s|[^/]+$||;
 if (!defined $reports_xml) { $reports_xml = $mig_path . '../mig-xml/evergreen_staged_report.xml'; } 
     else { $reports_xml = $mig_path . '/../mig-xml/' . $reports_xml; }
-print "$reports_xml \n";
 my $dom = $parser->parse_file($reports_xml);
 
 if (defined $added_page_file or defined $added_page_title) {
@@ -280,6 +279,8 @@ sub check_table {
     my $query = shift;
     my $MIGSCHEMA = shift;
 
+    print "$query\n";
+
     my $i;
     my $return_flag = 1;   
     my @qe = split(/ /,$query);
@@ -299,15 +300,15 @@ sub check_table {
 
     $i = 0;
     foreach my $table (@tables) {
-        $table =~ s/\)//g;
-        $table =~ s/\<//g;
         my $sql;
         my $schema;
         if (index($table,'.') != -1) {
             $schema = (split /\./,$table)[0];
             $table = (split /\./,$table)[1];
-        } 
+        }
+        $table = clean_query_string($table); 
         if (defined $schema) {
+            $schema = clean_query_string($schema);
             $sql = 'SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = \'' . $schema . '\' AND table_name = \'' . $table . '\');';
         } else {
             $sql = 'SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = \'' . $MIGSCHEMA . '\' AND table_name = \'' . $table . '\');';
@@ -319,12 +320,22 @@ sub check_table {
                     next;
                 } else {
                     $return_flag = 0;
+                    print "detecting $table failed...\n";
                 }
             if ($row[0] eq '0') {$return_flag = 0;}
         }
     }
-    if ($return_flag == 1) {print "succeeded ... ";} else {print "failed ... ";}
+    if ($return_flag == 1) {print "succeeded ...\n";}
     return $return_flag;
+}
+
+sub clean_query_string {
+    my $str = shift;
+    
+    $str =~ s/(?!_)[[:punct:]]//g; #remove punct except underscores
+    $str =~ s/\n//g;
+    $str =~ s/\r//g;
+    return $str;
 }
 
 sub print_query {
