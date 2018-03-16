@@ -36,6 +36,7 @@ my $next_arg_is_added_page_file;
 my $i = 0;
 my $parser = XML::LibXML->new();
 my $lines_per_page = 42;
+my $debug_flag = 0;
 
 foreach my $arg (@ARGV) {
     if ($arg eq '--report_title') {
@@ -92,6 +93,10 @@ foreach my $arg (@ARGV) {
         $next_arg_is_added_page_file = 0;
         next;
     }
+    if ($arg eq '--debug') {
+        $debug_flag = 1;
+        next;
+    }
 }
 
 if (!defined $tags) {$tags = 'circs.holds.actors.bibs.assets.money'};
@@ -145,7 +150,7 @@ $tags = lc($tags);
 my @report_tags = split(/\./,$tags);
 foreach my $t (@report_tags) {
     print "\n\n=========== Starting to process tag $t\n";
-    print   "==========================================\n";
+    print   "==========================================\n\n";
 
     my @asset_files;
     foreach my $asset ($dom->findnodes('//asset')) {
@@ -167,7 +172,7 @@ foreach my $t (@report_tags) {
     my $linecount = $lines_per_page;
     my $r;
 
-    my @asset_files;
+    undef @asset_files;
     foreach my $asset ($dom->findnodes('//asset')) {
         if (index($asset->findvalue('./tag'),$t) != -1) {
             push @asset_files, $asset->findvalue('./file');
@@ -189,15 +194,15 @@ foreach my $t (@report_tags) {
         my $check_tables0;
         my $check_tables1;
 
-        print "\nchecking for $rname ... ";
-        %report0 = find_report($dom,$t,$rname,'0');
-        $check_tables0 = check_table($report0{query},$MIGSCHEMA);
+        if ($debug_flag == 1) {print "\nchecking for $rname ... ";}
+        %report0 = find_report($dom,$t,$rname,'0',$debug_flag);
+        $check_tables0 = check_table($report0{query},$MIGSCHEMA,$debug_flag,$rname);
         if ($check_tables0 == 1) {
            $r =  print_query($fh,%report0); 
         } else {
-        %report1 = find_report($dom,$t,$rname,'1');
+        %report1 = find_report($dom,$t,$rname,'1',$debug_flag);
         if (defined $report1{query}) {
-            $check_tables1 = check_table($report1{query},$MIGSCHEMA);
+            $check_tables1 = check_table($report1{query},$MIGSCHEMA,$debug_flag,$rname);
             if ($check_tables1 == 1) {$r = print_query($fh,%report1);}    
             }
         }
@@ -214,12 +219,13 @@ sub find_report {
     my $tag = shift;
     my $name = shift;
     my $iteration = shift;
+    my $debug_flag = shift;
     my %report;
 
-    print "iteration $iteration ";
+    if ($debug_flag == 1) {print "iteration $iteration ";}
     foreach my $node ($dom->findnodes('//report')) {
         if ($node->findvalue('./tag') =~ $tag and $node->findvalue('./iteration') eq $iteration and $node->findvalue('./name') eq $name) {
-            print "succeeded ... \n";
+            if ($debug_flag == 1) {print "succeeded ... \n";}
             %report = (
                 name => $node->findvalue('./name'),
                 report_title => $node->findvalue('./report_title'),
@@ -232,7 +238,7 @@ sub find_report {
             return %report;
         }
     }
-    print "failed ... \n";
+    if ($debug_flag == 1) {print "failed ... \n";}
     return %report = (
         name => "eaten by grue"
     );
@@ -278,8 +284,10 @@ sub write_title_page {
 sub check_table {
     my $query = shift;
     my $MIGSCHEMA = shift;
+    my $debug_flag = shift;
+    my $report_name = shift;
 
-    print "$query\n";
+    if ($debug_flag == 1) {print "$query\n";}
 
     my $i;
     my $return_flag = 1;   
@@ -296,7 +304,7 @@ sub check_table {
         }
         $i--;
     }
-    print "checking tables ... ";
+    if ($debug_flag == 1) {print "checking tables ... ";}
 
     $i = 0;
     foreach my $table (@tables) {
@@ -320,12 +328,13 @@ sub check_table {
                     next;
                 } else {
                     $return_flag = 0;
-                    print "detecting $table failed...\n";
+                    if ($debug_flag == 1) {print "detecting $table failed...\n";}
                 }
             if ($row[0] eq '0') {$return_flag = 0;}
         }
     }
-    if ($return_flag == 1) {print "succeeded ...\n";}
+    if ($return_flag == 1 and $debug_flag == 1) {print "succeeded ...\n";}
+    if ($return_flag == 0) {print "!!!!! a table failed the find test for report $report_name\n\n";}
     return $return_flag;
 }
 
@@ -342,7 +351,6 @@ sub print_query {
     my $fh = shift;
     my %report = @_;
     my $query = $report{query};
-    print "$query\n";
     my $sth = $dbh->prepare($query);
     $sth->execute();
 

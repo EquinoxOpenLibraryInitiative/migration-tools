@@ -251,6 +251,10 @@ adds an extra arbitrary page of notes to the report.  Mig assumes the page file 
 This will define a set of tags to use, if not set it will default to Circs, 
 Holds, Actors, Bibs, Assets & Money. 
 
+--debug
+
+Gives more information about what is happening.
+
 --reports_xml 
 
 Allows you to override the default evergreen_staged_report.xml in the mig-xml folder.
