@@ -299,86 +299,9 @@ switch($ARGV[0]) {
             pod2usage(-verbose => 2);
         }
     }
-    case "env" {
-        standard_invocation(@ARGV);
-    }
-    case "init" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "status" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "quick" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "add" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "reporter" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "gsheet" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "remove" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "iconv" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "skip-iconv" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "clean" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "skip-clean" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "link" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "unlink" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "convert" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "stage" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "mapper" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "quicksheet" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
-    case "sql" {
-        Mig::die_if_no_env_migschema();
-        standard_invocation(@ARGV);
-    }
     case "map" {
-        Mig::die_if_no_env_migschema();
     }
     case "load" {
-        Mig::die_if_no_env_migschema();
     }
     case "wdir" {
         print "$MIGWORKDIR\n";
@@ -390,13 +313,20 @@ switch($ARGV[0]) {
         print "$MIGGITDIR\n";
     }
     else {
-        pod2usage(1);
+        standard_invocation(@ARGV);
     }
 }
 
 sub standard_invocation {
     my $cmd = shift;
-    system( $mig_bin . "mig-$cmd", @_ );
+
+    Mig::die_if_no_env_migschema();
+    if (-e $mig_bin . "mig-$cmd") {
+        system( $mig_bin . "mig-$cmd", @_ );
+    } else {
+        system( "mig-$cmd", @_ ) == 0 or die pod2usage(1);
+    }
+
 }
 
 
