@@ -28,6 +28,9 @@ Gives more information about what is happening.
 
 Allows you to override the default evergreen_staged_report.xml in the mig-xml folder.
 
+--excel_output or --excel
+
+Pushes output to an Excel file instead of asciidoc file. 
 
 =back
 
@@ -45,6 +48,7 @@ use Env qw(
     HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
     MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
+use Excel::Writer::XLSX;
 use Pod::Usage;
 use Switch;
 use Cwd 'abs_path';
@@ -69,10 +73,13 @@ my $added_page_title;
 my $next_arg_is_added_page_title;
 my $added_page_file;
 my $next_arg_is_added_page_file;
+my $excel_output = 0;
 my $i = 0;
 my $parser = XML::LibXML->new();
 my $lines_per_page = 42;
 my $debug_flag = 0;
+my $workbook;
+my $fh;
 
 foreach my $arg (@ARGV) {
     if ($arg eq '--report_title') {
@@ -129,6 +136,10 @@ foreach my $arg (@ARGV) {
         $next_arg_is_added_page_file = 0;
         next;
     }
+    if ($arg eq '--excel_output' or $arg eq '--excel') {
+        $excel_output = 1;
+        next;
+    }
     if ($arg eq '--debug') {
         $debug_flag = 1;
         next;
@@ -136,13 +147,15 @@ foreach my $arg (@ARGV) {
 }
 
 if (!defined $tags) {$tags = 'circs.holds.actors.bibs.assets.money'};
-if (!defined $analyst) { abort('--analyst must be supplied'); }
 if (!defined $report_title) { abort('--report_title must be supplied'); }
+if ($excel_output == 0 and !defined $analyst) { abort('--analyst must be supplied'); }
 
 my $mig_path = abs_path($0);
 $mig_path =~ s|[^/]+$||;
-if (!defined $reports_xml) { $reports_xml = $mig_path . '../mig-xml/evergreen_staged_report.xml'; } 
-    else { $reports_xml = $mig_path . '/../mig-xml/' . $reports_xml; }
+if (!defined $reports_xml) { 
+    if ($excel_output == 0) { $reports_xml = $mig_path . '../mig-xml/evergreen_staged_report.xml'; } 
+        else { $reports_xml = $mig_path . '../mig-xml/excel_mapping_reports.xml'; } 
+    } else { $reports_xml = $mig_path . '/../mig-xml/' . $reports_xml; }
 my $dom = $parser->parse_file($reports_xml);
 
 if (defined $added_page_file or defined $added_page_title) {
@@ -151,12 +164,15 @@ if (defined $added_page_file or defined $added_page_title) {
 if (defined $added_page_file) { $added_page_file = $MIGGITDIR . $added_page_file; }
 
 my $dbh = Mig::db_connect();
-my $report_file = create_report_name($report_title);
+my $report_file = create_report_name($report_title,$excel_output);
 $report_file = $MIGGITDIR . $report_file;
 
-open(my $fh, '>', $report_file) or abort("Could not open output file!");
-
-write_title_page($report_title,$fh,$analyst);
+if ($excel_output == 1) {
+    $workbook = Excel::Writer::XLSX->new( $report_file );
+} else {
+    open($fh, '>', $report_file) or abort("Could not open output file!");
+    write_title_page($report_title,$fh,$analyst);
+};
 
 if (defined $added_page_file and defined $added_page_title) { 
     print $fh "<<<\n";
@@ -204,7 +220,7 @@ foreach my $t (@report_tags) {
     print $fh "<<<\n";
     }
 
-    print_section_header(ucfirst($t),$fh);
+    if ($excel_output == 0) { print_section_header(ucfirst($t),$fh); }
     my $linecount = $lines_per_page;
     my $r;
 
@@ -219,34 +235,39 @@ foreach my $t (@report_tags) {
     foreach my $report ($dom->findnodes('//report')) {
         if (index($report->findvalue('./tag'),$t) != -1 and $report->findvalue('./iteration') eq '0') {
             push @report_names, $report->findvalue('./name');
+            if ($excel_output == 1) { print_query_to_excel($workbook,$report); }
         }
     }
 
     #only has one level of failover now but could change to array of hashes and loops
     #but this keeps it simple and in practice I haven't needed more than two
-    foreach my $rname (@report_names) {
-        my %report0;
-        my %report1;
-        my $check_tables0;
-        my $check_tables1;
+    
 
-        if ($debug_flag == 1) {print "\nchecking for $rname ... ";}
-        %report0 = find_report($dom,$t,$rname,'0',$debug_flag);
-        $check_tables0 = check_table($report0{query},$MIGSCHEMA,$debug_flag,$rname);
-        if ($check_tables0 == 1) {
-           $r =  print_query($fh,%report0); 
-        } else {
-        %report1 = find_report($dom,$t,$rname,'1',$debug_flag);
-        if (defined $report1{query}) {
-            $check_tables1 = check_table($report1{query},$MIGSCHEMA,$debug_flag,$rname);
-            if ($check_tables1 == 1) {$r = print_query($fh,%report1);}    
+    if ($excel_output == 0) {
+        foreach my $rname (@report_names) {
+            my %report0;
+            my %report1;
+            my $check_tables0;
+            my $check_tables1;
+
+            if ($debug_flag == 1) {print "\nchecking for $rname ... ";}
+            %report0 = find_report($dom,$t,$rname,'0',$debug_flag);
+            $check_tables0 = check_table($report0{query},$MIGSCHEMA,$debug_flag,$rname);
+            if ($check_tables0 == 1) { $r =  print_query($fh,%report0); } else {
+                %report1 = find_report($dom,$t,$rname,'1',$debug_flag);
+                if (defined $report1{query}) {
+                    $check_tables1 = check_table($report1{query},$MIGSCHEMA,$debug_flag,$rname);
+                    if ($check_tables1 == 1) { $r = print_query($fh,%report1); }
+                }
             }
         }
     }
 }
 
 print "\n";
-close $fh;
+
+if ($excel_output eq 1) { $workbook->close(); } 
+    else { close $fh; }
 
 ############ end of main logic
 
@@ -283,19 +304,25 @@ sub find_report {
 sub print_section_header {
     my $t = shift;
     my $fh = shift;
+
     $t =~ s/_/ /g;
     #$t =~ s/(\w+)/\u$1/g;;
     print $fh "<<<\n";
     print $fh "== $t Reports\n";
+    return;
 }
 
 sub create_report_name {
     my $rt = shift;
+    my $excel_output = shift;
+
     my @abbr = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
     $year += 1900;
     my $date = $year . '_' . $abbr[$mon] . '_' . $mday;
-    my $report_file = $rt . ' ' . $date . '.asciidoc';
+    my $report_file;
+    if ($excel_output == 0) { $report_file = $rt . ' ' . $date . '.asciidoc'; }
+        else { $report_file = $rt . ' ' . $date . '.xlsx'; }
     $report_file =~ s/ /_/g;
     return $report_file;
 }
@@ -370,7 +397,7 @@ sub check_table {
         }
     }
     if ($return_flag == 1 and $debug_flag == 1) {print "succeeded ...\n";}
-    if ($return_flag == 0) {print "!!!!! a table failed the find test for report $report_name\n\n";}
+    if ($return_flag == 0) {print "! a table failed the find test for report $report_name\n\n";}
     return $return_flag;
 }
 
@@ -423,6 +450,67 @@ sub print_query {
         print $fh "\n\n";
     }
     print "successfully wrote output for $report{name}.\n\n";
+}
+
+sub print_query_to_excel {
+    my $workbook = shift;
+    my $report = shift;
+
+    my $header_format = $workbook->add_format( bold => 1, color => 'green', size => 16);
+    my $note_format = $workbook->add_format( bold => 1, color => 'red', size => 14);
+
+    my $query = $report->findvalue('./query');
+    my $title = $report->findvalue('./report_title');
+    my $headings = $report->findnodes('./heading');
+
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    my $worksheet = $workbook->add_worksheet( $title );
+    my $cell = "";
+    my $col = "";
+
+    my @h = split(/\./,$headings);
+    my $h_length = @h;
+    my $h_count = 1;
+    while ($h_count <= $h_length) {
+        $col = give_column($h_count-1);
+        $cell = $col . '1';
+        $worksheet->write($cell,$h[$h_count-1],$header_format);
+        $h_count++;
+    }
+    my $cur_row = 1;
+    while (my @row = $sth->fetchrow_array) {
+            $cur_row++;
+            my $row_length = @row;
+            my $r = 1;
+            print Dumper(@row);
+            while ($r <= $row_length) {
+                if (! defined $row[$r-1] ) {
+                    $row[$r-1] = 'none';
+                }
+                $col = give_column($r-1);
+                $cell = $col . $cur_row;
+                $worksheet->write($cell,$row[$r-1]);
+                $r++;
+            }
+        }
+    $cur_row = $cur_row + 2;
+    $cell = "A" . "$cur_row"; 
+    $worksheet->write($cell,$report->findvalue('./note'),$note_format);
+    print "Printed Query for $title.\n";
+}
+
+sub give_column {
+    my $i = shift;
+    my $col = "";
+
+    do {
+        $col .= chr( ( $i % 26 ) + ord('A') );
+        $i = int( $i / 26 ) - 1;
+    } while ( $i >= 0 );
+
+    return scalar reverse $col;
 }
 
 sub abort {
