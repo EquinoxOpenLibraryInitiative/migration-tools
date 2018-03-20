@@ -19,14 +19,20 @@ use Env qw(
 );
 
 sub db_connect {
-    my $dbh = DBI->connect(
+    my $dbh;
+    if ($PGHOST) {
+        $dbh = DBI->connect(
          "dbi:Pg:host=$PGHOST;dbname=$PGDATABASE;port=$PGPORT"
         ,$PGUSER
         ,undef
-    ) || die "Unable to connect to $PGHOST:$PGPORT:$PGDATABASE:$PGUSER : $!\n";
+        ) || die "Unable to connect to $PGHOST:$PGPORT:$PGDATABASE:$PGUSER : $!\n";
+    } else {
+        $dbh = DBI->connect("dbi:Pg:dbname=$PGDATABASE", "", "") || die "Unable to connect to $PGDATABASE : $!\n";
+    }
     $dbh->do("SET search_path TO $MIGSCHEMA, evergreen, pg_catalog, public");
     return $dbh;
 }
+
 sub db_disconnect {
     my $dbh = shift;
     $dbh->disconnect;
