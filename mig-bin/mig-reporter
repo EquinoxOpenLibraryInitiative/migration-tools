@@ -1,5 +1,40 @@
 #!/usr/bin/perl
 
+###############################################################################
+=pod
+
+=item B<reporter> --analyst "Analyst Name" --report_title "Report Title"
+
+Generates an asciidoc file in the git working directory that can be converted to 
+any appropriate format.  The analyst and report parameters are required.
+
+Optional parameters are : 
+
+--added_page_title and --added_page_file 
+
+If one is used both must be.  The added page file can be plain text or asciidoc.  This
+adds an extra arbitrary page of notes to the report.  Mig assumes the page file is in the mig git directory.
+
+--tags
+
+This will define a set of tags to use, if not set it will default to Circs, 
+Holds, Actors, Bibs, Assets & Money. 
+
+--debug
+
+Gives more information about what is happening.
+
+--reports_xml 
+
+Allows you to override the default evergreen_staged_report.xml in the mig-xml folder.
+
+
+=back
+
+=cut
+
+###############################################################################
+
 use strict;
 use warnings;
 
@@ -20,6 +55,7 @@ use Mig;
 use open ':encoding(utf8)';
 
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
+pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $analyst;
 my $next_arg_is_analyst;
