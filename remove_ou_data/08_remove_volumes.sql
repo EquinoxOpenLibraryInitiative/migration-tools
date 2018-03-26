@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS esi.:vol_del_table;
 
 ALTER TABLE asset.call_number DISABLE RULE protect_cn_delete;
 ALTER TABLE asset.call_number DISABLE TRIGGER audit_asset_call_number_update_trigger;
+ALTER TABLE asset.call_number DISABLE TRIGGER z_opac_vis_mat_view_tgr;
 
 BEGIN;
 
@@ -49,5 +50,6 @@ COMMIT;
 
 ALTER TABLE asset.call_number ENABLE RULE protect_cn_delete;
 ALTER TABLE asset.call_number ENABLE TRIGGER audit_asset_call_number_update_trigger;
+ALTER TABLE asset.call_number ENABLE  TRIGGER z_opac_vis_mat_view_tgr;
 
 CREATE INDEX org_vol_bib_idx ON esi.:vol_del_table(record);
