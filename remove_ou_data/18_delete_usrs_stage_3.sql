@@ -22,8 +22,8 @@
 SELECT id
 FROM actor.usr WHERE home_ou IN (
     SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit
-    WHERE shortname IN (SELECT shortname FROM esi.ous_to_del)
-);
+    WHERE shortname = :ou_to_del
+) ;
 
 
 -- find the problems and clear them up
