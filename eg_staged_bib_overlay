@@ -33,7 +33,7 @@ my $dbpw;
 my $dbhost;
 my $batch;
 my $cutoff;
-my $wait = 0;
+my $wait = 1;
 my $output;
 my $link_skipped;
 
