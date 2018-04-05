@@ -3236,5 +3236,124 @@ BEGIN
 END;
 $BODY$ LANGUAGE plpgsql;
 
+-- convenience function for linking to the item staging table
 
+CREATE OR REPLACE FUNCTION migration_tools.handle_item_barcode (TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        foreign_column_name ALIAS FOR $3;
+        main_column_name ALIAS FOR $4;
+        btrim_desired ALIAS FOR $5;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, foreign_column_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_name, foreign_column_name; 
+        END IF;
 
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = ''asset_copy_legacy''
+            and column_name = $2
+        )' INTO proceed USING table_schema, main_column_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'No %.asset_copy_legacy with column %', table_schema, main_column_name; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_item';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_item BIGINT';
+
+        IF btrim_desired THEN
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_item = id FROM asset_copy_legacy b'
+                || ' WHERE BTRIM(a.' || quote_ident(foreign_column_name)
+                || ') = BTRIM(b.' || quote_ident(main_column_name) || ')';
+        ELSE
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_item = id FROM asset_copy_legacy b'
+                || ' WHERE a.' || quote_ident(foreign_column_name)
+                || ' = b.' || quote_ident(main_column_name);
+        END IF;
+
+        --EXECUTE 'SELECT migration_tools.assert(
+        --    NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE ' || quote_ident(foreign_column_name) || ' <> '''' AND x_item IS NULL),
+        --    ''Cannot link every barcode'',
+        --    ''Every barcode linked''
+        --);';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for linking to the user staging table
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_user_barcode (TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        foreign_column_name ALIAS FOR $3;
+        main_column_name ALIAS FOR $4;
+        btrim_desired ALIAS FOR $5;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, foreign_column_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_name, foreign_column_name; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = ''actor_usr_legacy''
+            and column_name = $2
+        )' INTO proceed USING table_schema, main_column_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'No %.actor_usr_legacy with column %', table_schema, main_column_name; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_user';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_user INTEGER';
+
+        IF btrim_desired THEN
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_user = id FROM actor_usr_legacy b'
+                || ' WHERE BTRIM(a.' || quote_ident(foreign_column_name)
+                || ') = BTRIM(b.' || quote_ident(main_column_name) || ')';
+        ELSE
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_user = id FROM actor_usr_legacy b'
+                || ' WHERE a.' || quote_ident(foreign_column_name)
+                || ' = b.' || quote_ident(main_column_name);
+        END IF;
+
+        --EXECUTE 'SELECT migration_tools.assert(
+        --    NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE ' || quote_ident(foreign_column_name) || ' <> '''' AND x_user IS NULL),
+        --    ''Cannot link every barcode'',
+        --    ''Every barcode linked''
+        --);';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
