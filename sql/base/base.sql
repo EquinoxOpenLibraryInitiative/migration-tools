@@ -2821,6 +2821,45 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_circmod (TEXT,TEXT) RETURNS VO
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- convenience functions for handling item status maps
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_status (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_status''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_status'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_status';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_status INTEGER';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_status = id FROM config.copy_status b'
+            || ' WHERE BTRIM(UPPER(a.desired_status)) = BTRIM(UPPER(b.name))';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_status <> '''' AND x_status IS NULL),
+            ''Cannot find a desired copy status'',
+            ''Found all desired copy statuses''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
 -- convenience function for handling desired_not_migrate
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_not_migrate (TEXT,TEXT) RETURNS VOID AS $$
