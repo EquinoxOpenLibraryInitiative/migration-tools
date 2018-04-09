@@ -3357,3 +3357,60 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_user_barcode (TEXT,TEXT,TEXT,T
 
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for linking two tables
+-- e.g. select migration_tools.handle_link(:'migschema','asset_copy','barcode','test_foo','l_barcode','x_acp_id',false);
+CREATE OR REPLACE FUNCTION migration_tools.handle_link (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_x ALIAS FOR $6;
+        btrim_desired ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_b)
+            || ' DROP COLUMN IF EXISTS ' || quote_ident(column_x);
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_b)
+            || ' ADD COLUMN ' || quote_ident(column_x) || ' BIGINT';
+
+        IF btrim_desired THEN
+            EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+                || ' SET ' || quote_ident(column_x) || ' = id FROM ' || quote_ident(table_a) || ' a'
+                || ' WHERE BTRIM(a.' || quote_ident(column_a)
+                || ') = BTRIM(b.' || quote_ident(column_b) || ')';
+        ELSE
+            EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+                || ' SET ' || quote_ident(column_x) || ' = id FROM ' || quote_ident(table_a) || ' a'
+                || ' WHERE a.' || quote_ident(column_a)
+                || ' = b.' || quote_ident(column_b);
+        END IF;
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
