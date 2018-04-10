@@ -3239,8 +3239,8 @@ END
 $$ LANGUAGE plpgsql;
 
 -- alternate adding subfield 9 function in that it adds them to existing tags where the 856$u matches a correct value only
-DROP FUNCTION IF EXISTS add_sf9(TEXT,TEXT,TEXT);
-CREATE OR REPLACE FUNCTION add_sf9(marc TEXT, partial_u TEXT, new_9 TEXT)
+DROP FUNCTION IF EXISTS migration_tools.add_sf9(TEXT,TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.add_sf9(marc TEXT, partial_u TEXT, new_9 TEXT)
  RETURNS TEXT
  LANGUAGE plperlu
 AS $function$
@@ -3288,8 +3288,8 @@ return $marc_xml->as_xml_record();
 
 $function$;
 
-DROP FUNCTION IF EXISTS add_sf9(INTEGER, TEXT, TEXT, TEXT);
-CREATE OR REPLACE FUNCTION add_sf9(bib_id INTEGER, target_u_text TEXT, sf9_text TEXT, bib_table TEXT)
+DROP FUNCTION IF EXISTS migration_tools.add_sf9(BIGINT, TEXT, TEXT, REGCLASS);
+CREATE OR REPLACE FUNCTION migration_tools.add_sf9(bib_id BIGINT, target_u_text TEXT, sf9_text TEXT, bib_table REGCLASS)
     RETURNS BOOLEAN AS
 $BODY$
 DECLARE
@@ -3298,14 +3298,15 @@ DECLARE
     r             BOOLEAN;
 BEGIN
 
-    SELECT marc FROM bib_table WHERE id = bib_id INTO source_xml;
+    EXECUTE 'SELECT marc FROM ' || bib_table || ' WHERE id = ' || bib_id INTO source_xml;
 
     SELECT add_sf9(source_xml, target_u_text, sf9_text) INTO new_xml;
 
     r = FALSE;
+	new_xml = '$_$' || new_xml || '$_$';
 
     IF new_xml != source_xml THEN
-        UPDATE bib_table SET marc = new_xml WHERE id = bib_id;
+        EXECUTE 'UPDATE ' || bib_table || ' SET marc = ' || new_xml || ' WHERE id = ' || bib_id;
         r = TRUE;
     END IF;
 
