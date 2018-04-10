@@ -96,17 +96,30 @@ foreach my $arg (@ARGV) {
     }
 }
 
-if ($append_is_false) {
-	$dbh->do(qq{
-    	DROP TABLE IF EXISTS $MIGSCHEMA.biblio_record_entry_stage;
-    	CREATE UNLOGGED TABLE $MIGSCHEMA.biblio_record_entry_stage (
-        	l_bib_id    TEXT,
-			x_source	TEXT,
-			x_warnings	TEXT,
-        	x_migrate   BOOLEAN DEFAULT TRUE
-    	) INHERITS ($MIGSCHEMA.biblio_record_entry);
-	});
-}
+$dbh->do(qq{
+	DO $$
+	DECLARE
+    	t   BOOLEAN;
+	BEGIN
+	SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = 'biblio_record_entry') INTO t;
+	IF t = FALSE THEN
+    	PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA','biblio.record_entry');
+	END IF;
+	END $$;
+});
+
+# normal stage table creation
+if ($append_is_false) { create_stage_table($dbh); }
+
+#sanity check and create stage table if --append is set but there isn't a stage table
+my $query = "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = 'biblio_record_entry_stage')";
+my $qsth = $dbh->prepare($query);
+$qsth->execute();
+my $f;
+while (my @row = $sth->fetchrow_array) { $f = ($row[0] }
+if ($f eq 'f') { create_stage_table($dbh); }
+
+if ($append_is_false == 0) { create_stage_table($dbh); }
 
 if ($file_is_xml) {
 	$batch = MARC::Batch->new('XML',$infile);
@@ -137,6 +150,19 @@ $dbh->do(qq/
 /);
 
 print "Finis.\n";
+
+sub create_stage_table {
+	my $dbh = shift;
+    $dbh->do(qq{
+        DROP TABLE IF EXISTS $MIGSCHEMA.biblio_record_entry_stage;
+        CREATE UNLOGGED TABLE $MIGSCHEMA.biblio_record_entry_stage (
+            l_bib_id    TEXT,
+            x_source    TEXT,
+            x_warnings  TEXT,
+            x_migrate   BOOLEAN DEFAULT TRUE
+        ) INHERITS ($MIGSCHEMA.biblio_record_entry);
+    });
+}
 
 sub clean_marc {
     my $xml = shift;
