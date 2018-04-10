@@ -3288,8 +3288,8 @@ return $marc_xml->as_xml_record();
 
 $function$;
 
-DROP FUNCTION IF EXISTS add_sf9(INTEGER, TEXT, TEXT);
-CREATE OR REPLACE FUNCTION add_sf9(bib_id INTEGER, target_u_text TEXT, sf9_text TEXT)
+DROP FUNCTION IF EXISTS add_sf9(INTEGER, TEXT, TEXT, TEXT);
+CREATE OR REPLACE FUNCTION add_sf9(bib_id INTEGER, target_u_text TEXT, sf9_text TEXT, bib_table TEXT)
     RETURNS BOOLEAN AS
 $BODY$
 DECLARE
@@ -3298,14 +3298,14 @@ DECLARE
     r             BOOLEAN;
 BEGIN
 
-    SELECT marc FROM biblio.record_entry WHERE id = bib_id INTO source_xml;
+    SELECT marc FROM bib_table WHERE id = bib_id INTO source_xml;
 
     SELECT add_sf9(source_xml, target_u_text, sf9_text) INTO new_xml;
 
     r = FALSE;
 
     IF new_xml != source_xml THEN
-        UPDATE biblio.record_entry SET marc = new_xml WHERE id = bib_id;
+        UPDATE bib_table SET marc = new_xml WHERE id = bib_id;
         r = TRUE;
     END IF;
 
