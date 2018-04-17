@@ -607,6 +607,22 @@ CREATE OR REPLACE FUNCTION migration_tools.parse_out_address (TEXT) RETURNS TEXT
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.parse_out_address2 (TEXT) RETURNS TEXT AS $$
+    my ($address) = @_;
+
+    use Geo::StreetAddress::US;
+
+    my $a = Geo::StreetAddress::US->parse_location($address);
+
+    return [
+         "$a->{number} $a->{prefix} $a->{street} $a->{type} $a->{suffix}"
+        ,"$a->{sec_unit_type} $a->{sec_unit_num}"
+        ,$a->{city}
+        ,$a->{state}
+        ,$a->{zip}
+    ];
+$$ LANGUAGE PLPERLU STABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.rebarcode (o TEXT, t BIGINT) RETURNS TEXT AS $$
     DECLARE
         n TEXT := o;
@@ -3359,12 +3375,12 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_item_barcode (TEXT,TEXT,TEXT,T
 
         IF btrim_desired THEN
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_item = id FROM asset_copy_legacy b'
+                || ' SET x_item = b.id FROM asset_copy_legacy b'
                 || ' WHERE BTRIM(a.' || quote_ident(foreign_column_name)
                 || ') = BTRIM(b.' || quote_ident(main_column_name) || ')';
         ELSE
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_item = id FROM asset_copy_legacy b'
+                || ' SET x_item = b.id FROM asset_copy_legacy b'
                 || ' WHERE a.' || quote_ident(foreign_column_name)
                 || ' = b.' || quote_ident(main_column_name);
         END IF;
@@ -3420,12 +3436,12 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_user_barcode (TEXT,TEXT,TEXT,T
 
         IF btrim_desired THEN
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_user = id FROM actor_usr_legacy b'
+                || ' SET x_user = b.id FROM actor_usr_legacy b'
                 || ' WHERE BTRIM(a.' || quote_ident(foreign_column_name)
                 || ') = BTRIM(b.' || quote_ident(main_column_name) || ')';
         ELSE
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_user = id FROM actor_usr_legacy b'
+                || ' SET x_user = b.id FROM actor_usr_legacy b'
                 || ' WHERE a.' || quote_ident(foreign_column_name)
                 || ' = b.' || quote_ident(main_column_name);
         END IF;
