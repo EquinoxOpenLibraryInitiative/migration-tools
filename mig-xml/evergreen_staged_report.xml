@@ -646,7 +646,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>1</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(eg) FROM bib_id_map</query>
+        <query>SELECT COUNT(id) FROM biblio_record_entry</query>
     </report>
 
     <report>
@@ -655,7 +655,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(eg) FROM bib_id_map where eg::INTEGER NOT IN (SELECT DISTINCT record FROM asset_call_number)</query>
+        <query>SELECT COUNT(id) FROM biblio_record_entry where id NOT IN (SELECT DISTINCT record FROM asset_call_number)</query>
     </report>
 
     <report>
