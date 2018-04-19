@@ -39,6 +39,7 @@ use MARC::Record;
 use MARC::Batch;
 use MARC::File;
 use MARC::File::XML;
+use MARC::Charset 'marc8_to_utf8';
 binmode STDIN, ':bytes';
 use Env qw(
     HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
@@ -67,6 +68,12 @@ my $infile;
 my $i = 0;
 my $batch;
 binmode STDIN, ':utf8';
+
+my $ignore = MARC::Charset->ignore_errors();    
+MARC::Charset->ignore_errors(1);
+my $setting = MARC::Charset->assume_unicode();
+MARC::Charset->assume_unicode(1); 
+MARC::Charset->ignore_errors(1);
 
 foreach my $arg (@ARGV) {
     if ($arg eq '--stage_file') {
@@ -174,6 +181,7 @@ sub create_child_table {
 
 sub clean_marc {
     my $xml = shift;
+    $xml = marc8_to_utf8($xml);
     $xml =~ s/\n//sog;
     $xml =~ s/^<\?xml.+\?\s*>//go;
     $xml =~ s/>\s+</></go;
