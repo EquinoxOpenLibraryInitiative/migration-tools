@@ -59,7 +59,7 @@ pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $next_arg_is_file = 0;
-my $append_is_false = 1;
+my $append = 0;
 my $next_arg_is_source = 0;
 my $source = 'default';
 my $file_is_xml = 0;
@@ -95,7 +95,7 @@ foreach my $arg (@ARGV) {
         next;
     }
 	if ($arg eq '--append') {
-		$append_is_false = 0;
+		$append = 1;
 		next;
 	}
     if ($arg eq '--xml') {
@@ -104,20 +104,13 @@ foreach my $arg (@ARGV) {
     }
 }
 
-create_child_table($dbh);
+create_child_table($dbh); #and test to see if it exists 
 
 # normal stage table creation
-if ($append_is_false) { create_stage_table($dbh); }
-
-#sanity check and create stage table if it doesn't exist 
-my $query = "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = 'biblio_record_entry_stage')";
-my $qsth = $dbh->prepare($query);
-$qsth->execute();
-my $f;
-while (my @row = $qsth->fetchrow_array) { $f = $row[0]; }
-if ($f eq 'f') { create_stage_table($dbh); }
-
-if ($append_is_false == 0) { create_stage_table($dbh); }
+if ($append == 0) { 
+    drop_stage_table($dbh); 
+    create_stage_table($dbh);
+    }
 
 if ($file_is_xml) {
 	$batch = MARC::Batch->new('XML',$infile);
@@ -149,10 +142,16 @@ $dbh->do(qq/
 
 print "Finis.\n";
 
+
+sub drop_stage_table {
+    my $dbh = shift;
+    $dbh->do("DROP TABLE IF EXISTS $MIGSCHEMA.biblio_record_entry_stage;");
+    return();
+}
+
 sub create_stage_table {
 	my $dbh = shift;
 
-    $dbh->do("DROP TABLE IF EXISTS $MIGSCHEMA.biblio_record_entry_stage;");
     $dbh->do("CREATE UNLOGGED TABLE $MIGSCHEMA.biblio_record_entry_stage (
             l_bib_id    TEXT,
             x_source    TEXT,
