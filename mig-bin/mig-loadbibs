@@ -89,7 +89,7 @@ foreach my $arg (@ARGV) {
         $next_arg_is_source = 1;
         next;
     }
-    if ($next_arg_is_file) {
+    if ($next_arg_is_source) {
         $source = $arg;
         $next_arg_is_source = 0;
         next;
@@ -136,7 +136,7 @@ while ( my $record = $batch->next() ) {
 	my @warnings = $batch->warnings();
 	my $warning_string;
 	if (@warnings) { $warning_string = "'" . join(':',@warnings) . "'"; } else { $warning_string = "'none'"; }
-	my $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry_stage (marc,x_source,x_warnings) VALUES ($xml,$source,$warning_string);";
+	my $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry_stage (marc,x_source,x_warnings) VALUES ($xml,'$source',$warning_string);";
     my $sth = $dbh->prepare($sql);
     $sth->execute();
 	report_progress("Records staged", $i) if 0 != $i % 100;
