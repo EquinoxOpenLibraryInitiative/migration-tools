@@ -646,7 +646,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>1</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(id) FROM biblio_record_entry</query>
+        <query>SELECT COUNT(id) FROM biblio_record_entry_stage WHERE x_migrate = TRUE</query>
     </report>
 
     <report>
