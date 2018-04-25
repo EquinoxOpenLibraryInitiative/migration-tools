@@ -3777,3 +3777,25 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_asset_sc_and_sce (TEXT,TEXT,TE
 
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+DROP FUNCTION IF EXISTS migration_tools.btrim_lcolumns(TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.btrim_lcolumns(s_name TEXT, t_name TEXT) RETURNS BOOLEAN
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    c_name     TEXT;
+BEGIN
+
+    FOR c_name IN SELECT column_name FROM information_schema.columns WHERE 
+            table_name = t_name
+            AND table_schema = s_name
+            AND (data_type='text' OR data_type='character varying')
+            AND column_name like 'l_%'
+    LOOP
+       EXECUTE FORMAT('UPDATE ' || s_name || '.' || t_name || ' SET ' || c_name || ' = BTRIM(' || c_name || ')'); 
+    END LOOP;  
+
+    RETURN TRUE;
+END
+$function$;
+
