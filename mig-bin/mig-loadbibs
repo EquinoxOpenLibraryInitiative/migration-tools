@@ -40,7 +40,7 @@ use MARC::Batch;
 use MARC::File;
 use MARC::File::XML;
 use MARC::Charset 'marc8_to_utf8';
-binmode STDIN, ':bytes';
+#binmode STDIN, ':bytes';
 use Env qw(
     HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
     MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
@@ -71,8 +71,10 @@ binmode STDIN, ':utf8';
 
 my $ignore = MARC::Charset->ignore_errors();    
 MARC::Charset->ignore_errors(1);
-my $setting = MARC::Charset->assume_unicode();
-MARC::Charset->assume_unicode(1); 
+#causes issues sometimes 
+#may be useful other times ... still in flux
+#my $setting = MARC::Charset->assume_unicode();
+#MARC::Charset->assume_unicode(1); 
 MARC::Charset->ignore_errors(1);
 
 foreach my $arg (@ARGV) {
@@ -111,7 +113,6 @@ if ($append == 0) {
     drop_stage_table($dbh); 
     create_stage_table($dbh);
     }
-
 if ($file_is_xml) {
 	$batch = MARC::Batch->new('XML',$infile);
 } else {
@@ -120,9 +121,8 @@ if ($file_is_xml) {
 $batch->strict_off();
 
 while ( my $record = $batch->next() ) {
-	my $xml;
-	if ($file_is_xml) { $xml = $record; } 
-		else { $xml = $record->as_xml_record(); } 
+	my $xml = $record->as_xml_record();
+    $xml = marc8_to_utf8($xml);
 	$i++;
 	$xml = clean_marc($xml);
 	$xml = '$_$' . $xml . '$_$';
