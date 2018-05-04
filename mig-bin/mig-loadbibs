@@ -129,15 +129,15 @@ while ( my $record = $batch->next() ) {
 	my @warnings = $batch->warnings();
 	my $warning_string;
 	if (@warnings) { $warning_string = "'" . join(':',@warnings) . "'"; } else { $warning_string = "'none'"; }
-	my $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry_stage (marc,x_source,x_warnings) VALUES ($xml,'$source',$warning_string);";
+	my $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry_legacy (marc,x_source,x_warnings) VALUES ($xml,'$source',$warning_string);";
     my $sth = $dbh->prepare($sql);
     $sth->execute();
 	report_progress("Records staged", $i) if 0 != $i % 100;
 }
 
 $dbh->do(qq/
-    CREATE INDEX ${MIGSCHEMA}_biblio_record_entry_stage_idx ON
-        $MIGSCHEMA.biblio_record_entry_stage (id);
+    CREATE INDEX ${MIGSCHEMA}_biblio_record_entry_legacy_idx ON
+        $MIGSCHEMA.biblio_record_entry_legacy (id);
 /);
 
 print "Finis.\n";
@@ -145,14 +145,14 @@ print "Finis.\n";
 
 sub drop_stage_table {
     my $dbh = shift;
-    $dbh->do("DROP TABLE IF EXISTS $MIGSCHEMA.biblio_record_entry_stage;");
+    $dbh->do("DROP TABLE IF EXISTS $MIGSCHEMA.biblio_record_entry_legacy;");
     return();
 }
 
 sub create_stage_table {
 	my $dbh = shift;
 
-    $dbh->do("CREATE UNLOGGED TABLE $MIGSCHEMA.biblio_record_entry_stage (
+    $dbh->do("CREATE UNLOGGED TABLE $MIGSCHEMA.biblio_record_entry_legacy (
             l_bib_id    TEXT,
             x_source    TEXT,
             x_warnings  TEXT,
