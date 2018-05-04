@@ -74,16 +74,6 @@
     </report>
 
     <report>
-        <name>tlc_load_asset_in_house_use</name>
-        <report_title>Copies With In House Uses</report_title>
-        <tag>tlc</tag>
-        <iteration>0</iteration>
-        <heading>Copy Count.Sum of In House Uses.Do Not Migrate</heading>
-        <query>SELECT COUNT(l_totalinhouseuses), SUM(l_totalinhouseuses::INTEGER) FROM ititeminformation_tsv_clean WHERE l_totalinhouseuses != '0'</query>
-        <note>TLC doesn't have dates recorded for in house use so these can only be migrated as date of migration or we can not migrate them.</note>
-    </report>
-
-    <report>
         <name>tlc_load_asset_holdings_codes</name>
         <report_title>Holdings Codes</report_title>
         <tag>tlc</tag>
@@ -112,15 +102,6 @@
         <query>SELECT COUNT(l_barcode) FROM ctlocitem_tsv_clean, 'Prefixes' WHERE l_callnumberprefix IS NOT NULL GROUP BY 1 UNION ALL SELECT 'Class Label', COUNT(l_barcode) FROM ctlocitem_tsv_clean WHERE l_callnumberclass IS NOT NULL GROUP BY 1 UNION ALL SELECT 'Cutter', COUNT(l_barcode) FROM ctlocitem_tsv_clean WHERE l_callnumbercutter IS NOT NULL GROUP BY 1 UNION ALL SELECT 'Year', COUNT(l_barcode) FROM ctlocitem_tsv_clean WHERE l_year IS NOT NULL GROUP BY 1 UNION ALL SELECT 'Volume', COUNT(l_barcode) FROM ctlocitem_tsv_clean WHERE l_volume IS NOT NULL GROUP BY 1</query>
     </report>
 -->
-    <report>
-        <name>tlc_load_asset_barcodes_with_spaces</name>
-        <report_title>Count of Barcodes with Spaces</report_title>
-        <tag>tlc</tag>
-        <iteration>0</iteration>
-        <heading>Count of Barcodes With Spaces.Transformation</heading>
-        <query>SELECT COUNT(l_itembarcode) FROM ititeminformation_tsv_clean WHERE l_itembarcode ~* ' '</query>
-    </report>
-
     <report>
         <name>tlc_load_money_migrating_bills</name>
         <report_title>Migrating Bills By Bill Type</report_title>
@@ -187,15 +168,6 @@
     </report>
 
     <report>
-        <name>tlc_load_usrs_alternate_ids</name>
-        <report_title>Count of Patrons w Alt Id</report_title>
-        <tag>tlc</tag>
-        <iteration>0</iteration>
-        <heading>Count.Migration Need</heading>
-        <query>SELECT COUNT(l_agencynumber) FROM itagency_tsv_clean WHERE l_alternateid IS NOT NULL</query>
-    </report>
-
-    <report>
         <name>tlc_load_active_usr_passwords</name>
         <report_title>Count of Patrons w Passwords</report_title>
         <tag>tlc</tag>
@@ -203,24 +175,6 @@
         <heading>Count of NULL PINs.Default Password</heading>
         <query>SELECT COUNT(l_agencynumber) FROM itagency_tsv_clean WHERE l_pin IS NULL</query>
         <note>If any PINS are blank we will have to choose a method to supply them as Evergreen requires passwords.</note>
-    </report>
-
-    <report>
-        <name>tlc_load_usr_barcodes_wspacess</name>
-        <report_title>Barcodes with Spaces</report_title>
-        <tag>tlc</tag>
-        <iteration>0</iteration>
-        <heading>Count</heading>
-        <query>SELECT COUNT(l_agencynumber) FROM itagency_tsv_clean WHERE l_barcode ~* ' '</query>
-    </report>
-
-    <report>
-        <name>tlc_load_usr_barcode_lengths</name>
-        <report_title>Barcode Lengths by Library</report_title>
-        <tag>tlc</tag>
-        <iteration>0</iteration>
-        <heading>Count of Barcode.Barcode Length.Branch.Transformation Note</heading>
-        <query>SELECT COUNT(l_agencynumber), LENGTH(l_barcode), l_issuingbranch FROM itagency_tsv_clean GROUP BY 2, 3 ORDER BY 3, 2</query>
     </report>
 
    <report>
@@ -232,15 +186,6 @@
         <query>SELECT COUNT(l_agencynumber), 'Patron Note' FROM itagency_tsv_clean WHERE l_agencycomment IS  NOT NULL UNION ALL SELECT COUNT(l_agencynumber), 'Address Comments' FROM itaddress_tsv_clean WHERE l_addresscomment IS NOT NULL</query>
     </report>
     
-    <report>
-        <name>tlc_load_misc</name>
-        <report_title>Miscellaneous Options</report_title>
-        <tag>tlc</tag>
-        <iteration>0</iteration>
-        <heading>Count.Option.Value.Note</heading>
-        <query>SELECT COUNT(l_agencynumber), 'Create Evergreen Grouped/Family Accounts?' FROM itagency_tsv_clean WHERE l_responsibleagencynumber IS NOT NULL GROUP BY 2 UNION ALL SELECT COUNT(l_itembarcode), 'Lost Items' FROM ititemlocation_tsv_clean WHERE l_outdate IS NOT NULL AND l_status = 'L' GROUP BY 2</query>
-    </report>
-
     <report>
         <name>tlc_load_usr_balance</name>
         <report_title>Count and Sum of Balances</report_title>
