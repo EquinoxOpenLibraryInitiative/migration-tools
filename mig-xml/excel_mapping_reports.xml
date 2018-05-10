@@ -128,7 +128,7 @@
         <heading>Count.Year of Expiration.Do Not Migrate?</heading>
         <query>SELECT COUNT(l_agencynumber), LEFT(l_expirationdate,4) FROM itagency_tsv_clean GROUP BY 2 ORDER BY 2</query>
     </report>
-
+<!--
     <report>
         <name>tlc_load_usrs_bynever</name>
         <report_title>Patrons With Claims</report_title>
@@ -137,7 +137,7 @@
         <heading>Count.Claim Type.Do Not Migrate</heading>
         <query>SELECT COUNT(l_agencynumber) FROM itagency_tsv_clean, 'Never Checked Out' WHERE l_itemsclaimednevercheckedout != '0' GROUP BY 1 UNION ALL SELECT COUNT(l_agencynumber), 'Claims Returned' FROM itagency_tsv_clean WHERE l_itemsclaimedreturned != '0' GROUP BY 1</query>
     </report>
-
+-->
     <report>
         <name>tlc_load_usrs_byactive</name>
         <report_title>Patrons by Last Active Date</report_title>
@@ -697,7 +697,7 @@
         </query>
     </report>
 
-<!-- tlc reports -->
+<!-- tlc reports 
 
     <report>
         <name>tlc_reports_load_asset_holdings_codes</name>
@@ -743,5 +743,5 @@
         <heading>Count.Phone Type.Phone Type</heading>
         <query>SELECT COUNT(id), 'Phone 1' FROM actor_usr_address_legacy WHERE l_phone_1 IS NOT NULL GROUP BY 2 UNION ALL SELECT COUNT(id), 'Phone 2' FROM actor_usr_address_legacy WHERE l_phone_2 IS NOT NULL GROUP BY 2</query>
     </report>
-
+-->
 </reports_file>
