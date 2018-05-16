@@ -431,7 +431,7 @@
         <iteration>0</iteration>
         <heading>Collision List</heading>
         <query>SELECT ac.barcode FROM asset_copy_legacy ac WHERE ac.barcode ~* 'collision' ORDER BY 1 LIMIT 20</query>
-        <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
+        <note>This is a shortlist of copy barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
     <report>
