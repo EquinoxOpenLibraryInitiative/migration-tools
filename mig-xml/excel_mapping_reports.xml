@@ -67,9 +67,12 @@
         <tag>tlc</tag>
         <iteration>0</iteration>
         <heading>Count.Note Type.Notes</heading>
-        <query>SELECT COUNT(l_itemcomment), 'Item Comments' FROM ititeminformation_tsv_clean WHERE l_itemcomment IS NOT NULL GROUP BY 2
-               UNION ALL SELECT COUNT(l_physicalcondition), 'Condition Notes' FROM ctlocitem_tsv_clean WHERE l_physicalcondition IS NOT NULL GROUP BY 2
-               UNION ALL SELECT COUNT(l_checkinoutnote), 'Circ Notes' FROM ctlocitem_tsv_clean WHERE l_checkinoutnote IS NOT NULL GROUP BY 2
+        <query>SELECT COUNT(l_itemcomment)::TEXT, 'Item Comments' FROM ititeminformation_tsv_clean WHERE l_itemcomment IS NOT NULL GROUP BY 2
+               UNION ALL SELECT COUNT(l_physicalcondition)::TEXT, 'Condition Notes' FROM ctlocitem_tsv_clean WHERE l_physicalcondition IS NOT NULL GROUP BY 2
+               UNION ALL SELECT COUNT(l_checkinoutnote)::TEXT, 'Circ Notes' FROM ctlocitem_tsv_clean WHERE l_checkinoutnote IS NOT NULL GROUP BY 2
+               UNION ALL (SELECT DISTINCT 'Sample Item Comment', l_itemcomment FROM ititeminformation_tsv_clean WHERE l_itemcomment IS NOT NULL LIMIT 20)
+               UNION ALL (SELECT DISTINCT 'Sample Physical Condition', l_physicalcondition FROM ctlocitem_tsv_clean WHERE l_physicalcondition IS NOT NULL LIMIT 20)
+               UNION ALL (SELECT DISTINCT 'Sample Circ Note', l_checkinoutnote FROM ctlocitem_tsv_clean WHERE l_checkinoutnote IS NOT NULL LIMIT 20) 
          </query>
     </report>
 
