@@ -1133,10 +1133,6 @@ CREATE OR REPLACE FUNCTION migration_tools.add_mod16_checkdigit (TEXT) RETURNS T
     } elsif ($difference == 13) { $checkdigit = '/';
     } elsif ($difference == 14) { $checkdigit = '.';
     } elsif ($difference == 15) { $checkdigit = '+';
-    } elsif ($difference == 16) { $checkdigit = 'A';
-    } elsif ($difference == 17) { $checkdigit = 'B';
-    } elsif ($difference == 18) { $checkdigit = 'C';
-    } elsif ($difference == 19) { $checkdigit = 'D';
     } else { die "error calculating checkdigit";
     }
 
