@@ -1098,6 +1098,51 @@ CREATE OR REPLACE FUNCTION migration_tools.add_code39mod43_checkdigit (TEXT) RET
     return $barcode . $checkdigit;
 $$ LANGUAGE PLPERLU STRICT STABLE;
 
+-- add_mod16_checkdigit
+--   $barcode      source barcode
+--
+-- https://www.activebarcode.com/codes/checkdigit/modulo16.html
+
+CREATE OR REPLACE FUNCTION migration_tools.add_mod16_checkdigit (TEXT) RETURNS TEXT AS $$
+    my $barcode = shift;
+
+    my @digits = split //, $barcode;
+    my $total = 0;
+    foreach $digit (@digits) {
+        if ($digit =~ /[0-9]/) { $total += $digit;
+        } elsif ($digit eq '-') { $total += 10;
+        } elsif ($digit eq '$') { $total += 11;
+        } elsif ($digit eq ':') { $total += 12;
+        } elsif ($digit eq '/') { $total += 13;
+        } elsif ($digit eq '.') { $total += 14;
+        } elsif ($digit eq '+') { $total += 15;
+        } elsif ($digit eq 'A') { $total += 16;
+        } elsif ($digit eq 'B') { $total += 17;
+        } elsif ($digit eq 'C') { $total += 18;
+        } elsif ($digit eq 'D') { $total += 19;
+        } else { die "invalid digit <$digit>";
+        }
+    }
+    my $remainder = $total % 16;
+    my $difference = 16 - $remainder;
+    my $checkdigit;
+    if ($difference < 10) { $checkdigit = $difference;
+    } elsif ($difference == 10) { $checkdigit = '-';
+    } elsif ($difference == 11) { $checkdigit = '$';
+    } elsif ($difference == 12) { $checkdigit = ':';
+    } elsif ($difference == 13) { $checkdigit = '/';
+    } elsif ($difference == 14) { $checkdigit = '.';
+    } elsif ($difference == 15) { $checkdigit = '+';
+    } elsif ($difference == 16) { $checkdigit = 'A';
+    } elsif ($difference == 17) { $checkdigit = 'B';
+    } elsif ($difference == 18) { $checkdigit = 'C';
+    } elsif ($difference == 19) { $checkdigit = 'D';
+    } else { die "error calculating checkdigit";
+    }
+
+    return $barcode . $checkdigit;
+$$ LANGUAGE PLPERLU STRICT STABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEXT AS $$
   DECLARE
     phone TEXT := $1;
