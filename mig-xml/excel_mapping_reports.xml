@@ -67,9 +67,12 @@
         <tag>tlc</tag>
         <iteration>0</iteration>
         <heading>Count.Note Type.Notes</heading>
-        <query>SELECT COUNT(l_itemcomment), 'Item Comments' FROM ititeminformation_tsv_clean WHERE l_itemcomment IS NOT NULL GROUP BY 2
-               UNION ALL SELECT COUNT(l_physicalcondition), 'Condition Notes' FROM ctlocitem_tsv_clean WHERE l_physicalcondition IS NOT NULL GROUP BY 2
-               UNION ALL SELECT COUNT(l_checkinoutnote), 'Circ Notes' FROM ctlocitem_tsv_clean WHERE l_checkinoutnote IS NOT NULL GROUP BY 2
+        <query>SELECT COUNT(l_itemcomment)::TEXT, 'Item Comments' FROM ititeminformation_tsv_clean WHERE l_itemcomment IS NOT NULL GROUP BY 2
+               UNION ALL SELECT COUNT(l_physicalcondition)::TEXT, 'Condition Notes' FROM ctlocitem_tsv_clean WHERE l_physicalcondition IS NOT NULL GROUP BY 2
+               UNION ALL SELECT COUNT(l_checkinoutnote)::TEXT, 'Circ Notes' FROM ctlocitem_tsv_clean WHERE l_checkinoutnote IS NOT NULL GROUP BY 2
+               UNION ALL (SELECT DISTINCT 'Sample Item Comment', l_itemcomment FROM ititeminformation_tsv_clean WHERE l_itemcomment IS NOT NULL LIMIT 20)
+               UNION ALL (SELECT DISTINCT 'Sample Physical Condition', l_physicalcondition FROM ctlocitem_tsv_clean WHERE l_physicalcondition IS NOT NULL LIMIT 20)
+               UNION ALL (SELECT DISTINCT 'Sample Circ Note', l_checkinoutnote FROM ctlocitem_tsv_clean WHERE l_checkinoutnote IS NOT NULL LIMIT 20) 
          </query>
     </report>
 
@@ -128,7 +131,7 @@
         <heading>Count.Year of Expiration.Do Not Migrate?</heading>
         <query>SELECT COUNT(l_agencynumber), LEFT(l_expirationdate,4) FROM itagency_tsv_clean GROUP BY 2 ORDER BY 2</query>
     </report>
-
+<!--
     <report>
         <name>tlc_load_usrs_bynever</name>
         <report_title>Patrons With Claims</report_title>
@@ -137,7 +140,7 @@
         <heading>Count.Claim Type.Do Not Migrate</heading>
         <query>SELECT COUNT(l_agencynumber) FROM itagency_tsv_clean, 'Never Checked Out' WHERE l_itemsclaimednevercheckedout != '0' GROUP BY 1 UNION ALL SELECT COUNT(l_agencynumber), 'Claims Returned' FROM itagency_tsv_clean WHERE l_itemsclaimedreturned != '0' GROUP BY 1</query>
     </report>
-
+-->
     <report>
         <name>tlc_load_usrs_byactive</name>
         <report_title>Patrons by Last Active Date</report_title>
@@ -697,5 +700,51 @@
         </query>
     </report>
 
+<!-- tlc reports 
 
+    <report>
+        <name>tlc_reports_load_asset_holdings_codes</name>
+        <report_title>Holdings Codes</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.Library.Holdings Codes.Evergreen Circulation Modifier.Evergreen Shelving Locatione</heading>
+        <query>SELECT COUNT(id), x_source, l_holdingscode FROM asset_copy_legacy GROUP BY 2, 3 ORDER BY 2, 3</query>
+    </report>
+
+    <report>
+        <name>tlc_reports_load_usrs_bygroup</name>
+        <report_title>Patrons by Agency Type</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.Library.Permission Group.Evergreen Permission Group</heading>
+        <query>SELECT COUNT(id), l_location, l_borrower_type FROM actor_usr_legacy GROUP BY 2, 3 ORDER BY 2, 3</query>
+    </report>
+
+    <report>
+        <name>tlc_reports_load_usr_balance</name>
+        <report_title>Count and Sum of Balances</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.SUM.Migrate?</heading>
+        <query>SELECT COUNT(id), SUM(l_current_fine_balance::NUMERIC(6,2)) FROM actor_usr_address_legacy WHERE l_current_fine_balance != '0' AND l_current_fine_balance IS NOT NULL</query>
+    </report>
+
+    <report>
+        <name>tlc_reports_users_blocked</name>
+        <report_title>Count of Blocked Patrons</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.Blocked.Migrate?</heading>
+        <query>SELECT COUNT(id), l_blocked FROM actor_usr_address_legacy GROUP BY 2</query>
+    </report>
+
+    <report>
+        <name>tlc_reports_load_usr_addresses_phones</name>
+        <report_title>Patron Phones</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.Phone Type.Phone Type</heading>
+        <query>SELECT COUNT(id), 'Phone 1' FROM actor_usr_address_legacy WHERE l_phone_1 IS NOT NULL GROUP BY 2 UNION ALL SELECT COUNT(id), 'Phone 2' FROM actor_usr_address_legacy WHERE l_phone_2 IS NOT NULL GROUP BY 2</query>
+    </report>
+-->
 </reports_file>
