@@ -3297,6 +3297,53 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+-- yet another subfield 9 function, this one only adds the $9 if the ind1 = 1 or 4 and ind2 = 0 or 1
+DROP FUNCTION IF EXISTS migration_tools.strict_add_sf9(TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.strict_add_sf9(marc TEXT, new_9 TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $new_9_to_set = shift;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @uris = $marc_xml->field('856');
+return $marc_xml->as_xml_record() unless @uris;
+
+foreach my $field (@uris) {
+    my $ind1 = $field->indicator('1');
+    if (!defined $ind1) { next; }
+    if ($ind1 ne '1' && $ind1 ne '4') { next; }
+    my $ind2 = $field->indicator('2');
+    if (!defined $ind2) { next; }
+    if ($ind2 ne '0' && $ind2 ne '1') { next; }
+    $field->add_subfields( '9' => $new_9_to_set );
+}
+
+return $marc_xml->as_xml_record();
+
+$function$;
+
 -- alternate adding subfield 9 function in that it adds them to existing tags where the 856$u matches a correct value only
 DROP FUNCTION IF EXISTS migration_tools.add_sf9(TEXT,TEXT,TEXT);
 CREATE OR REPLACE FUNCTION migration_tools.add_sf9(marc TEXT, partial_u TEXT, new_9 TEXT)
