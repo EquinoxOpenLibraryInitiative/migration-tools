@@ -3469,6 +3469,45 @@ BEGIN
 END;
 $BODY$ LANGUAGE plpgsql;
 
+-- strip marc tag
+DROP FUNCTION IF EXISTS migration_tools.strip_tag(TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.strip_tag(marc TEXT, tag TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $tag = shift;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @fields = $marc_xml->field($tag);
+return $marc_xml->as_xml_record() unless @fields;
+
+$marc_xml->delete_fields(@fields);
+
+return $marc_xml->as_xml_record();
+
+$function$;
+
 -- convenience function for linking to the item staging table
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_item_barcode (TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
