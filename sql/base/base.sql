@@ -2611,6 +2611,91 @@ CREATE OR REPLACE FUNCTION migration_tools.duplicate_template_but_change_delay (
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- example: SELECT * FROM migration_tools.duplicate_templates(3,'{5,6}');
+CREATE OR REPLACE FUNCTION migration_tools.duplicate_templates (INTEGER, INTEGER[]) RETURNS VOID AS $$
+    DECLARE
+        org ALIAS FOR $1;
+        target_event_defs ALIAS FOR $2;
+    BEGIN
+        DROP TABLE IF EXISTS new_atevdefs;
+        CREATE TEMP TABLE new_atevdefs (atevdef INTEGER);
+        FOR i IN array_lower(target_event_defs,1) .. array_upper(target_event_defs,1) LOOP
+            INSERT INTO action_trigger.event_definition (
+                active
+                ,owner
+                ,name
+                ,hook
+                ,validator
+                ,reactor
+                ,cleanup_success
+                ,cleanup_failure
+                ,delay
+                ,max_delay
+                ,usr_field
+                ,opt_in_setting
+                ,delay_field
+                ,group_field
+                ,template
+                ,granularity
+                ,repeat_delay
+            ) SELECT
+                'f'
+                ,org
+                ,name || ' (clone of '||target_event_defs[i]||')'
+                ,hook
+                ,validator
+                ,reactor
+                ,cleanup_success
+                ,cleanup_failure
+                ,delay
+                ,max_delay
+                ,usr_field
+                ,opt_in_setting
+                ,delay_field
+                ,group_field
+                ,template
+                ,granularity
+                ,repeat_delay
+            FROM
+                action_trigger.event_definition
+            WHERE
+                id = target_event_defs[i]
+            ;
+            RAISE INFO 'created atevdef with id = %', currval('action_trigger.event_definition_id_seq');
+            INSERT INTO new_atevdefs SELECT currval('action_trigger.event_definition_id_seq');
+            INSERT INTO action_trigger.environment (
+                event_def
+                ,path
+                ,collector
+                ,label
+            ) SELECT
+                currval('action_trigger.event_definition_id_seq')
+                ,path
+                ,collector
+                ,label
+            FROM
+                action_trigger.environment
+            WHERE
+                event_def = target_event_defs[i]
+            ;
+            INSERT INTO action_trigger.event_params (
+                event_def
+                ,param
+                ,value
+            ) SELECT
+                currval('action_trigger.event_definition_id_seq')
+                ,param
+                ,value
+            FROM
+                action_trigger.event_params
+            WHERE
+                event_def = target_event_defs[i]
+            ;
+        END LOOP;
+        RAISE INFO '-- UPDATE action_trigger.event_definition SET active = TRUE WHERE id in (%);', (SELECT array_to_string(array_agg(atevdef),',') from new_atevdefs);
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
 CREATE OR REPLACE FUNCTION migration_tools.get_marc_leader (TEXT) RETURNS TEXT AS $$
     my ($marcxml) = @_;
 
