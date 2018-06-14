@@ -1,3 +1,91 @@
+CREATE TABLE map_hold_policies (
+    l_org_unit            TEXT
+    ,l_user_group         TEXT
+    ,l_circ_mod           TEXT
+    ,l_holdable           TEXT
+    ,l_max_holds          TEXT
+    ,l_include_frozen     TEXT
+    ,l_transit_range      TEXT
+    ,l_range_from         TEXT
+    ,l_notes              TEXT
+    ,x_org_unit           INTEGER
+    ,x_grp_id             INTEGER
+    ,x_migrate            BOOLEAN DEFAULT TRUE
+) INHERITS (config.hold_matrix_matchpoint);
+
+INSERT INTO gsheet_tracked_table 
+    (table_name,tab_name,created)
+VALUES
+    ('map_hold_policies','Hold Policies',NOW())
+;
+
+INSERT INTO gsheet_tracked_column
+    (table_id,column_name)
+VALUES
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_org_unit')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_user_group')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_circ_mod')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_holdable')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_max_holds')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_include_frozen')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_transit_range')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_range_from')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_notes')
+;
+
+CREATE TABLE map_circ_policies (
+    l_org_unit              TEXT
+    ,l_user_group           TEXT
+    ,l_circ_mod             TEXT
+    ,l_copy_location        TEXT
+    ,l_circulate            TEXT
+    ,l_circ_limit_set       TEXT
+    ,l_duration_rule        TEXT
+    ,l_renewals             TEXT
+    ,l_fine                 TEXT
+    ,l_fine_interval        TEXT
+    ,l_grace_period         TEXT
+    ,l_max_fine             TEXT
+    ,l_grace_override       TEXT
+    ,l_renewal_boolean      TEXT
+    ,l_notes                TEXT
+    ,x_org_unit             INTEGER
+    ,x_grp_id               INTEGER
+    ,x_copy_location        INTEGER
+    ,x_circ_limit           INTEGER
+    ,x_duration             INTEGER
+    ,x_max_fine             INTEGER
+    ,x_fine_interval        INTEGER
+    ,x_migrate              INTEGER
+) INHERITS (config.circ_matrix_matchpoint);
+
+INSERT INTO gsheet_tracked_table
+    (table_name,tab_name,created)
+VALUES
+    ('map_circ_policies','Circ Policies',NOW())
+;
+
+INSERT INTO gsheet_tracked_column
+    (table_id,column_name)
+VALUES
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_org_unit')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_user_group')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_circ_mod')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_copy_location')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_circulate')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_circ_limit_set')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_duration_rule')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_renewals')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_fine')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_fine_interval')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_grace_period')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_max_fine')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_grace_override')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_renewal_boolean')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_notes')
+;
+
+
 CREATE TABLE map_create_shelving_location (
     l_id                  SERIAL
     ,l_owning_lib         TEXT            
