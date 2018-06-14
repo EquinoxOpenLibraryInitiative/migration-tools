@@ -198,7 +198,7 @@
         <query>SELECT COUNT(l_agencynumber), SUM(l_accountbalance::INTEGER) FROM itagency_tsv_clean WHERE l_accountbalance != '0'</query>
         <note>If this is being migrated there are a few options of how to do it and each will have different workflows.</note>
     </report>
-
+<!--
     <report>
         <name>tlc_load_usr_addresses_phones</name>
         <report_title>Patron Phones</report_title>
@@ -208,7 +208,7 @@
         <query>SELECT COUNT(l_phone1), 'Phone 1' FROM itaddress_tsv_clean WHERE l_phone1 IS NOT NULL GROUP BY 2 UNION ALL SELECT COUNT(l_phone1), 'Phone 2' FROM itaddress_tsv_clean WHERE l_phone2 IS NOT NULL GROUP BY 2</query>
         <note>These need to be mounted to Evergreen phone fields.</note>
     </report>
-
+-->
     <report>
          <name>tlc_load_usr_stat_cats</name>
         <report_title>Patron Stat Cats and Counts</report_title>
