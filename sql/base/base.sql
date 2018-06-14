@@ -3539,7 +3539,7 @@ BEGIN
 
     EXECUTE 'SELECT marc FROM ' || bib_table || ' WHERE id = ' || bib_id INTO source_xml;
 
-    SELECT add_sf9(source_xml, target_u_text, sf9_text) INTO new_xml;
+    SELECT migration_tools.add_sf9(source_xml, target_u_text, sf9_text) INTO new_xml;
 
     r = FALSE;
 	new_xml = '$_$' || new_xml || '$_$';
