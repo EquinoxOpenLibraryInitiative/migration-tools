@@ -261,7 +261,7 @@ sub mig_env_clone {
     my $orig_migration_schema = $ARGV[1] || '';
     my $orig_filename = "$HOME/.mig/$orig_migration_schema.env";
     `cp $orig_filename $filename`;
-    `sed -i 's/export PGOPTIONS=.*/export PGOPTIONS=-c search_path=$migration_schema,public,evergreen/' $filename`;
+    `sed -i 's/export PGOPTIONS=.*/export PGOPTIONS='"'"'-c search_path=$migration_schema,public,evergreen'"'"'/' $filename`;
     `sed -i 's/export MIGENVPROMPT=.*/export MIGENVPROMPT=$migration_schema/' $filename`;
     `sed -i 's/export MIGSCHEMA=.*/export MIGSCHEMA=$migration_schema/' $filename`;
 }
