@@ -13,6 +13,8 @@ B<mig-env> <create|use> <migration_schema>
 
 B<mig-env> <show> [migration_schema]
 
+B<mig-env> <clone> [orig_migration_schema] [new_migration_schema]
+
 B<mig-env> <list>
 
 B<mig-env> <help>
@@ -81,6 +83,12 @@ This command will show the contents of the corresponding ~/.mig/<schema>.env
 script, or, if no schema is specified, then it will list pertinent variables in
 the current environment if they exist.
 
+=item B<clone> [orig schema] [new schema]
+
+This command will create a "shallow" clone of the orig schema, in that it will
+share database credentials as well as git and data directories, but will have a
+separate schema name.
+
 =item B<list>
 
 This command will list migration schemas found in ~/.mig
@@ -122,6 +130,12 @@ switch($ARGV[0]) {
     case "create" {
         pod2usage(-verbose => 1) if ! $ARGV[1];
         mig_env_create();
+    }
+    case "clone" {
+        pod2usage(-verbose => 1) if ! $ARGV[2];
+        $migration_schema = $ARGV[2] || '';
+        $filename = "$HOME/.mig/$migration_schema.env";
+        mig_env_clone();
     }
     case "use" {
         pod2usage(-verbose => 1) if ! $ARGV[1];
@@ -241,5 +255,14 @@ sub mig_env_create {
     print FILE "env | sort | egrep 'PG|MIG'\n";
     print FILE 'echo shell PID = $$' . "\n";
     close FILE;
+}
+
+sub mig_env_clone {
+    my $orig_migration_schema = $ARGV[1] || '';
+    my $orig_filename = "$HOME/.mig/$orig_migration_schema.env";
+    `cp $orig_filename $filename`;
+    `sed -i 's/export PGOPTIONS=.*/export PGOPTIONS=-c search_path=$migration_schema,public,evergreen/' $filename`;
+    `sed -i 's/export MIGENVPROMPT=.*/export MIGENVPROMPT=$migration_schema/' $filename`;
+    `sed -i 's/export MIGSCHEMA=.*/export MIGSCHEMA=$migration_schema/' $filename`;
 }
 
