@@ -2696,6 +2696,22 @@ CREATE OR REPLACE FUNCTION migration_tools.duplicate_templates (INTEGER, INTEGER
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.reset_event (BIGINT) RETURNS VOID AS $$
+    UPDATE
+        action_trigger.event
+    SET
+         start_time = NULL
+        ,update_time = NULL
+        ,complete_time = NULL
+        ,update_process = NULL
+        ,state = 'pending'
+        ,template_output = NULL
+        ,error_output = NULL
+        ,async_output = NULL
+    WHERE
+        id = $1;
+$$ LANGUAGE SQL;
+
 CREATE OR REPLACE FUNCTION migration_tools.get_marc_leader (TEXT) RETURNS TEXT AS $$
     my ($marcxml) = @_;
 
