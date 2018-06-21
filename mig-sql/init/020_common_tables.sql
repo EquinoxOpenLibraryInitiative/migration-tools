@@ -67,7 +67,7 @@ VALUES
 INSERT INTO gsheet_tracked_table
     (table_name,tab_name,created)
 VALUES
-    ('map_combo_circ_policies','Hold Combos',NOW())
+    ('map_hold_combo_policies','Hold Combos',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column
@@ -176,7 +176,7 @@ VALUES
 INSERT INTO gsheet_tracked_table
     (table_name,tab_name,created)
 VALUES
-    ('map_combo_circ_policies','Circ Combos',NOW())
+    ('map_circ_combo_policies','Circ Combos',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column
