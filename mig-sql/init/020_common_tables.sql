@@ -33,6 +33,63 @@ VALUES
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_notes')
 ;
 
+
+ CREATE TABLE map_hold_combo_policies (
+    l_user_home_lib         TEXT
+    ,l_request_lib          TEXT
+    ,l_owning_lib           TEXT
+    ,l_item_circ_lib        TEXT
+    ,l_request_user_group   TEXT
+    ,l_circ_mod             TEXT
+    ,l_active               TEXT
+    ,l_holdable             TEXT
+    ,l_max_holds            TEXT
+    ,l_max_includes_frozen  TEXT
+    ,l_range_from           TEXT
+    ,l_transit_range        TEXT
+    ,l_user_group           TEXT
+    ,l_notes                TEXT
+    ,x_user_home_lib        INTEGER
+    ,x_request_lib          INTEGER
+    ,x_owning_lib           INTEGER
+    ,x_item_circ_lib        INTEGER
+    ,x_request_user_group   INTEGER
+    ,x_circ_mod             TEXT
+    ,x_active               BOOLEAN DEFAULT TRUE
+    ,x_holdable             BOOLEAN DEFAULT TRUE
+    ,x_max_holds            INTEGER
+    ,x_max_includes_frozen  BOOLEAN DEFAULT FALSE
+    ,x_range_from           BOOLEAN DEFAULT TRUE
+    ,x_trasnit_range        INTEGER
+    ,x_user_group           INTEGER
+    ,x_migrate              BOOLEAN DEFAULT TRUE
+);
+
+INSERT INTO gsheet_tracked_table
+    (table_name,tab_name,created)
+VALUES
+    ('map_combo_circ_policies','Hold Combos',NOW())
+;
+
+INSERT INTO gsheet_tracked_column
+    (table_id,column_name)
+VALUES
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_user_home_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_request_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_owning_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_item_circ_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_request_user_group')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_circ_mod')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_active')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_holdable')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_max_holds')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_max_includes_frozen')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_range_from')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_transit_range')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_user_group')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_notes')
+;
+
 CREATE TABLE map_circ_policies (
     l_org_unit              TEXT
     ,l_user_group           TEXT
@@ -85,6 +142,62 @@ VALUES
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_notes')
 ;
 
+
+ CREATE TABLE map_circ_combo_policies (
+    l_active                TEXT
+    ,l_user_group           TEXT
+    ,l_org_unit             TEXT
+    ,l_copy_own_lib         TEXT
+    ,l_user_home_lib        TEXT
+    ,l_circ_mod             TEXT
+    ,l_circulate            TEXT
+    ,l_copy_loc             TEXT
+    ,l_duration_rule        TEXT
+    ,l_recurring_fine_rule  TEXT
+    ,l_grace_override       TEXT
+    ,l_max_fine_rule        TEXT
+    ,l_circ_limit_set_name  TEXT
+    ,l_notes                TEXT
+    ,x_active               BOOLEAN
+    ,x_user_group           INTEGER
+    ,x_org_unit             INTEGER
+    ,x_copy_own_lib         INTEGER
+    ,x_user_home_lib        INTEGER
+    ,x_circ_mod             TEXT
+    ,x_circulate            BOOLEAN
+    ,x_copy_loc             INTEGER
+    ,x_duration_rule        INTEGER
+    ,x_recurring_fine_rule  INTEGER
+    ,x_grace_override       INTERVAL
+    ,x_max_fine_rule        INTEGER
+    ,x_circ_limit_set       INTEGER
+    ,x_migrate              BOOLEAN DEFAULT TRUE
+);
+
+INSERT INTO gsheet_tracked_table
+    (table_name,tab_name,created)
+VALUES
+    ('map_combo_circ_policies','Circ Combos',NOW())
+;
+
+INSERT INTO gsheet_tracked_column
+    (table_id,column_name)
+VALUES
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_active')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_user_group')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_org_unit')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_copy_own_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_user_home_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_circ_mod')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_circulate')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_copy_loc')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_duration_rule')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_recurring_fine_rule')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_grace_override')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_max_fine_rule')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_circ_limit_set_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_notes')
+;
 
 CREATE TABLE map_create_shelving_location (
     l_id                  SERIAL
