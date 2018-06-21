@@ -59,7 +59,7 @@ VALUES
     ,x_max_holds            INTEGER
     ,x_max_includes_frozen  BOOLEAN DEFAULT FALSE
     ,x_range_from           BOOLEAN DEFAULT TRUE
-    ,x_trasnit_range        INTEGER
+    ,x_transit_range        INTEGER
     ,x_user_group           INTEGER
     ,x_migrate              BOOLEAN DEFAULT TRUE
 );
