@@ -112,7 +112,7 @@ CREATE TABLE map_circ_policies (
     ,x_duration             INTEGER
     ,x_max_fine             INTEGER
     ,x_fine_interval        INTEGER
-    ,x_migrate              INTEGER
+    ,x_migrate              BOOLEAN DEFAULT FALSE
 );
 
 INSERT INTO gsheet_tracked_table
