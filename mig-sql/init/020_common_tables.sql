@@ -11,7 +11,7 @@ CREATE TABLE map_hold_policies (
     ,x_org_unit           INTEGER
     ,x_grp_id             INTEGER
     ,x_migrate            BOOLEAN DEFAULT TRUE
-) INHERITS (config.hold_matrix_matchpoint);
+);
 
 INSERT INTO gsheet_tracked_table 
     (table_name,tab_name,created)
@@ -32,7 +32,6 @@ VALUES
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_range_from')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_notes')
 ;
-
 
  CREATE TABLE map_hold_combo_policies (
     l_user_home_lib         TEXT
@@ -114,7 +113,7 @@ CREATE TABLE map_circ_policies (
     ,x_max_fine             INTEGER
     ,x_fine_interval        INTEGER
     ,x_migrate              INTEGER
-) INHERITS (config.circ_matrix_matchpoint);
+);
 
 INSERT INTO gsheet_tracked_table
     (table_name,tab_name,created)
