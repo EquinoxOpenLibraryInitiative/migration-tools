@@ -339,7 +339,7 @@ sub write_title_page {
     print $fh "= $rt\n"; 
     print $fh "$mday $abbr[$mon] $year\n";
     print $fh "$a\n";
-    print $fh ":title-logo-image: image::eolilogosmall.png[pdfwidth=3in]\n";
+    #print $fh ":title-logo-image: image::eolilogosmall.png[pdfwidth=3in]\n";
     print $fh ":toc:\n";
     print $fh "\n";
 }
