@@ -44,9 +44,20 @@
         <name>circ_count</name>
         <tag>circs</tag>
         <iteration>0</iteration>
-        <report_title>Open Circulations</report_title>
-        <heading>Circulation Status.Migrated.Count of Circs</heading>
-        <query>SELECT 'Closed Circulations', x_migrate::TEXT, COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NOT NULL GROUP BY 2 UNION ALL SELECT 'Open Circulations', x_migrate::TEXT, COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NULL GROUP BY 2</query>
+        <report_title>Migrated Circulations</report_title>
+        <heading>Circulation Status.Count of Circs</heading>
+        <query>SELECT 'Closed Circulations', COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NOT NULL AND x_migrate 
+            UNION ALL SELECT 'Open Circulations', COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate</query>
+    </report>
+
+    <report>
+        <name>circ_count_unmigrated</name>
+        <tag>circs</tag>
+        <iteration>0</iteration>
+        <report_title>Open Un-migrated Circulations</report_title>
+        <heading>Circulation Status.Count of Circs</heading>
+        <query>SELECT 'No Matching User', COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate = FALSE AND usr IS NULL 
+                UNION ALL SELECT 'No Matching Item', COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate = FALSE AND target_copy IS NULL </query>
     </report>
 
     <report>
