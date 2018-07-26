@@ -3533,7 +3533,7 @@ foreach my $field (@uris) {
     if (!defined $ind2) { next; }
     if ($ind2 ne '0') { next; }
     if (!defined $sfu) { next; }
-    if ($sfu =~ m/$matching_u_text/) {
+    if ($sfu =~ m/$matching_u_text/ or $matching_u_text eq 'pineapple') {
         $field->add_subfields( '9' => $new_9_to_set );
         last;
     }

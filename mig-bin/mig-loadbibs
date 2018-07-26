@@ -135,7 +135,7 @@ while ( my $record = $batch->next() ) {
 	my @warnings = $batch->warnings();
 	my $warning_string;
 	if (@warnings) { $warning_string = "'" . join(':',@warnings) . "'"; } else { $warning_string = "'none'"; }
-	my $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry_legacy (marc,x_source,x_warnings) VALUES ($xml,'$source',$warning_string);";
+	my $sql = "INSERT INTO $MIGSCHEMA.$stage_table (marc,x_source,x_warnings) VALUES ($xml,'$source',$warning_string);";
     my $sth = $dbh->prepare($sql);
     $sth->execute();
 	report_progress("Records staged", $i) if 0 != $i % 100;
