@@ -61,6 +61,8 @@ pod2usage(-verbose => 1) if ! $ARGV[1];
 my $next_arg_is_file = 0;
 my $append = 0;
 my $next_arg_is_source = 0;
+my $next_arg_is_stage = 0;
+my $stage_table = 'biblio_record_entry_legacy';
 my $source = 'default';
 my $file_is_xml = 0;
 my $dbh = Mig::db_connect();
@@ -91,6 +93,15 @@ foreach my $arg (@ARGV) {
         $next_arg_is_source = 0;
         next;
     }
+    if ($arg eq '--stage_table') {
+        $next_arg_is_stage = 1;
+        next;
+    }
+    if ($next_arg_is_stage) {
+        $stage_table = $arg;
+        $next_arg_is_stage = 0;
+        next;
+    }
 	if ($arg eq '--append') {
 		$append = 1;
 		next;
@@ -105,8 +116,8 @@ create_child_table($dbh); #and test to see if it exists
 
 # normal stage table creation
 if ($append == 0) { 
-    drop_stage_table($dbh); 
-    create_stage_table($dbh);
+    drop_stage_table($dbh,$stage_table); 
+    create_stage_table($dbh,$stage_table);
     }
 if ($file_is_xml) {
 	$batch = MARC::Batch->new('XML',$infile);
@@ -140,14 +151,20 @@ print "Finis.\n";
 
 sub drop_stage_table {
     my $dbh = shift;
-    $dbh->do("DROP TABLE IF EXISTS $MIGSCHEMA.biblio_record_entry_legacy;");
+    my $stage_table = shift;
+    my $tablecheck = check_for_mig_table($dbh,$stage_table);
+    my $answer = 'null';
+    if ($tablecheck == 1) { $answer = prompt('Do you want to drop $MIGSCHEMA.$stage_table? This will not remove any bibs loaded to production. y/n'); }
+    if ($tablecheck == 1 and $answer eq 'y') { $dbh->do("DROP TABLE IF EXISTS $MIGSCHEMA.$stage_table;"); } 
+    if ($tablecheck == 1 and $answer ne 'y') { abort('Table not dropped, bib load aborted.'); }
     return();
 }
 
 sub create_stage_table {
 	my $dbh = shift;
+    my $stage_table = shift;
 
-    $dbh->do("CREATE UNLOGGED TABLE $MIGSCHEMA.biblio_record_entry_legacy (
+    $dbh->do("CREATE UNLOGGED TABLE $MIGSCHEMA.$stage_table (
             l_bib_id    TEXT,
             x_source    TEXT,
             x_warnings  TEXT,
@@ -202,3 +219,24 @@ sub report_progress {
         print STDERR "$msg\n";
     }
 }
+
+sub check_for_mig_table {
+    my $dbh = shift;
+    my $table = shift;
+    my $sql = "SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = '$table';";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute();
+    my @sqlresult = $sth->fetchrow_array;
+    my $r = pop @sqlresult;
+    if ($r) { return $r; } else { return 0; }
+}
+
+sub prompt {
+  my ($query) = @_; 
+  local $| = 1; 
+  print $query;
+  chomp(my $answer = <STDIN>);
+  return $answer;
+}
+
+
