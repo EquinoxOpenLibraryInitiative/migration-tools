@@ -69,11 +69,6 @@ my $i = 0;
 my $batch;
 binmode STDIN, ':utf8';
 
-my $ignore = MARC::Charset->ignore_errors();    
-MARC::Charset->ignore_errors(1);
-#causes issues sometimes 
-#may be useful other times ... still in flux
-#my $setting = MARC::Charset->assume_unicode();
 #MARC::Charset->assume_unicode(1); 
 MARC::Charset->ignore_errors(1);
 
