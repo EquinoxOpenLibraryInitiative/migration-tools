@@ -104,12 +104,17 @@ CREATE TABLE map_circ_policies (
     ,l_max_fine             TEXT
     ,l_notes                TEXT
     ,x_org_unit             INTEGER
-    ,x_grp_id               INTEGER
+    ,x_user_group           INTEGER
+    ,x_copy_owning_lib      INTEGER
+    ,x_user_home_lib        INTEGER
+    ,x_circ_mod             TEXT
     ,x_copy_location        INTEGER
-    ,x_circ_limit           INTEGER
-    ,x_duration             INTEGER
+    ,x_circulate            BOOLEAN
+    ,x_circ_limit_set       INTEGER
+    ,x_duration_rule        INTEGER
+    ,x_fine_rule            INTEGER
+    ,x_grace_override       INTERVAL
     ,x_max_fine             INTEGER
-    ,x_fine_interval        INTEGER
     ,x_migrate              BOOLEAN DEFAULT FALSE
 );
 
