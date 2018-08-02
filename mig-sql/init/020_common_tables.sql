@@ -92,18 +92,16 @@ VALUES
 CREATE TABLE map_circ_policies (
     l_org_unit              TEXT
     ,l_user_group           TEXT
+    ,l_copy_owning_lib      TEXT
+    ,l_user_home_lib        TEXT
     ,l_circ_mod             TEXT
     ,l_copy_location        TEXT
     ,l_circulate            TEXT
     ,l_circ_limit_set       TEXT
     ,l_duration_rule        TEXT
-    ,l_renewals             TEXT
-    ,l_fine                 TEXT
-    ,l_fine_interval        TEXT
-    ,l_grace_period         TEXT
-    ,l_max_fine             TEXT
+    ,l_fine_rule            TEXT
     ,l_grace_override       TEXT
-    ,l_renewal_boolean      TEXT
+    ,l_max_fine             TEXT
     ,l_notes                TEXT
     ,x_org_unit             INTEGER
     ,x_grp_id               INTEGER
@@ -126,76 +124,17 @@ INSERT INTO gsheet_tracked_column
 VALUES
      ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_org_unit')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_user_group')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_copy_owning')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_user_home_lib')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_circ_mod')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_copy_location')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_circulate')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_circ_limit_set')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_duration_rule')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_renewals')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_fine')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_fine_interval')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_grace_period')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_max_fine')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_fine_rule')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_grace_override')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_renewal_boolean')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_max_fine')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_notes')
-;
-
-
- CREATE TABLE map_circ_combo_policies (
-    l_active                TEXT
-    ,l_user_group           TEXT
-    ,l_org_unit             TEXT
-    ,l_copy_own_lib         TEXT
-    ,l_user_home_lib        TEXT
-    ,l_circ_mod             TEXT
-    ,l_circulate            TEXT
-    ,l_copy_loc             TEXT
-    ,l_duration_rule        TEXT
-    ,l_recurring_fine_rule  TEXT
-    ,l_grace_override       TEXT
-    ,l_max_fine_rule        TEXT
-    ,l_circ_limit_set_name  TEXT
-    ,l_notes                TEXT
-    ,x_active               BOOLEAN
-    ,x_user_group           INTEGER
-    ,x_org_unit             INTEGER
-    ,x_copy_own_lib         INTEGER
-    ,x_user_home_lib        INTEGER
-    ,x_circ_mod             TEXT
-    ,x_circulate            BOOLEAN
-    ,x_copy_loc             INTEGER
-    ,x_duration_rule        INTEGER
-    ,x_recurring_fine_rule  INTEGER
-    ,x_grace_override       INTERVAL
-    ,x_max_fine_rule        INTEGER
-    ,x_circ_limit_set       INTEGER
-    ,x_migrate              BOOLEAN DEFAULT TRUE
-);
-
-INSERT INTO gsheet_tracked_table
-    (table_name,tab_name,created)
-VALUES
-    ('map_circ_combo_policies','Circ Combos',NOW())
-;
-
-INSERT INTO gsheet_tracked_column
-    (table_id,column_name)
-VALUES
-     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_active')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_user_group')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_org_unit')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_copy_own_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_user_home_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_circ_mod')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_circulate')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_copy_loc')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_duration_rule')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_recurring_fine_rule')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_grace_override')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_max_fine_rule')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_circ_limit_set_name')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Combos'),'l_notes')
 ;
 
 CREATE TABLE map_create_shelving_location (
