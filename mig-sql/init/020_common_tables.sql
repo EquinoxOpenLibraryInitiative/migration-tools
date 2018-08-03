@@ -106,6 +106,42 @@ VALUES
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Policies'),'l_notes')
 ;
 
+CREATE TABLE map_circ_limit_sets (
+    l_owning_lib        TEXT
+    ,l_name             TEXT
+    ,l_items_out        TEXT
+    ,l_depth            TEXT
+    ,l_global           TEXT
+    ,l_description      TEXT
+    ,l_circ_mod         TEXT
+    ,l_copy_loc         TEXT
+    ,x_owning_lib       INTEGER
+    ,x_name             TEXT
+    ,x_items_out        INTEGER
+    ,x_global           BOOLEAN
+    ,x_depth            INTEGER
+    ,x_description      TEXT
+);
+
+INSERT INTO gsheet_tracked_table
+    (table_name,tab_name,created)
+VALUES
+    ('map_circ_limit_sets','Circ Limit Sets',NOW())
+;
+
+INSERT INTO gsheet_tracked_column
+    (table_id,column_name)
+VALUES
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Limit Sets'),'l_owning_lib')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Limit Sets'),'l_name')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Limit Sets'),'l_items_out')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Limit Sets'),'l_depth')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Limit Sets'),'l_global')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Limit Sets'),'l_description')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Limit Sets'),'l_circ_mod')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Circ Limit Sets'),'l_copy_loc')
+;
+
 CREATE TABLE map_create_shelving_location (
     l_id                  SERIAL
     ,l_owning_lib         TEXT            
