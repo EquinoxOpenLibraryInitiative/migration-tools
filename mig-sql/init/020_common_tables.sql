@@ -8,8 +8,8 @@ CREATE TABLE map_hold_policies (
     ,l_active           TEXT
     ,l_holdable         TEXT
     ,l_max_holds        TEXT
-    ,l_includes_frozen_holds    TEXT
-    ,l_distiance_is_from_owner  TEXT
+    ,l_includes_frozen_holds   TEXT
+    ,l_distance_is_from_owner  TEXT
     ,l_transit_range    TEXT
     ,l_usr_grp          TEXT
     ,x_user_home_ou     INTEGER
@@ -21,8 +21,8 @@ CREATE TABLE map_hold_policies (
     ,x_active           BOOLEAN
     ,x_holdable         BOOLEAN
     ,x_max_holds        INTEGER
-    ,x_includes_frozen_holds    BOOLEAN
-    ,x_distiance_is_from_owner  BOOLEAN
+    ,x_includes_frozen_holds   BOOLEAN
+    ,x_distance_is_from_owner  BOOLEAN
     ,x_transit_range    INTEGER
     ,x_usr_grp          INTEGER    
    ,x_migrate           BOOLEAN DEFAULT TRUE
