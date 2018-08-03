@@ -1,16 +1,31 @@
 CREATE TABLE map_hold_policies (
-    l_org_unit            TEXT
-    ,l_user_group         TEXT
-    ,l_circ_mod           TEXT
-    ,l_holdable           TEXT
-    ,l_max_holds          TEXT
-    ,l_include_frozen     TEXT
-    ,l_transit_range      TEXT
-    ,l_range_from         TEXT
-    ,l_notes              TEXT
-    ,x_org_unit           INTEGER
-    ,x_grp_id             INTEGER
-    ,x_migrate            BOOLEAN DEFAULT TRUE
+    l_user_home_ou      TEXT
+    ,l_request_ou       TEXT
+    ,l_item_owning_ou   TEXT
+    ,l_item_circ_ou     TEXT
+    ,l_requestor_grp    TEXT
+    ,l_circ_modifier    TEXT
+    ,l_active           TEXT
+    ,l_holdable         TEXT
+    ,l_max_holds        TEXT
+    ,l_includes_frozen_holds    TEXT
+    ,l_distiance_is_from_owner  TEXT
+    ,l_transit_range    TEXT
+    ,l_usr_grp          TEXT
+    ,x_user_home_ou     INTEGER
+    ,x_request_ou       INTEGER
+    ,x_item_owning_ou   INTEGER
+    ,x_item_circ_ou     INTEGER
+    ,x_requestor_grp    INTEGER
+    ,x_circ_modifier    TEXT
+    ,x_active           BOOLEAN
+    ,x_holdable         BOOLEAN
+    ,x_max_holds        INTEGER
+    ,x_includes_frozen_holds    BOOLEAN
+    ,x_distiance_is_from_owner  BOOLEAN
+    ,x_transit_range    INTEGER
+    ,x_usr_grp          INTEGER    
+   ,x_migrate           BOOLEAN DEFAULT TRUE
 );
 
 INSERT INTO gsheet_tracked_table 
@@ -22,72 +37,21 @@ VALUES
 INSERT INTO gsheet_tracked_column
     (table_id,column_name)
 VALUES
-     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_org_unit')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_user_group')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_circ_mod')
+     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_user_home_ou')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_request_ou')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_item_owning_ou')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_item_circ_ou')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_requestor_grp')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_circ_modifier')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_active')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_holdable')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_max_holds')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_include_frozen')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_includes_frozen_holds')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_distance_is_from_owner')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_transit_range')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_range_from')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_notes')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Policies'),'l_usr_grp')
 ;
 
- CREATE TABLE map_hold_combo_policies (
-    l_user_home_lib         TEXT
-    ,l_request_lib          TEXT
-    ,l_owning_lib           TEXT
-    ,l_item_circ_lib        TEXT
-    ,l_request_user_group   TEXT
-    ,l_circ_mod             TEXT
-    ,l_active               TEXT
-    ,l_holdable             TEXT
-    ,l_max_holds            TEXT
-    ,l_max_includes_frozen  TEXT
-    ,l_range_from           TEXT
-    ,l_transit_range        TEXT
-    ,l_user_group           TEXT
-    ,l_notes                TEXT
-    ,x_user_home_lib        INTEGER
-    ,x_request_lib          INTEGER
-    ,x_owning_lib           INTEGER
-    ,x_item_circ_lib        INTEGER
-    ,x_request_user_group   INTEGER
-    ,x_circ_mod             TEXT
-    ,x_active               BOOLEAN DEFAULT TRUE
-    ,x_holdable             BOOLEAN DEFAULT TRUE
-    ,x_max_holds            INTEGER
-    ,x_max_includes_frozen  BOOLEAN DEFAULT FALSE
-    ,x_range_from           BOOLEAN DEFAULT TRUE
-    ,x_transit_range        INTEGER
-    ,x_user_group           INTEGER
-    ,x_migrate              BOOLEAN DEFAULT TRUE
-);
-
-INSERT INTO gsheet_tracked_table
-    (table_name,tab_name,created)
-VALUES
-    ('map_hold_combo_policies','Hold Combos',NOW())
-;
-
-INSERT INTO gsheet_tracked_column
-    (table_id,column_name)
-VALUES
-     ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_user_home_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_request_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_owning_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_item_circ_lib')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_request_user_group')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_circ_mod')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_active')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_holdable')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_max_holds')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_max_includes_frozen')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_range_from')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_transit_range')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_user_group')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Hold Combos'),'l_notes')
-;
 
 CREATE TABLE map_circ_policies (
     l_org_unit              TEXT
