@@ -79,6 +79,11 @@ CREATE TABLE map_circ_policies (
     ,x_fine_rule            INTEGER
     ,x_grace_override       INTERVAL
     ,x_max_fine             INTEGER
+    ,x_circ_limit_quantity  INTEGER
+    ,x_circ_limit_parts     INTEGER
+    ,x_circ_limit_ou_name   TEXT
+    ,x_circ_limit_ou_id     INTEGER
+    ,x_circ_limit_id        INTEGER
     ,x_migrate              BOOLEAN DEFAULT FALSE
 );
 
