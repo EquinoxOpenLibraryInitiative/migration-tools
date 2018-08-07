@@ -126,7 +126,9 @@ if ($file_is_xml) {
 } 
 $batch->strict_off();
 
-while ( my $record = $batch->next() ) {
+my $record;
+#while ( my $record = $batch->next() ) {
+while ( eval {$record = $batch->next()} or do { if (!$record and !$@) { last; } else { next; }} ) {
 	my $xml = $record->as_xml_record();
     $xml = marc8_to_utf8($xml);
 	$i++;
@@ -137,7 +139,7 @@ while ( my $record = $batch->next() ) {
 	if (@warnings) { $warning_string = "'" . join(':',@warnings) . "'"; } else { $warning_string = "'none'"; }
 	my $sql = "INSERT INTO $MIGSCHEMA.$stage_table (marc,x_source,x_warnings) VALUES ($xml,'$source',$warning_string);";
     my $sth = $dbh->prepare($sql);
-    $sth->execute();
+    eval { $sth->execute() };
 	report_progress("Records staged", $i) if 0 != $i % 100;
 }
 
