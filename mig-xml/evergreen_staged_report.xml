@@ -655,18 +655,9 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <report_title>Extracted Bibliographic Records</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
-        <heading>Count.Deleted.Migrated</heading>
-        <query>SELECT COUNT(bre.id), bre.deleted::TEXT, bre.x_migrate::TEXT FROM biblio_record_entry_legacy bre GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <heading>Count.Sourcee.Migrated</heading>
+        <query>SELECT COUNT(bre.id), bre.x_source, bre.x_migrate::TEXT FROM biblio_record_entry_legacy bre GROUP BY 2, 3 ORDER BY 2, 3</query>
         <note>False means the records are not deleted.</note>
-    </report>
-
-    <report>
-        <name>bibs</name>
-        <report_title>Extracted Bibliographic Records</report_title>
-        <tag>bibs</tag>
-        <iteration>1</iteration>
-        <heading>Count</heading>
-        <query>SELECT COUNT(id) FROM biblio_record_entry_stage WHERE x_migrate = TRUE</query>
     </report>
 
     <report>
