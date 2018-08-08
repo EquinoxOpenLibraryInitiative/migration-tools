@@ -315,6 +315,15 @@
     </report>
 
     <report>
+        <name>asset_precat</name>
+        <report_title>Precats (AKA Copies Without Bibs)</report_title>
+        <tag>assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Migating</heading>
+        <query>SELECT COUNT(ac.id), ac.x_migrate::TEXT FROM asset_copy_legacy ac WHERE ac.x_bre_id = -1 GROUP BY 2</query>
+    </report>
+
+    <report>
         <name>asset_circ_mod_copies_count</name>
         <report_title>Copies by Circulation Modifier</report_title>
         <tag>assets</tag>
