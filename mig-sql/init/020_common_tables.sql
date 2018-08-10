@@ -180,6 +180,7 @@ VALUES
 
 CREATE TABLE map_create_account (
     l_id                  SERIAL
+    ,l_barcode            TEXT
     ,l_usrname            TEXT            
     ,l_first_name         TEXT
     ,l_family_name        TEXT
@@ -189,11 +190,22 @@ CREATE TABLE map_create_account (
     ,l_profile1           TEXT
     ,l_profile2           TEXT
     ,l_profile3           TEXT
-    ,l_work_ou            TEXT
+    ,l_work_ou1           TEXT
+    ,l_work_ou2           TEXT
+    ,l_work_ou3           TEXT
+    ,l_work_ou4           TEXT
+    ,l_work_ou5           TEXT
+    ,l_work_ou6           TEXT
+    ,l_work_ou7           TEXT
+    ,l_work_ou8           TEXT
+    ,l_work_ou9           TEXT
+    ,l_work_ou10          TEXT
+    ,l_work_ou11          TEXT
+    ,l_work_ou12          TEXT
+    ,l_work_ou13          TEXT
     ,l_note               TEXT
-    ,l_note2              TEXT
     ,x_migrate            BOOLEAN NOT NULL DEFAULT TRUE
-) INHERITS (actor_usr);
+);
 
 INSERT INTO gsheet_tracked_table 
     (table_name,tab_name,created)
@@ -205,6 +217,7 @@ INSERT INTO gsheet_tracked_column
     (table_id,column_name) 
 VALUES 
      ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_usrname')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_barcode')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_first_name')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_family_name')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_email')
@@ -213,10 +226,23 @@ VALUES
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_profile1')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_profile2')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_profile3')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou1')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou2')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou3')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou4')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou5')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou6')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou7')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou8')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou9')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou10')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou11')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou12')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_work_ou13')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_note')
-    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_note2')
 ;
+
+
 
 
 CREATE TABLE map_threshold (
