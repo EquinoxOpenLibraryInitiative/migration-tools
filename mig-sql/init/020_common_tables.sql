@@ -247,6 +247,7 @@ VALUES
 
 CREATE TABLE map_threshold (
     id                  SERIAL
+    ,library            TEXT
     ,profile            TEXT            
     ,checkout_threshold TEXT
     ,fine_threshold     TEXT
@@ -264,6 +265,7 @@ INSERT INTO gsheet_tracked_column
     (table_id,column_name) 
 VALUES 
      ((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Thresholds'),'profile')
+    ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Thresholds'),'library')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Thresholds'),'checkout_threshold')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Thresholds'),'fine_threshold')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Patron Thresholds'),'overdue_threshold')
