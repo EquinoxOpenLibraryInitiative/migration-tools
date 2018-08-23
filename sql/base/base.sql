@@ -1574,6 +1574,56 @@ END;
 
 $$ LANGUAGE plpgsql;
 
+-- TODO: make another version of the procedure below that can work with specified copy staging tables
+-- The following should track the logic of OpenILS::Application::AppUtils::get_copy_price
+CREATE OR REPLACE FUNCTION migration_tools.get_copy_price( item BIGINT ) RETURNS NUMERIC AS $$
+DECLARE
+    context_lib             INT;
+    charge_lost_on_zero     BOOLEAN;
+    min_price               NUMERIC;
+    max_price               NUMERIC;
+    default_price           NUMERIC;
+    working_price           NUMERIC;
+
+BEGIN
+
+    SELECT INTO context_lib CASE WHEN call_number = -1 THEN circ_lib ELSE owning_lib END
+        FROM asset.copy ac, asset.call_number acn WHERE ac.call_number = acn.id AND ac.id = item;
+
+    SELECT INTO charge_lost_on_zero value
+        FROM actor.org_unit_ancestor_setting('circ.charge_lost_on_zero',context_lib);
+
+    SELECT INTO min_price value
+        FROM actor.org_unit_ancestor_setting('circ.min_item_price',context_lib);
+
+    SELECT INTO max_price value
+        FROM actor.org_unit_ancestor_setting('circ.max_item_price',context_lib);
+
+    SELECT INTO default_price value
+        FROM actor.org_unit_ancestor_setting('cat.default_item_price',context_lib);
+
+    SELECT INTO working_price price FROM asset.copy WHERE id = item;
+
+    IF (working_price IS NULL OR (working_price = 0 AND charge_lost_on_zero)) THEN
+        working_price := default_price;
+    END IF;
+
+    IF (max_price IS NOT NULL AND working_price > max_price) THEN
+        working_price := max_price;
+    END IF;
+
+    IF (min_price IS NOT NULL AND working_price < min_price) THEN
+        IF (working_price <> 0 OR charge_lost_on_zero IS NULL OR charge_lost_on_zero) THEN
+            working_price := min_price;
+        END IF;
+    END IF;
+
+    RETURN working_price;
+
+END;
+
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION migration_tools.apply_circ_matrix_to_specific_circ( tablename TEXT, circ BIGINT ) RETURNS VOID AS $$
 
 -- Usage:
@@ -1648,7 +1698,7 @@ BEGIN
       recurring_fine = rrf.normal,
       max_fine =
         CASE rmf.is_percent
-          WHEN TRUE THEN (rmf.amount / 100.0) * ac.price
+          WHEN TRUE THEN (rmf.amount / 100.0) * migration_tools.get_copy_price(ac.id)
           ELSE rmf.amount
         END,
       renewal_remaining = rcd.max_renewals,
