@@ -1,5 +1,6 @@
 CREATE TABLE gsheet_tracked_table (
     id                          SERIAL PRIMARY KEY
+    ,sheet_name                 TEXT NOT NULL
     ,table_name                 TEXT NOT NULL
     ,tab_name                   TEXT
     ,created                    TIMESTAMP
