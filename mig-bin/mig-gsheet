@@ -14,10 +14,6 @@ use lib "$FindBin::Bin/";
 my $mig_bin = "$FindBin::Bin/";
 use Mig;
 use strict;
-use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
-    );
 use Switch;
 use Cwd 'abs_path';
 use Pod::Usage;
