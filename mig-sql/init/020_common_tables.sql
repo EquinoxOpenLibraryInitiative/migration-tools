@@ -29,9 +29,9 @@ CREATE TABLE map_hold_policies (
 );
 
 INSERT INTO gsheet_tracked_table 
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES
-    ('map_hold_policies','Hold Policies',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_hold_policies','Hold Policies',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column
@@ -88,9 +88,9 @@ CREATE TABLE map_circ_policies (
 );
 
 INSERT INTO gsheet_tracked_table
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES
-    ('map_circ_policies','Circ Policies',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_circ_policies','Circ Policies',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column
@@ -129,9 +129,9 @@ CREATE TABLE map_circ_limit_sets (
 );
 
 INSERT INTO gsheet_tracked_table
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES
-    ('map_circ_limit_sets','Circ Limit Sets',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_circ_limit_sets','Circ Limit Sets',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column
@@ -161,9 +161,9 @@ CREATE TABLE map_create_shelving_location (
 ) INHERITS (asset_copy_location);
 
 INSERT INTO gsheet_tracked_table 
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES 
-    ('map_create_shelving_location','New Copy Locations',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_create_shelving_location','New Copy Locations',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
@@ -208,9 +208,9 @@ CREATE TABLE map_create_account (
 );
 
 INSERT INTO gsheet_tracked_table 
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES 
-    ('map_create_account','New Accounts',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_create_account','New Accounts',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
@@ -242,9 +242,6 @@ VALUES
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'New Accounts'),'l_note')
 ;
 
-
-
-
 CREATE TABLE map_threshold (
     id                  SERIAL
     ,library            TEXT
@@ -256,9 +253,9 @@ CREATE TABLE map_threshold (
 );
 
 INSERT INTO gsheet_tracked_table 
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES 
-    ('map_threshold','Patron Thresholds',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_threshold','Patron Thresholds',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
@@ -283,9 +280,9 @@ CREATE TABLE map_misc (
 );
 
 INSERT INTO gsheet_tracked_table 
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES 
-    ('map_misc','Miscellaneous Options',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_misc','Miscellaneous Options',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
@@ -309,9 +306,9 @@ CREATE TABLE map_org_setting (
 );
 
 INSERT INTO gsheet_tracked_table 
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES 
-    ('map_org_setting','Org Settings',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_org_setting','Org Settings',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column 
@@ -337,9 +334,9 @@ CREATE TABLE map_bib_manipulations (
 );
 
 INSERT INTO gsheet_tracked_table
-    (table_name,tab_name,created)
+    (sheet_name,table_name,tab_name,created)
 VALUES
-    ('map_bib_manipulations','Bib Records',NOW())
+    ((SELECT SPLIT_PART(reset_val,',',1) FROM pg_settings WHERE name = 'search_path'),'map_bib_manipulations','Bib Records',NOW())
 ;
 
 INSERT INTO gsheet_tracked_column
