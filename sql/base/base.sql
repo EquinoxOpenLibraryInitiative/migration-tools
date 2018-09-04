@@ -3346,6 +3346,7 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_actor_sc_and_sce (TEXT,TEXT,
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name)
                     ) AND value = BTRIM('||sce||')
+                    AND owner = ANY ($2)
                 )
                 AND NOT EXISTS (
                     SELECT id
@@ -3356,6 +3357,7 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_actor_sc_and_sce (TEXT,TEXT,
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name)
                     ) AND value = BTRIM('||sce||')
+                    AND owner = ANY ($2)
                 )
             ORDER BY 1,3;'
         USING org, org_list;
@@ -4305,6 +4307,7 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_asset_sc_and_sce (TEXT,TEXT,
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name)
                     ) AND value = BTRIM('||sce||')
+                    AND owner = ANY ($2)
                 )
                 AND NOT EXISTS (
                     SELECT id
@@ -4315,6 +4318,7 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_asset_sc_and_sce (TEXT,TEXT,
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name)
                     ) AND value = BTRIM('||sce||')
+                    AND owner = ANY ($2)
                 )
             ORDER BY 1,3;'
         USING org, org_list;
