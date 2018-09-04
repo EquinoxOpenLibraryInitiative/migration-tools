@@ -3908,7 +3908,6 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_link3 (TEXT,TEXT,TEXT,TEXT,TEX
         column_b ALIAS FOR $5;
         column_w ALIAS FOR $6;
         column_x ALIAS FOR $7;
-        btrim_desired ALIAS FOR $8;
         proceed BOOLEAN;
     BEGIN
         EXECUTE 'SELECT EXISTS (
