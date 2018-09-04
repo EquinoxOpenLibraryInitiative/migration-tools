@@ -3940,7 +3940,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_link3 (TEXT,TEXT,TEXT,TEXT,TEX
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
-CREATE OR REPLACE FUNCTION migration_tools.handle_link3_skip_null (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3_skip_null_or_empty_string (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
     DECLARE
         table_schema ALIAS FOR $1;
         table_a ALIAS FOR $2;
@@ -3978,6 +3978,48 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_link3_skip_null (TEXT,TEXT,TEX
             || ' WHERE a.' || quote_ident(column_a)
             || ' = b.' || quote_ident(column_b)
             || ' AND NULLIF(a.' || quote_ident(column_w) || ','''') IS NOT NULL';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3_skip_null (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+            || ' SET ' || quote_ident(column_x) || ' = a.' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+            || ' WHERE a.' || quote_ident(column_a)
+            || ' = b.' || quote_ident(column_b)
+            || ' AND a.' || quote_ident(column_w) || ' IS NOT NULL';
 
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
