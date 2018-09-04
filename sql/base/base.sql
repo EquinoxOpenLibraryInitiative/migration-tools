@@ -3152,6 +3152,64 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_not_migrate (TEXT,TEXT) RETURN
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- convenience function for handling desired_not_migrate
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_barred_or_blocked (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_barred_or_blocked''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_barred_or_blocked'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_barred';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_barred BOOLEAN';
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_blocked';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_blocked BOOLEAN';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_barred = CASE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Barred'' THEN TRUE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Blocked'' THEN FALSE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Neither'' THEN FALSE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = '''' THEN FALSE'
+            || ' END';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_blocked = CASE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Blocked'' THEN TRUE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Barred'' THEN FALSE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Neither'' THEN FALSE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = '''' THEN FALSE'
+            || ' END';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE x_barred IS NULL or x_blocked IS NULL),
+            ''Not all desired_barred_or_blocked values understood'',
+            ''All desired_barred_or_blocked values understood''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
 -- convenience function for handling desired_profile
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_profile (TEXT,TEXT) RETURNS VOID AS $$
