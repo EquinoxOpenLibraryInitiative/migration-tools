@@ -3897,6 +3897,49 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_link2 (TEXT,TEXT,TEXT,TEXT,TEX
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- convenience function for linking two tables, but copying column w into column x instead of "id". Unlike handle_link2, this one won't drop the target column, and it also doesn't have a final boolean argument for btrim
+-- e.g. select migration_tools.handle_link3(:'migschema','asset_copy','barcode','test_foo','l_barcode','id','x_acp_id');
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3 (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        btrim_desired ALIAS FOR $8;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+            || ' SET ' || quote_ident(column_x) || ' = ' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+            || ' WHERE a.' || quote_ident(column_a)
+            || ' = b.' || quote_ident(column_b);
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
 -- convenience function for handling desired asset stat cats
 
 CREATE OR REPLACE FUNCTION migration_tools.vivicate_asset_sc_and_sce (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
