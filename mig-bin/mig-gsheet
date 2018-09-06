@@ -37,6 +37,8 @@ my $sql;
 my $sth;
 my @ws;
 my @tracked_ws_names;
+my $authfile = $ENV{HOME} . '/.mig/oauth.env';
+my $next_arg_is_authfile;
 
 foreach my $arg (@ARGV) {
     if ($arg eq '--push') {
@@ -57,6 +59,15 @@ foreach my $arg (@ARGV) {
         $next_arg_is_pull = 0;
         next;
     }
+    if ($arg eq '--authfile') {
+        $next_arg_is_authfile = 1;
+        next;
+    }
+    if ($next_arg_is_authfile) {
+        $authfile = $arg;
+        $next_arg_is_authfile = 0;
+        next;
+    }
     if ($arg eq '--export') {
         $cmd_export = 1;
         next;
@@ -66,8 +77,20 @@ foreach my $arg (@ARGV) {
 abort('must specify --push (db->worksheets) or --pull (worksheets->db)') unless (defined $cmd_push or defined $cmd_pull);
 if (defined $cmd_push and defined $cmd_pull) { abort('you can not specify both a --push and --pull on the same command'); }
 
+my $clientid;
+my $clientsecret;
+my $sessionfile;
+
+open (my $fh, '<', $authfile) or abort("Could not open $authfile");
+while (my $var = <$fh>) {
+    chomp $var;
+    my ($var1, $var2) = split /=/,$var;
+    if ($var1 eq 'CLIENTID') { $clientid = $var2; }
+    if ($var1 eq 'CLIENTSECRET') { $clientsecret = $var2; }
+    if ($var1 eq 'SESSIONFILE') { $sessionfile = $var2; }   
+}
 my $dbh = Mig::db_connect();
-my $spreadsheet = connect_gsheet();
+my $spreadsheet = connect_gsheet($clientid,$clientsecret,$sessionfile);
 abort('could not connect to google sheet') unless (defined $spreadsheet);
 
 $sql = 'SELECT tab_name FROM gsheet_tracked_table;';
@@ -366,18 +389,17 @@ sub abort {
 }
 
 sub connect_gsheet {
-    if (!defined $ENV{'CLIENTID'}) {
-        exec '/bin/bash', '--init-file', '~/.mig/oauth.env';
-        print "Open Authentication settings were not loaded, please re-run.\n";
-    }
-    my $session_filename = $ENV{SESSIONFILE};
+
+    my ($clientid,$clientsecret,$sessionfile) = @_;
+
     my $oauth2 = Net::Google::DataAPI::Auth::OAuth2->new(
-        client_id => $ENV{CLIENTID},
-        client_secret => $ENV{CLIENTSECRET},
+        client_id => $clientid,
+        client_secret => $clientsecret,
         scope => ['http://spreadsheets.google.com/feeds/'],
         redirect_uri => 'https://developers.google.com/oauthplayground',
     );
-    my $session = retrieve($session_filename);
+    if ($sessionfile =~ m/~/) {$sessionfile =~ s/~/$ENV{HOME}/; }
+    my $session = retrieve($sessionfile);
     my $restored_token = Net::OAuth2::AccessToken->session_thaw(
         $session,
         auto_refresh => 1,
