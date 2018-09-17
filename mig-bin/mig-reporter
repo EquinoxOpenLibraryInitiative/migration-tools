@@ -32,6 +32,10 @@ Allows you to override the default evergreen_staged_report.xml in the mig-xml fo
 
 Pushes output to an Excel file instead of asciidoc file. 
 
+--captions or --captions_off
+
+Adds the captions tag to asciidoc header to turn off captions in generated output.
+
 =back
 
 =cut
