@@ -56,6 +56,7 @@ use Excel::Writer::XLSX;
 use Pod::Usage;
 use Switch;
 use Cwd 'abs_path';
+use Cwd qw(getcwd);
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
@@ -161,10 +162,8 @@ if ($excel_output == 0 and !defined $analyst) { abort('--analyst must be supplie
 
 my $mig_path = abs_path($0);
 $mig_path =~ s|[^/]+$||;
-if (!defined $reports_xml) { 
-    if ($excel_output == 0) { $reports_xml = $mig_path . '../mig-xml/evergreen_staged_report.xml'; } 
-        else { $reports_xml = $mig_path . '../mig-xml/excel_mapping_reports.xml'; } 
-    } else { $reports_xml = $mig_path . '/../mig-xml/' . $reports_xml; }
+$reports_xml = find_xml($reports_xml,$mig_path,$excel_output);
+if (!defined $reports_xml) { abort("Can not find xml reports file."); }
 my $dom = $parser->parse_file($reports_xml);
 
 if (defined $added_page_file or defined $added_page_title) {
@@ -279,6 +278,28 @@ if ($excel_output eq 1) { $workbook->close(); }
     else { close $fh; }
 
 ############ end of main logic
+
+sub find_xml {
+    my $reports_xml = shift;
+    my $mig_path = shift;
+    my $excel_output = shift;
+
+    if (!defined $reports_xml) {
+        if ($excel_output == 0) { $reports_xml = $mig_path . '../mig-xml/evergreen_staged_report.xml'; return $reports_xml; }
+            else { $reports_xml = $mig_path . '../mig-xml/excel_mapping_reports.xml'; return $reports_xml; }
+    };
+
+    if ($reports_xml =~ m/\//) { return $reports_xml; }
+
+    my $mig_test_file =  $mig_path . '/../mig-xml/' . $reports_xml;
+    my $working_test_dir = getcwd();
+    my $working_test_file = $working_test_dir . '/' . $reports_xml;
+
+    if (-e $mig_test_file) { return $mig_test_file; }
+    if (-e $working_test_file) { return $working_test_file; }
+
+    return undef;
+}
 
 sub find_report {
     my $dom = shift;
