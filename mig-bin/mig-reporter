@@ -74,6 +74,7 @@ my $next_arg_is_added_page_title;
 my $added_page_file;
 my $next_arg_is_added_page_file;
 my $excel_output = 0;
+my $captions_off = 0;
 my $i = 0;
 my $parser = XML::LibXML->new();
 my $lines_per_page = 42;
@@ -140,6 +141,10 @@ foreach my $arg (@ARGV) {
         $excel_output = 1;
         next;
     }
+    if ($arg eq '--captions_off' or $arg eq '--captions') {
+        $captions_off = 1;
+        next;
+    }
     if ($arg eq '--debug') {
         $debug_flag = 1;
         next;
@@ -171,7 +176,7 @@ if ($excel_output == 1) {
     $workbook = Excel::Writer::XLSX->new( $report_file );
 } else {
     open($fh, '>', $report_file) or abort("Could not open output file!");
-    write_title_page($report_title,$fh,$analyst);
+    write_title_page($report_title,$fh,$analyst,$captions_off);
 };
 
 if (defined $added_page_file and defined $added_page_title) { 
@@ -331,6 +336,7 @@ sub write_title_page {
     my $rt = shift;
     my $fh = shift;
     my $a = shift;
+    my $captions_off = shift;
 
     my @abbr = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
     my $l = length($report_title);
@@ -341,6 +347,7 @@ sub write_title_page {
     print $fh "$a\n";
     #print $fh ":title-logo-image: image::eolilogosmall.png[pdfwidth=3in]\n";
     print $fh ":toc:\n";
+    if ($captions_off == 1) { print $fh ":caption:\n"; }
     print $fh "\n";
 }
 
