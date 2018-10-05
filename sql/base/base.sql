@@ -3237,7 +3237,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_profile (TEXT,TEXT) RETURNS VO
             || ' ADD COLUMN x_profile INTEGER';
 
         EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-            || ' SET x_profile = id FROM permission.grp_tree b'
+            || ' SET x_profile = b.id FROM permission.grp_tree b'
             || ' WHERE BTRIM(UPPER(a.desired_profile)) = BTRIM(UPPER(b.name))';
 
         EXECUTE 'SELECT migration_tools.assert(
