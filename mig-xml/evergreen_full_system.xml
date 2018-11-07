@@ -515,15 +515,5 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT COUNT(id) FROM acq.invoice;</query>
     </report>    
 
-    <!-- SERIALS REPORTS -->
-    <report>
-        <name>serials_mfhd_count</name>
-        <tag>serials</tag>
-        <iteration>0</iteration>
-        <report_title>Serial MFHDs</report_title>
-        <heading>Number of MFHDs</heading>
-        <query>SELECT COUNT(id) FROM serial.record_entry</query>
-    </report>
-
 </reports_file>
 
