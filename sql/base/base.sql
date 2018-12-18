@@ -287,6 +287,31 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_into_production (TEXT,TEXT) RE
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_first_middle_last_comma_suffix (TEXT) RETURNS TEXT[] AS $$
+    DECLARE
+        full_name TEXT := $1;
+        before_comma TEXT;
+        family_name TEXT := '';
+        first_given_name TEXT := '';
+        second_given_name TEXT := '';
+        suffix TEXT := '';
+        prefix TEXT := '';
+    BEGIN
+        before_comma := BTRIM( REGEXP_REPLACE(full_name,E'^(.+),.+$',E'\\1') );
+        suffix := CASE WHEN full_name ~ ',' THEN BTRIM( REGEXP_REPLACE(full_name,E'^.+,(.+)$',E'\\1') ) ELSE '' END;
+
+        IF suffix = before_comma THEN
+            suffix := '';
+        END IF;
+
+        family_name := BTRIM( REGEXP_REPLACE(before_comma,E'^.+\\s(.+)$',E'\\1') );
+        first_given_name := BTRIM( REGEXP_REPLACE(before_comma,E'^(.+?)\\s.+$',E'\\1') );
+        second_given_name := BTRIM( CASE WHEN before_comma ~ '^.+\s.+\s.+$' THEN REGEXP_REPLACE(before_comma,E'^.+\\s(.+)\\s.+$',E'\\1') ELSE '' END );
+
+        RETURN ARRAY[ family_name, prefix, first_given_name, second_given_name, suffix ];
+    END;
+$$ LANGUAGE PLPGSQL STRICT IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_last_comma_prefix_first_middle_suffix (TEXT) RETURNS TEXT[] AS $$
     DECLARE
         full_name TEXT := $1;
