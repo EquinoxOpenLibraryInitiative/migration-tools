@@ -2349,6 +2349,24 @@ BEGIN
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
+CREATE OR REPLACE FUNCTION migration_tools.split_rows_on_column_with_delimiter(schemaname TEXT, tablename TEXT, matchcol TEXT, delimiter TEXT) RETURNS VOID AS $FUNC$
+DECLARE
+    id BIGINT;
+    loopq TEXT;
+    cols TEXT[];
+    splitst TEXT;
+BEGIN
+    loopq := 'SELECT id FROM ' || schemaname || '.' || tablename || ' WHERE ' || matchcol || ' ~ $1 ORDER BY id';
+    SELECT ARRAY_AGG(column_name::TEXT) INTO cols FROM information_schema.columns WHERE table_schema = schemaname AND table_name = tablename AND column_name <> 'id' AND column_name <> matchcol;
+    FOR id IN EXECUTE loopq USING delimiter LOOP
+       RAISE NOTICE 'splitting row from %.% with id = %', schemaname, tablename, id;
+       splitst := 'INSERT INTO ' || schemaname || '.' || tablename || ' (' || ARRAY_TO_STRING(cols, ',') || ', ' || matchcol || ') SELECT ' || ARRAY_TO_STRING(cols, ',') || ', s.token ' ||
+                 ' FROM ' || schemaname || '.' || tablename || ' t, UNNEST(STRING_TO_ARRAY(t.' || matchcol || ', $2)) s(token) WHERE id = $1';
+       EXECUTE splitst USING id, delimiter;
+    END LOOP;
+END;
+$FUNC$ LANGUAGE PLPGSQL;
+
 CREATE OR REPLACE FUNCTION migration_tools.merge_marc_fields( TEXT, TEXT, TEXT[] ) RETURNS TEXT AS $func$
 
 use strict;
