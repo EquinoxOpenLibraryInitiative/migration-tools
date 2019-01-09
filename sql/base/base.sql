@@ -3517,6 +3517,10 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
         org_range ALIAS FOR $4;
         proceed BOOLEAN;
         org INTEGER;
+        -- if x_org is on the mapping table, it'll take precedence over the passed org_shortname param
+        -- though we'll still use the passed org for the full path traversal when needed
+        x_org_found BOOLEAN;
+        x_org INTEGER;
         org_list INTEGER[];
         o INTEGER;
     BEGIN
@@ -3528,8 +3532,16 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
             and column_name = ''desired_shelf''
         )' INTO proceed USING table_schema, table_name;
         IF NOT proceed THEN
-            RAISE EXCEPTION 'Missing column desired_shelf'; 
+            RAISE EXCEPTION 'Missing column desired_shelf';
         END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''x_org''
+        )' INTO x_org_found USING table_schema, table_name;
 
         SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
         IF org IS NULL THEN
@@ -3545,12 +3557,33 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
             || quote_ident(table_name)
             || ' ADD COLUMN x_shelf INTEGER';
 
-        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-            || ' SET x_shelf = id FROM asset_copy_location b'
-            || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
-            || ' AND b.owning_lib = $1'
-            || ' AND NOT b.deleted'
-        USING org;
+        IF x_org_found THEN
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = x_org'
+                || ' AND NOT b.deleted';
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = id FROM asset.copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = x_org'
+                || ' AND x_shelf IS NULL'
+                || ' AND NOT b.deleted';
+        ELSE
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = $1'
+                || ' AND NOT b.deleted'
+            USING org;
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = $1'
+                || ' AND x_shelf IS NULL'
+                || ' AND NOT b.deleted'
+            USING org;
+        END IF;
 
         FOREACH o IN ARRAY org_list LOOP
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
