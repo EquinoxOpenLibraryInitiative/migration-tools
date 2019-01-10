@@ -1183,15 +1183,26 @@ INSERT INTO migration_tools.usps_suffixes VALUES
     ('WY','WAY'),
     ('XING','XING');
 
-CREATE OR REPLACE FUNCTION migration_tools.normalize_address_suffix (TEXT) RETURNS TEXT AS $$
+-- this function should get a smaller range of inputs and benefit more from STABLE, hopefully speeding things up
+CREATE OR REPLACE FUNCTION migration_tools._normalize_address_suffix (TEXT) RETURNS TEXT AS $$
     DECLARE
-        street1 TEXT := $1;
+        suffix TEXT := $1;
 		_r RECORD;
     BEGIN
+        --RAISE INFO 'suffix = %', suffix;
 		FOR _r IN (SELECT * FROM migration_tools.usps_suffixes) LOOP
-			street1 := REGEXP_REPLACE( street1, ' ' || _r.suffix_from || '$', ' ' || _r.suffix_to, 'i');
+			suffix := REGEXP_REPLACE( suffix, _r.suffix_from, _r.suffix_to, 'i');
 		END LOOP;
-		RETURN street1;
+		RETURN suffix;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.normalize_address_suffix (TEXT) RETURNS TEXT AS $$
+    BEGIN
+		RETURN CASE
+            WHEN $1 ~ '\s\S+$' THEN REGEXP_REPLACE( $1, '^(.*\s)(\S+)$', '\1' ) || migration_tools._normalize_address_suffix( REGEXP_REPLACE( $1, '^(.*\s)(\S+)$', '\2' ) )
+            ELSE $1
+        END;
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
