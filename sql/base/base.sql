@@ -261,6 +261,40 @@ CREATE OR REPLACE FUNCTION migration_tools.build_specific_base_staging_table (TE
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_from (TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        parent_table ALIAS FOR $2;
+        source_table ALIAS FOR $3;
+        columns RECORD;
+        create_sql TEXT;
+        insert_sql TEXT;
+        column_list TEXT := '';
+        column_count INTEGER := 0;
+    BEGIN
+        create_sql := 'CREATE UNLOGGED TABLE ' || migration_schema || '.' || parent_table || '_legacy ( ';
+        FOR columns IN
+            SELECT table_schema, table_name, column_name, data_type
+            FROM information_schema.columns
+            WHERE table_schema = migration_schema AND table_name = source_table
+        LOOP
+            column_count := column_count + 1;
+            if column_count > 1 then
+                create_sql := create_sql || ', ';
+                column_list := column_list || ', ';
+            end if;
+            create_sql := create_sql || columns.column_name || ' ' || columns.data_type;
+            column_list := column_list || columns.column_name;
+        END LOOP;
+        create_sql := create_sql || ' ) INHERITS ( ' || migration_schema || '.' || parent_table || ' );';
+        --RAISE INFO 'create_sql = %', create_sql;
+        EXECUTE create_sql;
+        insert_sql := 'INSERT INTO ' || migration_schema || '.' || parent_table || '_legacy (' || column_list || ') SELECT ' || column_list || ' FROM ' || migration_schema || '.' || source_table || ';';
+        --RAISE INFO 'insert_sql = %', insert_sql;
+        EXECUTE insert_sql;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
 CREATE OR REPLACE FUNCTION migration_tools.insert_base_into_production (TEXT) RETURNS VOID AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
