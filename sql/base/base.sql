@@ -283,7 +283,12 @@ CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_from (TEXT
                 create_sql := create_sql || ', ';
                 column_list := column_list || ', ';
             end if;
-            create_sql := create_sql || columns.column_name || ' ' || columns.data_type;
+            create_sql := create_sql || columns.column_name || ' ';
+            if columns.data_type = 'ARRAY' then
+                create_sql := create_sql || 'TEXT[]';
+            else
+                create_sql := create_sql || columns.data_type;
+            end if;
             column_list := column_list || columns.column_name;
         END LOOP;
         create_sql := create_sql || ' ) INHERITS ( ' || migration_schema || '.' || parent_table || ' );';
