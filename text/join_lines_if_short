@@ -75,7 +75,7 @@ while (my $line = <>) {
     } else {
         $line_buffer = "$line_buffer$join_delimiter$line";
     }
-    my @f = split /$delimiter/, $line_buffer;
+    my @f = split /$delimiter/, $line_buffer, -1;
     if (scalar(@f) >= $colcount) {
         $line_buffer =~ s/\x0D//g; # strip embedded carriage returns
         print "$line_buffer\n";
