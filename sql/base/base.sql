@@ -4182,9 +4182,25 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
--- yet another subfield 9 function, this one only adds the $9 if the ind1 = 1 or 4 and ind2 = 0 or 1
-DROP FUNCTION IF EXISTS migration_tools.strict_add_sf9(TEXT,TEXT);
-CREATE OR REPLACE FUNCTION migration_tools.strict_add_sf9(marc TEXT, new_9 TEXT)
+DROP FUNCTION IF EXISTS migration_tools.munge_sf9(INTEGER,TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.merge_group(bib_id INTEGER,new_sf9 TEXT,force TEXT DEFAULT 'false')
+    RETURNS BOOLEAN AS 
+$BODY$
+DECLARE
+	marc_xml	TEXT;
+	new_marc	TEXT;
+BEGIN
+	SELECT marc FROM biblio.record_entry WHERE id = bib_id INTO marc_xml;
+	
+	SELECT munge_sf9(marc_xml,new_sf9,force) INTO new_marc;
+	UPDATE biblio.record_entry SET marc = new_marc WHERE id = bib_id;
+	
+	RETURN true;
+END;
+$BODY$ LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS migration_tools.munge_sf9(TEXT,TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.munge_sf9(marc_xml TEXT, new_9_to_set TEXT, force TEXT)
  RETURNS TEXT
  LANGUAGE plperlu
 AS $function$
@@ -4200,6 +4216,7 @@ binmode(STDERR, ':utf8');
 
 my $marc_xml = shift;
 my $new_9_to_set = shift;
+my $force = shift;
 
 $marc_xml =~ s/(<leader>.........)./${1}a/;
 
@@ -4218,58 +4235,12 @@ return $marc_xml->as_xml_record() unless @uris;
 foreach my $field (@uris) {
     my $ind1 = $field->indicator('1');
     if (!defined $ind1) { next; }
-    if ($ind1 ne '1' && $ind1 ne '4') { next; }
+    if ($ind1 ne '1' && $ind1 ne '4' && $force eq 'false') { next; }
+	if ($ind1 ne '1' && $ind1 ne '4' && $force eq 'true') { $field->set_indicator(1,'4'); }
     my $ind2 = $field->indicator('2');
     if (!defined $ind2) { next; }
-    if ($ind2 ne '0' && $ind2 ne '1') { next; }
-    $field->add_subfields( '9' => $new_9_to_set );
-}
-
-return $marc_xml->as_xml_record();
-
-$function$;
-
--- yet another subfield 9 function, this one only adds the $9 and forces
--- ind1 = 4 if not already ind1 = 1 or 4 and ind2 = 0 if not already ind2 = 0 or 1
-DROP FUNCTION IF EXISTS migration_tools.force_add_sf9(TEXT,TEXT);
-CREATE OR REPLACE FUNCTION migration_tools.force_add_sf9(marc TEXT, new_9 TEXT)
- RETURNS TEXT
- LANGUAGE plperlu
-AS $function$
-use strict;
-use warnings;
-
-use MARC::Record;
-use MARC::File::XML (BinaryEncoding => 'utf8');
-
-binmode(STDERR, ':bytes');
-binmode(STDOUT, ':utf8');
-binmode(STDERR, ':utf8');
-
-my $marc_xml = shift;
-my $new_9_to_set = shift;
-
-$marc_xml =~ s/(<leader>.........)./${1}a/;
-
-eval {
-    $marc_xml = MARC::Record->new_from_xml($marc_xml);
-};
-if ($@) {
-    #elog("could not parse $bibid: $@\n");
-    import MARC::File::XML (BinaryEncoding => 'utf8');
-    return $marc_xml;
-}
-
-my @uris = $marc_xml->field('856');
-return $marc_xml->as_xml_record() unless @uris;
-
-foreach my $field (@uris) {
-    my $ind1 = $field->indicator('1');
-    if (!defined $ind1) { next; }
-    if ($ind1 ne '1' && $ind1 ne '4') { $field->set_indicator(1,'4'); }
-    my $ind2 = $field->indicator('2');
-    if (!defined $ind2) { next; }
-    if ($ind2 ne '0' && $ind2 ne '1') { $field->set_indicator(2,'0'); }
+    if ($ind2 ne '0' && $ind2 ne '1' && $force eq 'false') { next; }
+    if ($ind2 ne '0' && $ind2 ne '1' && $force eq 'true') { $field->set_indicator(2,'0'); }
     $field->add_subfields( '9' => $new_9_to_set );
 }
 
