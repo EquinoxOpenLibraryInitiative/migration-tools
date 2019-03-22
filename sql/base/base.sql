@@ -3609,25 +3609,25 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
 
         IF x_org_found THEN
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = x_org'
                 || ' AND NOT b.deleted';
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset.copy_location b'
+                || ' SET x_shelf = b.id FROM asset.copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = x_org'
                 || ' AND x_shelf IS NULL'
                 || ' AND NOT b.deleted';
         ELSE
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1'
                 || ' AND NOT b.deleted'
             USING org;
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1'
                 || ' AND x_shelf IS NULL'
@@ -3637,7 +3637,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
 
         FOREACH o IN ARRAY org_list LOOP
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset.copy_location b'
+                || ' SET x_shelf = b.id FROM asset.copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1 AND x_shelf IS NULL'
                 || ' AND NOT b.deleted'
@@ -3768,7 +3768,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_org (TEXT,TEXT) RETURNS VOID A
             || ' ADD COLUMN x_org INTEGER';
 
         EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-            || ' SET x_org = id FROM actor.org_unit b'
+            || ' SET x_org = b.id FROM actor.org_unit b'
             || ' WHERE BTRIM(a.desired_org) = BTRIM(b.shortname)';
 
         EXECUTE 'SELECT migration_tools.assert(
