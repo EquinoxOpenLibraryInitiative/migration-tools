@@ -3,8 +3,11 @@ CREATE TABLE map_tlc_branches (
     ,tlc_branch_id      TEXT
     ,tlc_name           TEXT
     ,org_unit           TEXT
+	,mig_patrons		TEXT
+	,mig_items			TEXT
     ,note               TEXT
     ,x_org_id           INTEGER
+	
 );
 
 INSERT INTO gsheet_tracked_table
@@ -21,6 +24,8 @@ VALUES
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'tlc_name')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'org_unit')
     ,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'note')
+	,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'mig_patrons')
+	,((SELECT id FROM gsheet_tracked_table WHERE tab_name = 'Branches Present in Extract'),'mig_items')
 ;
 
 -- ############################################
