@@ -573,6 +573,98 @@ CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_fuller_last_first_midd
     END;
 $$ LANGUAGE PLPGSQL STRICT IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_fuller_last_first_middle_and_random_affix2 (TEXT) RETURNS TEXT[] AS $$
+    DECLARE
+        full_name TEXT := $1;
+        temp TEXT;
+        family_name TEXT := '';
+        first_given_name TEXT := '';
+        second_given_name TEXT := '';
+        suffix TEXT := '';
+        prefix TEXT := '';
+    BEGIN
+        temp := BTRIM(full_name);
+        -- Use values, not structure, for prefix/suffix, unless we come up with a better idea
+        --IF temp ~ '^\S{2,}\.' THEN
+        --    prefix := REGEXP_REPLACE(temp, '^(\S{2,}\.).*$','\1');
+        --    temp := BTRIM(REGEXP_REPLACE(temp, '^\S{2,}\.(.*)$','\1'));
+        --END IF;
+        --IF temp ~ '\S{2,}\.$' THEN
+        --    suffix := REGEXP_REPLACE(temp, '^.*(\S{2,}\.)$','\1');
+        --    temp := REGEXP_REPLACE(temp, '^(.*)\S{2,}\.$','\1');
+        --END IF;
+        IF temp ilike '%MR.%' THEN
+            prefix := 'Mr.';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'MR\.\\s*', '', 'i' ));
+        END IF;
+        IF temp ilike '%MRS.%' THEN
+            prefix := 'Mrs.';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'MRS\.\\s*', '', 'i' ));
+        END IF;
+        IF temp ilike '%MS.%' THEN
+            prefix := 'Ms.';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'MS\.\\s*', '', 'i' ));
+        END IF;
+        IF temp ilike '%DR.%' THEN
+            prefix := 'Dr.';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'DR\.\\s*', '', 'i' ));
+        END IF;
+        IF temp ilike '%JR.%' THEN
+            suffix := 'Jr.';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'JR\.\\s*', '', 'i' ));
+        END IF;
+        IF temp ilike '%JR,%' THEN
+            suffix := 'Jr.';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'JR,\\s*', ',', 'i' ));
+        END IF;
+        IF temp ilike '%SR.%' THEN
+            suffix := 'Sr.';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'SR\.\\s*', '', 'i' ));
+        END IF;
+        IF temp ilike '%SR,%' THEN
+            suffix := 'Sr.';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'SR,\\s*', ',', 'i' ));
+        END IF;
+        IF temp like '%III%' THEN
+            suffix := 'III';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'III', '' ));
+        END IF;
+        IF temp like '%II%' THEN
+            suffix := 'II';
+            temp := BTRIM(REGEXP_REPLACE( temp, E'II', '' ));
+        END IF;
+
+        IF temp ~ ',' THEN
+            family_name = BTRIM(REGEXP_REPLACE(temp,'^(.*?,).*$','\1'));
+            temp := BTRIM(REPLACE( temp, family_name, '' ));
+            family_name := REPLACE( family_name, ',', '' );
+            IF temp ~ ' ' THEN
+                first_given_name := BTRIM( REGEXP_REPLACE(temp,'^(.+)\s(.+)$','\1') );
+                second_given_name := BTRIM( REGEXP_REPLACE(temp,'^(.+)\s(.+)$','\2') );
+            ELSE
+                first_given_name := temp;
+                second_given_name := '';
+            END IF;
+        ELSE
+            IF temp ~ '^\S+\s+\S+\s+\S+$' THEN
+                first_given_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)\s*(\S+)$','\1') );
+                second_given_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)\s*(\S+)$','\2') );
+                family_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)\s*(\S+)$','\3') );
+            ELSE
+                first_given_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)$','\1') );
+                second_given_name := temp;
+                family_name := BTRIM( REGEXP_REPLACE(temp,'^(\S+)\s*(\S+)$','\2') );
+            END IF;
+        END IF;
+
+        family_name := BTRIM(REPLACE(REPLACE(family_name,',',''),'"',''));
+        first_given_name := BTRIM(REPLACE(REPLACE(first_given_name,',',''),'"',''));
+        second_given_name := BTRIM(REPLACE(REPLACE(second_given_name,',',''),'"',''));
+
+        RETURN ARRAY[ family_name, prefix, first_given_name, second_given_name, suffix ];
+    END;
+$$ LANGUAGE PLPGSQL STRICT IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.address_parse_out_citystatezip (TEXT) RETURNS TEXT[] AS $$
     DECLARE
         city_state_zip TEXT := $1;
@@ -3609,25 +3701,25 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
 
         IF x_org_found THEN
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = x_org'
                 || ' AND NOT b.deleted';
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset.copy_location b'
+                || ' SET x_shelf = b.id FROM asset.copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = x_org'
                 || ' AND x_shelf IS NULL'
                 || ' AND NOT b.deleted';
         ELSE
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1'
                 || ' AND NOT b.deleted'
             USING org;
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1'
                 || ' AND x_shelf IS NULL'
@@ -3637,7 +3729,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
 
         FOREACH o IN ARRAY org_list LOOP
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = id FROM asset.copy_location b'
+                || ' SET x_shelf = b.id FROM asset.copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1 AND x_shelf IS NULL'
                 || ' AND NOT b.deleted'
@@ -3768,7 +3860,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_org (TEXT,TEXT) RETURNS VOID A
             || ' ADD COLUMN x_org INTEGER';
 
         EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-            || ' SET x_org = id FROM actor.org_unit b'
+            || ' SET x_org = b.id FROM actor.org_unit b'
             || ' WHERE BTRIM(a.desired_org) = BTRIM(b.shortname)';
 
         EXECUTE 'SELECT migration_tools.assert(
