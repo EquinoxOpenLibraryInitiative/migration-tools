@@ -46,7 +46,7 @@ my %pass_thru = ('add'=>[],'skip-iconv'=>[],'clean'=>[],'convert'=>[],'stage'=>[
 foreach my $a (@ARGV) {
     if ($a =~ /^--([a-z]+)-(.*)$/) {
         $pass_thru{$1} = [] if ! defined $pass_thru{$1};
-        unshift $pass_thru{$1}, "--$2";
+        unshift @{ $pass_thru{$1} }, "--$2";
     }
 }
 
