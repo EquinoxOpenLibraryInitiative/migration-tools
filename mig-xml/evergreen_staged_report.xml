@@ -528,6 +528,15 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT COUNT(map.id), tag.tag_type, tag.label, tag.staff_note, tag.pub FROM asset_copy_tag tag JOIN asset_copy_tag_copy_map map ON map.tag = tag.id GROUP BY 2,3,4,5 ORDER BY 2,3</query>
     </report>
 
+    <report>
+         <name>asset_copy_alerts</name>
+        <report_title>Copy Alerts</report_title>
+        <tag>assets</tag>
+        <iteration>0</iteration>
+        <heading>Alert Count.Alert Type</heading>
+		<query>SELECT COUNT(*), cat.name FROM asset_copy_alert aca JOIN config.copy_alert_type cat ON cat.id = aca.alert_type GROUP BY 2</query>
+    </report>
+
     <!-- MONEY REPORTS -->
 
     <report>
