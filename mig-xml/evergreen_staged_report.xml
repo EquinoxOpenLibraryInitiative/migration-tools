@@ -102,7 +102,7 @@
         <iteration>0</iteration>
         <report_title>Migrated Circulations by Duration, Fine and Max Fine</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Migrated</heading>
-        <query>SELECT COUNT(id), duration, recurring_fine, max_fine, x_migrate::TEXT FROM action_circulation_legacy WHERE x_migrate = TRUE GROUP BY 2, 3, 4, 5</query>
+        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule, x_migrate::TEXT FROM action_circulation_legacy WHERE x_migrate = TRUE GROUP BY 2, 3, 4, 5</query>
     </report>
 
      <report>
@@ -111,7 +111,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Duration, Fine and Max Fine</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine</heading>
-        <query>SELECT COUNT(id), duration, recurring_fine, max_fine FROM action_circulation GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
+        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule FROM action_circulation GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
     </report>
 
      <report>
@@ -120,7 +120,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Patron Group</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.User Group.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, pgt.name, x.buildrows FROM action_circulation_legacy acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name, x.buildrows FROM action_circulation_legacy acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
      <report>
@@ -129,7 +129,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Rules and Patron Group</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.User Group.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, pgt.name, x.buildrows FROM action_circulation acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation acirc) x ON x.id = acirc.id GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name, x.buildrows FROM action_circulation acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation acirc) x ON x.id = acirc.id GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
      <report>
@@ -138,7 +138,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Circulation Modifier</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Circulation Modifier.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, ac.circ_modifier, x.buildrows FROM action_circulation_legacy acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier, x.buildrows FROM action_circulation_legacy acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
      <report>
@@ -147,7 +147,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Rules and Circulation Modifier</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Circulation Modifier.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, ac.circ_modifier, x.buildrows FROM action_circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation acirc) x ON x.id = acirc.id
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier, x.buildrows FROM action_circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation acirc) x ON x.id = acirc.id
              GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
@@ -157,7 +157,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Org Unit</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Library Branch</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, aou.name FROM action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
     </report>
 
      <report>
@@ -166,7 +166,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Rules and Org Unit</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Library Branch</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, aou.name FROM action_circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM action_circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
     </report>
 
      <report>

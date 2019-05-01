@@ -23,9 +23,9 @@
         <name>circs_by_duration</name>
         <tag>circs</tag>
         <iteration>0</iteration>
-        <report_title>Circulations by Duration, Fine and Max Fine</report_title>
+        <report_title>Circulations by Duration, Fine and Max Fine Rules</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine</heading>
-        <query>SELECT COUNT(id), duration, recurring_fine, max_fine FROM action.circulation GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
+        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule FROM action.circulation GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
     </report>
 
      <report>
@@ -34,7 +34,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Patron Group</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.User Group</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, pgt.name FROM action.circulation acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile 
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name FROM action.circulation acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile
             GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
     </report>
 
@@ -44,7 +44,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Circulation Modifier</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Circulation Modifier</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, ac.circ_modifier FROM action.circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier FROM action.circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy
              GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
     </report>
 
@@ -54,7 +54,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Org Unit</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Library Branch</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration, acirc.recurring_fine, acirc.max_fine, aou.name FROM action.circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM action.circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
     </report>
 
      <report>
