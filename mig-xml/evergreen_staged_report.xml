@@ -660,12 +660,12 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     <!-- BIBS REPORTS -->
 
     <report>
-        <name>bibs</name>
-        <report_title>Extracted Bibliographic Records</report_title>
+        <name>bibs_loaded</name>
+        <report_title>Loaded Bibliographic Records</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
-        <heading>Count.Sourcee.Migrated</heading>
-        <query>SELECT COUNT(bre.id), bre.x_source, bre.x_migrate::TEXT FROM biblio_record_entry_legacy bre GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <heading>Count.Loaded</heading>
+        <query>SELECT COUNT(bre.id), bre.x_migrate::TEXT FROM biblio_record_entry_legacy bre WHERE id IN (SELECT id FROM biblio.record_entry WHERE deleted = FALSE) GROUP BY 2 ORDER BY 2</query>
         <note>False means the records are not deleted.</note>
     </report>
 
