@@ -737,7 +737,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <report_title>Bibliographic Merge Count</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
-        <heading>Records Merged.Incumbent Records Merged INto</heading>
+        <heading>Records Merged.Incumbent Records Merged Into</heading>
         <query>SELECT SUM(array_length(records,1)), COUNT(*) FROM groups</query>
     </report>
 
