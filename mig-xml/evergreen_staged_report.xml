@@ -750,6 +750,20 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>WITH g AS (SELECT UNNEST(records) FROM groups) SELECT COUNT(record), search_format_str FROM dedupe_batch WHERE record IN (SELECT * FROM g) GROUP BY 2</query>
     </report>
 
+	</report>
+        <name>bibs_not_loaded</name>
+        <report_title>Bibliographic Records That Failed to Load</report_title>
+        <tag>bibs</tag>
+        <iteration>0</iteration>
+        <heading>Title.Author.Control Number</heading>
+        <query>SELECT LEFT(ARRAY_TO_STRING(oils_xpath( '//*[@tag="245"]/*[@code="a"]/text()', a.marc),''),50) AS "Title",
+				LEFT(ARRAY_TO_STRING(oils_xpath( '//*[@tag="100"]/*[@code="a"]/text()', a.marc),''),50) AS "Author",
+				ARRAY_TO_STRING(oils_xpath( '//*[@tag="001"]/text()', a.marc),'') AS "001"
+				FROM biblio_record_entry aLEFT JOIN biblio.record_entry b ON b.id = a.id WHERE b.id IS NULL AND a.x_migrate;
+		</query>
+    </report>
+
+
     <!-- ACTORS REPORTS -->
 
     <report>
