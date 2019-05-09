@@ -67,6 +67,8 @@ Using B<mig> should go something like this:
 
 =item mig gsheet --pull foo_tab_name OR --push foo_pg_table_name 
 
+=item mig stagebibs --file foo.xml 
+
 =back
 
 =head1 COMMANDS

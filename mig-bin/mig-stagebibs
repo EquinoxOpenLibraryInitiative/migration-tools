@@ -3,26 +3,18 @@
 ###############################################################################
 =pod
 
-=item B<loadbibs> --stage_file foo.mrc 
+=item B<stagebibs> --file foo.xml
 
-Takes a load of bibs from a binary marc file and loads them into mig staging table 
-of bibio_record_entry.
+Takes a load of bibs from a UTF-8 MARC XML  file and loads them into mig staging 
+table of bibio_record_entry.  This is done with no checking of file validity 
+so records should be checked before hand and cleaned.
 
-Takes these optional arguments:
-
---append 
-
-When used it does not drop the staging table and instead adds onto it.  
+Takes one  optional arguments:
 
 --source
 
 Sets an x_source value on the staging table to the one supplied instead of the 
 default of none.
-
---xml 
-
-By default the program assumes a USMARC file.  This flag will identify it as 
-a MARCXML file instead.
 
 =back
 
@@ -39,6 +31,7 @@ use Env qw(
     HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
     MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
+use Data::Dumper;
 use Pod::Usage;
 use Switch;
 use Cwd 'abs_path';
@@ -64,11 +57,8 @@ my $i = 0;
 my $batch;
 binmode STDIN, ':utf8';
 
-#MARC::Charset->assume_unicode(1); 
-MARC::Charset->ignore_errors(1);
-
 foreach my $arg (@ARGV) {
-    if ($arg eq '--stage_file') {
+    if ($arg eq '--file') {
         $next_arg_is_file = 1;
         next;
     }
@@ -92,32 +82,27 @@ my $bre_test = check_for_table($dbh,'biblio_record_entry');
 if ($bre_test == 0) { create_child_bre($dbh); }
 
 my $xmig_test = check_for_column($dbh,'biblio_record_entry','x_migrate');
-if ($xmig_test == 0) { add_column($dbh,'biblio_record_entry','x_migrate','BOOLEAN DEFAULT TRUE');
+if ($xmig_test == 0) { add_column($dbh,'biblio_record_entry','x_migrate','BOOLEAN DEFAULT TRUE'); }
 
 my $xsource_test = check_for_column($dbh,'biblio_record_entry','x_source');
-if ($xsource_test == 0) { add_column($dbh,'biblio_record_entry','x_source','TEXT');
-
-my $last_xact;
-if ($source) { $last_xact = "'$MIGSCHEMA $source'" } else { $last_xact = "'$MIGSCHEMA'"; }
+if ($xsource_test == 0) { add_column($dbh,'biblio_record_entry','x_source','TEXT'); }
 
 #flatten out MARC XML FILE
 open my $xml, "<:encoding(utf8)", $infile or abort('could not open MARC XML file');
 $i = 0;
-my $record;
+my $record = '';
 while(my $line = <$xml>) {
-	 if ($line =~ /^<\/?collection/) { next; }
-	 chomp $line;
-	 $record = $record . $line;
-	 if ($line =~ /^<\/record/) {
-		stage_record($dbh,$record,$last_xact); 
+	if ($line =~ /^<\/?collection/) { next; }
+	chomp $line;
+	$record = $record . $line;
+	if ($line =~ /^<\/record/) {
+		stage_record($dbh,$record,$source); 
 		$record = '';
+		$i++;
+		if (($i % 100) == 0) { report_progress('Records stage', $i); }
 	}
-
+}
 close $xml;
-
-
-#load the MARC XML FILE TO STAGING 
-report_progress("Records staged", $i) if 0 != $i % 100;
 
 print "Finis.\n";
 
@@ -156,9 +141,12 @@ sub report_progress {
 sub stage_record {
     my $dbh = shift;
     my $record = shift;
-	my $last_xact = shift;
+	my $source = shift;
+	my $last_xact = "'$MIGSCHEMA'";
 	$record = '$_$' . $record . '$_$';
-    my $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry (last_xact_id,marc) VALUES ($last_xact,$record);";
+	my $sql;
+	if ($source eq 'default') { $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry (last_xact_id,marc) VALUES ($last_xact,$record);"; }
+		else { $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry (last_xact_id,marc,x_source) VALUES ($last_xact,$record,'$source');";  }
     my $sth = $dbh->prepare($sql);
     $sth->execute();
 	return;
@@ -179,7 +167,7 @@ sub check_for_column {
     my $dbh = shift;
     my $table = shift;
 	my $column = shift;
-    my $sql = "SELECT 1 FROM information_schema.columns WHERE table_schema = '$MIGSCHEMA' AND table_name = '$table' AND column_name = $column;";
+    my $sql = "SELECT 1 FROM information_schema.columns WHERE table_schema = '$MIGSCHEMA' AND table_name = '$table' AND column_name = '$column';";
     my $sth = $dbh->prepare($sql);
     $sth->execute();
     my @sqlresult = $sth->fetchrow_array;
@@ -192,8 +180,11 @@ sub add_column {
     my $table = shift;
     my $column = shift;
 	my $column_type = shift;
-    my $sql = "ALTER TABLE $MIGSCHEMA.$table ADD COLUMN $COLUMN $COLUMN_TYPE;";
+    my $sql = "ALTER TABLE $MIGSCHEMA.$table ADD COLUMN $column $column_type;";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute();
+    my @sqlresult = $sth->fetchrow_array;
 	my $r = check_for_column($dbh,$table,$column);
-	if ($r == 0) { abort('failed to create column'; } else { return $r; }
+	if ($r == 0) { abort('failed to create column'); } else { return $r; }
 }
 
