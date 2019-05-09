@@ -34,12 +34,6 @@ use strict;
 use warnings;
 
 use DBI;
-use Data::Dumper;
-use MARC::Record;
-use MARC::Batch;
-use MARC::File;
-use MARC::File::XML;
-use MARC::Charset 'marc8_to_utf8';
 #binmode STDIN, ':bytes';
 use Env qw(
     HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
@@ -50,7 +44,6 @@ use Switch;
 use Cwd 'abs_path';
 use FindBin;
 use UNIVERSAL;
-use Unicode::Normalize;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
 use Mig;
@@ -62,7 +55,7 @@ my $next_arg_is_file = 0;
 my $append = 0;
 my $next_arg_is_source = 0;
 my $next_arg_is_stage = 0;
-my $stage_table = 'biblio_record_entry_legacy';
+my $stage_table = 'biblio_record_entry';
 my $source = 'default';
 my $file_is_xml = 0;
 my $dbh = Mig::db_connect();
@@ -93,92 +86,45 @@ foreach my $arg (@ARGV) {
         $next_arg_is_source = 0;
         next;
     }
-    if ($arg eq '--stage_table') {
-        $next_arg_is_stage = 1;
-        next;
-    }
-    if ($next_arg_is_stage) {
-        $stage_table = $arg;
-        $next_arg_is_stage = 0;
-        next;
-    }
-	if ($arg eq '--append') {
-		$append = 1;
-		next;
-	}
-    if ($arg eq '--xml') {
-        $file_is_xml = 1;
-        next;
-    }
 }
 
-create_child_table($dbh); #and test to see if it exists 
+my $bre_test = check_for_table($dbh,'biblio_record_entry');
+if ($bre_test == 0) { create_child_bre($dbh); }
 
-# normal stage table creation
-if ($append == 0) { 
-    drop_stage_table($dbh,$stage_table); 
-    create_stage_table($dbh,$stage_table);
-    }
-if ($file_is_xml) {
-	$batch = MARC::Batch->new('XML',$infile);
-} else {
-	$batch = MARC::Batch->new('USMARC',$infile);
-} 
-$batch->strict_off();
+my $xmig_test = check_for_column($dbh,'biblio_record_entry','x_migrate');
+if ($xmig_test == 0) { add_column($dbh,'biblio_record_entry','x_migrate','BOOLEAN DEFAULT TRUE');
 
+my $xsource_test = check_for_column($dbh,'biblio_record_entry','x_source');
+if ($xsource_test == 0) { add_column($dbh,'biblio_record_entry','x_source','TEXT');
+
+my $last_xact;
+if ($source) { $last_xact = "'$MIGSCHEMA $source'" } else { $last_xact = "'$MIGSCHEMA'"; }
+
+#flatten out MARC XML FILE
+open my $xml, "<:encoding(utf8)", $infile or abort('could not open MARC XML file');
+$i = 0;
 my $record;
-#while ( my $record = $batch->next() ) {
-while ( eval {$record = $batch->next()} or do { if (!$record and !$@) { last; } else { next; }} ) {
-	my $xml = $record->as_xml_record();
-    $xml = marc8_to_utf8($xml);
-	$i++;
-	$xml = clean_marc($xml);
-	$xml = '$_$' . $xml . '$_$';
-	my @warnings = $batch->warnings();
-	my $warning_string;
-	if (@warnings) { $warning_string = "'" . join(':',@warnings) . "'"; } else { $warning_string = "'none'"; }
-	my $sql = "INSERT INTO $MIGSCHEMA.$stage_table (marc,x_source,x_warnings) VALUES ($xml,'$source',$warning_string);";
-    my $sth = $dbh->prepare($sql);
-    eval { $sth->execute() };
-	report_progress("Records staged", $i) if 0 != $i % 100;
-}
+while(my $line = <$xml>) {
+	 if ($line =~ /^<\/?collection/) { next; }
+	 chomp $line;
+	 $record = $record . $line;
+	 if ($line =~ /^<\/record/) {
+		stage_record($dbh,$record,$last_xact); 
+		$record = '';
+	}
 
-$dbh->do(qq/
-    CREATE INDEX ${MIGSCHEMA}_biblio_record_entry_legacy_idx ON
-        $MIGSCHEMA.biblio_record_entry_legacy (id);
-/);
+close $xml;
+
+
+#load the MARC XML FILE TO STAGING 
+report_progress("Records staged", $i) if 0 != $i % 100;
 
 print "Finis.\n";
 
+# beyond here be functions 
 
-sub drop_stage_table {
+sub create_child_bre {
     my $dbh = shift;
-    my $stage_table = shift;
-    my $tablecheck = check_for_mig_table($dbh,$stage_table);
-    my $answer = 'null';
-    if ($tablecheck == 1) { $answer = prompt('Do you want to drop $MIGSCHEMA.$stage_table? This will not remove any bibs loaded to production. y/n'); }
-    if ($tablecheck == 1 and $answer eq 'y') { $dbh->do("DROP TABLE IF EXISTS $MIGSCHEMA.$stage_table;"); } 
-    if ($tablecheck == 1 and $answer ne 'y') { abort('Table not dropped, bib load aborted.'); }
-    return();
-}
-
-sub create_stage_table {
-	my $dbh = shift;
-    my $stage_table = shift;
-
-    $dbh->do("CREATE UNLOGGED TABLE $MIGSCHEMA.$stage_table (
-            l_bib_id    TEXT,
-            x_source    TEXT,
-            x_warnings  TEXT,
-            x_migrate   BOOLEAN DEFAULT TRUE
-        ) INHERITS ($MIGSCHEMA.biblio_record_entry);");
-
-    return();
-}
-
-sub create_child_table {
-    my $dbh = shift;
-
     $dbh->do("DO \$\$ 
         DECLARE
             t   BOOLEAN;
@@ -191,21 +137,6 @@ sub create_child_table {
 
     return ();
 }
-
-sub clean_marc {
-    my $xml = shift;
-    $xml = marc8_to_utf8($xml);
-    $xml =~ s/\n//sog;
-    $xml =~ s/^<\?xml.+\?\s*>//go;
-    $xml =~ s/>\s+</></go;
-    $xml =~ s/\p{Cc}//go;
-    $xml = NFC($xml);
-    $xml =~ s/&(?!\S+;)/&amp;/gso;
-    $xml =~ s/([\x{0080}-\x{fffd}])/sprintf('&#x%X;',ord($1))/sgoe;
-    $xml =~ s/[\x00-\x1f]//go;
-    return $xml;
-}
-
 
 sub abort {
     my $msg = shift;
@@ -222,7 +153,18 @@ sub report_progress {
     }
 }
 
-sub check_for_mig_table {
+sub stage_record {
+    my $dbh = shift;
+    my $record = shift;
+	my $last_xact = shift;
+	$record = '$_$' . $record . '$_$';
+    my $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry (last_xact_id,marc) VALUES ($last_xact,$record);";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute();
+	return;
+}
+
+sub check_for_table {
     my $dbh = shift;
     my $table = shift;
     my $sql = "SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = '$table';";
@@ -233,12 +175,25 @@ sub check_for_mig_table {
     if ($r) { return $r; } else { return 0; }
 }
 
-sub prompt {
-  my ($query) = @_; 
-  local $| = 1; 
-  print $query;
-  chomp(my $answer = <STDIN>);
-  return $answer;
+sub check_for_column {
+    my $dbh = shift;
+    my $table = shift;
+	my $column = shift;
+    my $sql = "SELECT 1 FROM information_schema.columns WHERE table_schema = '$MIGSCHEMA' AND table_name = '$table' AND column_name = $column;";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute();
+    my @sqlresult = $sth->fetchrow_array;
+    my $r = pop @sqlresult;
+    if ($r) { return $r; } else { return 0; }
 }
 
+sub add_column {
+    my $dbh = shift;
+    my $table = shift;
+    my $column = shift;
+	my $column_type = shift;
+    my $sql = "ALTER TABLE $MIGSCHEMA.$table ADD COLUMN $COLUMN $COLUMN_TYPE;";
+	my $r = check_for_column($dbh,$table,$column);
+	if ($r == 0) { abort('failed to create column'; } else { return $r; }
+}
 
