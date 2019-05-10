@@ -5161,3 +5161,36 @@ BEGIN
 END
 $function$;
 
+
+-- convenience function for handling item barcode collisions in asset_copy_legacy
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_asset_barcode_collisions(migration_schema TEXT) RETURNS VOID AS $function$
+DECLARE
+    x_barcode TEXT;
+    x_id BIGINT;
+    row_count NUMERIC;
+    internal_collision_count NUMERIC := 0;
+    incumbent_collision_count NUMERIC := 0;
+BEGIN
+    FOR x_barcode IN SELECT barcode FROM asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    LOOP
+        FOR x_id IN SELECT id FROM asset_copy WHERE barcode = x_barcode
+        LOOP
+            UPDATE asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            internal_collision_count := internal_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% internal collisions', internal_collision_count;
+    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
+    LOOP
+        FOR x_id IN SELECT id FROM asset_copy_legacy WHERE barcode = x_barcode
+        LOOP
+            UPDATE asset_copy_legacy SET barcode = migration_schema || '_incumbent_collision_' || id || '_' || barcode WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_collision_count := incumbent_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent collisions', incumbent_collision_count;
+END
+$function$ LANGUAGE plpgsql;
