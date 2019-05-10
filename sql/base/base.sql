@@ -5194,3 +5194,52 @@ BEGIN
     RAISE INFO '% incumbent collisions', incumbent_collision_count;
 END
 $function$ LANGUAGE plpgsql;
+
+-- convenience function for handling patron barcode/usrname collisions in actor_usr_legacy
+-- this should be ran prior to populating actor_card
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_actor_barcode_collisions(migration_schema TEXT) RETURNS VOID AS $function$
+DECLARE
+    x_barcode TEXT;
+    x_id BIGINT;
+    row_count NUMERIC;
+    internal_collision_count NUMERIC := 0;
+    incumbent_barcode_collision_count NUMERIC := 0;
+    incumbent_usrname_collision_count NUMERIC := 0;
+BEGIN
+    FOR x_barcode IN SELECT usrname FROM actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    LOOP
+        FOR x_id IN SELECT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            internal_collision_count := internal_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% internal usrname/barcode collisions', internal_collision_count;
+
+    FOR x_barcode IN
+        SELECT a.barcode FROM actor.card a, actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
+    LOOP
+        FOR x_id IN SELECT DISTINCT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE actor_usr_legacy SET usrname = migration_schema || '_incumbent_barcode_collision_' || id || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_barcode_collision_count := incumbent_barcode_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
+
+    FOR x_barcode IN
+        SELECT a.usrname FROM actor.usr a, actor_usr_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.usrname = b.usrname
+    LOOP
+        FOR x_id IN SELECT DISTINCT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE actor_usr_legacy SET usrname = migration_schema || '_incumbent_usrname_collision_' || id || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_usrname_collision_count := incumbent_usrname_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent usrname collisions (post barcode collision munging)', incumbent_usrname_collision_count;
+END
+$function$ LANGUAGE plpgsql;
