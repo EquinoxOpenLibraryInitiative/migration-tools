@@ -4394,7 +4394,7 @@ foreach my $field (@uris) {
     $marc_xml->delete_field($field); # -- we're going to dedup and add them back
 }
 
-my %hash = (map { ($_->as_usmarc => $_) } @uris); -- courtesy of an old Mike Rylander post :-)
+my %hash = (map { ($_->as_usmarc => $_) } @uris); # -- courtesy of an old Mike Rylander post :-)
 $marc_xml->insert_fields_ordered( values( %hash ) );
 
 return $marc_xml->as_xml_record();
