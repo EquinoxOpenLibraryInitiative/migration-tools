@@ -660,6 +660,13 @@ sub initialize {
     $c->{'renumber-tag'} = 903 unless defined $c->{'renumber-tag'};
     $c->{'renumber-subfield'} = 'a' unless defined $c->{'renumber-subfield'};
     $c->{window} = 9;
+	if ($c->{marcfile} and $c->{prefix}) { abort('You can not declare a marc file and prefix.'); }
+    if ($c->{marcfile}) {
+        $c->{output} = join('.',$c->{marcfile},'clean')
+          unless $c->{output};
+        $c->{exception} = join('.',$c->{marcfile},'exception')
+          unless $c->{exception};
+    }
     if ($c->{prefix}) {
         $c->{output} = join('.',$c->{prefix},'clean','marc','xml')
           unless $c->{output};
@@ -683,6 +690,12 @@ sub initialize {
     # remove original id sequence tag from trash hash if we know it
     $c->{trash}->remove_tag($c->{'original-tag'})
       if ( $c->{'original-tag'} and $c->{trash}->has($c->{'original-tag'}) );
+}
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    exit 1;
 }
 
 sub show_help {
