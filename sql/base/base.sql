@@ -4340,6 +4340,66 @@ return $marc_xml->as_xml_record();
 
 $function$;
 
+DROP FUNCTION IF EXISTS migration_tools.owner_change_sf9_substring_match(TEXT,TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.owner_change_sf9_substring_match (marc_xml TEXT, substring_old_value TEXT, new_value TEXT, fix_indicators TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $substring_old_value = shift;
+my $new_value = shift;
+my $fix_indicators = shift;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @uris = $marc_xml->field('856');
+return $marc_xml->as_xml_record() unless @uris;
+
+foreach my $field (@uris) {
+    my $ind1 = $field->indicator('1');
+    if (defined $ind1) {
+	    if ($ind1 ne '1' && $ind1 ne '4' && $fix_indicators eq 'true') {
+            $field->set_indicator(1,'4');
+        }
+    }
+    my $ind2 = $field->indicator('2');
+    if (defined $ind2) {
+        if ($ind2 ne '0' && $ind2 ne '1' && $fix_indicators eq 'true') {
+            $field->set_indicator(2,'0');
+        }
+    }
+    if ($field->as_string('9') =~ qr/$substring_old_value/) {
+        $field->delete_subfield('9');
+        $field->add_subfields( '9' => $new_value );
+    }
+    $marc_xml->delete_field($field); # -- we're going to dedup and add them back
+}
+
+my %hash = (map { ($_->as_usmarc => $_) } @uris); -- courtesy of an old Mike Rylander post :-)
+$marc_xml->insert_fields_ordered( values( %hash ) );
+
+return $marc_xml->as_xml_record();
+
+$function$;
 -- strip marc tag
 DROP FUNCTION IF EXISTS migration_tools.strip_tag(TEXT,TEXT);
 CREATE OR REPLACE FUNCTION migration_tools.strip_tag(marc TEXT, tag TEXT)
