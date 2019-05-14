@@ -244,7 +244,7 @@ CREATE OR REPLACE FUNCTION migration_tools.build_specific_base_staging_table (TE
     BEGIN
         base_staging_table = REPLACE( production_table, '.', '_' );
         --RAISE INFO 'In migration_tools.build_specific_base_staging_table(%,%) -> %', migration_schema, production_table, base_staging_table;
-        PERFORM migration_tools.exec( $1, 'CREATE UNLOGGED TABLE ' || migration_schema || '.' || base_staging_table || ' ( LIKE ' || production_table || ' INCLUDING DEFAULTS EXCLUDING CONSTRAINTS );' );
+        PERFORM migration_tools.exec( $1, 'CREATE TABLE ' || migration_schema || '.' || base_staging_table || ' ( LIKE ' || production_table || ' INCLUDING DEFAULTS EXCLUDING CONSTRAINTS );' );
         PERFORM migration_tools.exec( $1, '
             INSERT INTO ' || migration_schema || '.fields_requiring_mapping
                 SELECT table_schema, table_name, column_name, data_type
@@ -272,7 +272,7 @@ CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_from (TEXT
         column_list TEXT := '';
         column_count INTEGER := 0;
     BEGIN
-        create_sql := 'CREATE UNLOGGED TABLE ' || migration_schema || '.' || parent_table || '_legacy ( ';
+        create_sql := 'CREATE TABLE ' || migration_schema || '.' || parent_table || '_legacy ( ';
         FOR columns IN
             SELECT table_schema, table_name, column_name, data_type
             FROM information_schema.columns
@@ -780,7 +780,7 @@ CREATE OR REPLACE FUNCTION migration_tools.parse_out_address2 (TEXT) RETURNS TEX
 $$ LANGUAGE PLPERLU STABLE;
 
 DROP TABLE IF EXISTS migration_tools.usps_suffixes;
-CREATE UNLOGGED TABLE migration_tools.usps_suffixes ( suffix_from TEXT, suffix_to TEXT );
+CREATE TABLE migration_tools.usps_suffixes ( suffix_from TEXT, suffix_to TEXT );
 INSERT INTO migration_tools.usps_suffixes VALUES
     ('ALLEE','ALY'),
     ('ALLEY','ALY'),
