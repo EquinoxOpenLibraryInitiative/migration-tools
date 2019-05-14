@@ -95,7 +95,7 @@ while(my $line = <$xml>) {
 	if ($line =~ /^<\/?collection/) { next; }
 	chomp $line;
 	$record = $record . $line;
-	if ($line =~ /^<\/record/) {
+	if ($line =~ /<\/record>$/) {
 		stage_record($dbh,$record,$source); 
 		$record = '';
 		$i++;
