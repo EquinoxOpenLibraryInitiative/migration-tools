@@ -3543,6 +3543,27 @@ CREATE OR REPLACE FUNCTION migration_tools.get_marc_tags (TEXT, TEXT, TEXT, TEXT
     return \@texts;
 $$ LANGUAGE PLPERLU STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.get_marc_tags_filtered (TEXT, TEXT, TEXT, TEXT, TEXT) RETURNS TEXT[] AS $$
+    my ($marcxml, $tag, $subfield, $delimiter, $match) = @_;
+
+    use MARC::Record;
+    use MARC::File::XML;
+    use MARC::Field;
+
+    my @fields;
+    eval {
+        my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+        @fields = $marc->field($tag);
+    };
+    my @texts;
+    foreach my $field (@fields) {
+        if ($field->as_string() =~ qr/$match/) {
+            push @texts, $field->as_string($subfield,$delimiter);
+        }
+    }
+    return \@texts;
+$$ LANGUAGE PLPERLU STABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.find_hold_matrix_matchpoint (INTEGER) RETURNS INTEGER AS $$
     SELECT action.find_hold_matrix_matchpoint(
         (SELECT pickup_lib FROM action.hold_request WHERE id = $1),
