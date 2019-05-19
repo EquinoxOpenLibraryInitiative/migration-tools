@@ -3686,6 +3686,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
         x_org INTEGER;
         org_list INTEGER[];
         o INTEGER;
+        row_count NUMERIC;
     BEGIN
         EXECUTE 'SELECT EXISTS (
             SELECT 1
@@ -3721,6 +3722,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
             || ' ADD COLUMN x_shelf INTEGER';
 
         IF x_org_found THEN
+            RAISE INFO 'Found x_org column';
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
                 || ' SET x_shelf = b.id FROM asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
@@ -3733,6 +3735,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
                 || ' AND x_shelf IS NULL'
                 || ' AND NOT b.deleted';
         ELSE
+            RAISE INFO 'Did not find x_org column';
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
                 || ' SET x_shelf = b.id FROM asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
@@ -3749,12 +3752,15 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
         END IF;
 
         FOREACH o IN ARRAY org_list LOOP
+            RAISE INFO 'Considering org %', o;
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
                 || ' SET x_shelf = b.id FROM asset.copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1 AND x_shelf IS NULL'
                 || ' AND NOT b.deleted'
             USING o;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            RAISE INFO 'Updated % rows', row_count;
         END LOOP;
 
         EXECUTE 'SELECT migration_tools.assert(
