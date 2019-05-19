@@ -3671,13 +3671,17 @@ $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
 
 -- convenience functions for handling copy_location maps
-
 CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER) RETURNS VOID AS $$
+    PEFORM migration_tools._handle_shelf($1,$2,$3,$4,TRUE);
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER,BOOLEAN) RETURNS VOID AS $$
     DECLARE
         table_schema ALIAS FOR $1;
         table_name ALIAS FOR $2;
         org_shortname ALIAS FOR $3;
         org_range ALIAS FOR $4;
+        make_assertion ALIAS FOR $5;
         proceed BOOLEAN;
         org INTEGER;
         -- if x_org is on the mapping table, it'll take precedence over the passed org_shortname param
@@ -3763,11 +3767,13 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER)
             RAISE INFO 'Updated % rows', row_count;
         END LOOP;
 
-        EXECUTE 'SELECT migration_tools.assert(
-            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_shelf <> '''' AND x_shelf IS NULL),
-            ''Cannot find a desired location'',
-            ''Found all desired locations''
-        );';
+        IF make_assertion THEN
+            EXECUTE 'SELECT migration_tools.assert(
+                NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_shelf <> '''' AND x_shelf IS NULL),
+                ''Cannot find a desired location'',
+                ''Found all desired locations''
+            );';
+        END IF;
 
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
