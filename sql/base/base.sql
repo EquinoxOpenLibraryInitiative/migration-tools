@@ -3672,7 +3672,7 @@ $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
 -- convenience functions for handling copy_location maps
 CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER) RETURNS VOID AS $$
-    PEFORM migration_tools._handle_shelf($1,$2,$3,$4,TRUE);
+    PERFORM migration_tools._handle_shelf($1,$2,$3,$4,TRUE);
 $$ LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER,BOOLEAN) RETURNS VOID AS $$
