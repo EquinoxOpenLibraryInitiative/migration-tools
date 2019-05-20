@@ -5291,7 +5291,7 @@ BEGIN
     RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
 
     FOR x_barcode IN
-        SELECT a.usrname FROM actor.usr a, actor_usr_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.usrname = b.usrname
+        SELECT a.usrname FROM actor.usr a, actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
     LOOP
         FOR x_id IN SELECT DISTINCT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
         LOOP
