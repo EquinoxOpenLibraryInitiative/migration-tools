@@ -750,7 +750,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>WITH g AS (SELECT UNNEST(records) FROM groups) SELECT COUNT(record), search_format_str FROM dedupe_batch WHERE record IN (SELECT * FROM g) GROUP BY 2</query>
     </report>
 
-	</report>
+	<report>
         <name>bibs_not_loaded</name>
         <report_title>Bibliographic Records That Failed to Load</report_title>
         <tag>bibs</tag>
