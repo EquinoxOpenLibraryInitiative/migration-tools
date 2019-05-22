@@ -664,9 +664,17 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <report_title>Loaded Bibliographic Records</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
-        <heading>Count.Loaded</heading>
-        <query>SELECT COUNT(bre.id), bre.x_migrate::TEXT FROM biblio_record_entry_legacy bre WHERE id IN (SELECT id FROM biblio.record_entry WHERE deleted = FALSE) GROUP BY 2 ORDER BY 2</query>
-        <note>False means the records are not deleted.</note>
+        <heading>Count</heading>
+        <query>SELECT COUNT(bre.id) FROM biblio_record_entry_legacy bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
+    </report>
+
+    <report>
+        <name>bibs_loaded</name>
+        <report_title>Loaded Bibliographic Records</report_title>
+        <tag>bibs</tag>
+        <iteration>1</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(bre.id) FROM biblio_record_entry bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
     </report>
 
     <report>
@@ -676,6 +684,16 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <iteration>0</iteration>
         <heading>Count</heading>
         <query>SELECT COUNT(id) FROM biblio_record_entry where id NOT IN (SELECT DISTINCT record FROM asset_call_number)</query>
+		<note>These records would not have been loaded.</note>
+    </report>
+
+    <report>
+        <name>bibswuri</name>
+        <report_title>Bibliographic Records With 856$9s</report_title>
+        <tag>bibs</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(id) FROM biblio_record_entry where id IN (SELECT record FROM asset.call_number WHERE label ~* '##URI##')</query>
     </report>
 
     <report>
@@ -742,12 +760,12 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
-        <name>bib_merges_by_search_format</name>
+        <name>bib_merges_searchformat</name>
         <report_title>Bibliographic Merges By Search Format</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count.Item Type</heading>
-        <query>WITH g AS (SELECT UNNEST(records) FROM groups) SELECT COUNT(record), search_format_str FROM dedupe_batch WHERE record IN (SELECT * FROM g) GROUP BY 2</query>
+        <query>DROP TABLE IF EXISTS temp_unnest; CREATE TABLE temp_unnest AS (SELECT UNNEST(records) FROM groups); SELECT COUNT(record), search_format_str FROM dedupe_batch WHERE record IN (SELECT * FROM temp_unnest) GROUP BY 2 ORDER BY 2</query>
     </report>
 
 	<report>
