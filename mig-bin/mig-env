@@ -57,7 +57,7 @@ The name of the actual database containing the migration schema.
 
 This script may also setup a symlink from a specified Git repository to a
 scripts/ directory within the migration work directory.  The default for this is
-~/git/migration-work/past_migrations/MIGSCHEMA --> MIGWORKDIR/scripts
+~/git/migration-work/MIGSCHEMA --> MIGWORKDIR/scripts
 
 It may also create the migration work directory if necessary.
 
@@ -186,7 +186,7 @@ sub mig_env_create {
         $MIGWORKDIR = $migworkdir_default;
     }
     $MIGBASEGITDIR = "$HOME/git/migration-work/" unless $MIGBASEGITDIR;
-    my $miggitdir_default = "${MIGBASEGITDIR}past_migrations/$migration_schema/";
+    my $miggitdir_default = "${MIGBASEGITDIR}/$migration_schema/";
     print "git repo for migration-specific scripts (default $miggitdir_default): ";
     my $MIGGITDIR = <STDIN>;
     chomp $MIGGITDIR;
