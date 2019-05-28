@@ -1159,9 +1159,9 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <name>notices_overview</name>
         <tag>notices</tag>
         <iteration>0</iteration>
-        <report_title>Overview of Notices for Migration</report_title>
-        <heading>ID.Active.Owner.Name.Delay.Validator.Reactor</heading>
-        <query>SELECT ed.id, ed.active, aou.shortname, LEFT(ed.name,25) || '...', ed.delay, ed.validator, ed.reactor 
+        <report_title>Action Triggers Setup for Notices</report_title>
+        <heading>ID.Active.Owner.Name</heading>
+        <query>SELECT ed.id, ed.active, aou.shortname, ed.name
             FROM action_trigger.event_definition ed 
             JOIN actor.org_unit aou ON aou.id = ed.owner 
             WHERE ed.owner IN (SELECT DISTINCT home_ou FROM actor_usr)
@@ -1175,7 +1175,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <iteration>0</iteration>
         <report_title>Count of Notices Run with State</report_title>
         <heading>Count of Notices.State.ID.Owner.Name</heading>
-        <query>SELECT COUNT(ate.id), ate.state, ed.id, aou.shortname, LEFT(ed.name,25) || '...' 
+        <query>SELECT COUNT(ate.id), ate.state, ed.id, aou.shortname, ed.name 
             FROM action_trigger.event_definition ed 
             JOIN actor.org_unit aou ON aou.id = ed.owner 
             JOIN action_trigger.event ate ON ate.event_def = ed.id 
