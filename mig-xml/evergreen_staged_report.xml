@@ -1049,6 +1049,17 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
                 ORDER BY 2, 1, 3</query>
     </report>
 
+    <report>
+        <name>usr_settings</name>
+        <report_title>Patron Settings</report_title>
+        <tag>actors</tag>
+        <iteration>0</iteration>
+        <heading>Count.Setting.Value</heading>
+        <query>SELECT COUNT(*), name, 'User''s Phone' FROM actor_usr_setting WHERE name IN ('opac.default_phone') GROUP BY 2, 3 
+			UNION ALL SELECT COUNT(*), name, value FROM actor_usr_setting WHERE name IN ('opac.hold_notify') GROUP BY 2, 3 
+			UNION ALL SELECT COUNT(*), a.name, aou.shortname FROM actor_usr_setting a JOIN actor.org_unit aou ON aou.id = REPLACE(a.value,'"','')::INTEGER 
+				WHERE a.name IN ('opac.default_pickup_location','opac.default_search_location') GROUP BY 2, 3 ORDER BY 2, 3;</query>
+    </report>
 
     <!-- ACQUISITIONS REPORTS -->
     <report>
