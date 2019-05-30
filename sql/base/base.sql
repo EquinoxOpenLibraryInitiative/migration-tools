@@ -5457,3 +5457,155 @@ BEGIN
     RAISE INFO '% incumbent usrname collisions (post barcode collision munging)', incumbent_usrname_collision_count;
 END
 $function$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION migration_tools.is_circ_rule_safe_to_delete( test_matchpoint INTEGER ) RETURNS BOOLEAN AS $func$
+-- WARNING: Use at your own risk
+-- FIXME: not considering marc_type, marc_form, marc_bib_level, marc_vr_format, usr_age_lower_bound, usr_age_upper_bound, item_age
+DECLARE
+    item_object asset.copy%ROWTYPE;
+    user_object actor.usr%ROWTYPE;
+    test_rule_object config.circ_matrix_matchpoint%ROWTYPE;
+    result_rule_object config.circ_matrix_matchpoint%ROWTYPE;
+    safe_to_delete BOOLEAN := FALSE;
+    m action.found_circ_matrix_matchpoint;
+    result_matchpoint INTEGER;
+    -- ( success BOOL, matchpoint config.circ_matrix_matchpoint, buildrows INT[] )
+BEGIN
+    SELECT INTO test_rule_object * FROM config.circ_matrix_matchpoint WHERE id = test_matchpoint;
+    RAISE INFO 'testing rule: %', test_rule_object;
+
+    INSERT INTO actor.usr (
+        profile,
+        usrname,
+        passwd,
+        ident_type,
+        first_given_name,
+        family_name,
+        home_ou,
+        juvenile
+    ) SELECT
+        COALESCE(test_rule_object.grp, 2),
+        'is_circ_rule_safe_to_delete_' || test_matchpoint || '_' || NOW()::text,
+        MD5(NOW()::TEXT),
+        1,
+        'Ima',
+        'Test',
+        COALESCE(test_rule_object.user_home_ou, test_rule_object.org_unit),
+        COALESCE(test_rule_object.juvenile_flag, FALSE)
+    ;
+    
+    SELECT INTO user_object * FROM actor.usr WHERE id = currval('actor.usr_id_seq');
+
+    INSERT INTO asset.call_number (
+        creator,
+        editor,
+        record,
+        owning_lib,
+        label,
+        label_class
+    ) SELECT
+        1,
+        1,
+        -1,
+        COALESCE(test_rule_object.copy_owning_lib,test_rule_object.org_unit),
+        'is_circ_rule_safe_to_delete_' || test_matchpoint || '_' || NOW()::text,
+        1
+    ;
+
+    INSERT INTO asset.copy (
+        barcode,
+        circ_lib,
+        creator,
+        call_number,
+        editor,
+        location,
+        loan_duration,
+        fine_level,
+        ref,
+        circ_modifier
+    ) SELECT
+        'is_circ_rule_safe_to_delete_' || test_matchpoint || '_' || NOW()::text,
+        COALESCE(test_rule_object.copy_circ_lib,test_rule_object.org_unit),
+        1,
+        currval('asset.call_number_id_seq'),
+        1,
+        COALESCE(test_rule_object.copy_location,1),
+        2,
+        2,
+        COALESCE(test_rule_object.ref_flag,FALSE),
+        test_rule_object.circ_modifier
+    ;
+
+    SELECT INTO item_object * FROM asset.copy WHERE id = currval('asset.copy_id_seq');
+
+    SELECT INTO m * FROM action.find_circ_matrix_matchpoint(
+        test_rule_object.org_unit,
+        item_object,
+        user_object,
+        COALESCE(test_rule_object.is_renewal,FALSE)
+    );
+    RAISE INFO 'action.find_circ_matrix_matchpoint(%,%,%,%) = (%,%,%)',
+        test_rule_object.org_unit,
+        item_object.id,
+        user_object.id,
+        COALESCE(test_rule_object.is_renewal,FALSE),
+        m.success,
+        (m.matchpoint).id,
+        m.buildrows
+    ;
+
+    FOR result_matchpoint IN SELECT UNNEST(m.buildrows)
+    LOOP
+        SELECT INTO result_rule_object * FROM config.circ_matrix_matchpoint WHERE id = result_matchpoint;
+        RAISE INFO 'considering rule: %', result_rule_object;
+        IF result_rule_object.id = test_rule_object.id THEN
+            RAISE INFO 'found self';
+            CONTINUE;
+        END IF;
+        IF (result_rule_object.circulate = test_rule_object.circulate
+            AND result_rule_object.duration_rule = test_rule_object.duration_rule
+            AND result_rule_object.recurring_fine_rule = test_rule_object.recurring_fine_rule
+            AND result_rule_object.max_fine_rule = test_rule_object.max_fine_rule
+            AND (
+                (result_rule_object.hard_due_date IS NULL AND test_rule_object.hard_due_date IS NULL)
+                OR (result_rule_object.hard_due_date = test_rule_object.hard_due_date)
+                OR (result_rule_object.hard_due_date IS NOT NULL AND test_rule_object.hard_due_date IS NULL)
+            )
+            AND (
+                (result_rule_object.renewals IS NULL AND test_rule_object.renewals IS NULL)
+                OR (result_rule_object.renewals = test_rule_object.renewals)
+                OR (result_rule_object.renewals IS NOT NULL AND test_rule_object.renewals IS NULL)
+            )
+            AND (
+                (result_rule_object.grace_period IS NULL AND test_rule_object.grace_period IS NULL)
+                OR (result_rule_object.grace_period = test_rule_object.grace_period)
+                OR (result_rule_object.grace_period IS NOT NULL AND test_rule_object.grace_period IS NULL)
+            )
+            AND NOT EXISTS (
+                SELECT limit_set, fallthrough
+                FROM config.circ_matrix_limit_set_map
+                WHERE active and matchpoint = test_rule_object.id
+                EXCEPT
+                SELECT limit_set, fallthrough
+                FROM config.circ_matrix_limit_set_map
+                WHERE active and matchpoint = result_rule_object.id
+            )
+        ) THEN
+            RAISE INFO 'rule has same outcome';
+            safe_to_delete := TRUE;
+        ELSE
+            RAISE INFO 'rule has different outcome, bail now';
+            RAISE EXCEPTION 'rollback the item and user tables';
+        END IF;
+    END LOOP;
+
+    RAISE EXCEPTION 'rollback the item and user tables';
+
+EXCEPTION WHEN OTHERS THEN
+
+    RAISE INFO 'inside exception block: %, %', SQLSTATE, SQLERRM;
+    RETURN safe_to_delete;
+
+END;
+$func$ LANGUAGE plpgsql;
+
