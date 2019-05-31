@@ -82,6 +82,7 @@ export_table(uc $table, $outfh, $sqlfh, $out);
 
 close $outfh;
 close $sqlfh;
+$dbh->disconnect;
 
 exit 0;
 
