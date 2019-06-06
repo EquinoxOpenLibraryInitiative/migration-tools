@@ -104,6 +104,7 @@ while(my $line = <$xml>) {
 }
 close $xml;
 
+if ($i == 0) { print "No XML was processed, are you sure this is an XML file?\n"; }
 print "Finis.\n";
 
 # beyond here be functions 
