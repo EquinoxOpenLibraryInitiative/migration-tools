@@ -3163,6 +3163,73 @@ The second argument is an array of text containing the values to plug into each 
 If the value for a given field is NULL or the empty string, it is not inserted.
 $$;
 
+CREATE OR REPLACE FUNCTION migration_tools.make_stub_bib (text[], text[], text[], text[]) RETURNS TEXT AS $func$
+
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'UTF-8');
+use Text::CSV;
+
+my $in_tags = shift;
+my $in_ind1 = shift;
+my $in_ind2 = shift;
+my $in_values = shift;
+
+# hack-and-slash parsing of array-passed-as-string;
+# this can go away once everybody is running Postgres 9.1+
+my $csv = Text::CSV->new({binary => 1});
+$in_tags =~ s/^{//;
+$in_tags =~ s/}$//;
+my $status = $csv->parse($in_tags);
+my $tags = [ $csv->fields() ];
+$in_ind1 =~ s/^{//;
+$in_ind1 =~ s/}$//;
+$status = $csv->parse($in_ind1);
+my $ind1s = [ $csv->fields() ];
+$in_ind2 =~ s/^{//;
+$in_ind2 =~ s/}$//;
+$status = $csv->parse($in_ind2);
+my $ind2s = [ $csv->fields() ];
+$in_values =~ s/^{//;
+$in_values =~ s/}$//;
+$status = $csv->parse($in_values);
+my $values = [ $csv->fields() ];
+
+my $marc = MARC::Record->new();
+
+$marc->leader('00000nam a22000007  4500');
+$marc->append_fields(MARC::Field->new('008', '000000s                       000   eng d'));
+
+foreach my $i (0..$#$tags) {
+    my ($tag, $sf);
+    if ($tags->[$i] =~ /^(\d{3})([0-9a-z])$/) {
+        $tag = $1;
+        $sf = $2;
+        $marc->append_fields(MARC::Field->new($tag, $ind1s->[$i], $ind2s->[$i], $sf => $values->[$i])) if $values->[$i] !~ /^\s*$/ and $values->[$i] ne 'NULL';
+    } elsif ($tags->[$i] =~ /^(\d{3})$/) {
+        $tag = $1;
+        $marc->append_fields(MARC::Field->new($tag, $ind1s->[$i], $ind2s->[$i], $values->[$i])) if $values->[$i] !~ /^\s*$/ and $values->[$i] ne 'NULL';
+    }
+}
+
+my $xml = $marc->as_xml_record;
+$xml =~ s/^<\?.+?\?>$//mo;
+$xml =~ s/\n//sgo;
+$xml =~ s/>\s+</></sgo;
+
+return $xml;
+
+$func$ LANGUAGE PLPERLU;
+COMMENT ON FUNCTION migration_tools.make_stub_bib (text[], text[], text[], text[]) IS $$Simple function to create a stub MARCXML bib from a set of columns.
+The first argument is an array of tag/subfield specifiers, e.g., ARRAY['001', '245a', '500a'].
+The second argument is an array of text containing the values to plug into indicator 1 for each field.  
+The third argument is an array of text containing the values to plug into indicator 2 for each field.  
+The fourth argument is an array of text containing the values to plug into each field.  
+If the value for a given field is NULL or the empty string, it is not inserted.
+$$;
+
 CREATE OR REPLACE FUNCTION migration_tools.set_indicator (TEXT, TEXT, INTEGER, CHAR(1)) RETURNS TEXT AS $func$
 
 my ($marcxml, $tag, $pos, $value) = @_;
