@@ -3210,7 +3210,7 @@ foreach my $i (0..$#$tags) {
         $marc->append_fields(MARC::Field->new($tag, $ind1s->[$i], $ind2s->[$i], $sf => $values->[$i])) if $values->[$i] !~ /^\s*$/ and $values->[$i] ne 'NULL';
     } elsif ($tags->[$i] =~ /^(\d{3})$/) {
         $tag = $1;
-        $marc->append_fields(MARC::Field->new($tag, $ind1s->[$i], $ind2s->[$i], $values->[$i])) if $values->[$i] !~ /^\s*$/ and $values->[$i] ne 'NULL';
+        $marc->append_fields(MARC::Field->new($tag, $values->[$i])) if $values->[$i] !~ /^\s*$/ and $values->[$i] ne 'NULL';
     }
 }
 
