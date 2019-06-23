@@ -1717,7 +1717,7 @@ BEGIN
 -- l_title_remainder        -> 245b
 -- l_responsibility_stmt    -> 245c
 -- l_topic?                 -> 650a
--- l_bibid                  -> 999a
+-- l_bibid                  -> 001
 
 RETURN
     migration_tools.make_stub_bib(y.tag,y.ind1,y.ind2,y.data)
@@ -1823,10 +1823,10 @@ FROM (
         where l_bibid = x_bibid and nullif(btrim(l_topic5),'') is not null
     union
         select
-            '999' as "l_tag",
-            'a' as "l_subfield_cd",
-            ' ' as "l_ind1_cd",
-            ' ' as "l_ind2_cd",
+            '001' as "l_tag",
+            '' as "l_subfield_cd",
+            '' as "l_ind1_cd",
+            '' as "l_ind2_cd",
             l_bibid as "l_field_data"
         from export_biblio_tsv
         where l_bibid = x_bibid
