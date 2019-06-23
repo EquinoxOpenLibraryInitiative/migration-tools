@@ -1720,7 +1720,7 @@ BEGIN
 -- l_bibid                  -> 001
 
 RETURN
-    migration_tools.make_stub_bib(y.tag,y.ind1,y.ind2,y.data)
+    migration_tools.consolidate_tag( migration_tools.make_stub_bib(y.tag,y.ind1,y.ind2,y.data), '245' )
 FROM (
     select
         array_agg(lpad(l_tag,3,'0') || l_subfield_cd) as "tag",
