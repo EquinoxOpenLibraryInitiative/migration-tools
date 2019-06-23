@@ -4821,6 +4821,68 @@ return $marc_xml->as_xml_record();
 
 $function$;
 
+-- consolidate marc tag
+DROP FUNCTION IF EXISTS migration_tools.consolidate_tag(TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.consolidate_tag(marc TEXT, tag TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $tag = shift;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @fields = $marc_xml->field($tag);
+return $marc_xml->as_xml_record() unless @fields;
+
+my @combined_subfield_refs = ();
+my @combined_subfields = ();
+foreach my $field (@fields) {
+    my @subfield_refs = $field->subfields();
+    push @combined_subfield_refs, @subfield_refs;
+}
+
+my @sorted_subfield_refs = reverse sort { $a->[0] <=> $b->[0] } @combined_subfield_refs;
+
+while ( my $tuple = pop( @sorted_subfield_refs ) ) {
+    my ($code,$data) = @$tuple;
+    unshift( @combined_subfields, $code, $data );
+}
+
+$marc_xml->delete_fields(@fields);
+
+my $new_field = new MARC::Field(
+    $tag,
+    $fields[0]->indicator(1),
+    $fields[0]->indicator(2),
+    @combined_subfields
+);
+
+$marc_xml->insert_grouped_field( $new_field );
+
+return $marc_xml->as_xml_record();
+
+$function$;
+
 -- convenience function for linking to the item staging table
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_item_barcode (TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
