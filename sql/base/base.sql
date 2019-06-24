@@ -5914,8 +5914,9 @@ DECLARE
     result_rule_object config.circ_matrix_matchpoint%ROWTYPE;
     safe_to_delete BOOLEAN := FALSE;
     m action.found_circ_matrix_matchpoint;
-    result_matchpoint INTEGER;
+    n action.found_circ_matrix_matchpoint;
     -- ( success BOOL, matchpoint config.circ_matrix_matchpoint, buildrows INT[] )
+    result_matchpoint INTEGER;
 BEGIN
     SELECT INTO test_rule_object * FROM config.circ_matrix_matchpoint WHERE id = test_matchpoint;
     RAISE INFO 'testing rule: %', test_rule_object;
@@ -5990,62 +5991,97 @@ BEGIN
         user_object,
         COALESCE(test_rule_object.is_renewal,FALSE)
     );
-    RAISE INFO 'action.find_circ_matrix_matchpoint(%,%,%,%) = (%,%,%)',
+    RAISE INFO '   action.find_circ_matrix_matchpoint(%,%,%,%) = (%,%,%)',
         test_rule_object.org_unit,
         item_object.id,
         user_object.id,
         COALESCE(test_rule_object.is_renewal,FALSE),
         m.success,
-        (m.matchpoint).id,
+        m.matchpoint,
         m.buildrows
     ;
 
-    FOR result_matchpoint IN SELECT UNNEST(m.buildrows)
-    LOOP
-        SELECT INTO result_rule_object * FROM config.circ_matrix_matchpoint WHERE id = result_matchpoint;
-        RAISE INFO 'considering rule: %', result_rule_object;
-        IF result_rule_object.id = test_rule_object.id THEN
-            RAISE INFO 'found self';
-            CONTINUE;
-        END IF;
-        IF (result_rule_object.circulate = test_rule_object.circulate
-            AND result_rule_object.duration_rule = test_rule_object.duration_rule
-            AND result_rule_object.recurring_fine_rule = test_rule_object.recurring_fine_rule
-            AND result_rule_object.max_fine_rule = test_rule_object.max_fine_rule
-            AND (
-                (result_rule_object.hard_due_date IS NULL AND test_rule_object.hard_due_date IS NULL)
-                OR (result_rule_object.hard_due_date = test_rule_object.hard_due_date)
-                OR (result_rule_object.hard_due_date IS NOT NULL AND test_rule_object.hard_due_date IS NULL)
-            )
-            AND (
-                (result_rule_object.renewals IS NULL AND test_rule_object.renewals IS NULL)
-                OR (result_rule_object.renewals = test_rule_object.renewals)
-                OR (result_rule_object.renewals IS NOT NULL AND test_rule_object.renewals IS NULL)
-            )
-            AND (
-                (result_rule_object.grace_period IS NULL AND test_rule_object.grace_period IS NULL)
-                OR (result_rule_object.grace_period = test_rule_object.grace_period)
-                OR (result_rule_object.grace_period IS NOT NULL AND test_rule_object.grace_period IS NULL)
-            )
-            AND NOT EXISTS (
-                SELECT limit_set, fallthrough
-                FROM config.circ_matrix_limit_set_map
-                WHERE active and matchpoint = test_rule_object.id
-                EXCEPT
-                SELECT limit_set, fallthrough
-                FROM config.circ_matrix_limit_set_map
-                WHERE active and matchpoint = result_rule_object.id
-            )
-        ) THEN
-            RAISE INFO 'rule has same outcome';
-            safe_to_delete := TRUE;
-        ELSE
-            RAISE INFO 'rule has different outcome, bail now';
-            RAISE EXCEPTION 'rollback the item and user tables';
-        END IF;
-    END LOOP;
+    --  disable the rule being tested to see if the outcome changes
+    UPDATE config.circ_matrix_matchpoint SET active = FALSE WHERE id = (m.matchpoint).id;
 
-    RAISE EXCEPTION 'rollback the item and user tables';
+    SELECT INTO n * FROM action.find_circ_matrix_matchpoint(
+        test_rule_object.org_unit,
+        item_object,
+        user_object,
+        COALESCE(test_rule_object.is_renewal,FALSE)
+    );
+    RAISE INFO 'VS action.find_circ_matrix_matchpoint(%,%,%,%) = (%,%,%)',
+        test_rule_object.org_unit,
+        item_object.id,
+        user_object.id,
+        COALESCE(test_rule_object.is_renewal,FALSE),
+        n.success,
+        n.matchpoint,
+        n.buildrows
+    ;
+
+    -- FIXME: We could dig deeper and see if the referenced config.rule_*
+    -- entries are effectively equivalent, but for now, let's assume no
+    -- duplicate rules at that level
+    IF (
+            (m.matchpoint).circulate = (n.matchpoint).circulate
+        AND (m.matchpoint).duration_rule = (n.matchpoint).duration_rule
+        AND (m.matchpoint).recurring_fine_rule = (n.matchpoint).recurring_fine_rule
+        AND (m.matchpoint).max_fine_rule = (n.matchpoint).max_fine_rule
+        AND (
+                (m.matchpoint).hard_due_date = (n.matchpoint).hard_due_date
+                OR (
+                        (m.matchpoint).hard_due_date IS NULL
+                    AND (n.matchpoint).hard_due_date IS NULL
+                )
+        )
+        AND (
+                (m.matchpoint).renewals = (n.matchpoint).renewals
+                OR (
+                        (m.matchpoint).renewals IS NULL
+                    AND (n.matchpoint).renewals IS NULL
+                )
+        )
+        AND (
+                (m.matchpoint).grace_period = (n.matchpoint).grace_period
+                OR (
+                        (m.matchpoint).grace_period IS NULL
+                    AND (n.matchpoint).grace_period IS NULL
+                )
+        )
+        AND (
+                (m.matchpoint).total_copy_hold_ratio = (n.matchpoint).total_copy_hold_ratio
+                OR (
+                        (m.matchpoint).total_copy_hold_ratio IS NULL
+                    AND (n.matchpoint).total_copy_hold_ratio IS NULL
+                )
+        )
+        AND (
+                (m.matchpoint).available_copy_hold_ratio = (n.matchpoint).available_copy_hold_ratio
+                OR (
+                        (m.matchpoint).available_copy_hold_ratio IS NULL
+                    AND (n.matchpoint).available_copy_hold_ratio IS NULL
+                )
+        )
+        AND NOT EXISTS (
+            SELECT limit_set, fallthrough
+            FROM config.circ_matrix_limit_set_map
+            WHERE active and matchpoint = (m.matchpoint).id
+            EXCEPT
+            SELECT limit_set, fallthrough
+            FROM config.circ_matrix_limit_set_map
+            WHERE active and matchpoint = (n.matchpoint).id
+        )
+
+    ) THEN
+        RAISE INFO 'rule has same outcome';
+        safe_to_delete := TRUE;
+    ELSE
+        RAISE INFO 'rule has different outcome';
+        safe_to_delete := FALSE;
+    END IF;
+
+    RAISE EXCEPTION 'rollback the temporary changes';
 
 EXCEPTION WHEN OTHERS THEN
 
