@@ -48,7 +48,7 @@ my $next_arg_is_file = 0;
 my $append = 0;
 my $next_arg_is_source = 0;
 my $next_arg_is_stage = 0;
-my $stage_table = 'biblio_record_entry';
+my $stage_table = 'biblio_record_entry_legacy';
 my $source = 'default';
 my $file_is_xml = 0;
 my $dbh = Mig::db_connect();
@@ -79,7 +79,9 @@ foreach my $arg (@ARGV) {
 }
 
 my $bre_test = check_for_table($dbh,'biblio_record_entry');
-if ($bre_test == 0) { create_child_bre($dbh); }
+my $bre_legacy_test = check_for_table($dbh,'biblio_record_entry_legacy');
+if ($bre_test == 0 and $bre_legacy_test == 0 ) { create_child_bre($dbh); rename_child_bre($db); }
+if ($bre_test == 1 and $bre_legacy_test == 0 ) { rename_child_bre($db); }
 
 my $xmig_test = check_for_column($dbh,'biblio_record_entry','x_migrate');
 if ($xmig_test == 0) { add_column($dbh,'biblio_record_entry','x_migrate','BOOLEAN DEFAULT TRUE'); }
@@ -119,7 +121,16 @@ sub create_child_bre {
         IF t = FALSE THEN
             PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA','biblio.record_entry');
         END IF;
-		ALTER TABLE biblio_record_entry RENAME TO biblio_record_entry_legacy;
+        END \$\$;");
+
+    return ();
+}
+
+sub rename_child_bre {
+    my $dbh = shift;
+    $dbh->do("DO \$\$ 
+        BEGIN
+        ALTER TABLE biblio_record_entry RENAME TO biblio_record_entry_legacy;
         END \$\$;");
 
     return ();
