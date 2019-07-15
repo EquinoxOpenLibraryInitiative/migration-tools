@@ -119,6 +119,7 @@ sub create_child_bre {
         IF t = FALSE THEN
             PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA','biblio.record_entry');
         END IF;
+		ALTER TABLE biblio_record_entry RENAME TO biblio_record_entry_legacy;
         END \$\$;");
 
     return ();
