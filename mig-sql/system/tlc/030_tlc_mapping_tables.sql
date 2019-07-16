@@ -245,6 +245,10 @@ CREATE TABLE map_tlc_holding_code (
     ,alert_message      TEXT
     ,dnm                TEXT
     ,note               TEXT
+    ,reference 			BOOLEAN DEFAULT FALSE
+    ,item_status 		TEXT
+    ,stat_cat_title 	TEXT
+    ,stat_cat_entry 	TEXT
 );
 
 INSERT INTO gsheet_tracked_table 
