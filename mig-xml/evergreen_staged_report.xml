@@ -838,23 +838,23 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT COUNT(id), active::TEXT FROM actor_card GROUP BY 2</query>
     </report>
 
-    <report>
+    <!-- report>
         <name>usr_barcode_lengths</name>
         <report_title>Barcode Lengths by Library</report_title>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Barcode.Barcode Length.Library</heading>
         <query>SELECT COUNT(acard.id), LENGTH(acard.barcode), aou.name FROM actor_card_legacy acard JOIN actor_usr_legacy au ON au.id = acard.usr JOIN actor.org_unit aou ON aou.id = au.home_ou WHERE acard.x_migrate = TRUE GROUP BY 2, 3 ORDER BY 3, 2</query>
-    </report>
+    </report -->
 
-    <report>
+    <!-- report>
         <name>usr_barcode_lengths</name>
         <report_title>Barcode Lengths by Library</report_title>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count of Barcode.Barcode Length.Library</heading>
         <query>SELECT COUNT(acard.id), LENGTH(acard.barcode), aou.name FROM actor_card acard JOIN actor_usr au ON au.id = acard.usr JOIN actor.org_unit aou ON aou.id = au.home_ou GROUP BY 2, 3 ORDER BY 3, 2</query>
-    </report>
+    </report -->
 
     <report>
         <name>usr_barcode_patterns</name>
@@ -875,8 +875,8 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
  
    <report>
-        <name>usr_barcode_collisions</name>
-        <report_title>Patron Barcode Collisions</report_title>
+        <name>usr_barcode_incoming_collisions</name>
+        <report_title>Incoming Patron Barcode Collisions</report_title>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
@@ -884,21 +884,39 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
-        <name>usr_barcode_collisions</name>
-        <report_title>Patron Barcode Collisions</report_title>
+        <name>usr_barcode_incoming_collisions</name>
+        <report_title>Incoming Patron Barcode Collisions</report_title>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
         <query>SELECT COUNT(acard.id) FROM actor_card acard WHERE barcode ~* 'collision'</query>
     </report>
 
+	<report>
+     	<name>usr_barcode_incumbent_collisions</name>
+     	<report_title>Incumbent Patron Barcode Collisions</report_title>
+     	<tag>actors</tag>
+     	<iteration>0</iteration>
+     	<heading>Collision Count</heading>
+     	<query>SELECT COUNT(acard.id) FROM actor_card_legacy acard WHERE barcode ~* '^x_' AND x_migrate = TRUE</query>
+ 	</report>
+
+ 	<report>
+     	<name>usr_barcode_incumbent_collisions</name>
+     	<report_title>Incumbent Patron Barcode Collisions</report_title>
+     	<tag>actors</tag>
+     	<iteration>1</iteration>
+     	<heading>Collision Count</heading>
+     	<query>SELECT COUNT(acard.id) FROM actor_card acard WHERE barcode ~* '^x_'</query>
+ 	</report>
+
     <report>
         <name>usr_barcode_collision_shortlist</name>
         <report_title>Patron Barcode Collisions (first 20)</report_title>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM actor_card_legacy acard WHERE acard.barcode ~* 'collision' AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM actor_card_legacy acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
     </report>
 
@@ -908,7 +926,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM actor_card acard WHERE acard.barcode ~* 'collision' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM actor_card acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
     </report>
 
@@ -918,7 +936,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor_card_legacy acard WHERE acard.barcode ~* 'collision' AND acard.x_migrate = TRUE GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor_card_legacy acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') AND acard.x_migrate = TRUE GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -927,7 +945,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor_card acard WHERE acard.barcode ~* 'collision' GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor_card acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
