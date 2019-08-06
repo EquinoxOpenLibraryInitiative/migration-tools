@@ -459,7 +459,7 @@ sub print_query {
                 my $h_length = @h;
                 my $h_count = 1;
                 while ($h_count <= $h_length) {
-                    print $fh "|$h[$h_count-1] ";
+                    print $fh "|*$h[$h_count-1]* ";
                     $h_count++;
                 }
                 print $fh "\n";
