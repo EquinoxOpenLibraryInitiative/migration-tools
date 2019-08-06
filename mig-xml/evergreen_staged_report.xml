@@ -285,6 +285,34 @@
         <query>SELECT COUNT(ahr.id), ahr.selection_depth FROM action.hold_request ahr WHERE ahr.id IN (SELECT id FROM action_hold_request) AND ahr.cancel_time IS NULL AND ahr.capture_time IS NULL AND ahr.fulfillment_time IS NULL GROUP BY 2 ORDER BY 2</query>
     </report>
 
+      <!-- finding title matched holds where there are duplicates, this will table match for legacy but column won't be present for all  -->
+      <report>
+        <name>duplicate_title_matching_holds</name>
+        <tag>holds</tag>
+        <iteration>0</iteration>
+        <report_title>Holds by Title Matchs</report_title>
+        <heading>Count.Number of Matches</heading>
+        <query>SELECT COUNT(*), x_title_matches FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+      <report>
+        <name>duplicate_title_matching_holds_w_zero</name>
+        <tag>holds</tag>
+        <iteration>0</iteration>
+        <report_title>Sample of Holds with No Matches</report_title>
+        <heading>Borrower Barcode.Title.Request Date</heading>
+        <query>SELECT l_borrower_id, l_title, l_request_date FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches = 0 LIMIT 20</query>
+    </report>
+
+      <report>
+        <name>duplicate_title_matching_holds_w_greater_than_1</name>
+        <tag>holds</tag>
+        <iteration>0</iteration>
+        <report_title>Sample of Holds with More Than One Title Match</report_title>
+        <heading>Borrower Barcode.Title.Request Date</heading>
+        <query>SELECT l_borrower_id, l_title, l_request_date FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches > 1 LIMIT 20</query>
+    </report>
+
     <!-- ASSET REPORTS -->
     
     <report>
