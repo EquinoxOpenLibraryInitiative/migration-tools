@@ -48,6 +48,7 @@ my $next_arg_is_file = 0;
 my $append = 0;
 my $next_arg_is_source = 0;
 my $next_arg_is_stage = 0;
+my $base_table = 'biblio_record_entry';
 my $stage_table = 'biblio_record_entry_legacy';
 my $source = 'default';
 my $file_is_xml = 0;
@@ -78,16 +79,16 @@ foreach my $arg (@ARGV) {
     }
 }
 
-my $bre_test = check_for_table($dbh,'biblio_record_entry');
-my $bre_legacy_test = check_for_table($dbh,'biblio_record_entry_legacy');
-if ($bre_test == 0 and $bre_legacy_test == 0 ) { create_child_bre($dbh); rename_child_bre($dbh); }
-if ($bre_test == 1 and $bre_legacy_test == 0 ) { rename_child_bre($dbh); }
+my $bre_test = check_for_table($dbh,$base_table);
+my $bre_legacy_test = check_for_table($dbh,$stage_table);
+if ($bre_test == 0 and $bre_legacy_test == 0 ) { create_bre($dbh); create_child_bre($dbh); }
+if ($bre_test == 1 and $bre_legacy_test == 0 ) { create_child_bre($dbh); }
 
-my $xmig_test = check_for_column($dbh,'biblio_record_entry','x_migrate');
-if ($xmig_test == 0) { add_column($dbh,'biblio_record_entry','x_migrate','BOOLEAN DEFAULT TRUE'); }
+my $xmig_test = check_for_column($dbh,$stage_table,'x_migrate');
+if ($xmig_test == 0) { add_column($dbh,$stage_table,'x_migrate','BOOLEAN DEFAULT TRUE'); }
 
-my $xsource_test = check_for_column($dbh,'biblio_record_entry','x_source');
-if ($xsource_test == 0) { add_column($dbh,'biblio_record_entry','x_source','TEXT'); }
+my $xsource_test = check_for_column($dbh,$stage_table,'x_source');
+if ($xsource_test == 0) { add_column($dbh,$stage_table,'x_source','TEXT'); }
 
 #flatten out MARC XML FILE
 open my $xml, "<:encoding(utf8)", $infile or abort('could not open MARC XML file');
@@ -111,26 +112,26 @@ print "Finis.\n";
 
 # beyond here be functions 
 
-sub create_child_bre {
+sub create_bre {
     my $dbh = shift;
     $dbh->do("DO \$\$ 
         DECLARE
             t   BOOLEAN;
         BEGIN
-        SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = 'biblio_record_entry') INTO t;
+        SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = '$base_table') INTO t;
         IF t = FALSE THEN
-            PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA','biblio.record_entry');
+            PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA',REGEXP_REPLACE('$base_table','_','.'));
         END IF;
         END \$\$;");
 
     return ();
 }
 
-sub rename_child_bre {
+sub create_child_bre {
     my $dbh = shift;
     $dbh->do("DO \$\$ 
         BEGIN
-        ALTER TABLE biblio_record_entry RENAME TO biblio_record_entry_legacy;
+        CREATE TABLE $MIGSCHEMA.$stage_table (x_migrate BOOLEAN DEFAULT TRUE, x_source TEXT) INHERITS ($MIGSCHEMA.$base_table);
         END \$\$;");
 
     return ();
@@ -158,8 +159,8 @@ sub stage_record {
 	my $last_xact = "'$MIGSCHEMA'";
 	$record = '$_$' . $record . '$_$';
 	my $sql;
-	if ($source eq 'default') { $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry (last_xact_id,marc) VALUES ($last_xact,$record);"; }
-		else { $sql = "INSERT INTO $MIGSCHEMA.biblio_record_entry (last_xact_id,marc,x_source) VALUES ($last_xact,$record,'$source');";  }
+	if ($source eq 'default') { $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,marc) VALUES ($last_xact,$record);"; }
+		else { $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,marc,x_source) VALUES ($last_xact,$record,'$source');";  }
     my $sth = $dbh->prepare($sql);
     $sth->execute();
 	return;
