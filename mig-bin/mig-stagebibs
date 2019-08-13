@@ -80,8 +80,8 @@ foreach my $arg (@ARGV) {
 
 my $bre_test = check_for_table($dbh,'biblio_record_entry');
 my $bre_legacy_test = check_for_table($dbh,'biblio_record_entry_legacy');
-if ($bre_test == 0 and $bre_legacy_test == 0 ) { create_child_bre($dbh); rename_child_bre($db); }
-if ($bre_test == 1 and $bre_legacy_test == 0 ) { rename_child_bre($db); }
+if ($bre_test == 0 and $bre_legacy_test == 0 ) { create_child_bre($dbh); rename_child_bre($dbh); }
+if ($bre_test == 1 and $bre_legacy_test == 0 ) { rename_child_bre($dbh); }
 
 my $xmig_test = check_for_column($dbh,'biblio_record_entry','x_migrate');
 if ($xmig_test == 0) { add_column($dbh,'biblio_record_entry','x_migrate','BOOLEAN DEFAULT TRUE'); }
