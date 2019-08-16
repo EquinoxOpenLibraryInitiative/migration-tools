@@ -48,6 +48,8 @@ my $next_arg_is_file = 0;
 my $append = 0;
 my $next_arg_is_source = 0;
 my $next_arg_is_stage = 0;
+my $next_arg_is_base_table = 0;
+my $next_arg_is_stage_table = 0;
 my $base_table = 'biblio_record_entry';
 my $stage_table = 'biblio_record_entry_legacy';
 my $source = 'default';
@@ -75,6 +77,24 @@ foreach my $arg (@ARGV) {
     if ($next_arg_is_source) {
         $source = $arg;
         $next_arg_is_source = 0;
+        next;
+    }
+    if ($arg eq '--base-table') {
+        $next_arg_is_base_table = 1;
+        next;
+    }
+    if ($next_arg_is_base_table) {
+        $base_table = $arg;
+        $next_arg_is_base_table = 0;
+        next;
+    }
+    if ($arg eq '--stage-table') {
+        $next_arg_is_stage_table = 1;
+        next;
+    }
+    if ($next_arg_is_stage_table) {
+        $stage_table = $arg;
+        $next_arg_is_stage_table = 0;
         next;
     }
 }
