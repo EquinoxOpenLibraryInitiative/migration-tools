@@ -3823,7 +3823,8 @@ CREATE OR REPLACE FUNCTION migration_tools.get_marc_tag (TEXT, TEXT, TEXT, TEXT)
         my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
         $field = $marc->field($tag);
     };
-    return $field->as_string($subfield,$delimiter);
+    return $field->as_string($subfield,$delimiter) if $field;
+    return;
 $$ LANGUAGE PLPERLU STABLE;
 
 CREATE OR REPLACE FUNCTION migration_tools.get_marc_tags (TEXT, TEXT, TEXT, TEXT) RETURNS TEXT[] AS $$
