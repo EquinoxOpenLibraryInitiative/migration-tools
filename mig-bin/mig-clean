@@ -105,7 +105,7 @@ sub call_clean_csv {
         }
 
         print join(' ',@args) . "\n";
-        system('clean_csv', @args, $utf8_file);
+        system('/home/rhamby/git/migration-tools/text/clean_csv', @args, $utf8_file);
 
         my $dbh = Mig::db_connect();
         my $clean_file = $dbh->quote($utf8_file . '.clean');
