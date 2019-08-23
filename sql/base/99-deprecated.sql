@@ -1,15 +1,32 @@
+CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEXT AS $$
+  DECLARE
+    phone TEXT := $1;
+    areacode TEXT := $2;
+    temp TEXT := '';
+    output TEXT := '';
+    n_digits INTEGER := 0;
+  BEGIN
+    temp := phone;
+    temp := REGEXP_REPLACE(temp, '^1*[^0-9]*(?=[0-9])', '');
+    temp := REGEXP_REPLACE(temp, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2-\\3');
+    n_digits := LENGTH(REGEXP_REPLACE(REGEXP_REPLACE(temp, '(.*)?[a-zA-Z].*', E'\\1') , '[^0-9]', '', 'g'));
+    IF n_digits = 7 AND areacode <> '' THEN
+      temp := REGEXP_REPLACE(temp, '[^0-9]*([0-9]{3})[^0-9]*([0-9]{4})', E'\\1-\\2');
+      output := (areacode || '-' || temp);
+    ELSE
+      output := temp;
+    END IF;
+    RETURN output;
+  END;
 
-CREATE OR REPLACE FUNCTION migration_tools.base_profile_map (TEXT) RETURNS TEXT AS $$
-    DECLARE
-        migration_schema ALIAS FOR $1;
-        output TEXT;
-    BEGIN
-        FOR output IN
-            EXECUTE 'SELECT ''' || migration_schema || '.'' || value FROM ' || migration_schema || '.config WHERE key = ''base_profile_map'';'
-        LOOP
-            RETURN output;
-        END LOOP;
-    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.is_staff_profile (INT) RETURNS BOOLEAN AS $$
+  DECLARE
+    profile ALIAS FOR $1;
+  BEGIN
+    RETURN CASE WHEN 'Staff' IN (select (permission.grp_ancestors(profile)).name) THEN TRUE ELSE FALSE END;
+  END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
 CREATE OR REPLACE FUNCTION migration_tools.base_item_dynamic_field_map (TEXT) RETURNS TEXT AS $$
