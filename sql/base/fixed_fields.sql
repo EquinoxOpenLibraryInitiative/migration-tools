@@ -1,3 +1,36 @@
+DROP TABLE IF EXISTS migration_tools.search_format_map;
+CREATE TABLE migration_tools.search_format_map (code TEXT, itype CHAR(1), iform CHAR(1), phy CHAR(1), phyv CHAR(1), phyp SMALLINT,
+    biblevel CHAR(1), iform_exclude CHAR(1)[], srform_exclude CHAR(1)[] );
+INSERT INTO search_format_map (code, itype, iform, phy, phyv, phyp, biblevel, iform_exclude, srform_exclude) VALUES
+    --                  itype iform phy   phyv  phyp  bib   itemform exclude     sr format exclude
+     ('blu-ray',        'g',  NULL, 'v',  's',  4,    NULL, NULL,                NULL)
+    ,('book',           'a',  NULL, NULL, NULL, NULL, 'a',  '{a,b,c,f,o,q,r,s}', NULL)
+    ,('braille',        'a',  'f',  NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('casaudiobook',   'i',  NULL, 's',  'l',  3,    NULL, NULL,                NULL)
+    ,('casmusic',       'j',  NULL, 's',  'l',  3,    NULL, NULL,                NULL)
+    ,('cdaudiobook',    'i',  NULL, 's',  'f',  3,    NULL, NULL,                NULL)
+    ,('cdmusic',        'j',  NULL, 's',  'f',  3,    NULL, NULL,                NULL)
+    ,('dvd',            'g',  NULL, 'v',  'v',  4,    NULL, NULL,                NULL)
+    ,('eaudio',         'i',  'o',  NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('ebook',          'a',  's',  NULL, NULL, NULL, 'a' , NULL,                NULL)
+    ,('electronic',     's',  'o',  NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('equip',          'r',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('evideo',         'g',  'o',  NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('kit',            'o',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('lpbook',         'a',  'd',  NULL, NULL, NULL, 'a' , NULL,                NULL)
+    ,('map',            'e',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('microform',      'a',  'b',  NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('music',          'j',  NULL, NULL, NULL, NULL, NULL, NULL,                '{a,b,c,d,e,f}')
+    ,('phonomusic',     'j',  NULL, 's',  'a',  3,    NULL, NULL,                NULL)
+    ,('phonospoken',    'i',  NULL, 's',  'a',  3,    NULL, NULL,                NULL)
+    ,('picture',        'k',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('preloadedaudio', 'i',  'q',  NULL, NULL, NULL, NULL, NULL,                '{a,b,c,d,e,f,s}')
+    ,('score',          'c',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('serial',         NULL, NULL, NULL, NULL, NULL, 's' , NULL,                NULL)
+    ,('software',       'm',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
+    ,('vhs',            'g',  NULL, 'v',  'b',  4,    NULL, NULL,                NULL)
+;
+
 CREATE OR REPLACE FUNCTION migration_tools.reingest_staged_record_attributes (rid BIGINT, pattr_list TEXT[] DEFAULT NULL, prmarc TEXT DEFAULT NULL, rdeleted BOOL DEFAULT TRUE) RETURNS INTEGER[] AS $func$
 DECLARE
     transformed_xml TEXT;
