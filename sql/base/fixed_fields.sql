@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION reingest_staged_record_attributes (rid BIGINT, pattr_list TEXT[] DEFAULT NULL, prmarc TEXT DEFAULT NULL, rdeleted BOOL DEFAULT TRUE) RETURNS INTEGER[] AS $func$
+CREATE OR REPLACE FUNCTION migration_tools.reingest_staged_record_attributes (rid BIGINT, pattr_list TEXT[] DEFAULT NULL, prmarc TEXT DEFAULT NULL, rdeleted BOOL DEFAULT TRUE) RETURNS INTEGER[] AS $func$
 DECLARE
     transformed_xml TEXT;
     rmarc           TEXT := prmarc;
@@ -210,7 +210,7 @@ BEGIN
     $func$ LANGUAGE PLPGSQL;
 
 
-CREATE OR REPLACE FUNCTION view_staged_vlist (rid BIGINT) RETURNS TABLE (r_ctype text, r_code text, r_value text) AS $func$
+CREATE OR REPLACE FUNCTION migration_tools.view_staged_vlist (rid BIGINT) RETURNS TABLE (r_ctype text, r_code text, r_value text) AS $func$
 DECLARE
     search  TEXT[];
     icon    TEXT[];
@@ -222,7 +222,7 @@ BEGIN
 END;
 $func$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION stage_vlist (rid BIGINT) RETURNS VOID AS $func$
+CREATE OR REPLACE FUNCTION migration_tools.stage_vlist (rid BIGINT) RETURNS VOID AS $func$
 DECLARE 
 	search	TEXT[];
 	vlist	INTEGER[];
@@ -236,7 +236,7 @@ BEGIN
 END;
 $func$ LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION show_staged_vlist (rid BIGINT) RETURNS TEXT[] AS $func$
+CREATE OR REPLACE FUNCTION migration_tools.show_staged_vlist (rid BIGINT) RETURNS TEXT[] AS $func$
 DECLARE
     search  TEXT[];
     vlist   INTEGER[];
@@ -251,7 +251,7 @@ END;
 $func$ LANGUAGE PLPGSQL;
 
 
-CREATE OR REPLACE FUNCTION postfix_vlist (rid BIGINT) RETURNS VOID AS $func$
+CREATE OR REPLACE FUNCTION migration_tools.postfix_vlist (rid BIGINT) RETURNS VOID AS $func$
 DECLARE
     search  TEXT[];
     vlist   INTEGER[];
@@ -266,7 +266,7 @@ END;
 $func$ LANGUAGE PLPGSQL;
 
 
-CREATE OR REPLACE FUNCTION set_exp_sfs (rid BIGINT) RETURNS VOID AS $func$
+CREATE OR REPLACE FUNCTION migration_tools.set_exp_sfs (rid BIGINT) RETURNS VOID AS $func$
 DECLARE
     cms TEXT[];
     y   TEXT;
@@ -292,7 +292,7 @@ CREATE AGGREGATE anyarray_agg(anyarray) (
 COMMENT ON AGGREGATE anyarray_agg(anyarray) IS
 'Concatenates arrays into a single array when aggregating.';
 
-DROP FUNCTION IF EXISTS anyarray_agg_statefunc(anyarray, anyarray);
+DROP FUNCTION IF EXISTS migration_tools.anyarray_agg_statefunc(anyarray, anyarray);
 CREATE FUNCTION anyarray_agg_statefunc(state anyarray, value anyarray)
         RETURNS anyarray AS
 $BODY$
@@ -302,8 +302,8 @@ $BODY$
 COMMENT ON FUNCTION anyarray_agg_statefunc(anyarray, anyarray) IS
 'Used internally by aggregate anyarray_agg(anyarray).';
 
-DROP FUNCTION IF EXISTS anyarray_sort(anyarray);
-CREATE OR REPLACE FUNCTION anyarray_sort(with_array anyarray)
+DROP FUNCTION IF EXISTS migration_tools.anyarray_sort(anyarray);
+CREATE OR REPLACE FUNCTION migration_tools.anyarray_sort(with_array anyarray)
     RETURNS anyarray AS
 $BODY$
     DECLARE
@@ -318,8 +318,8 @@ $BODY$
     END;
 $BODY$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS anyarray_uniq(anyarray);
-CREATE OR REPLACE FUNCTION anyarray_uniq(with_array anyarray)
+DROP FUNCTION IF EXISTS migration_tools.anyarray_uniq(anyarray);
+CREATE OR REPLACE FUNCTION migration_tools.anyarray_uniq(with_array anyarray)
     RETURNS anyarray AS
 $BODY$
     DECLARE
@@ -355,8 +355,8 @@ $BODY$
  END;
 $BODY$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS modify_staged_fixed_fields (BIGINT,TEXT);
-CREATE OR REPLACE FUNCTION modify_staged_fixed_fields (bib_id BIGINT, xcode TEXT)
+DROP FUNCTION IF EXISTS migration_tools.modify_staged_fixed_fields (BIGINT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.modify_staged_fixed_fields (bib_id BIGINT, xcode TEXT)
  RETURNS BOOLEAN
  LANGUAGE plpgsql
 AS $function$
@@ -391,8 +391,8 @@ BEGIN
 END;
 $function$;
 
-DROP FUNCTION IF EXISTS modify_fixed_fields (TEXT, TEXT, CHAR(1), CHAR(1), CHAR(1), CHAR(1), SMALLINT, CHAR(1), TEXT, TEXT);
-CREATE OR REPLACE FUNCTION modify_fixed_fields (TEXT, TEXT, CHAR(1), CHAR(1), CHAR(1), CHAR(1), SMALLINT, CHAR(1), TEXT, TEXT)
+DROP FUNCTION IF EXISTS migration_tools.modify_fixed_fields (TEXT, TEXT, CHAR(1), CHAR(1), CHAR(1), CHAR(1), SMALLINT, CHAR(1), TEXT, TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.modify_fixed_fields (TEXT, TEXT, CHAR(1), CHAR(1), CHAR(1), CHAR(1), SMALLINT, CHAR(1), TEXT, TEXT)
 RETURNS TEXT
  LANGUAGE plperlu
 AS $function$
