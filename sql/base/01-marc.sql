@@ -235,25 +235,6 @@ The fourth argument is the character to set the indicator value to.
 All occurences of the specified field will be changed.
 The function returns the revised MARCXML string.$$;
 
-CREATE OR REPLACE FUNCTION migration_tools.create_staff_user(
-    username TEXT,
-    password TEXT,
-    org TEXT,
-    perm_group TEXT,
-    first_name TEXT DEFAULT '',
-    last_name TEXT DEFAULT ''
-) RETURNS VOID AS $func$
-BEGIN
-    RAISE NOTICE '%', org ;
-    INSERT INTO actor.usr (usrname, passwd, ident_type, first_given_name, family_name, home_ou, profile)
-    SELECT username, password, 1, first_name, last_name, aou.id, pgt.id
-    FROM   actor.org_unit aou, permission.grp_tree pgt
-    WHERE  aou.shortname = org
-    AND    pgt.name = perm_group;
-END
-$func$
-LANGUAGE PLPGSQL;
-
 CREATE OR REPLACE FUNCTION migration_tools.get_marc_leader (TEXT) RETURNS TEXT AS $$
     my ($marcxml) = @_;
 
@@ -721,5 +702,85 @@ $marc_xml->insert_grouped_field( $new_field );
 return $marc_xml->as_xml_record();
 
 $function$;
+
+CREATE OR REPLACE FUNCTION migration_tools.set_leader (TEXT, INT, TEXT) RETURNS TEXT AS $$
+  my ($marcxml, $pos, $value) = @_;
+
+  use MARC::Record;
+  use MARC::File::XML;
+
+  my $xml = $marcxml;
+  eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+    my $leader = $marc->leader();
+    substr($leader, $pos, 1) = $value;
+    $marc->leader($leader);
+    $xml = $marc->as_xml_record;
+    $xml =~ s/^<\?.+?\?>$//mo;
+    $xml =~ s/\n//sgo;
+    $xml =~ s/>\s+</></sgo;
+  };
+  return $xml;
+$$ LANGUAGE PLPERLU STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.set_008 (TEXT, INT, TEXT) RETURNS TEXT AS $$
+  my ($marcxml, $pos, $value) = @_;
+
+  use MARC::Record;
+  use MARC::File::XML;
+
+  my $xml = $marcxml;
+  eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+    my $f008 = $marc->field('008');
+
+    if ($f008) {
+       my $field = $f008->data();
+       substr($field, $pos, 1) = $value;
+       $f008->update($field);
+       $xml = $marc->as_xml_record;
+       $xml =~ s/^<\?.+?\?>$//mo;
+       $xml =~ s/\n//sgo;
+       $xml =~ s/>\s+</></sgo;
+    }
+  };
+  return $xml;
+$$ LANGUAGE PLPERLU STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.insert_tags (TEXT, TEXT) RETURNS TEXT AS $$
+
+  my ($marcxml, $tags) = @_;
+
+  use MARC::Record;
+  use MARC::File::XML;
+
+  my $xml = $marcxml;
+
+  eval {
+    my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+    my $to_insert = MARC::Record->new_from_xml("<record>$tags</record>", 'UTF-8');
+
+    my @incumbents = ();
+
+    foreach my $field ( $marc->fields() ) {
+      push @incumbents, $field->as_formatted();
+    }
+
+    foreach $field ( $to_insert->fields() ) {
+      if (!grep {$_ eq $field->as_formatted()} @incumbents) {
+        $marc->insert_fields_ordered( ($field) );
+      }
+    }
+
+    $xml = $marc->as_xml_record;
+    $xml =~ s/^<\?.+?\?>$//mo;
+    $xml =~ s/\n//sgo;
+    $xml =~ s/>\s+</></sgo;
+  };
+
+  return $xml;
+
+$$ LANGUAGE PLPERLU STABLE;
+
 
 

@@ -198,3 +198,77 @@ FROM (
 END
 $func$ LANGUAGE plpgsql;
 
+-- add koha holding tag to marc
+DROP FUNCTION IF EXISTS migration_tools.generate_koha_holding_tag(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+
+CREATE OR REPLACE FUNCTION migration_tools.generate_koha_holding_tag(marc TEXT, tag TEXT, ind1 TEXT, ind2 TEXT, barcode TEXT, dateaccessioned TEXT, booksellerid TEXT, homebranch TEXT, price TEXT, replacementprice TEXT, replacementpricedate TEXT, datelastborrowed TEXT, datelastseen TEXT, stack TEXT, notforloan TEXT, damaged TEXT, itemlost TEXT, wthdrawn TEXT, itemcallnumber TEXT, issues TEXT, renewals TEXT, reserves TEXT, restricted TEXT, internalnotes TEXT, itemnotes TEXT, holdingbranch TEXT, location TEXT, onloan TEXT, cn_source TEXT, cn_sort TEXT, ccode TEXT, materials TEXT, uri TEXT, itype TEXT, enumchron TEXT, copynumber TEXT, stocknumber TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my ($marc_xml, $tag , $ind1 , $ind2 , $barcode , $dateaccessioned , $booksellerid , $homebranch , $price , $replacementprice , $replacementpricedate , $datelastborrowed , $datelastseen , $stack , $notforloan , $damaged , $itemlost , $wthdrawn , $itemcallnumber , $issues , $renewals , $reserves , $restricted , $internalnotes , $itemnotes , $holdingbranch , $location , $onloan , $cn_source , $cn_sort , $ccode , $materials , $uri , $itype , $enumchron , $copynumber , $stocknumber ) = @_;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my $new_field = new MARC::Field(
+    $tag, $ind1, $ind2,
+    'a' => $homebranch,
+    'b' => $holdingbranch,
+    'c' => $location,
+    'p' => $barcode,
+    'y' => $itype
+);
+
+if ($dateaccessioned) { $new_field->add_subfields('d' => $dateaccessioned); }
+if ($booksellerid) { $new_field->add_subfields('e' => $booksellerid); }
+if ($price) { $new_field->add_subfields('g' => $price); }
+if ($replacementprice) { $new_field->add_subfields('v' => $replacementprice); }
+if ($replacementpricedate) { $new_field->add_subfields('w' => $replacementpricedate); }
+if ($datelastborrowed) { $new_field->add_subfields('s' => $datelastborrowed); }
+if ($datelastseen) { $new_field->add_subfields('r' => $datelastseen); }
+if ($stack) { $new_field->add_subfields('j' => $stack); }
+if ($notforloan) { $new_field->add_subfields('7' => $notforloan); }
+if ($damaged) { $new_field->add_subfields('4' => $damaged); }
+if ($itemlost) { $new_field->add_subfields('1' => $itemlost); }
+if ($wthdrawn) { $new_field->add_subfields('0' => $wthdrawn); }
+if ($itemcallnumber) { $new_field->add_subfields('o' => $itemcallnumber); }
+if ($issues) { $new_field->add_subfields('l' => $issues); }
+if ($renewals) { $new_field->add_subfields('m' => $renewals); }
+if ($reserves) { $new_field->add_subfields('n' => $reserves); }
+if ($restricted) { $new_field->add_subfields('5' => $restricted); }
+if ($internalnotes) { $new_field->add_subfields('x' => $internalnotes); }
+if ($itemnotes) { $new_field->add_subfields('z' => $itemnotes); }
+if ($onloan) { $new_field->add_subfields('q' => $onloan); }
+if ($cn_source) { $new_field->add_subfields('2' => $cn_source); }
+if ($cn_sort) { $new_field->add_subfields('6' => $cn_sort); }
+if ($ccode) { $new_field->add_subfields('8' => $ccode); }
+if ($materials) { $new_field->add_subfields('3' => $materials); }
+if ($uri) { $new_field->add_subfields('u' => $uri); }
+if ($enumchron) { $new_field->add_subfields('h' => $enumchron); }
+if ($copynumber) { $new_field->add_subfields('t' => $copynumber); }
+if ($stocknumber) { $new_field->add_subfields('i' => $stocknumber); }
+
+$marc_xml->insert_grouped_field( $new_field );
+
+return $marc_xml->as_xml_record();
+
+$function$;
+
