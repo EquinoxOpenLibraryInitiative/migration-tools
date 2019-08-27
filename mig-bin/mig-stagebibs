@@ -61,6 +61,14 @@ my $batch;
 binmode STDIN, ':utf8';
 
 foreach my $arg (@ARGV) {
+    if ($arg eq '--auth') {
+        $base_table = 'authority_record_entry';
+        $stage_table = 'authority_record_entry_legacy';
+    }
+    if ($arg eq '--serial') {
+        $base_table = 'serial_record_entry';
+        $stage_table = 'serial_record_entry_legacy';
+    }
     if ($arg eq '--file') {
         $next_arg_is_file = 1;
         next;
