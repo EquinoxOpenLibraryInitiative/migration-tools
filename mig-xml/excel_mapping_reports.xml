@@ -491,13 +491,13 @@
         <report_title>Borrowers by Borrower Types</report_title>
         <tag>horizon</tag>
         <iteration>1</iteration>
-        <heading>Count.Borrower Type</heading>
-        <query>SELECT COUNT(id), btype FROM borrower_csv_clean GROUP BY 2 ORDER BY 2;</query>
+        <heading>Count.Borrower Type.Description</heading>
+        <query>SELECT COUNT(*), a.btype, b.descr FROM borrower_csv_clean a JOIN btype_csv_clean b ON b.btype = a.btype  GROUP BY 2, 3 ORDER BY 2;</query>
     </report>
 
     <report>
-        <name>hz_borrowerpinsamples</name>
-        <report_title>Borrower PINs Samples</report_title>
+        <name>hz_borrowerpincount</name>
+        <report_title>Borrower PINs Count</report_title>
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count of Migratable Passwords / PINs</heading>
@@ -505,8 +505,8 @@
     </report>
 
     <report>
-        <name>hz_borrowerpinsamples</name>
-        <report_title>Borrower PINs Samples</report_title>
+        <name>hz_borrowerpincount</name>
+        <report_title>Borrower PINs Count</report_title>
         <tag>horizon</tag>
         <iteration>1</iteration>
         <heading>Count of Migratable Passwords / PINs</heading>
@@ -527,8 +527,8 @@
         <report_title>Borrower Note Field Samples</report_title>
         <tag>horizon</tag>
         <iteration>1</iteration>
-        <heading>Sampel of Migratable Notes</heading>
-        <query>SELECT l_borrower_borrower_note FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1 LIMIT 20;</query>
+        <heading>Sample of Migratable Notes</heading>
+        <query>SELECT borrower_note FROM borrower_csv_clean WHERE LENGTH(borrower_note) > 1 LIMIT 20;</query>
     </report>
 
     <report>
@@ -542,11 +542,11 @@
 
     <report>
         <name>hz_borrowernotescount</name>
-        <report_title>Counnt of Migratable Borrower NOtes</report_title>
+        <report_title>Counnt of Migratable Borrower Notes</report_title>
         <tag>horizon</tag>
         <iteration>1</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(l_borrower_borrower_note) FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1;</query>
+        <query>SELECT COUNT(borrower_note) FROM borrower_csv_clean WHERE LENGTH(borrower_note) > 1;</query>
     </report>
 
     <report>
@@ -639,7 +639,7 @@
         <tag>horizon</tag>
         <iteration>1</iteration>
         <heading>Count.Collection.Description.PAC Description</heading>
-        <query>SELECT COUNT(*), a.collection, b.descr, b.pac_descr FROM item_csv_clean a JOIN from collection_csv_clean c ON c.collection = a.collection GROUP BY 2, 3, 4 ORDER BY 2, 3, 4;</query>
+        <query>SELECT COUNT(*), a.collection, c.descr, c.pac_descr FROM item_csv_clean a JOIN collection_csv_clean c ON c.collection = a.collection GROUP BY 2, 3, 4 ORDER BY 2, 3, 4;</query>
     </report>
 
     <report>
@@ -657,7 +657,7 @@
         <tag>horizon</tag>
         <iteration>1</iteration>
         <heading>Count.Item Type (itype).Description</heading>
-        <query>SELECT COUNT(id), a.itype, b.descr FROM item_csv_clean a JOIN itype_csv_clean b ON b.itype = a.itype  GROUP BY 2, 3 ORDER BY 2;</query>
+        <query>SELECT COUNT(*), a.itype, b.descr FROM item_csv_clean a JOIN itype_csv_clean b ON b.itype = a.itype  GROUP BY 2, 3 ORDER BY 2;</query>
     </report>
    
     <report>
