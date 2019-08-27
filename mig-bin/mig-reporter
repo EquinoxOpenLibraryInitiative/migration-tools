@@ -178,7 +178,7 @@ $report_file = $MIGGITDIR . $report_file;
 if ($excel_output == 1) {
     $workbook = Excel::Writer::XLSX->new( $report_file );
 } else {
-    open($fh, '>', $report_file) or abort("Could not open output file!");
+    open($fh, '>', $report_file) or abort("Could not open output file $report_file!");
     write_title_page($report_title,$fh,$analyst,$captions_off);
 };
 

@@ -632,9 +632,9 @@
         <heading>Count.Collection</heading>
         <query>SELECT COUNT(id), l_collection FROM asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
     </report>
-    
 
-    <name>hz_copybycollection</name>
+	<report>    
+	    <name>hz_copybycollection</name>
         <report_title>Copies by Collection</report_title>
         <tag>horizon</tag>
         <iteration>1</iteration>
@@ -762,6 +762,7 @@
         <query>SELECT COUNT(id), l_access_if_applicable FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;
         </query>
     </report>
+
     <report>
         <name>rm_actor_comments</name>
         <report_title>Patron Comments</report_title>
