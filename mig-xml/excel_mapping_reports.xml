@@ -475,6 +475,8 @@
         <note>These need to be mapped to Evergreen phone types.</note>
     </report>
 
+<!-- horizon -->
+
     <report>
         <name>hz_borrowersbybtypes</name>
         <report_title>Borrowers by Borrower Types</report_title>
@@ -485,13 +487,30 @@
     </report>
 
     <report>
+        <name>hz_borrowersbybtypes</name>
+        <report_title>Borrowers by Borrower Types</report_title>
+        <tag>horizon</tag>
+        <iteration>1</iteration>
+        <heading>Count.Borrower Type</heading>
+        <query>SELECT COUNT(id), btype FROM borrower_csv_clean GROUP BY 2 ORDER BY 2;</query>
+    </report>
+
+    <report>
         <name>hz_borrowerpinsamples</name>
         <report_title>Borrower PINs Samples</report_title>
         <tag>horizon</tag>
         <iteration>0</iteration>
-        <heading>Sample PINs</heading>
-        <query>SELECT l_borrower_pin FROM actor_usr_legacy WHERE LENGTH(l_borrower_pin) > 1 LIMIT 20;</query>
-        <note>Only 16 PINS defined.</note>
+        <heading>Count of Migratable Passwords / PINs</heading>
+        <query>SELECT COUNT(l_borrower_pin) FROM actor_usr_legacy WHERE LENGTH(l_borrower_pin) > 1;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowerpinsamples</name>
+        <report_title>Borrower PINs Samples</report_title>
+        <tag>horizon</tag>
+        <iteration>1</iteration>
+        <heading>Count of Migratable Passwords / PINs</heading>
+        <query>SELECT COUNT(pin) FROM borrower_csv_clean WHERE LENGTH(pin) > 1;</query>
     </report>
     
     <report>
@@ -499,9 +518,35 @@
         <report_title>Borrower Note Field Samples</report_title>
         <tag>horizon</tag>
         <iteration>0</iteration>
-        <heading>Count</heading>
+        <heading>Sample of Migratable Notes</heading>
         <query>SELECT l_borrower_borrower_note FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1 LIMIT 20;</query>
-        <note>19,473</note>
+    </report>
+
+    <report>
+        <name>hz_borrowernotesample</name>
+        <report_title>Borrower Note Field Samples</report_title>
+        <tag>horizon</tag>
+        <iteration>1</iteration>
+        <heading>Sampel of Migratable Notes</heading>
+        <query>SELECT l_borrower_borrower_note FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1 LIMIT 20;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowernotescount</name>
+        <report_title>Count of Migratable Borrower Notes</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(l_borrower_borrower_note) FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowernotescount</name>
+        <report_title>Counnt of Migratable Borrower NOtes</report_title>
+        <tag>horizon</tag>
+        <iteration>1</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(l_borrower_borrower_note) FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1;</query>
     </report>
 
     <report>
@@ -511,7 +556,6 @@
         <iteration>0</iteration>
         <heading>Count</heading>
         <query>SELECT l_borrower_note2 FROM actor_usr_legacy WHERE LENGTH(l_borrower_note2) > 1 LIMIT 20;</query>
-        <note>78</note>
     </report>
 
     <report>
@@ -521,7 +565,6 @@
         <iteration>0</iteration>
         <heading>Count</heading>
         <query>SELECT l_borrower_note3 FROM actor_usr_legacy WHERE LENGTH(l_borrower_note3) > 1 LIMIT 20;</query>
-        <note>Only 6.</note>
     </report>
 
     <report>
@@ -538,7 +581,21 @@
         UNION ALL SELECT l_borrower_phone_4_phone_type AS b FROM actor_usr_legacy) x 
         GROUP BY 2 ORDER BY 2
         </query>
-        <note>Ordinal phones will have to be combined.</note>
+    </report>
+
+    <report>
+        <name>hz_phones</name>
+        <report_title>Borrower Phones</report_title>
+        <tag>horizon</tag>
+        <iteration>1</iteration>
+        <heading>Count.Borrower Phone Position</heading>
+        <query>
+        SELECT COUNT(*), '0' FROM borrower_phone_csv_clean WHERE ord = '0'
+        UNION ALL SELECT COUNT(*), '1' FROM borrower_phone_csv_clean WHERE ord = '1'
+        UNION ALL SELECT COUNT(*), '2' FROM borrower_phone_csv_clean WHERE ord = '2'
+        UNION ALL SELECT COUNT(*), '3' FROM borrower_phone_csv_clean WHERE ord = '3'
+		UNION ALL SELECT COUNT(*), '4' FROM borrower_phone_csv_clean WHERE ord = '4'
+        </query>
     </report>
 
     <report>
@@ -558,6 +615,16 @@
     </report>
     
     <report>
+        <name>hz_bstats</name>
+        <report_title>Borrower B-Stats</report_title>
+        <tag>horizon</tag>
+        <iteration>1</iteration>
+        <heading>Count.B-Stat.Description</heading>
+        <query>SELECT COUNT(*), a.bstat, b.descr FROM borrower_bstat_csv_clean a JOIN bstat_csv_clean b ON b.bstat = a.bstat GROUP BY 2, 3;
+        </query>
+    </report>
+
+    <report>
         <name>hz_copybycollection</name>
         <report_title>Copies by Collection</report_title>
         <tag>horizon</tag>
@@ -566,13 +633,13 @@
         <query>SELECT COUNT(id), l_collection FROM asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
     </report>
     
-    <report>
-        <name>hz_copyfieldexamples</name>
-        <report_title>Sample Copy Field Values</report_title>
+
+    <name>hz_copybycollection</name>
+        <report_title>Copies by Collection</report_title>
         <tag>horizon</tag>
-        <iteration>0</iteration>
-        <heading>Field</heading>
-        <query>SELECT l_copy FROM asset_copy_legacy WHERE LENGTH(l_copy) > 1 LIMIT 30;</query>
+        <iteration>1</iteration>
+        <heading>Count.Collection.Description.PAC Description</heading>
+        <query>SELECT COUNT(*), a.collection, b.descr, b.pac_descr FROM item_csv_clean a JOIN from collection_csv_clean c ON c.collection = a.collection GROUP BY 2, 3, 4 ORDER BY 2, 3, 4;</query>
     </report>
 
     <report>
@@ -583,35 +650,52 @@
         <heading>Count.Item Type (itype)</heading>
         <query>SELECT COUNT(id), l_itype FROM asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
     </report>
-    
+  
     <report>
-        <name>hz_volfieldexamples</name>
-        <report_title>Sample Volume Field Values</report_title>
+        <name>hz_itemsbyitype</name>
+        <report_title>Items by IType</report_title>
         <tag>horizon</tag>
-        <iteration>0</iteration>
-        <heading>Field</heading>
-        <query>SELECT l_volume FROM asset_copy_legacy WHERE LENGTH(l_volume) > 1 LIMIT 30;</query>
-        <note></note>
+        <iteration>1</iteration>
+        <heading>Count.Item Type (itype).Description</heading>
+        <query>SELECT COUNT(id), a.itype, b.descr FROM item_csv_clean a JOIN itype_csv_clean b ON b.itype = a.itype  GROUP BY 2, 3 ORDER BY 2;</query>
     </report>
-    
-     <report>
-        <name>hz_iteminhouseuses</name>
-        <report_title>Item In House Uses</report_title>
+   
+    <report>
+        <name>hz_internalnotescount</name>
+        <report_title>Internal/Check In Item Notes</report_title>
         <tag>horizon</tag>
         <iteration>0</iteration>
-        <heading>Count.Number of Uses</heading>
-        <query>SELECT COUNT(id), l_n_inhouse_uses FROM asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
+        <heading>Count</heading>
+        <query>SELECT COUNT(l_internal_note) FROM asset_copy_legacy WHERE LENGTH(l_internal_note) > 1;</query>
+    </report>
+
+    <report>
+        <name>hz_internalnotescount</name>
+        <report_title>Internal/Check In Item Notes</report_title>
+        <tag>horizon</tag>
+        <iteration>1</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(cki_notes) FROM item_csv_clean WHERE LENGTH(cki_notes) > 1;</query>
     </report>
     
     <report>
         <name>hz_internalnotesample</name>
-        <report_title>Internal Item Notes</report_title>
+        <report_title>Internal/Check In Item Notes Sample</report_title>
         <tag>horizon</tag>
         <iteration>0</iteration>
-        <heading>Sample Note</heading>
-        <query>SELECT l_internal_note FROM asset_copy_legacy WHERE LENGTH(l_internal_note) > 1 LIMIT 30;</query>
+        <heading>Count</heading>
+        <query>SELECT l_internal_note FROM asset_copy_legacy WHERE LENGTH(l_internal_note) > 1 LIMIT 20;</query>
     </report>
-    
+
+    <report>
+        <name>hz_internalnotesample</name>
+        <report_title>Internal/Check In Item Notes Sample</report_title>
+        <tag>horizon</tag>
+        <iteration>1</iteration>
+        <heading>Count</heading>
+        <query>SELECT cki_notes FROM item_csv_clean WHERE LENGTH(cki_notes) > 1 LIMIT 20;</query>
+    </report>
+
 <!-- resource mate -->
 
     <report>
