@@ -20,17 +20,18 @@ adds an extra arbitrary page of notes to the report.  Mig assumes the page file 
 This will define a set of tags to use, if not set it will default to Circs, 
 Holds, Actors, Bibs, Assets & Money. 
 
---debug
+--debug on
 
-Gives more information about what is happening.
+Gives more information about what is happening. Defaults to off.
 
 --reports_xml 
 
 Allows you to override the default evergreen_staged_report.xml in the mig-xml folder.
 
---captions or --captions_off
+--captions on OR --captions off 
 
 Adds the captions tag to asciidoc header to turn off captions in generated output.
+Defaults to off.
 
 =back
 
@@ -50,6 +51,7 @@ use Env qw(
 );
 use Pod::Usage;
 use Switch;
+use Getopt::Long; 
 use Cwd 'abs_path';
 use Cwd qw(getcwd);
 use FindBin;
@@ -62,89 +64,29 @@ pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $analyst;
-my $next_arg_is_analyst;
 my $report_title;
-my $next_arg_is_report_title;
 my $reports_xml;
-my $next_arg_is_reports_xml;
 my $tags;
-my $next_arg_is_tags;
 my $added_page_title;
-my $next_arg_is_added_page_title;
 my $added_page_file;
-my $next_arg_is_added_page_file;
-my $captions_off = 0;
+my $captions = 'off';  
 my $i = 0;
 my $parser = XML::LibXML->new();
 my $lines_per_page = 42;
-my $debug_flag = 0;
+my $debug = 'off';
 my $workbook;
 my $fh;
 
-foreach my $arg (@ARGV) {
-    if ($arg eq '--report_title') {
-        $next_arg_is_report_title = 1;
-        next;
-    }
-    if ($next_arg_is_report_title) {
-        $report_title = $arg;
-        $next_arg_is_report_title = 0;
-        next;
-    }
-    if ($arg eq '--analyst') {
-        $next_arg_is_analyst = 1;
-        next;
-    }
-    if ($next_arg_is_analyst) {
-        $analyst = $arg;
-        $next_arg_is_analyst = 0;
-        next;
-    }
-    if ($arg eq '--reports_xml') {
-        $next_arg_is_reports_xml = 1;
-        next;
-    }
-    if ($next_arg_is_reports_xml) {
-        $reports_xml = $arg;
-        $next_arg_is_reports_xml = 0;
-        next;
-    }
-    if ($arg eq '--tags') {
-        $next_arg_is_tags = 1;
-        next;
-    }
-    if ($next_arg_is_tags) {
-        $tags = $arg;
-        $next_arg_is_tags = 0;
-        next;
-    }
-    if ($arg eq '--added_page_title') {
-        $next_arg_is_added_page_title = 1;
-        next;
-    }
-    if ($next_arg_is_added_page_title) {
-        $added_page_title = $arg;
-        $next_arg_is_added_page_title = 0;
-        next;
-    }
-    if ($arg eq '--added_page_file') {
-        $next_arg_is_added_page_file = 1;
-        next;
-    }
-    if ($next_arg_is_added_page_file) {
-        $added_page_file = $arg;
-        $next_arg_is_added_page_file = 0;
-        next;
-    }
-    if ($arg eq '--captions_off' or $arg eq '--captions') {
-        $captions_off = 1;
-        next;
-    }
-    if ($arg eq '--debug') {
-        $debug_flag = 1;
-        next;
-    }
-}
+my $ret = GetOptions(
+    'analyst:s'           => \$analyst,
+    'report_title:s'      => \$report_title,
+    'reports_xml:s'       => \$reports_xml,
+    'tags:s'              => \$tags,
+    'added_page_title:s'  => \$added_page_title,
+    'added_page_file:s'   => \$added_page_file,
+    'captions:s'          => \$captions,
+	'debug:s'             => \$debug
+);
 
 if (!defined $tags) {$tags = 'circs.holds.actors.bibs.assets.money.notices'};
 if (!defined $report_title) { abort('--report_title must be supplied'); }
@@ -166,7 +108,7 @@ my $report_file = create_report_name($report_title);
 $report_file = $MIGGITDIR . $report_file;
 
 open($fh, '>', $report_file) or abort("Could not open output file $report_file!");
-write_title_page($report_title,$fh,$analyst,$captions_off);
+write_title_page($report_title,$fh,$analyst,$captions);
 
 if (defined $added_page_file and defined $added_page_title) { 
     print $fh "<<<\n";
@@ -242,13 +184,13 @@ foreach my $t (@report_tags) {
         my $check_tables0;
         my $check_tables1;
 
-        if ($debug_flag == 1) {print "\nchecking for $rname ... ";}
-        %report0 = find_report($dom,$t,$rname,'0',$debug_flag);
-        $check_tables0 = check_table($report0{query},$MIGSCHEMA,$debug_flag,$rname);
+        if ($debug eq 'on') {print "\nchecking for $rname ... ";}
+        %report0 = find_report($dom,$t,$rname,'0',$debug);
+        $check_tables0 = check_table($report0{query},$MIGSCHEMA,$debug,$rname);
         if ($check_tables0 == 1) { $r =  print_query($fh,%report0); } else {
-        	%report1 = find_report($dom,$t,$rname,'1',$debug_flag);
+        	%report1 = find_report($dom,$t,$rname,'1',$debug);
             if (defined $report1{query}) {
-            	$check_tables1 = check_table($report1{query},$MIGSCHEMA,$debug_flag,$rname);
+            	$check_tables1 = check_table($report1{query},$MIGSCHEMA,$debug,$rname);
                	if ($check_tables1 == 1) { $r = print_query($fh,%report1); }
             }
         }
@@ -283,13 +225,13 @@ sub find_report {
     my $tag = shift;
     my $name = shift;
     my $iteration = shift;
-    my $debug_flag = shift;
+    my $debug = shift;
     my %report;
 
-    if ($debug_flag == 1) {print "iteration $iteration ";}
+    if ($debug eq 'on') {print "iteration $iteration ";}
     foreach my $node ($dom->findnodes('//report')) {
         if ($node->findvalue('./tag') =~ $tag and $node->findvalue('./iteration') eq $iteration and $node->findvalue('./name') eq $name) {
-            if ($debug_flag == 1) {print "succeeded ... \n";}
+            if ($debug eq 'on') {print "succeeded ... \n";}
             %report = (
                 name => $node->findvalue('./name'),
                 report_title => $node->findvalue('./report_title'),
@@ -302,7 +244,7 @@ sub find_report {
             return %report;
         }
     }
-    if ($debug_flag == 1) {print "failed ... \n";}
+    if ($debug eq 'on') {print "failed ... \n";}
     return %report = (
         name => "eaten by grue"
     );
@@ -336,7 +278,7 @@ sub write_title_page {
     my $rt = shift;
     my $fh = shift;
     my $a = shift;
-    my $captions_off = shift;
+    my $captions = shift;
 
     my @abbr = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
     my $l = length($report_title);
@@ -347,17 +289,17 @@ sub write_title_page {
     print $fh "$a\n";
     #print $fh ":title-logo-image: image::eolilogosmall.png[pdfwidth=3in]\n";
     print $fh ":toc:\n";
-    if ($captions_off == 1) { print $fh ":caption:\n"; }
+    if ($captions eq 'on') { print $fh ":caption:\n"; }
     print $fh "\n";
 }
 
 sub check_table {
     my $query = shift;
     my $MIGSCHEMA = shift;
-    my $debug_flag = shift;
+    my $debug = shift;
     my $report_name = shift;
 
-    if ($debug_flag == 1) {print "$query\n";}
+    if ($debug eq 'on') {print "$query\n";}
 
     my $i;
     my $return_flag = 1;   
@@ -374,7 +316,7 @@ sub check_table {
         }
         $i--;
     }
-    if ($debug_flag == 1) {print "checking tables ... ";}
+    if ($debug eq 'on') {print "checking tables ... ";}
 
     $i = 0;
     foreach my $table (@tables) {
@@ -398,12 +340,12 @@ sub check_table {
                     next;
                 } else {
                     $return_flag = 0;
-                    if ($debug_flag == 1) {print "detecting $table failed...\n";}
+                    if ($debug eq 'on') {print "detecting $table failed...\n";}
                 }
             if ($row[0] eq '0') {$return_flag = 0;}
         }
     }
-    if ($return_flag == 1 and $debug_flag == 1) {print "succeeded ...\n";}
+    if ($return_flag == 1 and $debug eq 'on') {print "succeeded ...\n";}
     if ($return_flag == 0) {print "! a table failed the find test for report $report_name\n\n";}
     return $return_flag;
 }
