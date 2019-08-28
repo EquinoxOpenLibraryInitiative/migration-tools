@@ -48,72 +48,48 @@ use UNIVERSAL;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
 use Mig;
+use Getopt::Long;
 
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
-my $next_arg_is_file = 0;
 my $append = 0;
-my $next_arg_is_source = 0;
-my $next_arg_is_stage = 0;
-my $next_arg_is_base_table = 0;
-my $next_arg_is_stage_table = 0;
 my $base_table = 'biblio_record_entry';
 my $stage_table = 'biblio_record_entry_legacy';
+my $auth = '';
+my $serial = '';
 my $source = 'default';
-my $file_is_xml = 0;
 my $dbh = Mig::db_connect();
 my $infile;
 my $i = 0;
 my $batch;
 binmode STDIN, ':utf8';
 
-foreach my $arg (@ARGV) {
-    if ($arg eq '--auth') {
-        $base_table = 'authority_record_entry';
-        $stage_table = 'authority_record_entry_legacy';
-    }
-    if ($arg eq '--serial') {
-        $base_table = 'serial_record_entry';
-        $stage_table = 'serial_record_entry_legacy';
-    }
-    if ($arg eq '--file') {
-        $next_arg_is_file = 1;
-        next;
-    }
-    if ($next_arg_is_file) {
-        $infile = $arg;
-        $next_arg_is_file = 0;
-        next;
-    }
-    if ($arg eq '--source') {
-        $next_arg_is_source = 1;
-        next;
-    }
-    if ($next_arg_is_source) {
-        $source = $arg;
-        $next_arg_is_source = 0;
-        next;
-    }
-    if ($arg eq '--base-table') {
-        $next_arg_is_base_table = 1;
-        next;
-    }
-    if ($next_arg_is_base_table) {
-        $base_table = $arg;
-        $next_arg_is_base_table = 0;
-        next;
-    }
-    if ($arg eq '--stage-table') {
-        $next_arg_is_stage_table = 1;
-        next;
-    }
-    if ($next_arg_is_stage_table) {
-        $stage_table = $arg;
-        $next_arg_is_stage_table = 0;
-        next;
-    }
+my $ret = GetOptions(
+    'file:s'              => \$infile,
+    'serial:s'            => \$serial,
+    'auth:s'              => \$auth,
+    'source:s'            => \$source,
+    'base_table:s'        => \$base_table,
+    'stage_table:s'       => \$stage_table,
+    'captions:s'          => \$captions,
+    'debug:s'             => \$debug
+);
+
+#if in file is empty then fail
+#if auth and serial = 1 fail 
+
+if ($serial == 1) { 
+    $base_table = 'authority_record_entry';
+    $stage_table = 'authority_record_entry_legacy';
 }
+
+if ($auth == 1) {
+    $base_table = 'serial_record_entry';
+    $stage_table = 'serial_record_entry_legacy';	
+}
+
+if ($auth == 1 and $serial == 1) { abort('are you sure you want to load these as authorities and serials?'); }
 
 my $bre_test = check_for_table($dbh,$base_table);
 my $bre_legacy_test = check_for_table($dbh,$stage_table);
