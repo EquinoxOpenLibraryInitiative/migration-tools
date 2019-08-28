@@ -3,18 +3,26 @@
 ###############################################################################
 =pod
 
-=item B<stagebibs> --file foo.xml
+=item B<stagebibs> --file foo.mrc.xml
 
 Takes a load of bibs from a UTF-8 MARC XML  file and loads them into mig staging 
-table of bibio_record_entry.  This is done with no checking of file validity 
+table of bibio_record_entry_legacy.  This is done with no checking of file validity 
 so records should be checked before hand and cleaned.
 
-Takes one  optional arguments:
+Takes three optional arguments:
 
 --source
 
 Sets an x_source value on the staging table to the one supplied instead of the 
 default of none.
+
+--auth foo.mrc.xml
+
+This will load bibs into the authority_record_entry_legacy.
+
+--serial foo.mrc.xml
+
+This will load bibs into the serial_record_entry_legacy.
 
 =back
 
