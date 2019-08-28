@@ -1,0 +1,836 @@
+<reports_file>
+<!-- sample reports entry
+    <report>
+        <name>name of report</name>
+        <iteration value='0' /> which version, the first version to run is 0, first backup is 1, then so on
+        <tag>money</tag>  arbitrary tags, each should go in separate tag
+        <report_title>Migrated Billings</report_title>  title used in the asciidoc output
+        <heading column='1'>Number of Billings.Migrated.Total</heading> period delimited 
+        <query>SELECT COUNT(id),x_migrate,SUM(amount) FROM money_billing_legacy GROUP BY 2;</query>  query itself, will be replaced
+        <note>Arbitrary note that can be included in the entries.</note>
+    </report>
+-->
+
+   <!-- evergreen -->
+
+    <report>
+        <name>evg_asset_copy_statuses</name>
+        <report_title>Statuses</report_title>
+        <tag>evergreen</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Migrating Status.New Evergreen Status.Notes</heading>
+        <query>SELECT COUNT(ac.l_id), cs.l_name FROM asset_copy_legacy ac JOIN config_copy_status_legacy cs ON cs.l_id = ac.l_status GROUP BY 2 ORDER BY 2</query>
+        <note>You only need to fill this sheet out if you use custom statuses that need to be migrated.</note>
+    </report>
+
+    <report>
+        <name>evg_asset_circ_mods</name>
+        <report_title>Circulation Modifiers</report_title>
+        <tag>evergreen</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Migrating Circ Mod.New Circ Mod.Notes</heading>
+        <query>SELECT COUNT(ac.l_id), ac.l_circ_modifier FROM asset_copy_legacy ac GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>evg_asset_copy_locs</name>
+        <report_title>Copy Locations</report_title>
+        <tag>evergreen</tag>
+        <iteration>0</iteration>
+        <heading>Count.Library.Migrating Copy Location.New Copy Location.Notes</heading>
+        <query>SELECT COUNT(ac.l_id), aou.l_name, acl.l_name FROM asset_copy_location_legacy acl JOIN actor_org_unit_legacy aou ON aou.l_id = acl.l_owning_lib JOIN asset_copy_legacy ac ON ac.l_location = acl.l_id GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <note>Any locations not mapped can be moved over as their existing locations.</note>
+    </report>
+
+   <report>
+        <name>evg_permission_grps</name>
+        <report_title>Permission Groups</report_title>
+        <tag>evergreen</tag>
+        <iteration>0</iteration>
+        <heading>Count.Migrating Permission Group.New Permission Group.Notes</heading>
+        <query>SELECT COUNT(au.l_id), pgt.l_name FROM actor_usr_legacy au JOIN permission_grp_tree_legacy pgt ON pgt.l_id = au.l_profile GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <!-- tlc -->
+    <report>
+        <name>tlc_load_branches_list</name>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <report_title>Branches Present in Extract</report_title>
+        <heading>Name.Evergreen Org Unit.Notes</heading>
+        <query>SELECT l_name FROM ctbranches_tsv_clean ORDER BY 1</query>
+    </report>
+
+    <report>
+        <name>tlc_load_asset_notes</name>
+        <report_title>Item Notes</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Note Type.Notes</heading>
+        <query>SELECT COUNT(l_itemcomment)::TEXT, 'Item Comments' FROM ititeminformation_tsv_clean WHERE l_itemcomment IS NOT NULL GROUP BY 2
+               UNION ALL SELECT COUNT(l_physicalcondition)::TEXT, 'Condition Notes' FROM ctlocitem_tsv_clean WHERE l_physicalcondition IS NOT NULL GROUP BY 2
+               UNION ALL SELECT COUNT(l_checkinoutnote)::TEXT, 'Circ Notes' FROM ctlocitem_tsv_clean WHERE l_checkinoutnote IS NOT NULL GROUP BY 2
+               UNION ALL (SELECT DISTINCT 'Sample Item Comment', l_itemcomment FROM ititeminformation_tsv_clean WHERE l_itemcomment IS NOT NULL LIMIT 20)
+               UNION ALL (SELECT DISTINCT 'Sample Physical Condition', l_physicalcondition FROM ctlocitem_tsv_clean WHERE l_physicalcondition IS NOT NULL LIMIT 20)
+               UNION ALL (SELECT DISTINCT 'Sample Circ Note', l_checkinoutnote FROM ctlocitem_tsv_clean WHERE l_checkinoutnote IS NOT NULL LIMIT 20) 
+         </query>
+    </report>
+
+    <report>
+        <name>tlc_load_asset_holdings_codes</name>
+        <report_title>Holdings Codes</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Holdings Codes.Evergreen Circulation Modifier.Evergreen Shelving Locatione</heading>
+        <query>SELECT COUNT(l_barcode), l_activeholdingscode FROM ctlocitem_tsv_clean GROUP BY 2 ORDER BY 2</query>
+    </report>
+<!--
+    <report>
+        <name>tlc_load_asset_callnumbertype</name>
+        <report_title>Call Number Types</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Call Number Type.Evergreen Call Number Type.Notes</heading>
+        <query>SELECT COUNT(l_barcode), l_callnumbertype FROM ctlocitem_tsv_clean GROUP BY 2 ORDER BY 2</query>
+        <note>Mappable to generic, LoC and Dewey types in Evergreen.</note>
+    </report>
+-->
+<!-- 
+    <report>
+        <name>tlc_load_asset_callnumberparts</name>
+        <report_title>Call Number Parts</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Call Number Part.Evergreen Sequence.Evergreen Call Number Part.Delimiter</heading>
+        <query>SELECT COUNT(l_barcode) FROM ctlocitem_tsv_clean, 'Prefixes' WHERE l_callnumberprefix IS NOT NULL GROUP BY 1 UNION ALL SELECT 'Class Label', COUNT(l_barcode) FROM ctlocitem_tsv_clean WHERE l_callnumberclass IS NOT NULL GROUP BY 1 UNION ALL SELECT 'Cutter', COUNT(l_barcode) FROM ctlocitem_tsv_clean WHERE l_callnumbercutter IS NOT NULL GROUP BY 1 UNION ALL SELECT 'Year', COUNT(l_barcode) FROM ctlocitem_tsv_clean WHERE l_year IS NOT NULL GROUP BY 1 UNION ALL SELECT 'Volume', COUNT(l_barcode) FROM ctlocitem_tsv_clean WHERE l_volume IS NOT NULL GROUP BY 1</query>
+    </report>
+-->
+    <report>
+        <name>tlc_load_money_migrating_bills</name>
+        <report_title>Migrating Bills By Bill Type</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Billing Type.Evergreen Bill Type</heading>
+        <query>SELECT COUNT(a.l_chargenumber), b.l_description FROM itpayment_tsv_clean a JOIN itpaymenttype_tsv_clean b ON b.l_paymenttype = a.l_paymenttype WHERE a.l_dueamount::INTEGER - (a.l_waiveamount::INTEGER + a.l_tenderamount::INTEGER) > 0 GROUP BY 2 ORDER BY 2 </query>
+    </report>
+
+    <report>
+        <name>tlc_load_usrs_bygroup</name>
+        <report_title>Patrons by Agency Type</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Permission Group.Evergreen Permission Group</heading>
+        <query>SELECT COUNT(l_agencynumber), l_agencytype FROM itagency_tsv_clean GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>tlc_load_usrs_byexpiration</name>
+        <report_title>Patrons by Expiration Date</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Year of Expiration.Do Not Migrate?</heading>
+        <query>SELECT COUNT(l_agencynumber), LEFT(l_expirationdate,4) FROM itagency_tsv_clean GROUP BY 2 ORDER BY 2</query>
+    </report>
+<!--
+    <report>
+        <name>tlc_load_usrs_bynever</name>
+        <report_title>Patrons With Claims</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Claim Type.Do Not Migrate</heading>
+        <query>SELECT COUNT(l_agencynumber) FROM itagency_tsv_clean, 'Never Checked Out' WHERE l_itemsclaimednevercheckedout != '0' GROUP BY 1 UNION ALL SELECT COUNT(l_agencynumber), 'Claims Returned' FROM itagency_tsv_clean WHERE l_itemsclaimedreturned != '0' GROUP BY 1</query>
+    </report>
+-->
+    <report>
+        <name>tlc_load_usrs_byactive</name>
+        <report_title>Patrons by Last Active Date</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Year Last Active.Migrate as Active Flag?</heading>
+        <query>SELECT COUNT(l_agencynumber), LEFT(l_lastactivedate,4) FROM itagency_tsv_clean GROUP BY 2 ORDER BY 2</query>
+        <note>We can set the active flag based on this if desired.</note>
+    </report>
+
+    <report>
+        <name>tlc_load_usrs_blocks</name>
+        <report_title>Patrons by Block Status</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Block Status.Migration Note</heading>
+        <query>SELECT COUNT(l_agencynumber), l_blockstatus FROM itagency_tsv_clean GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>tlc_load_usrs_gender</name>
+        <report_title>Patrons by Gender</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Gender.Migrate as Stat Cat</heading>
+        <query>SELECT COUNT(l_agencynumber), l_gender FROM itagency_tsv_clean GROUP BY 2 ORDER BY 2</query>
+        <note>Evergreen can load these as statistical categories</note>
+    </report>
+
+    <report>
+        <name>tlc_load_active_usr_passwords</name>
+        <report_title>Count of Patrons w Passwords</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count of NULL PINs.Default Password</heading>
+        <query>SELECT COUNT(l_agencynumber) FROM itagency_tsv_clean WHERE l_pin IS NULL</query>
+        <note>If any PINS are blank we will have to choose a method to supply them as Evergreen requires passwords.</note>
+    </report>
+
+   <report>
+        <name>tlc_load_usr_notes</name>
+        <report_title>Count of Patron Notes</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Note Type.Action</heading>
+        <query>SELECT COUNT(l_agencynumber), 'Patron Note' FROM itagency_tsv_clean WHERE l_agencycomment IS  NOT NULL UNION ALL SELECT COUNT(l_agencynumber), 'Address Comments' FROM itaddress_tsv_clean WHERE l_addresscomment IS NOT NULL</query>
+    </report>
+    
+    <report>
+        <name>tlc_load_usr_balance</name>
+        <report_title>Count and Sum of Balances</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.SUM in Pennies.Migrate?</heading>
+        <query>SELECT COUNT(l_agencynumber), SUM(l_accountbalance::INTEGER) FROM itagency_tsv_clean WHERE l_accountbalance != '0'</query>
+        <note>If this is being migrated there are a few options of how to do it and each will have different workflows.</note>
+    </report>
+<!--
+    <report>
+        <name>tlc_load_usr_addresses_phones</name>
+        <report_title>Patron Phones</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Count.Phone Type.Phone Type</heading>
+        <query>SELECT COUNT(l_phone1), 'Phone 1' FROM itaddress_tsv_clean WHERE l_phone1 IS NOT NULL GROUP BY 2 UNION ALL SELECT COUNT(l_phone1), 'Phone 2' FROM itaddress_tsv_clean WHERE l_phone2 IS NOT NULL GROUP BY 2</query>
+        <note>These need to be mounted to Evergreen phone fields.</note>
+    </report>
+-->
+    <report>
+         <name>tlc_load_usr_stat_cats</name>
+        <report_title>Patron Stat Cats and Counts</report_title>
+        <tag>tlc</tag>
+        <iteration>0</iteration>
+        <heading>Patron Count.Stat Cat.Migrate?</heading>
+        <query>SELECT COUNT(b.l_agencynumber), a.l_description FROM itagencyfields_tsv_clean a JOIN itagencydata_tsv_clean b ON b.l_agencyfieldnumber = a.l_agencyfieldnumber GROUP BY 2 ORDER BY 1</query>
+    </report>
+
+<!-- destiny -->
+
+    <report>
+        <name>destiny_load_usr_by_gradelevel</name>
+        <report_title>Patrons by Destiny Grade Level</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Graduation Year</heading>
+        <query>SELECT COUNT(*), grade_level FROM patrons_csv GROUP BY 2 ORDER BY 2</query>
+        <note>Transfer to note or stat cat?</note>
+    </report>
+    
+        <report>
+        <name>destiny_load_usr_by_gender</name>
+        <report_title>Patrons by Destiny Gender</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Gender</heading>
+        <query>SELECT COUNT(*), gender FROM patrons_csv GROUP BY 2 ORDER BY 2</query>
+        <note>Transfer to stat cat?</note>
+    </report>
+    
+        <report>
+        <name>destiny_load_usr_by_patrontype</name>
+        <report_title>Patrons by Destiny Patron Type</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Patron Type.Permission Group</heading>
+        <query>SELECT COUNT(*), patron_type FROM patrons_csv GROUP BY 2 ORDER BY 2</query>
+    </report>
+    
+    <report>
+        <name>destiny_load_usr_by_status</name>
+        <report_title>Patrons by Destiny Status</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Status</heading>
+        <query>SELECT COUNT(*), status FROM patrons_csv GROUP BY 2 ORDER BY 2</query>
+    </report>
+    
+    <report>
+        <name>destiny_load_usr_by_municipality</name>
+        <report_title>Patrons by Municipality</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Municipality</heading>
+        <query>SELECT COUNT(*), municipality FROM patrons_csv GROUP BY 2 ORDER BY 2</query>
+        <note>State cat?</note>
+    </report>
+    
+    <report>
+        <name>destiny_load_usr_notes</name>
+        <report_title>Types of and Counts of Notes</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Type of Note.Count</heading>
+        <query>SELECT 'General Note', COUNT(*) FROM patrons_csv WHERE note_general IS NOT NULL and note_general != '' UNION ALL SELECT 'Important Note', COUNT(*) FROM patrons_csv WHERE note_important IS NOT NULL and note_important != '' </query>
+        <note>Messsage / alert / note?</note>
+    </report>
+    
+    <report>
+        <name>destiny_load_usr_userdefined5</name>
+        <report_title>User Defined Field 5</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Values</heading>
+        <query>SELECT COUNT(*), user_defined_5 FROM patrons_csv GROUP BY 2 ORDER BY 2</query>
+        <note>Retain somewhere?</note>
+    </report>
+    
+    <report>
+        <name>destiny_load_usrs_pswdconfigured</name>
+        <report_title>Patrons by Password Configured</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Password Configured</heading>
+        <query>SELECT COUNT(*), password_configured FROM patrons_csv GROUP BY 2 ORDER BY 2</query>
+        <note>Need how they want passwords set since we don't have them to migrate and do they want these that are configured with some special note?</note>
+    </report>
+
+    <report>
+        <name>destiny_load_usrs_phonefields</name>
+        <report_title>Phone Fields</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Phone Field.Count.Evergreen Phone Field</heading>
+        <query>SELECT 'Primary Phone 1', COUNT(*) FROM patrons_csv WHERE primary_phone_1 IS NOT NULL AND primary_phone_1 != '' UNION ALL SELECT 'Primary Phone 2', COUNT(*) FROM patrons_csv WHERE primary_phone_2 IS NOT NULL AND primary_phone_2 != '' UNION ALL SELECT 'Secondary Phone 1', COUNT(*) FROM patrons_csv WHERE secondary_phone_1 IS NOT NULL AND secondary_phone_1 != '' UNION ALL SELECT 'Secondary Phone 2', COUNT(*) FROM patrons_csv WHERE secondary_phone_2 IS NOT NULL AND secondary_phone_2 != '' </query>
+    </report>
+    
+    <report>
+        <name>destiny_load_asset_categories</name>
+        <report_title>Count of Categories</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Category.Circ Mod?</heading>
+        <query>SELECT COUNT(*), category FROM copies_csv GROUP BY 2 ORDER BY 2</query>
+    </report>
+    
+    <report>
+        <name>destiny_load_asset_notes</name>
+        <report_title>Copies by Note Types</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Note Type.Count</heading>
+        <query>SELECT 'General Note', COUNT(*) FROM copies_csv WHERE note_general IS NOT NULL and note_general != '' UNION ALL SELECT 'Important Note', COUNT(*) FROM copies_csv WHERE note_important IS NOT NULL and note_important != ''</query>
+        <note>Retain?</note>
+    </report>
+    
+        <report>
+        <name>destiny_load_asset_sublocation</name>
+        <report_title>Copies by Sub Location</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Sub Location.Shelving Location?</heading>
+        <query>SELECT COUNT(*), sublocation FROM copies_csv GROUP BY 2 ORDER BY 2</query>
+    </report>
+    
+    <report>
+        <name>destiny_load_asset_vendor</name>
+        <report_title>Copies by Vendor</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Count.Vendor</heading>
+        <query>SELECT COUNT(*), vendor FROM copies_csv GROUP BY 2 ORDER BY 2</query>
+        <note>Retain?</note>
+    </report>
+    
+    <report>
+        <name>destiny_load_asset_descriptions</name>
+        <report_title>Copies with Description Fields</report_title>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <heading>Description Field.Count</heading>
+        <query>SELECT 'Description Field 1', COUNT(*) FROM copies_csv WHERE description_1 IS NOT NULL and description_1 != '' UNION ALL SELECT 'Description Field 2', COUNT(*) FROM copies_csv WHERE description_2 IS NOT NULL and description_2 != '' UNION ALL SELECT 'Description Field 3', COUNT(*) FROM copies_csv WHERE description_3 IS NOT NULL and description_3 != ''</query>
+        <note>Need report?  Retain?</note>
+    </report>
+    
+    <report>
+        <name>destiny_load_fines_byreason</name>
+        <tag>destiny</tag>
+        <iteration>0</iteration>
+        <report_title>Fines by Reason</report_title>
+        <heading>Count.Reason</heading>
+        <query>SELECT COUNT(*), reason FROM fines_csv GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+<!-- apollo -->
+
+
+    <report>
+        <name>circ_bystatus</name>
+        <report_title>Circulations by Status</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Status.Type</heading>
+        <query>SELECT COUNT(id), l_status, l_type FROM action_circulation_legacy GROUP BY 2, 3</query>
+        <note>Circulations will only not be migrated if they can't be attached to a migrated patron and holding.</note>
+    </report>
+
+    <report>
+        <name>hold_bystatus</name>
+        <report_title>Holds by Status</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Status</heading>
+        <query> SELECT COUNT(id), l_status FROM action_hold_request_legacy GROUP BY 2</query>
+        <note>Only unfilled holds are being migrated.</note>
+    </report>
+
+    <report>
+        <name>asset_pending_bibs</name>
+        <report_title>Pending Records</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Year of Last Edit.Count of Copies Attached</heading>
+        <query>SELECT COUNT(bre.id), CASE WHEN LENGTH(bre.l_edited) > 1 THEN EXTRACT(YEAR FROM bre.l_edited::TIMESTAMP) ELSE '1900' END, COUNT(ac.id) FROM biblio_record_entry_legacy bre LEFT JOIN asset_copy_legacy ac ON ac.l_biblio = bre.l_id WHERE bre.l_status = 'pending' GROUP BY 2 ORDER BY 2
+</query>
+    </report>
+
+    <report>
+        <name>asset_copies_by_status</name>
+        <report_title>Copies by Status</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Status</heading>
+        <query>SELECT COUNT(id), l_status FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <note>Deleted copies with a delete date were not exported additionally those with the deleted status won't get loaded.</note>
+    </report>
+
+    <report>
+        <name>asset_pending_copies</name>
+        <report_title>Pending Copies by Last Edit</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Last Edited</heading>
+        <query>SELECT COUNT(id), CASE WHEN LENGTH(l_edited) > 1 THEN EXTRACT(YEAR FROM l_edited::TIMESTAMP) ELSE '1900' END FROM asset_copy_legacy WHERE l_status = 'pending' GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>assets_by_memberships</name>
+        <report_title>Copies by Memberships</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Membership Number.Membership Name</heading>
+        <query>SELECT COUNT(ac.id), acl.l_membership_number, acl.l_membership_name FROM asset_copy_legacy ac JOIN asset_copy_location_legacy acl ON acl.l_membership_name = ac.l_memberships GROUP BY 2,3 ORDER BY 2
+</query>
+    </report>
+
+   <report>
+        <name>money_bills</name>
+        <report_title>Bills</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Status</heading>
+        <query>SELECT COUNT(id), l_status FROM money_billing_legacy GROUP BY 2 ORDER BY 2</query>
+        <note>Unless there is a good reason to do so forgiven and paid bills will not be migrated.</note>
+    </report>
+
+   <report>
+        <name>actor_groups</name>
+        <report_title>Patron Membership Groups</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Membership List Name.Membership List ID.Membership Number.Membership Name.Membership Length in Monthst</heading>
+        <query>SELECT l_membership_list_name, l_membership_list_id, l_membership_number, l_membership_name, l_membership_length_months FROM actor_usr_legacy_groups_tsv ORDER BY 1, 3</query>
+        <note>Age looks like a good target for a stat cat and / or juvenile setting while the patron type can map to profiles.</note>
+    </report>
+
+    <report>
+        <name>actor_by_groups</name>
+        <report_title>Patrons by Membership Groups</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Membership List Name.Membership Number</heading>
+        <query>SELECT COUNT(*), l_membership_list_name, l_membership_number FROM (SELECT id, UNNEST(STRING_TO_ARRAY(l_memberships,'|')) AS m FROM actor_usr_legacy ) x JOIN actor_usr_legacy_groups_tsv t ON t.l_membership_name = x.m GROUP BY 2, 3 ORDER BY 2, 3</query>
+    </report>
+
+    <report>
+        <name>actor_addresses_nulls</name>
+        <report_title>Patron Addresses</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Address Field.Nulls</heading>
+        <query>SELECT 'Street Address', COUNT(id) FROM actor_usr_address_legacy WHERE l_lines IS NULL UNION ALL SELECT 'City', COUNT(id) FROM actor_usr_address_legacy UNION ALL SELECT 'State', COUNT(id) FROM actor_usr_address_legacy WHERE l_country_division IS NULL UNION ALL SELECT 'Postal Code', COUNT(id) FROM actor_usr_address_legacy WHERE l_postal_code IS NULL </query>
+        <note>If any of these fields are null then we need defaults to fill in, note the extract had no city data.</note>
+    </report>
+
+    <report>
+        <name>actor_phones</name>
+        <report_title>Patron Phones</report_title>
+        <tag>apollo</tag>
+        <iteration>0</iteration>
+        <heading>Count.Type</heading>
+        <query>SELECT COUNT(*), l_type FROM actor_usr_phones_tsv GROUP BY 2 ORDER BY 2</query>
+        <note>These need to be mapped to Evergreen phone types.</note>
+    </report>
+
+<!-- horizon tag = from a sirsi supplied extract -->
+<!-- horizon2 tag = from direct database tables -->
+
+    <report>
+        <name>hz_borrowersbybtypes</name>
+        <report_title>Borrowers by Borrower Types</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count.Borrower Type</heading>
+        <query>SELECT COUNT(id), l_borrower_btype FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowersbybtypes</name>
+        <report_title>Borrowers by Borrower Types</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count.Borrower Type.Description</heading>
+        <query>SELECT COUNT(*), a.btype, b.descr FROM borrower_csv_clean a JOIN btype_csv_clean b ON b.btype = a.btype  GROUP BY 2, 3 ORDER BY 2;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowerpincount</name>
+        <report_title>Borrower PINs Count</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count of Migratable Passwords / PINs</heading>
+        <query>SELECT COUNT(l_borrower_pin) FROM actor_usr_legacy WHERE LENGTH(l_borrower_pin) > 1;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowerpincount</name>
+        <report_title>Borrower PINs Count</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count of Migratable Passwords / PINs</heading>
+        <query>SELECT COUNT(pin) FROM borrower_csv_clean WHERE LENGTH(pin) > 1;</query>
+    </report>
+    
+    <report>
+        <name>hz_borrowernotesample</name>
+        <report_title>Borrower Note Field Samples</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Sample of Migratable Notes</heading>
+        <query>SELECT l_borrower_borrower_note FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1 LIMIT 20;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowernotesample</name>
+        <report_title>Borrower Note Field Samples</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Sample of Migratable Notes</heading>
+        <query>SELECT borrower_note FROM borrower_csv_clean WHERE LENGTH(borrower_note) > 1 LIMIT 20;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowernotescount</name>
+        <report_title>Count of Migratable Borrower Notes</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(l_borrower_borrower_note) FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowernotescount</name>
+        <report_title>Counnt of Migratable Borrower Notes</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(borrower_note) FROM borrower_csv_clean WHERE LENGTH(borrower_note) > 1;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowernotesample2</name>
+        <report_title>Borrower Note Field 2 Samples</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT l_borrower_note2 FROM actor_usr_legacy WHERE LENGTH(l_borrower_note2) > 1 LIMIT 20;</query>
+    </report>
+
+    <report>
+        <name>hz_borrowernotesample3</name>
+        <report_title>Borrower Note Field 3 Samples</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT l_borrower_note3 FROM actor_usr_legacy WHERE LENGTH(l_borrower_note3) > 1 LIMIT 20;</query>
+    </report>
+
+    <report>
+        <name>hz_phones</name>
+        <report_title>Borrower Phones</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count.Borrower Phone Type</heading>
+        <query>
+        SELECT COUNT(*), b 
+        FROM (SELECT l_borrower_phone_1_phone_type AS b FROM actor_usr_legacy
+        UNION ALL SELECT l_borrower_phone_2_phone_type AS b FROM actor_usr_legacy
+        UNION ALL SELECT l_borrower_phone_3_phone_type AS b FROM actor_usr_legacy
+        UNION ALL SELECT l_borrower_phone_4_phone_type AS b FROM actor_usr_legacy) x 
+        GROUP BY 2 ORDER BY 2
+        </query>
+    </report>
+
+    <report>
+        <name>hz_phones</name>
+        <report_title>Borrower Phones</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count.Borrower Phone Position</heading>
+        <query>
+        SELECT COUNT(*), '0' FROM borrower_phone_csv_clean WHERE ord = '0'
+        UNION ALL SELECT COUNT(*), '1' FROM borrower_phone_csv_clean WHERE ord = '1'
+        UNION ALL SELECT COUNT(*), '2' FROM borrower_phone_csv_clean WHERE ord = '2'
+        UNION ALL SELECT COUNT(*), '3' FROM borrower_phone_csv_clean WHERE ord = '3'
+		UNION ALL SELECT COUNT(*), '4' FROM borrower_phone_csv_clean WHERE ord = '4'
+        </query>
+    </report>
+
+    <report>
+        <name>hz_bstats</name>
+        <report_title>Borrower B-Stats</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count.BStat</heading>
+        <query>SELECT COUNT(*), b 
+        FROM (SELECT l_borrower_bstat_1_bstat AS b FROM actor_usr_legacy
+        UNION ALL
+        SELECT l_borrower_bstat_2_bstat AS b FROM actor_usr_legacy
+        UNION ALL
+        SELECT l_borrower_bstat_3_bstat AS b FROM actor_usr_legacy) x
+        GROUP BY 2 ORDER BY 1;
+        </query>
+    </report>
+    
+    <report>
+        <name>hz_bstats</name>
+        <report_title>Borrower B-Stats</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count.B-Stat.Description</heading>
+        <query>SELECT COUNT(*), a.bstat, b.descr FROM borrower_bstat_csv_clean a JOIN bstat_csv_clean b ON b.bstat = a.bstat GROUP BY 2, 3;
+        </query>
+    </report>
+
+    <report>
+        <name>hz_copybycollection</name>
+        <report_title>Copies by Collection</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count.Collection</heading>
+        <query>SELECT COUNT(id), l_collection FROM asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
+    </report>
+
+	<report>    
+	    <name>hz_copybycollection</name>
+        <report_title>Copies by Collection</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count.Collection.Description.PAC Description</heading>
+        <query>SELECT COUNT(*), a.collection, c.descr, c.pac_descr FROM item_csv_clean a JOIN collection_csv_clean c ON c.collection = a.collection GROUP BY 2, 3, 4 ORDER BY 2, 3, 4;</query>
+    </report>
+
+    <report>
+        <name>hz_itemsbyitype</name>
+        <report_title>Items by IType</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count.Item Type (itype)</heading>
+        <query>SELECT COUNT(id), l_itype FROM asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
+    </report>
+  
+    <report>
+        <name>hz_itemsbyitype</name>
+        <report_title>Items by IType</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count.Item Type (itype).Description</heading>
+        <query>SELECT COUNT(*), a.itype, b.descr FROM item_csv_clean a JOIN itype_csv_clean b ON b.itype = a.itype  GROUP BY 2, 3 ORDER BY 2;</query>
+    </report>
+   
+    <report>
+        <name>hz_internalnotescount</name>
+        <report_title>Internal/Check In Item Notes</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(l_internal_note) FROM asset_copy_legacy WHERE LENGTH(l_internal_note) > 1;</query>
+    </report>
+
+    <report>
+        <name>hz_internalnotescount</name>
+        <report_title>Internal/Check In Item Notes</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(cki_notes) FROM item_csv_clean WHERE LENGTH(cki_notes) > 1;</query>
+    </report>
+    
+    <report>
+        <name>hz_internalnotesample</name>
+        <report_title>Internal/Check In Item Notes Sample</report_title>
+        <tag>horizon</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT l_internal_note FROM asset_copy_legacy WHERE LENGTH(l_internal_note) > 1 LIMIT 20;</query>
+    </report>
+
+    <report>
+        <name>hz_internalnotesample</name>
+        <report_title>Internal/Check In Item Notes Sample</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT cki_notes FROM item_csv_clean WHERE LENGTH(cki_notes) > 1 LIMIT 20;</query>
+    </report>
+
+<!-- resource mate -->
+
+    <report>
+        <name>rm_load_circ_count</name>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <report_title>Circs by Status</report_title>
+        <heading>Count of Circs.Status</heading>
+        <query>SELECT COUNT(id), l_is_checked_out FROM asset_copy_legacy GROUP BY 2</query>
+    </report>
+
+   <report>
+        <name>rm_load_asset_by_resource_type</name>
+        <report_title>Resource Type</report_title>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <heading>Count.Resource Type</heading>
+        <query>SELECT COUNT(*), l_resource_type FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+   <report>
+        <name>rm_load_asset_by_location</name>
+        <report_title>Copies by Location</report_title>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <heading>Count.Location</heading>
+        <query>SELECT COUNT(*), l_location FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>rm_load_asset_by_category</name>
+        <report_title>Copies by Category</report_title>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <heading>Count.Category</heading>
+        <query>SELECT COUNT(*), l_category FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+    </report>
+   
+    <report>
+        <name>rm_load_asset_by_status</name>
+        <report_title>Copies by Status</report_title>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <heading>Count.Status</heading>
+        <query>SELECT COUNT(*), l_status FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+    </report>
+
+    <report>
+        <name>rm_actor_groups</name>
+        <report_title>Patrons by User Groups</report_title>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <heading>Count.Group</heading>
+        <query>SELECT COUNT(id), l_user_group FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;
+        </query>
+    </report>
+
+    <report>
+        <name>rm_actor_access</name>
+        <report_title>Patrons by Access Field</report_title>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <heading>Count.Access</heading>
+        <query>SELECT COUNT(id), l_access_if_applicable FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;
+        </query>
+    </report>
+
+    <report>
+        <name>rm_actor_comments</name>
+        <report_title>Patron Comments</report_title>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <heading>Count.Sample</heading>
+        <query>SELECT COUNT(id), 'All Comments' FROM actor_usr_legacy WHERE LENGTH(l_comments) > 1
+            UNION ALL SELECT NULL, l_comments FROM  actor_usr_legacy WHERE LENGTH(l_comments) > 1 LIMIT 10
+        </query>
+    </report>
+
+    <report>
+        <name>rm_actor_circulation_note</name>
+        <report_title>Patron Circ Notes</report_title>
+        <tag>rm</tag>
+        <iteration>0</iteration>
+        <heading>Count.Sample</heading>
+        <query>SELECT COUNT(id), 'All Notes' FROM actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1
+            UNION ALL SELECT NULL, l_circulation_note FROM  actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1 LIMIT 10
+        </query>
+    </report>
+
+<!-- tlc reports 
+
+    <report>
+        <name>tlc_reports_load_asset_holdings_codes</name>
+        <report_title>Holdings Codes</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.Library.Holdings Codes.Evergreen Circulation Modifier.Evergreen Shelving Locatione</heading>
+        <query>SELECT COUNT(id), x_source, l_holdingscode FROM asset_copy_legacy GROUP BY 2, 3 ORDER BY 2, 3</query>
+    </report>
+
+    <report>
+        <name>tlc_reports_load_usrs_bygroup</name>
+        <report_title>Patrons by Agency Type</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.Library.Permission Group.Evergreen Permission Group</heading>
+        <query>SELECT COUNT(id), l_location, l_borrower_type FROM actor_usr_legacy GROUP BY 2, 3 ORDER BY 2, 3</query>
+    </report>
+
+    <report>
+        <name>tlc_reports_load_usr_balance</name>
+        <report_title>Count and Sum of Balances</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.SUM.Migrate?</heading>
+        <query>SELECT COUNT(id), SUM(l_current_fine_balance::NUMERIC(6,2)) FROM actor_usr_address_legacy WHERE l_current_fine_balance != '0' AND l_current_fine_balance IS NOT NULL</query>
+    </report>
+
+    <report>
+        <name>tlc_reports_users_blocked</name>
+        <report_title>Count of Blocked Patrons</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.Blocked.Migrate?</heading>
+        <query>SELECT COUNT(id), l_blocked FROM actor_usr_address_legacy GROUP BY 2</query>
+    </report>
+
+    <report>
+        <name>tlc_reports_load_usr_addresses_phones</name>
+        <report_title>Patron Phones</report_title>
+        <tag>tlc_reports</tag>
+        <iteration>0</iteration>
+        <heading>Count.Phone Type.Phone Type</heading>
+        <query>SELECT COUNT(id), 'Phone 1' FROM actor_usr_address_legacy WHERE l_phone_1 IS NOT NULL GROUP BY 2 UNION ALL SELECT COUNT(id), 'Phone 2' FROM actor_usr_address_legacy WHERE l_phone_2 IS NOT NULL GROUP BY 2</query>
+    </report>
+-->
+</reports_file>
