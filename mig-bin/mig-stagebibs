@@ -71,9 +71,7 @@ my $ret = GetOptions(
     'auth:s'              => \$auth,
     'source:s'            => \$source,
     'base_table:s'        => \$base_table,
-    'stage_table:s'       => \$stage_table,
-    'captions:s'          => \$captions,
-    'debug:s'             => \$debug
+    'stage_table:s'       => \$stage_table
 );
 
 #if in file is empty then fail
