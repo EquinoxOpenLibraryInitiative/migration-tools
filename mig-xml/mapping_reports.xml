@@ -543,7 +543,7 @@
 
     <report>
         <name>hz_borrowernotescount</name>
-        <report_title>Counnt of Migratable Borrower Notes</report_title>
+        <report_title>Count of Migratable Borrower Notes</report_title>
         <tag>horizon2</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
