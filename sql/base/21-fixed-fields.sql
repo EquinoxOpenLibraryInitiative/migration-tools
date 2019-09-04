@@ -249,7 +249,7 @@ DECLARE
     icon    TEXT[];
     vlist   INTEGER[];
 BEGIN
-    SELECT reingest_staged_record_attributes(rid) INTO vlist;
+    SELECT migration_tools.reingest_staged_record_attributes(rid) INTO vlist;
 
     RETURN QUERY SELECT ctype, code, value FROM config.coded_value_map WHERE id IN (SELECT UNNEST(vlist));
 END;
@@ -260,7 +260,7 @@ DECLARE
 	search	TEXT[];
 	vlist	INTEGER[];
 BEGIN
-	SELECT reingest_staged_record_attributes(rid) INTO vlist;
+	SELECT migration_tools.reingest_staged_record_attributes(rid) INTO vlist;
 
 	SELECT ARRAY_AGG(code) FROM config.coded_value_map WHERE id IN (SELECT UNNEST(vlist)) 
 		AND ctype = 'search_format' INTO search;
@@ -274,7 +274,7 @@ DECLARE
     search  TEXT[];
     vlist   INTEGER[];
 BEGIN
-    SELECT reingest_staged_record_attributes(rid) INTO vlist;
+    SELECT migration_tools.reingest_staged_record_attributes(rid) INTO vlist;
 
     SELECT ARRAY_AGG(code) FROM config.coded_value_map WHERE id IN (SELECT UNNEST(vlist))
         AND ctype = 'search_format' INTO search;
@@ -289,7 +289,7 @@ DECLARE
     search  TEXT[];
     vlist   INTEGER[];
 BEGIN
-    SELECT reingest_staged_record_attributes(rid) INTO vlist;
+    SELECT migration_tools.reingest_staged_record_attributes(rid) INTO vlist;
 
     SELECT ARRAY_AGG(code) FROM config.coded_value_map WHERE id IN (SELECT UNNEST(vlist))
         AND ctype = 'search_format' INTO search;
