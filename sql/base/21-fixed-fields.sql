@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS migration_tools.search_format_map;
 CREATE TABLE migration_tools.search_format_map (code TEXT, itype CHAR(1), iform CHAR(1), phy CHAR(1), phyv CHAR(1), phyp SMALLINT,
     biblevel CHAR(1), iform_exclude CHAR(1)[], srform_exclude CHAR(1)[] );
-INSERT INTO search_format_map (code, itype, iform, phy, phyv, phyp, biblevel, iform_exclude, srform_exclude) VALUES
+INSERT INTO migration_tools.search_format_map (code, itype, iform, phy, phyv, phyp, biblevel, iform_exclude, srform_exclude) VALUES
     --                  itype iform phy   phyv  phyp  bib   itemform exclude     sr format exclude
      ('blu-ray',        'g',  NULL, 'v',  's',  4,    NULL, NULL,                NULL)
     ,('book',           'a',  NULL, NULL, NULL, NULL, 'a',  '{a,b,c,f,o,q,r,s}', NULL)
@@ -406,7 +406,7 @@ DECLARE
 	yiform_exclude 		TEXT;
 	ysrform_exclude     TEXT;
 BEGIN
-    SELECT itype, iform, phy, phyv, phyp, biblevel, iform_exclude, srform_exclude FROM search_format_map WHERE code = xcode
+    SELECT itype, iform, phy, phyv, phyp, biblevel, iform_exclude, srform_exclude FROM migration_tools.search_format_map WHERE code = xcode
         INTO xitype, xiform, xphy, xphyv, xphyp, xbiblevel, xiform_exclude, xsrform_exclude;
 	IF xiform_exclude IS NOT NULL THEN 
 		yiform_exclude := ARRAY_TO_STRING(xiform_exclude,',');
