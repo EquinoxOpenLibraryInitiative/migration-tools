@@ -724,6 +724,15 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT COUNT(id) FROM biblio_record_entry where id IN (SELECT record FROM asset.call_number WHERE label ~* '##URI##')</query>
     </report>
 
+	<report>
+		<name>bibsff</name>
+		<report_title>Bibliographic Records with Adjusted Fixed Fields</report_title>
+		<tag>bibs</tag>
+		<iteration>0</iteration>
+		<heading>Count.Original Search Format.New Search Format</heading>
+		<query>SELECT COUNT(*), x_search_format, x_after_search_format FROM biblio_record_entry_legacy WHERE x_migrate AND x_after_search_format IS NOT NULL GROUP BY 2, 3 ORDER BY 3,2</query>
+	</report>
+
     <report>
         <name>bibs_notes</name>
         <report_title>Bib Record Notes</report_title>
