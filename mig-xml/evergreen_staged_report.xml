@@ -301,7 +301,7 @@
         <iteration>0</iteration>
         <report_title>Sample of Holds with No Matches</report_title>
         <heading>Borrower Barcode.Title.Request Date</heading>
-        <query>SELECT l_borrower_id, l_title, l_request_date FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches = 0 LIMIT 20</query>
+        <query>SELECT l_borrower_id, l_title, l_request_date FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches = 0 AND x_migrate LIMIT 20</query>
     </report>
 
       <report>
@@ -310,7 +310,7 @@
         <iteration>0</iteration>
         <report_title>Sample of Holds with More Than One Title Match</report_title>
         <heading>Borrower Barcode.Title.Request Date</heading>
-        <query>SELECT l_borrower_id, l_title, l_request_date FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches > 1 LIMIT 20</query>
+        <query>SELECT l_borrower_id, l_title, l_request_date FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches > 1 AND x_migrate LIMIT 20</query>
     </report>
 
     <!-- ASSET REPORTS -->
