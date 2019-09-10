@@ -65,7 +65,7 @@ pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $analyst;
 my $report_title;
-my $reports_xml;
+my $reports_xml = 'evergreen_staged_report.xml';
 my $tags;
 my $added_page_title;
 my $added_page_file;

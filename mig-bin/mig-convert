@@ -110,7 +110,7 @@ sub call_convert_csv {
         push @args, $stage_sql_filename;
 
         print "args: " . join(',',@args) . "\n";
-        system('/home/rhamby/git/migration-tools/text/csv2sql', @args, $clean_file);
+        system('csv2sql', @args, $clean_file);
 
         my $dbh = Mig::db_connect();
         if (! -e $stage_sql_filename) {
