@@ -433,6 +433,15 @@
     </report -->
 
     <report>
+        <name>asset_no_barcode</name>
+        <report_title>Items Without Barcodes</report_title>
+        <tag>assets</tag>
+        <iteration>0</iteration>
+        <heading>Assigned Barcode</heading>
+        <query>SELECT barcode FROM asset_copy_legacy WHERE barcode ~* 'no_barocde' AND x_migrate</query>
+    </report>
+
+    <report>
         <name>asset_barcode_patterns</name>
         <report_title>Common Barcode Starting Patterns</report_title>
         <tag>assets</tag>
