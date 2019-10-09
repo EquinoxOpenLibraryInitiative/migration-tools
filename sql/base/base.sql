@@ -1065,8 +1065,6 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-function$;
-
 -- convenience function for linking to the item staging table
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_item_barcode (TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
