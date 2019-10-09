@@ -838,10 +838,7 @@ CREATE OR REPLACE FUNCTION migration_tools.set_salted_passwd(INTEGER,TEXT) RETUR
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
--- convenience functions for handling copy_location maps
-CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER) RETURNS VOID AS $$
-    SELECT migration_tools._handle_shelf($1,$2,$3,$4,TRUE);
-$$ LANGUAGE SQL;
+-- internal function for handle_shelf
 
 CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER,BOOLEAN) RETURNS VOID AS $$
     DECLARE
@@ -945,6 +942,11 @@ CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER
 
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience functions for handling copy_location maps
+CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER) RETURNS VOID AS $$
+    SELECT migration_tools._handle_shelf($1,$2,$3,$4,TRUE);
+$$ LANGUAGE SQL;
 
 -- convenience functions for handling circmod maps
 

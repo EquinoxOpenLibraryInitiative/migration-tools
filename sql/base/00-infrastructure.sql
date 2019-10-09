@@ -169,7 +169,7 @@ AS $function$
             EXECUTE 'ALTER TABLE ' || columns.table_schema || '.' || columns.table_name || ' ALTER COLUMN ' || columns.column_name || ' DROP NOT NULL;';
         END LOOP;
     END;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN) RETURNS VOID AS $$
     DECLARE
