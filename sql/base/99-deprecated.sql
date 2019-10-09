@@ -505,3 +505,456 @@ BEGIN
 END;
 
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION migration_tools.log (TEXT,TEXT,INTEGER) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        sql ALIAS FOR $2;
+        nrows ALIAS FOR $3;
+    BEGIN
+        EXECUTE 'INSERT INTO ' || migration_schema || '.sql_log ( sql, row_count ) VALUES ( ' || quote_literal(sql) || ', ' || nrows || ' );';
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.exec (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        sql ALIAS FOR $2;
+        nrows INTEGER;
+    BEGIN
+        EXECUTE 'UPDATE ' || migration_schema || '.sql_current SET sql = ' || quote_literal(sql) || ';';
+        --RAISE INFO '%', sql;
+        EXECUTE sql;
+        GET DIAGNOSTICS nrows = ROW_COUNT;
+        PERFORM migration_tools.log(migration_schema,sql,nrows);
+    EXCEPTION
+        WHEN OTHERS THEN 
+            RAISE EXCEPTION '!!!!!!!!!!! state = %, msg = %, sql = %', SQLSTATE, SQLERRM, sql;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.debug_exec (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        sql ALIAS FOR $2;
+        nrows INTEGER;
+    BEGIN
+        EXECUTE 'UPDATE ' || migration_schema || '.sql_current SET sql = ' || quote_literal(sql) || ';';
+        RAISE INFO 'debug_exec sql = %', sql;
+        EXECUTE sql;
+        GET DIAGNOSTICS nrows = ROW_COUNT;
+        PERFORM migration_tools.log(migration_schema,sql,nrows);
+    EXCEPTION
+        WHEN OTHERS THEN 
+            RAISE EXCEPTION '!!!!!!!!!!! state = %, msg = %, sql = %', SQLSTATE, SQLERRM, sql;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.insert_base_into_production (TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        production_tables TEXT[];
+    BEGIN
+        --RAISE INFO 'In migration_tools.insert_into_production(%)', migration_schema;
+        SELECT migration_tools.production_tables(migration_schema) INTO STRICT production_tables;
+        FOR i IN array_lower(production_tables,1) .. array_upper(production_tables,1) LOOP
+            PERFORM migration_tools.insert_into_production(migration_schema,production_tables[i]);
+        END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.insert_into_production (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        production_table ALIAS FOR $2;
+        base_staging_table TEXT;
+        columns RECORD;
+    BEGIN
+        base_staging_table = REPLACE( production_table, '.', '_' );
+        --RAISE INFO 'In migration_tools.insert_into_production(%,%) -> %', migration_schema, production_table, base_staging_table;
+        EXECUTE 'INSERT INTO ' || production_table || ' SELECT * FROM ' || migration_schema || '.' || base_staging_table || ';';
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- push bib sequence and return starting value for reserved range
+CREATE OR REPLACE FUNCTION migration_tools.push_bib_sequence(INTEGER) RETURNS BIGINT AS $$
+    DECLARE
+        bib_count ALIAS FOR $1;
+        output BIGINT;
+    BEGIN
+        PERFORM setval('biblio.record_entry_id_seq',(SELECT MAX(id) FROM biblio.record_entry) + bib_count + 2000);
+        FOR output IN
+            SELECT CEIL(MAX(id)/1000)*1000+1000 FROM biblio.record_entry WHERE id < (SELECT last_value FROM biblio.record_entry_id_seq)
+        LOOP
+            RETURN output;
+        END LOOP;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for linking two tables
+-- e.g. select migration_tools.handle_link(:'migschema','asset_copy','barcode','test_foo','l_barcode','x_acp_id',false);
+CREATE OR REPLACE FUNCTION migration_tools.handle_link (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_x ALIAS FOR $6;
+        btrim_desired ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_b)
+            || ' DROP COLUMN IF EXISTS ' || quote_ident(column_x);
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_b)
+            || ' ADD COLUMN ' || quote_ident(column_x) || ' BIGINT';
+
+        IF btrim_desired THEN
+            EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+                || ' SET ' || quote_ident(column_x) || ' = a.id FROM ' || quote_ident(table_a) || ' a'
+                || ' WHERE BTRIM(a.' || quote_ident(column_a)
+                || ') = BTRIM(b.' || quote_ident(column_b) || ')';
+        ELSE
+            EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+                || ' SET ' || quote_ident(column_x) || ' = a.id FROM ' || quote_ident(table_a) || ' a'
+                || ' WHERE a.' || quote_ident(column_a)
+                || ' = b.' || quote_ident(column_b);
+        END IF;
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for linking two tables, but copying column w into column x instead of "id"
+-- e.g. select migration_tools.handle_link2(:'migschema','asset_copy','barcode','test_foo','l_barcode','id','x_acp_id',false);
+CREATE OR REPLACE FUNCTION migration_tools.handle_link2 (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        btrim_desired ALIAS FOR $8;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_b)
+            || ' DROP COLUMN IF EXISTS ' || quote_ident(column_x);
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_b)
+            || ' ADD COLUMN ' || quote_ident(column_x) || ' TEXT';
+
+        IF btrim_desired THEN
+            EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+                || ' SET ' || quote_ident(column_x) || ' = a.' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+                || ' WHERE BTRIM(a.' || quote_ident(column_a)
+                || ') = BTRIM(b.' || quote_ident(column_b) || ')';
+        ELSE
+            EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+                || ' SET ' || quote_ident(column_x) || ' = a.' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+                || ' WHERE a.' || quote_ident(column_a)
+                || ' = b.' || quote_ident(column_b);
+        END IF;
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for linking two tables, but copying column w into column x instead of "id". Unlike handle_link2, this one won't drop the target column, and it also doesn't have a final boolean argument for btrim
+-- e.g. select migration_tools.handle_link3(:'migschema','asset_copy','barcode','test_foo','l_barcode','id','x_acp_id');
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3 (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+            || ' SET ' || quote_ident(column_x) || ' = a.' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+            || ' WHERE a.' || quote_ident(column_a)
+            || ' = b.' || quote_ident(column_b);
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3_skip_null_or_empty_string (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+            || ' SET ' || quote_ident(column_x) || ' = a.' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+            || ' WHERE a.' || quote_ident(column_a)
+            || ' = b.' || quote_ident(column_b)
+            || ' AND NULLIF(a.' || quote_ident(column_w) || ','''') IS NOT NULL';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3_skip_null (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+            || ' SET ' || quote_ident(column_x) || ' = a.' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+            || ' WHERE a.' || quote_ident(column_a)
+            || ' = b.' || quote_ident(column_b)
+            || ' AND a.' || quote_ident(column_w) || ' IS NOT NULL';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3_skip_true (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+            || ' SET ' || quote_ident(column_x) || ' = a.' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+            || ' WHERE a.' || quote_ident(column_a)
+            || ' = b.' || quote_ident(column_b)
+            || ' AND a.' || quote_ident(column_w) || ' IS NOT TRUE';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3_skip_false (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+            || ' SET ' || quote_ident(column_x) || ' = a.' || quote_ident(column_w) || ' FROM ' || quote_ident(table_a) || ' a'
+            || ' WHERE a.' || quote_ident(column_a)
+            || ' = b.' || quote_ident(column_b)
+            || ' AND a.' || quote_ident(column_w) || ' IS NOT FALSE';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_link3_concat_skip_null (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_a ALIAS FOR $2;
+        column_a ALIAS FOR $3;
+        table_b ALIAS FOR $4;
+        column_b ALIAS FOR $5;
+        column_w ALIAS FOR $6;
+        column_x ALIAS FOR $7;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_a, column_a;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_a, column_a; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_b, column_b;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_b, column_b; 
+        END IF;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_b) || ' b'
+            || ' SET ' || quote_ident(column_x) || ' = CONCAT_WS('' ; '',b.' || quote_ident(column_x) || ',a.' || quote_ident(column_w) || ') FROM ' || quote_ident(table_a) || ' a'
+            || ' WHERE a.' || quote_ident(column_a)
+            || ' = b.' || quote_ident(column_b)
+            || ' AND NULLIF(a.' || quote_ident(column_w) || ','''') IS NOT NULL';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;

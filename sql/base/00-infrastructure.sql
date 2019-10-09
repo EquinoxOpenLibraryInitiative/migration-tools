@@ -141,3 +141,67 @@ CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_from (TEXT
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- creates other child table so you can have more than one child table in a schema from a base table 
+CREATE OR REPLACE FUNCTION build_variant_staging_table(text, text, text)
+ RETURNS void
+ LANGUAGE plpgsql
+ STRICT
+AS $function$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        production_table ALIAS FOR $2;
+        base_staging_table ALIAS FOR $3;
+        columns RECORD;
+    BEGIN
+        --RAISE INFO 'In migration_tools.build_specific_base_staging_table(%,%) -> %', migration_schema, production_table, base_staging_table;
+        EXECUTE 'CREATE TABLE ' || migration_schema || '.' || base_staging_table || ' ( LIKE ' || production_table || ' INCLUDING DEFAULTS EXCLUDING CONSTRAINTS );';
+        EXECUTE '
+            INSERT INTO ' || migration_schema || '.fields_requiring_mapping
+                SELECT table_schema, table_name, column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = ''' || migration_schema || ''' AND table_name = ''' || base_staging_table || ''' AND is_nullable = ''NO'' AND column_default IS NULL;
+        ';
+        FOR columns IN
+            SELECT table_schema, table_name, column_name, data_type
+            FROM information_schema.columns
+            WHERE table_schema = migration_schema AND table_name = base_staging_table AND is_nullable = 'NO' AND column_default IS NULL
+        LOOP
+            EXECUTE 'ALTER TABLE ' || columns.table_schema || '.' || columns.table_name || ' ALTER COLUMN ' || columns.column_name || ' DROP NOT NULL;';
+        END LOOP;
+    END;
+$function$
+
+CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        test ALIAS FOR $1;
+    BEGIN
+        IF NOT test THEN
+            RAISE EXCEPTION 'assertion';
+        END IF;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN,TEXT) RETURNS VOID AS $$
+    DECLARE
+        test ALIAS FOR $1;
+        msg ALIAS FOR $2;
+    BEGIN
+        IF NOT test THEN
+            RAISE EXCEPTION '%', msg;
+        END IF;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.assert (BOOLEAN,TEXT,TEXT) RETURNS TEXT AS $$
+    DECLARE
+        test ALIAS FOR $1;
+        fail_msg ALIAS FOR $2;
+        success_msg ALIAS FOR $3;
+    BEGIN
+        IF NOT test THEN
+            RAISE EXCEPTION '%', fail_msg;
+        END IF;
+        RETURN success_msg;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
