@@ -11,4 +11,4 @@
 \i 10-staging.sql
 \i 21-fixed-fields.sql
 \i 22-anyarray.sql
-\i 99-deprecated.sql
+--\i 99-deprecated.sql
