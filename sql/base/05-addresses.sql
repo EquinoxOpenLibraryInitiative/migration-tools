@@ -21,7 +21,7 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_phone (TEXT,TEXT) RETURNS TEX
 
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
-CREATE OR REPLACE FUNCTION msgration_tools.address_parse_out_citystatezip (TEXT) RETURNS TEXT[] AS $$
+CREATE OR REPLACE FUNCTION migration_tools.address_parse_out_citystatezip (TEXT) RETURNS TEXT[] AS $$
     DECLARE
         city_state_zip TEXT := $1;
         city TEXT := '';
