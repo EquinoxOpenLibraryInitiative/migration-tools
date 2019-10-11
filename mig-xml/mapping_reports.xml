@@ -513,7 +513,16 @@
         <heading>Count of Migratable Passwords / PINs</heading>
         <query>SELECT COUNT(pin) FROM borrower_csv_clean WHERE LENGTH(pin) > 1;</query>
     </report>
-    
+   
+    <report>
+        <name>hz_blocks</name>
+        <report_title>Borrower Blocks</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count of Entries.Block Description</heading>
+        <query>SELECT COUNT(*), b.descr FROM burb_csv_clean a JOIN block_csv_clean b ON a.block = b.block GROUP BY 2;</query>
+    </report>
+ 
     <report>
         <name>hz_borrowernotesample</name>
         <report_title>Borrower Note Field Samples</report_title>
