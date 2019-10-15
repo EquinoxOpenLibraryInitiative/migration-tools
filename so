@@ -1,0 +1,2 @@
+#!/bin/bash
+time mig sql -f $1 2>&1 | tee `basename $1`.out
