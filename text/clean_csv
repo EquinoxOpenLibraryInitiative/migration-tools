@@ -585,7 +585,7 @@ if ($apply && -e $ARGV[0] . '.fixes') {
 ################################################################## CSV Setup
 $CSV_options{sep_char} = get_separator( path => $ARGV[0], lucky => 1 );
 if ($config && -e $config) {
-	do $config;
+	eval `cat $config`;
 }
 $csv = Text::CSV_XS->new(\%CSV_options);
 $csv->callbacks(
