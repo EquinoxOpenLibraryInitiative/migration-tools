@@ -62,7 +62,7 @@ sub populate_fingerprint {
     $fp{sha1}    = sha1_base64($stripped);
 
     # make sure file is sorted properly
-    if ($lastscore and ($fp{compact} > $lastscore)) {
+    if ($lastscore and ($fp{compact} < $lastscore)) {
         print "Input file is sorted improperly or unsorted.\n";
         die "Sort descending (sort -r) and rerun this script.\n";
     }
@@ -79,7 +79,7 @@ sub rank_fingerprint {
     my $id   = $fp->{id};
 
     # only process records which haven't already been seen
-    unless (defined $seen{$id}) {
+    #unless (defined $seen{$id}) {
         unless (defined $fps{$sha1}) {
             # haven't seen this fp before. create a new listref to hold subs
             # and stow the hash of the fingerprint that we're lead of
@@ -90,7 +90,7 @@ sub rank_fingerprint {
             push @{ $fps{$sha1} }, $id;
         }
         $seen{$id} = 1;
-    }
+    #}
 }
 
 
@@ -107,16 +107,38 @@ sub dump_records {
     for my $rec (@recs) {
         for ( @{ $fps{ $rec->{sha1} } } ) {
             # check for dupes and die if they exist
-            die "Collision: dupe sub record $_\n" if $subs{$_};
-            $subs{$_} = 1;
-            die "Collision: lead in sub list ", $rec->{id}, "\n"
-              if $subs{ $rec->{id} };
+            #die "Collision: dupe sub record $_\n" if $subs{$_};
+            if( not exists ($subs{$_}) ) {
+                #die "Collision: lead in sub list ", $rec->{id}, "\n"
+                #  if $subs{ $rec->{id} };
+                my $lead = $rec->{id};
 
-            # we don't want subs below threshold
-            next if ($_ < $conf->{threshold});
+                # we don't need to match onto itself
+                next if ($lead eq $_);
 
-            # still here? output.
-            print OUT $rec->{id}, "\t$_\n"
+                if ($subs{ $rec->{id} })
+                {
+                    print "moving ".$lead." to ".$subs{$rec->{id}}."\n";
+                    $lead = $subs{$rec->{id}};
+                }
+
+                if($_ eq '1459051')
+                {
+                    print "looking at ".$rec->{sha1};
+                }
+
+                # we don't want subs below threshold
+                next if ($_ < $conf->{threshold});
+
+                # we don't need to match onto itself
+                next if ($lead eq $_);
+
+                # record this sub having this leader
+                $subs{$_} = $lead;
+
+                # still here? output.
+                print OUT $lead, "\t$_\n"
+            }
         }
     }
 }

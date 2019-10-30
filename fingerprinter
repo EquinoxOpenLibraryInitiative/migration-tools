@@ -75,7 +75,7 @@ for my $file (@ARGV) {
 
         # if everything looks good, score it and dump fingerprints
         score_marc($marc, $record);
-        dump_fingerprints($marc);
+        dump_fingerprints_score_id($marc);
         $scount++; progress_ticker();
     }
 }
@@ -102,6 +102,8 @@ sub populate_marc {
 
     # date1, date2
     my $my_008 = $record->field('008');
+    my @my_007 = $record->field('007');
+    my $my_006 = $record->field('006');
     $marc{tag008} = $my_008->as_string() if ($my_008);
     if (defined $marc{tag008}) {
         unless (length $marc{tag008} == 40) {
@@ -123,12 +125,35 @@ sub populate_marc {
             }
         }
     }
+    $marc{tag006} = $my_006->as_string() if ($my_006);
+    $marc{tag007} = \@my_007 if (@my_007);
+    $marc{audioformat}='';
+    $marc{videoformat}='';
+    foreach(@my_007)
+    {
+        if(substr($_->data(),0,1) eq 's' && $marc{audioformat} eq '')
+        {
+            $marc{audioformat} = substr($_->data(),3,1) unless (length $_->data() < 4);
+        }
+        elsif(substr($_->data(),0,1) eq 'v' && $marc{videoformat} eq '')
+        {
+            $marc{videoformat} = substr($_->data(),4,1) unless (length $_->data() < 5);
+        }
+    }
+    #print "$marc{audioformat}\n";
+    #print "$marc{videoformat}\n";
 
     # item_form
+    $marc{item_form}='';
     if ( $marc{record_type} =~ /[gkroef]/ ) { # MAP, VIS
-        $marc{item_form} = substr($marc{tag008},29,1) if ($marc{tag008});
+        $marc{item_form} = substr($marc{tag008},29,1) if ($marc{tag008} && (length $marc{tag008} > 29 ));
     } else {
-        $marc{item_form} = substr($marc{tag008},23,1) if ($marc{tag008});
+        $marc{item_form} = substr($marc{tag008},23,1) if ($marc{tag008} && (length $marc{tag008} > 23 ));
+    }
+    #fall through to 006 if 008 doesn't have info for item form
+    if ($marc{item_form} eq '|')
+    {
+        $marc{item_form} = substr($marc{tag006},6,1) if ($marc{tag006} && (length $marc{tag006} > 6 ));
     }
 
     # isbns
@@ -411,6 +436,227 @@ sub dump_fingerprints {
     if ($conf->{fingerprints}{authpub} and $marc->{author} and
         $marc->{publisher} and $marc->{pubyear} and $marc->{pages}) {
         print OF join("\t", $marc->{score}, $marc->{id}, "authpub",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{author},
+                      $marc->{publisher}, $marc->{pubyear},
+                      $marc->{pages}), "\n";
+    }
+}
+
+sub dump_fingerprints_score_id {
+    my ($marc) = @_;
+
+    if ($conf->{fingerprints}{baseline}) {
+        print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, 'baseline',
+                      $marc->{item_form}, $marc->{date1}, $marc->{record_type},
+                      $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat}, $marc->{title}), "\n";
+    }
+
+    if ($conf->{fingerprints}{oclc} and scalar @{$marc->{oclc} }) {
+        for (@{$marc->{oclc} }) {
+            print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, "oclc",
+                          $marc->{item_form}, $marc->{date1},
+                          $marc->{record_type}, $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat},
+                          $marc->{title}, $_, "\n");
+        }
+    }
+
+    if ($conf->{fingerprints}{koha_bib_id} and exists $marc->{koha_bib_id}) {
+        print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, "z_koha_bib_id",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type},
+                      $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat}, $marc->{title},
+                      $marc->{koha_bib_id}), "\n";
+    }
+
+    if ($conf->{fingerprints}{isbn}) {
+        if ((scalar @{ $marc->{isbns} } > 0) and $marc->{pages}) {
+            foreach my $isbn ( @{ $marc->{isbns}} ) {
+                print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, "isbn",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type},
+                              $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat}, $marc->{title},
+                              $isbn, $marc->{pages}), "\n";
+            }
+        }
+    }
+
+    if ($conf->{fingerprints}{edition} and $marc->{edition} and $marc->{author}) {
+        print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, "edition",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat},
+                      $marc->{title}, $marc->{author}, $marc->{edition}), "\n";
+    }
+
+    if ($conf->{fingerprints}{issn} and $marc->{issn}) {
+        print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, "issn",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat},
+                      $marc->{title}, $marc->{issn}), "\n";
+    }
+
+    if ($conf->{fingerprints}{lccn} and $marc->{lccn}) {
+        print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, "lccn",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat},
+                      $marc->{title}, $marc->{lccn}) ,"\n";
+    }
+
+    if ($conf->{fingerprints}{accomp} and $marc->{accomp}) {
+        print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, "accomp",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat},
+                      $marc->{title}, $marc->{accomp}) ,"\n";
+    }
+
+    if ($conf->{fingerprints}{authpub} and $marc->{author} and
+        $marc->{publisher} and $marc->{pubyear} and $marc->{pages}) {
+        print OF join("\t", sortvalfromid($marc->{id}),"json", $marc->{id}, "authpub",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},$marc->{audioformat},$marc->{videoformat},
+                      $marc->{title}, $marc->{author},
+                      $marc->{publisher}, $marc->{pubyear},
+                      $marc->{pages}), "\n";
+    }
+}
+
+sub sortvalfromid
+{
+    my $sortval = shift;
+    while(length($sortval)<17)
+    {
+        $sortval = '0'.$sortval;
+    }
+    return $sortval;
+}
+
+sub dump_fingerprints_hash_score {
+    my ($marc) = @_;
+
+    if ($conf->{fingerprints}{baseline}) {
+        my $string = join("", 'baseline',
+                      $marc->{item_form}, $marc->{date1}, $marc->{record_type},
+                      $marc->{bib_lvl}, $marc->{title});
+        $string =~ s/[^A-Za-z0-9]//g;
+        $string = sha1_base64($string);
+        print OF join("\t", $string,"json", $marc->{id}, 'baseline',
+                      $marc->{item_form}, $marc->{date1}, $marc->{record_type},
+                      $marc->{bib_lvl}, $marc->{title}), "\n";
+    }
+
+    if ($conf->{fingerprints}{oclc} and scalar @{$marc->{oclc} }) {
+        for (@{$marc->{oclc} }) {
+            my $string = join("", "oclc",
+                          $marc->{item_form}, $marc->{date1},
+                          $marc->{record_type}, $marc->{bib_lvl},
+                          $marc->{title}, $_);
+            $string =~ s/[^A-Za-z0-9]//g;
+            $string = sha1_base64($string);
+            print OF join("\t", $string,"json", $marc->{id}, "oclc",
+                          $marc->{item_form}, $marc->{date1},
+                          $marc->{record_type}, $marc->{bib_lvl},
+                          $marc->{title}, $_, "\n");
+        }
+    }
+
+    if ($conf->{fingerprints}{koha_bib_id} and exists $marc->{koha_bib_id}) {
+        my $string = join("", "z_koha_bib_id",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type},
+                      $marc->{bib_lvl}, $marc->{title},
+                      $marc->{koha_bib_id});
+        $string =~ s/[^A-Za-z0-9]//g;
+        $string = sha1_base64($string);
+        print OF join("\t", $string,"json", $marc->{id}, "z_koha_bib_id",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type},
+                      $marc->{bib_lvl}, $marc->{title},
+                      $marc->{koha_bib_id}), "\n";
+    }
+
+    if ($conf->{fingerprints}{isbn}) {
+        if ((scalar @{ $marc->{isbns} } > 0) and $marc->{pages}) {
+            foreach my $isbn ( @{ $marc->{isbns}} ) {
+                my $string = join("", "isbn",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type},
+                              $marc->{bib_lvl}, $marc->{title},
+                              $isbn, $marc->{pages});
+                $string =~ s/[^A-Za-z0-9]//g;
+                $string = sha1_base64($string);
+                print OF join("\t", $string,"json", $marc->{id}, "isbn",
+                              $marc->{item_form}, $marc->{date1},
+                              $marc->{record_type},
+                              $marc->{bib_lvl}, $marc->{title},
+                              $isbn, $marc->{pages}), "\n";
+            }
+        }
+    }
+
+    if ($conf->{fingerprints}{edition} and $marc->{edition} and $marc->{author}) {
+        my $string = join("", "edition",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{author}, $marc->{edition});
+        $string =~ s/[^A-Za-z0-9]//g;
+        $string = sha1_base64($string);
+        print OF join("\t", $string,"json", $marc->{id}, "edition",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{author}, $marc->{edition}), "\n";
+    }
+
+    if ($conf->{fingerprints}{issn} and $marc->{issn}) {
+        my $string = join("", "issn",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{issn});
+        $string =~ s/[^A-Za-z0-9]//g;
+        $string = sha1_base64($string);
+        print OF join("\t", $string,"json", $marc->{id}, "issn",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{issn}), "\n";
+    }
+
+    if ($conf->{fingerprints}{lccn} and $marc->{lccn}) {
+        my $string = join("", "lccn",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{lccn});
+        $string =~ s/[^A-Za-z0-9]//g;
+        $string = sha1_base64($string);
+        print OF join("\t", $string,"json", $marc->{id}, "lccn",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{lccn}) ,"\n";
+    }
+
+    if ($conf->{fingerprints}{accomp} and $marc->{accomp}) {
+        my $string = join("", "accomp",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{accomp});
+        $string =~ s/[^A-Za-z0-9]//g;
+        $string = sha1_base64($string);
+        print OF join("\t", $string,"json", $marc->{id}, "accomp",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{accomp}) ,"\n";
+    }
+
+    if ($conf->{fingerprints}{authpub} and $marc->{author} and
+        $marc->{publisher} and $marc->{pubyear} and $marc->{pages}) {
+        my $string = join("", "authpub",
+                      $marc->{item_form}, $marc->{date1},
+                      $marc->{record_type}, $marc->{bib_lvl},
+                      $marc->{title}, $marc->{author},
+                      $marc->{publisher}, $marc->{pubyear},
+                      $marc->{pages});
+        $string =~ s/[^A-Za-z0-9]//g;
+        $string = sha1_base64($string);
+        print OF join("\t", $string,"json", $marc->{id}, "authpub",
                       $marc->{item_form}, $marc->{date1},
                       $marc->{record_type}, $marc->{bib_lvl},
                       $marc->{title}, $marc->{author},
