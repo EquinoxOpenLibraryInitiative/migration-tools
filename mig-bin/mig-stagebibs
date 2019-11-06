@@ -11,7 +11,13 @@ so records should be checked before hand and cleaned.
 
 Takes three optional arguments:
 
---source
+
+--source 
+
+Takes a numeric value and set the x_source of the bib record to that.  Defaults to 
+2 which is local system.
+
+--x_source
 
 Sets an x_source value on the staging table to the one supplied instead of the 
 default of none.
@@ -58,7 +64,8 @@ my $base_table = 'biblio_record_entry';
 my $stage_table = 'biblio_record_entry_legacy';
 my $auth = '';
 my $serial = '';
-my $source = 'default';
+my $source = 2;
+my $x_source = 'default';
 my $dbh = Mig::db_connect();
 my $infile;
 my $i = 0;
@@ -69,7 +76,8 @@ my $ret = GetOptions(
     'file:s'              => \$infile,
     'serial:s'            => \$serial,
     'auth:s'              => \$auth,
-    'source:s'            => \$source,
+    'x_source:s'          => \$x_source,
+    'source:i'            => \$source,
     'base_table:s'        => \$base_table,
     'stage_table:s'       => \$stage_table
 );
@@ -97,8 +105,8 @@ if ($bre_test == 1 and $bre_legacy_test == 0 ) { create_child_bre($dbh); }
 my $xmig_test = check_for_column($dbh,$stage_table,'x_migrate');
 if ($xmig_test == 0) { add_column($dbh,$stage_table,'x_migrate','BOOLEAN DEFAULT TRUE'); }
 
-my $xsource_test = check_for_column($dbh,$stage_table,'x_source');
-if ($xsource_test == 0) { add_column($dbh,$stage_table,'x_source','TEXT'); }
+my $xx_source_test = check_for_column($dbh,$stage_table,'x_source');
+if ($xx_source_test == 0) { add_column($dbh,$stage_table,'x_source','TEXT'); }
 
 #flatten out MARC XML FILE
 open my $xml, "<:encoding(utf8)", $infile or abort('could not open MARC XML file');
@@ -109,7 +117,7 @@ while(my $line = <$xml>) {
 	chomp $line;
 	$record = $record . $line;
 	if ($line =~ /<\/record>$/) {
-		stage_record($dbh,$record,$source); 
+		stage_record($dbh,$record,$x_source,$source); 
 		$record = '';
 		$i++;
 		if (($i % 100) == 0) { report_progress('Records stage', $i); }
@@ -165,12 +173,13 @@ sub report_progress {
 sub stage_record {
     my $dbh = shift;
     my $record = shift;
-	my $source = shift;
+	my $x_source = shift;
+    my $source = shift;
 	my $last_xact = "'$MIGSCHEMA'";
 	$record = '$_$' . $record . '$_$';
 	my $sql;
-	if ($source eq 'default') { $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,marc) VALUES ($last_xact,$record);"; }
-		else { $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,marc,x_source) VALUES ($last_xact,$record,'$source');";  }
+	if ($x_source eq 'default') { $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,marc,source) VALUES ($last_xact,$record,$source);"; }
+		else { $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,marc,x_source,source) VALUES ($last_xact,$record,'$x_source',$source);";  }
     my $sth = $dbh->prepare($sql);
     $sth->execute();
 	return;
