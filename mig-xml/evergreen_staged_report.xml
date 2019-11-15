@@ -451,43 +451,23 @@
     </report>
 
     <report>
-        <name>asset_barcode_incumbent_collisions</name>
-        <report_title>Copy Barcode Incumbent Collisions</report_title>
+        <name>asset_barcode_collisions</name>
+        <report_title>Copy Barcode Collisions</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* 'collision' and barcode ~* 'incumbent'</query>
+        <query>SELECT COUNT(id) FROM asset_copy_legacy WHERE x_migrate = TRUE AND barcode LIKE 'x_%'</query>
         <note>Incumbent collisions are those where the migrated barcodes collide with existing barcodes in the database.</note>
     </report>
 
     <report>
-        <name>asset_barcode_incumbent_collisions</name>
-        <report_title>Copy Barcode Incumbent Collisions</report_title>
+        <name>asset_barcode_collisions</name>
+        <report_title>Copy Barcode Collisions</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM asset_copy WHERE barcode ~* 'collision' and barcode ~* 'incumbent'</query>
+        <query>SELECT COUNT(id) FROM asset_copy WHERE barcode LIKE 'x_%'</query>
         <note>Incumbent collisions are those where the migrated barcodes collide with existing barcodes in the database.</note>
-    </report>
-
-    <report>
-        <name>asset_barcode_internal_collisions</name>
-        <report_title>Copy Barcode Internal Collisions</report_title>
-        <tag>assets</tag>
-        <iteration>0</iteration>
-        <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* 'collision' and barcode ~* 'internal'</query>
-        <note>Internal collisions are those where the migrated barcodes have conflicts within their list of barcodes.</note>
-    </report>
-
-    <report>
-        <name>asset_barcode_internal_collisions</name>
-        <report_title>Copy Barcode Internal Collisions</report_title>
-        <tag>assets</tag>
-        <iteration>1</iteration>
-        <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM asset_copy WHERE barcode ~* 'collision' and barcode ~* 'internal'</query>
-        <note>Internal collisions are those where the migrated barcodes have conflicts within their list of barcodes.</note>
     </report>
 
     <report>
@@ -496,7 +476,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM asset_copy_legacy ac WHERE ac.barcode ~* 'collision' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM asset_copy_legacy ac WHERE ac.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of copy barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
@@ -506,7 +486,7 @@
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM asset_copy ac WHERE ac.barcode ~* 'collision' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM asset_copy ac WHERE ac.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
@@ -516,7 +496,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM asset_copy_legacy ac WHERE barcode ~* 'collision' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM asset_copy_legacy ac WHERE barcode LIKE 'x_%' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -525,7 +505,7 @@
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM asset_copy ac WHERE barcode ~* 'collision' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM asset_copy ac WHERE barcode LIKE 'x_%' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -930,40 +910,22 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
  
    <report>
-        <name>usr_barcode_incoming_collisions</name>
-        <report_title>Incoming Patron Barcode Collisions</report_title>
+        <name>usr_barcode_collisions</name>
+        <report_title>Patron Barcode Collisions</report_title>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM actor_card_legacy acard WHERE barcode ~* 'collision' AND x_migrate = TRUE</query>
+        <query>SELECT COUNT(acard.id) FROM actor_card_legacy acard WHERE barcode LIKE 'x_%' AND x_migrate = TRUE</query>
     </report>
 
     <report>
-        <name>usr_barcode_incoming_collisions</name>
-        <report_title>Incoming Patron Barcode Collisions</report_title>
+        <name>usr_barcode_collisions</name>
+        <report_title>Patron Barcode Collisions</report_title>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM actor_card acard WHERE barcode ~* 'collision'</query>
+        <query>SELECT COUNT(acard.id) FROM actor_card acard WHERE barcode LIKE 'x_%'</query>
     </report>
-
-	<report>
-     	<name>usr_barcode_incumbent_collisions</name>
-     	<report_title>Incumbent Patron Barcode Collisions</report_title>
-     	<tag>actors</tag>
-     	<iteration>0</iteration>
-     	<heading>Collision Count</heading>
-     	<query>SELECT COUNT(acard.id) FROM actor_card_legacy acard WHERE barcode ~* '^x_' AND x_migrate = TRUE</query>
- 	</report>
-
- 	<report>
-     	<name>usr_barcode_incumbent_collisions</name>
-     	<report_title>Incumbent Patron Barcode Collisions</report_title>
-     	<tag>actors</tag>
-     	<iteration>1</iteration>
-     	<heading>Collision Count</heading>
-     	<query>SELECT COUNT(acard.id) FROM actor_card acard WHERE barcode ~* '^x_'</query>
- 	</report>
 
     <report>
         <name>usr_barcode_collision_shortlist</name>
@@ -971,7 +933,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM actor_card_legacy acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM actor_card_legacy acard WHERE acard.barcode LIKE 'x_' AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
     </report>
 
@@ -981,7 +943,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM actor_card acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM actor_card acard WHERE acard.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
     </report>
 
