@@ -62,13 +62,13 @@ CREATE OR REPLACE FUNCTION migration_tools.build (TEXT) RETURNS VOID AS $$
     BEGIN
         SELECT migration_tools.production_tables(migration_schema) INTO STRICT production_tables;
         PERFORM migration_tools.build_base_staging_tables(migration_schema,production_tables);
-        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_patron_barcode_key ON ' || migration_schema || '.actor_card ( barcode );';
-        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_patron_usrname_key ON ' || migration_schema || '.actor_usr ( usrname );';
-        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_copy_barcode_key ON ' || migration_schema || '.asset_copy ( barcode );';
-        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_copy_id_key ON ' || migration_schema || '.asset_copy ( id );';
-        EXECUTE 'CREATE INDEX ' || migration_schema || '_callnum_record_idx ON ' || migration_schema || '.asset_call_number ( record );';
-        EXECUTE 'CREATE INDEX ' || migration_schema || '_callnum_upper_label_id_lib_idx ON ' || migration_schema || '.asset_call_number ( UPPER(label),id,owning_lib );';
-        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_callnum_label_once_per_lib ON ' || migration_schema || '.asset_call_number ( record,owning_lib,label,prefix,suffix );';
+        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_patron_barcode_key ON ' || migration_schema || '.m_actor_card ( barcode );';
+        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_patron_usrname_key ON ' || migration_schema || '.m_actor_usr ( usrname );';
+        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_copy_barcode_key ON ' || migration_schema || '.m_asset_copy ( barcode );';
+        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_copy_id_key ON ' || migration_schema || '.m_asset_copy ( id );';
+        EXECUTE 'CREATE INDEX ' || migration_schema || '_callnum_record_idx ON ' || migration_schema || '.m_asset_call_number ( record );';
+        EXECUTE 'CREATE INDEX ' || migration_schema || '_callnum_upper_label_id_lib_idx ON ' || migration_schema || '.m_asset_call_number ( UPPER(label),id,owning_lib );';
+        EXECUTE 'CREATE UNIQUE INDEX ' || migration_schema || '_callnum_label_once_per_lib ON ' || migration_schema || '.m_asset_call_number ( record,owning_lib,label,prefix,suffix );';
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
@@ -90,7 +90,7 @@ CREATE OR REPLACE FUNCTION migration_tools.build_specific_base_staging_table (TE
         base_staging_table TEXT;
         columns RECORD;
     BEGIN
-        base_staging_table = REPLACE( production_table, '.', '_' );
+        base_staging_table = REPLACE( 'm_' || production_table, '.', '_' );
         EXECUTE 'CREATE TABLE ' || migration_schema || '.' || base_staging_table || ' ( LIKE ' || production_table || ' INCLUDING DEFAULTS EXCLUDING CONSTRAINTS );';
         FOR columns IN 
             SELECT table_schema, table_name, column_name, data_type

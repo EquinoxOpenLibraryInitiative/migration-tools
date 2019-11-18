@@ -34,7 +34,7 @@
         <tag>money</tag>  arbitrary tags, each should go in separate tag
         <report_title>Migrated Billings</report_title>  title used in the asciidoc output
         <heading column='1'>Number of Billings.Migrated.Total</heading> period delimited 
-        <query>SELECT COUNT(id),x_migrate::TEXT,SUM(amount) FROM money_billing_legacy GROUP BY 2;</query>  query itself, will be replaced
+        <query>SELECT COUNT(id),x_migrate::TEXT,SUM(amount) FROM m_money_billing_legacy GROUP BY 2;</query>  query itself, will be replaced
         <note>Arbitrary note that can be included in the entries.</note>
     </report>
 -->
@@ -46,8 +46,8 @@
         <iteration>0</iteration>
         <report_title>Migrated Circulations</report_title>
         <heading>Circulation Status.Count of Circs</heading>
-        <query>SELECT 'Closed Circulations', COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NOT NULL AND x_migrate 
-            UNION ALL SELECT 'Open Circulations', COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate</query>
+        <query>SELECT 'Closed Circulations', COUNT(id) FROM m_action_circulation_legacy WHERE xact_finish IS NOT NULL AND x_migrate 
+            UNION ALL SELECT 'Open Circulations', COUNT(id) FROM m_action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate</query>
     </report>
 
     <report>
@@ -56,8 +56,8 @@
         <iteration>0</iteration>
         <report_title>Open Un-migrated Circulations</report_title>
         <heading>Circulation Status.Count of Circs</heading>
-        <query>SELECT 'No Matching User', COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate = FALSE AND usr IS NULL 
-                UNION ALL SELECT 'No Matching Item', COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate = FALSE AND target_copy IS NULL </query>
+        <query>SELECT 'No Matching User', COUNT(id) FROM m_action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate = FALSE AND usr IS NULL 
+                UNION ALL SELECT 'No Matching Item', COUNT(id) FROM m_action_circulation_legacy WHERE xact_finish IS NULL AND x_migrate = FALSE AND target_copy IS NULL </query>
     </report>
 
     <report>
@@ -66,7 +66,7 @@
         <iteration>1</iteration>
         <report_title>Open Circulations</report_title>
         <heading>Circulation Status.Count of Circs</heading>
-        <query>SELECT 'Closed Circulations', COUNT(id) FROM action_circulation WHERE xact_finish IS NOT NULL UNION ALL SELECT 'Open Circulations', COUNT(id) FROM action_circulation WHERE xact_finish IS NULL</query>
+        <query>SELECT 'Closed Circulations', COUNT(id) FROM m_action_circulation WHERE xact_finish IS NOT NULL UNION ALL SELECT 'Open Circulations', COUNT(id) FROM m_action_circulation WHERE xact_finish IS NULL</query>
     </report>
 <!-- intent is to add a report by circulated and item status
     <report>
@@ -75,7 +75,7 @@
         <iteration>0</iteration>
         <report_title>Open Circulations</report_title>
         <heading>Circulation Status.Migrated.Count of Circs</heading>
-        <query>SELECT 'Closed Circulations', x_migrate::TEXT, COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NOT NULL GROUP BY 2 UNION ALL SELECT 'Open Circulations', x_migrate::TEXT, COUNT(id) FROM action_circulation_legacy WHERE xact_finish IS NULL GROUP BY 2</query>
+        <query>SELECT 'Closed Circulations', x_migrate::TEXT, COUNT(id) FROM m_action_circulation_legacy WHERE xact_finish IS NOT NULL GROUP BY 2 UNION ALL SELECT 'Open Circulations', x_migrate::TEXT, COUNT(id) FROM m_action_circulation_legacy WHERE xact_finish IS NULL GROUP BY 2</query>
     </report>
 -->
      <report>
@@ -84,7 +84,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Org Unit</report_title>
         <heading>Circulations Count.Migrated.Org Unit</heading>
-        <query>SELECT COUNT(acirc.id), acirc.x_migrate::TEXT, aou.name FROM action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.xact_finish IS NULL GROUP BY 2, 3</query>
+        <query>SELECT COUNT(acirc.id), acirc.x_migrate::TEXT, aou.name FROM m_action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.xact_finish IS NULL GROUP BY 2, 3</query>
     </report>
 
      <report>
@@ -93,7 +93,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Org Unit</report_title>
         <heading>Circulations Count.Org Unit</heading>
-        <query>SELECT COUNT(acirc.id), aou.name FROM action_circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.xact_finish IS NULL GROUP BY 2</query>
+        <query>SELECT COUNT(acirc.id), aou.name FROM m_action_circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.xact_finish IS NULL GROUP BY 2</query>
     </report>
 
      <report>
@@ -102,7 +102,7 @@
         <iteration>0</iteration>
         <report_title>Migrated Circulations by Duration, Fine and Max Fine</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Migrated</heading>
-        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule, x_migrate::TEXT FROM action_circulation_legacy WHERE x_migrate = TRUE GROUP BY 2, 3, 4, 5</query>
+        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule, x_migrate::TEXT FROM m_action_circulation_legacy WHERE x_migrate = TRUE GROUP BY 2, 3, 4, 5</query>
     </report>
 
      <report>
@@ -111,7 +111,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Duration, Fine and Max Fine</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine</heading>
-        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule FROM action_circulation GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
+        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule FROM m_action_circulation GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
     </report>
 
      <report>
@@ -120,7 +120,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Patron Group</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.User Group.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name, x.buildrows FROM action_circulation_legacy acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name, x.buildrows FROM m_action_circulation_legacy acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM m_action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
      <report>
@@ -129,7 +129,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Rules and Patron Group</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.User Group.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name, x.buildrows FROM action_circulation acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation acirc) x ON x.id = acirc.id GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name, x.buildrows FROM m_action_circulation acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM m_action_circulation acirc) x ON x.id = acirc.id GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
      <report>
@@ -138,7 +138,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Circulation Modifier</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Circulation Modifier.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier, x.buildrows FROM action_circulation_legacy acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier, x.buildrows FROM m_action_circulation_legacy acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM m_action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
      <report>
@@ -147,7 +147,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Rules and Circulation Modifier</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Circulation Modifier.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier, x.buildrows FROM action_circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM action_circulation acirc) x ON x.id = acirc.id
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier, x.buildrows FROM m_action_circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM m_action_circulation acirc) x ON x.id = acirc.id
              GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
@@ -157,7 +157,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Org Unit</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Library Branch</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM m_action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
     </report>
 
      <report>
@@ -166,7 +166,7 @@
         <iteration>1</iteration>
         <report_title>Circulations by Rules and Org Unit</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Library Branch</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM action_circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM m_action_circulation acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
     </report>
 
      <report>
@@ -175,7 +175,7 @@
         <iteration>0</iteration>
         <report_title>Non-Cataloged Circulation</report_title>
         <heading>Circulations Count.Migrated</heading>
-        <query>SELECT COUNT(id), x_migrate::TEXT FROM action_non_cataloged_circulation_legacy GROUP BY 2</query>
+        <query>SELECT COUNT(id), x_migrate::TEXT FROM m_action_non_cataloged_circulation_legacy GROUP BY 2</query>
     </report>
 
      <report>
@@ -184,7 +184,7 @@
         <iteration>1</iteration>
         <report_title>Non-Cataloged Circulation</report_title>
         <heading>Circulations Count</heading>
-        <query>SELECT COUNT(id) FROM action_non_cataloged_circulation</query>
+        <query>SELECT COUNT(id) FROM m_action_non_cataloged_circulation</query>
     </report>
 
      <report>
@@ -193,7 +193,7 @@
         <iteration>0</iteration>
         <report_title>In House Use</report_title>
         <heading>In House Use Records.Migrated</heading>
-        <query>SELECT COUNT(id), x_migrate::TEXT FROM action_in_house_use_legacy GROUP BY 2</query>
+        <query>SELECT COUNT(id), x_migrate::TEXT FROM m_action_in_house_use_legacy GROUP BY 2</query>
     </report>
 
      <report>
@@ -202,7 +202,7 @@
         <iteration>1</iteration>
         <report_title>In House Use</report_title>
         <heading>In House Use Records</heading>
-        <query>SELECT COUNT(id) FROM action_in_house_use</query>
+        <query>SELECT COUNT(id) FROM m_action_in_house_use</query>
     </report>
 
      <report>
@@ -211,12 +211,12 @@
         <iteration>1</iteration>
         <report_title>Circs Missing Rules</report_title>
         <heading>Count.Field Missing</heading>
-        <query>SELECT COUNT(id), 'Duration Rule Value' FROM action_circulation WHERE duration IS NULL 
-            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule Value' FROM action_circulation WHERE recurring_fine IS NULL 
-            UNION ALL SELECT COUNT(id), 'Max Fine Rule Value' FROM action_circulation WHERE max_fine IS NULL
-            UNION ALL SELECT COUNT(id), 'Duration Rule' FROM action_circulation WHERE duration_rule IS NULL       
-            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule' FROM action_circulation WHERE recurring_fine_rule IS NULL      
-            UNION ALL SELECT COUNT(id), 'Max Fine Rule' FROM action_circulation WHERE max_fine_rule IS NULL
+        <query>SELECT COUNT(id), 'Duration Rule Value' FROM m_action_circulation WHERE duration IS NULL 
+            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule Value' FROM m_action_circulation WHERE recurring_fine IS NULL 
+            UNION ALL SELECT COUNT(id), 'Max Fine Rule Value' FROM m_action_circulation WHERE max_fine IS NULL
+            UNION ALL SELECT COUNT(id), 'Duration Rule' FROM m_action_circulation WHERE duration_rule IS NULL       
+            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule' FROM m_action_circulation WHERE recurring_fine_rule IS NULL      
+            UNION ALL SELECT COUNT(id), 'Max Fine Rule' FROM m_action_circulation WHERE max_fine_rule IS NULL
         </query>
     </report>
 
@@ -226,7 +226,7 @@
         <iteration>0</iteration>
         <report_title>Open Circulation and Status of Linked Items</report_title>
         <heading>Count.Status</heading>
-        <query>SELECT COUNT(acirc.id), ccs.name FROM action.circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE acirc.xact_finish IS NULL AND acirc.checkin_time IS NULL AND acirc.id IN (SELECT id FROM action_circulation) GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(acirc.id), ccs.name FROM action.circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE acirc.xact_finish IS NULL AND acirc.checkin_time IS NULL AND acirc.id IN (SELECT id FROM m_action_circulation) GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <!-- HOLDS REPORTS -->
@@ -237,7 +237,7 @@
         <iteration>0</iteration>
         <report_title>Migrated Holds</report_title>
         <heading>Hold Type.Hold Count.Migrated</heading>
-        <query>SELECT 'Closed Holds', COUNT(id), x_migrate::TEXT FROM action_hold_request_legacy WHERE (expire_time::TIMESTAMP &lt; now()) OR cancel_time IS NOT NULL OR fulfillment_time IS NOT NULL GROUP BY 3 UNION ALL SELECT 'Open Holds', COUNT(id), x_migrate::TEXT FROM action_hold_request_legacy WHERE (expire_time IS NULL OR expire_time::TIMESTAMP &gt; now()) AND cancel_time IS NULL AND fulfillment_time IS NULL GROUP BY 3</query>
+        <query>SELECT 'Closed Holds', COUNT(id), x_migrate::TEXT FROM m_action_hold_request_legacy WHERE (expire_time::TIMESTAMP &lt; now()) OR cancel_time IS NOT NULL OR fulfillment_time IS NOT NULL GROUP BY 3 UNION ALL SELECT 'Open Holds', COUNT(id), x_migrate::TEXT FROM m_action_hold_request_legacy WHERE (expire_time IS NULL OR expire_time::TIMESTAMP &gt; now()) AND cancel_time IS NULL AND fulfillment_time IS NULL GROUP BY 3</query>
     </report>
 
      <report>
@@ -246,7 +246,7 @@
         <iteration>0</iteration>
         <report_title>Migrated Holds By Type</report_title>
         <heading>Hold Type.Hold Count.Migrated</heading>
-        <query>SELECT hold_type as "Hold Type", COUNT(id), x_migrate::TEXT FROM action_hold_request_legacy GROUP BY 1, 3</query>
+        <query>SELECT hold_type as "Hold Type", COUNT(id), x_migrate::TEXT FROM m_action_hold_request_legacy GROUP BY 1, 3</query>
     </report>
 
      <report>
@@ -255,7 +255,7 @@
         <iteration>0</iteration>
         <report_title>Transit Copy Records and Status of Linked Items</report_title>
         <heading>Count.Status</heading>
-        <query>SELECT COUNT(atc.id), ccs.name FROM action.transit_copy atc JOIN asset.copy ac ON ac.id = atc.target_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE atc.id IN (SELECT id FROM action_transit_copy) AND atc.dest_recv_time IS NULL GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(atc.id), ccs.name FROM action.transit_copy atc JOIN asset.copy ac ON ac.id = atc.target_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE atc.id IN (SELECT id FROM m_action_transit_copy) AND atc.dest_recv_time IS NULL GROUP BY 2 ORDER BY 2</query>
     </report>
 
      <report>
@@ -264,7 +264,7 @@
         <iteration>0</iteration>
         <report_title>Status of Items with Count of Open In Transits</report_title>
         <heading>Count.Status.Count of Open Transits</heading>
-        <query>SELECT COUNT(ac.id), ccs.name, SUM(CASE WHEN atc.id IS NULL THEN 0 ELSE 1 END) FROM asset.copy ac JOIN config.copy_status ccs ON ccs.id = ac.status LEFT JOIN (SELECT * FROM action.transit_copy WHERE id IN (SELECT id FROM action_transit_copy) AND dest_recv_time IS NULL) atc ON atc.target_copy = ac.id WHERE ac.id IN (SELECT id from asset_copy) GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), ccs.name, SUM(CASE WHEN atc.id IS NULL THEN 0 ELSE 1 END) FROM asset.copy ac JOIN config.copy_status ccs ON ccs.id = ac.status LEFT JOIN (SELECT * FROM action.transit_copy WHERE id IN (SELECT id FROM m_action_transit_copy) AND dest_recv_time IS NULL) atc ON atc.target_copy = ac.id WHERE ac.id IN (SELECT id from m_asset_copy) GROUP BY 2 ORDER BY 2</query>
     </report>
     
      <report>
@@ -273,7 +273,7 @@
         <iteration>0</iteration>
         <report_title>Captured Holds with Status of Items</report_title>
         <heading>Count of Captured Hold.Status of Item</heading>
-        <query>SELECT COUNT(ahr.id), ccs.name FROM action.hold_request ahr JOIN asset.copy ac ON ac.id = ahr.current_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE ahr.capture_time IS NOT NULL AND ahr.fulfillment_time IS NULL and ahr.cancel_time IS NULL AND ahr.id IN (SELECT id FROM action_hold_request) GROUP BY 2 ORDER By 2</query>
+        <query>SELECT COUNT(ahr.id), ccs.name FROM action.hold_request ahr JOIN asset.copy ac ON ac.id = ahr.current_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE ahr.capture_time IS NOT NULL AND ahr.fulfillment_time IS NULL and ahr.cancel_time IS NULL AND ahr.id IN (SELECT id FROM m_action_hold_request) GROUP BY 2 ORDER By 2</query>
     </report>
 
       <report>
@@ -282,7 +282,7 @@
         <iteration>0</iteration>
         <report_title>Depth of Unfilled Holds</report_title>
         <heading>Count.Depth</heading>
-        <query>SELECT COUNT(ahr.id), ahr.selection_depth FROM action.hold_request ahr WHERE ahr.id IN (SELECT id FROM action_hold_request) AND ahr.cancel_time IS NULL AND ahr.capture_time IS NULL AND ahr.fulfillment_time IS NULL GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(ahr.id), ahr.selection_depth FROM action.hold_request ahr WHERE ahr.id IN (SELECT id FROM m_action_hold_request) AND ahr.cancel_time IS NULL AND ahr.capture_time IS NULL AND ahr.fulfillment_time IS NULL GROUP BY 2 ORDER BY 2</query>
     </report>
 
       <!-- finding title matched holds where there are duplicates, this will table match for legacy but column won't be present for all  -->
@@ -292,7 +292,7 @@
         <iteration>0</iteration>
         <report_title>Holds by Title Matchs</report_title>
         <heading>Count.Number of Matches</heading>
-        <query>SELECT COUNT(*), x_title_matches FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), x_title_matches FROM m_action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() GROUP BY 2 ORDER BY 2</query>
     </report>
 
       <report>
@@ -301,7 +301,7 @@
         <iteration>0</iteration>
         <report_title>Sample of Holds with No Matches</report_title>
         <heading>Borrower Barcode.Title.Request Date</heading>
-        <query>SELECT l_borrower_id, l_title, l_request_date FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches = 0 AND x_migrate LIMIT 20</query>
+        <query>SELECT l_borrower_id, l_title, l_request_date FROM m_action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches = 0 AND x_migrate LIMIT 20</query>
     </report>
 
       <report>
@@ -310,376 +310,376 @@
         <iteration>0</iteration>
         <report_title>Sample of Holds with More Than One Title Match</report_title>
         <heading>Borrower Barcode.Title.Request Date</heading>
-        <query>SELECT l_borrower_id, l_title, l_request_date FROM action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches > 1 AND x_migrate LIMIT 20</query>
+        <query>SELECT l_borrower_id, l_title, l_request_date FROM m_action_hold_request_legacy WHERE TO_DATE(l_expire_date,'MM/DD/YYYY') > NOW() AND x_title_matches > 1 AND x_migrate LIMIT 20</query>
     </report>
 
     <!-- ASSET REPORTS -->
     
     <report>
-        <name>asset_copy_count</name>
+        <name>m_asset_copy_count</name>
         <report_title>Count of Copies by Library</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Library.Migrated</heading>
-        <query>SELECT COUNT(ac.id), aou.name, ac.x_migrate::TEXT FROM asset_copy_legacy ac JOIN actor.org_unit aou ON aou.id = ac.circ_lib GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(ac.id), aou.name, ac.x_migrate::TEXT FROM m_asset_copy_legacy ac JOIN actor.org_unit aou ON aou.id = ac.circ_lib GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
-        <name>asset_deleted_copies</name>
+        <name>m_asset_deleted_copies</name>
         <report_title>Deleted Copies</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Deleted.Migrated</heading>
-        <query>SELECT COUNT(ac.id), ac.deleted::TEXT, ac.x_migrate::TEXT FROM asset_copy_legacy ac GROUP BY 2, 3</query>
+        <query>SELECT COUNT(ac.id), ac.deleted::TEXT, ac.x_migrate::TEXT FROM m_asset_copy_legacy ac GROUP BY 2, 3</query>
     </report>
 
     <report>
-        <name>asset_copies_by_status</name>
+        <name>m_asset_copies_by_status</name>
         <report_title>Copies by Status</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Status.Migrated</heading>
-        <query>SELECT COUNT(ac.id), cs.name, ac.x_migrate::TEXT FROM asset_copy_legacy ac JOIN config.copy_status cs ON cs.id = ac.status GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(ac.id), cs.name, ac.x_migrate::TEXT FROM m_asset_copy_legacy ac JOIN config.copy_status cs ON cs.id = ac.status GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
-        <name>asset_precat</name>
+        <name>m_asset_precat</name>
         <report_title>Precats (AKA Copies Without Bibs)</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Migating</heading>
-        <query>SELECT COUNT(ac.id), ac.x_migrate::TEXT FROM asset_copy_legacy ac WHERE ac.x_bre_id = -1 GROUP BY 2</query>
+        <query>SELECT COUNT(ac.id), ac.x_migrate::TEXT FROM m_asset_copy_legacy ac WHERE ac.x_bre_id = -1 GROUP BY 2</query>
     </report>
 
     <report>
-        <name>asset_circ_mod_copies_count</name>
+        <name>m_asset_circ_mod_copies_count</name>
         <report_title>Copies by Circulation Modifier</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Circulation Modifier.Migrated</heading>
-        <query>SELECT COUNT(ac.id), ac.circ_modifier, ac.x_migrate::TEXT FROM asset_copy_legacy ac GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(ac.id), ac.circ_modifier, ac.x_migrate::TEXT FROM m_asset_copy_legacy ac GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
-        <name>asset_copy_notes</name>
+        <name>m_asset_copy_notes</name>
         <report_title>Copy Notes</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Note Count.Public.Migrated</heading>
-        <query>SELECT COUNT(acnote.id), acnote.pub::TEXT, acnote.x_migrate::TEXT FROM asset_copy_note_legacy acnote GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(acnote.id), acnote.pub::TEXT, acnote.x_migrate::TEXT FROM m_asset_copy_note_legacy acnote GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
-        <name>asset_copy_notes</name>
+        <name>m_asset_copy_notes</name>
         <report_title>Copy Notes</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Note Count.Public</heading>
-        <query>SELECT COUNT(acnote.id), acnote.pub::TEXT FROM asset_copy_note acnote GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(acnote.id), acnote.pub::TEXT FROM m_asset_copy_note acnote GROUP BY 2 ORDER BY 2</query>
     </report>
 
    <report>
-        <name>asset_vols_by_lib</name>
+        <name>m_asset_vols_by_lib</name>
         <report_title>Volumes by Library</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Volume Count.Library.Migrated</heading>
-        <query>SELECT COUNT(acn.id), aou.name, acn.x_migrate::TEXT FROM asset_call_number_legacy acn JOIN actor_org_unit_legacy aou ON aou.id = acn.owning_lib GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(acn.id), aou.name, acn.x_migrate::TEXT FROM m_asset_call_number_legacy acn JOIN m_actor_org_unit_legacy aou ON aou.id = acn.owning_lib GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
    <report>
-        <name>asset_vols_by_lib</name>
+        <name>m_asset_vols_by_lib</name>
         <report_title>Volumes by Library</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Volume Count.Library</heading>
-        <query>SELECT COUNT(acn.id), aou.name FROM asset_call_number acn JOIN actor.org_unit aou ON aou.id = acn.owning_lib GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(acn.id), aou.name FROM m_asset_call_number acn JOIN actor.org_unit aou ON aou.id = acn.owning_lib GROUP BY 2 ORDER BY 2</query>
     </report>
     <!--
    <report>
-        <name>asset_cops_by_loc</name>
+        <name>m_asset_cops_by_loc</name>
         <report_title>Copies by Location</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Library.Migrated</heading>
-        <query>SELECT COUNT(ac.id), acl.name, ac.x_migrate::TEXT FROM asset_copy_legacy ac JOIN asset.copy_location acl ON acl.id = ac.location GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(ac.id), acl.name, ac.x_migrate::TEXT FROM m_asset_copy_legacy ac JOIN asset.copy_location acl ON acl.id = ac.location GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
    -->
    <report>
-        <name>asset_cops_by_loc_and_org</name>
+        <name>m_asset_cops_by_loc_and_org</name>
         <report_title>Copies by Location</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Library.Circ Library.Migrated</heading>
-        <query>SELECT COUNT(ac.id), acl.name, aou.name, ac.x_migrate::TEXT FROM asset_copy_legacy ac JOIN asset.copy_location acl ON acl.id = ac.location JOIN actor.org_unit aou ON aou.id = ac.circ_lib GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
+        <query>SELECT COUNT(ac.id), acl.name, aou.name, ac.x_migrate::TEXT FROM m_asset_copy_legacy ac JOIN asset.copy_location acl ON acl.id = ac.location JOIN actor.org_unit aou ON aou.id = ac.circ_lib GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
     </report>
 
    <report>
-        <name>asset_cops_w_loc_one</name>
+        <name>m_asset_cops_w_loc_one</name>
         <report_title>Copies with a Location of Stacks</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Barcode</heading>
-        <query>SELECT barcode FROM asset_copy_legacy WHERE location = 1 AND x_migrate</query>
+        <query>SELECT barcode FROM m_asset_copy_legacy WHERE location = 1 AND x_migrate</query>
     </report>
 
     <!-- report>
-        <name>asset_barcode_lengths</name>
+        <name>m_asset_barcode_lengths</name>
         <report_title>Barcode Lengths by Library</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Count of Barcode.Barcode Length.Library</heading>
-        <query>SELECT COUNT(ac.id), LENGTH(ac.barcode), aou.name FROM asset_copy_legacy ac JOIN actor.org_unit aou ON aou.id = ac.circ_lib WHERE ac.x_migrate = TRUE GROUP BY 2, 3 ORDER BY 3, 2</query>
+        <query>SELECT COUNT(ac.id), LENGTH(ac.barcode), aou.name FROM m_asset_copy_legacy ac JOIN actor.org_unit aou ON aou.id = ac.circ_lib WHERE ac.x_migrate = TRUE GROUP BY 2, 3 ORDER BY 3, 2</query>
     </report -->
 
     <report>
-        <name>asset_no_barcode</name>
+        <name>m_asset_no_barcode</name>
         <report_title>Items Without Barcodes</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Assigned Barcode</heading>
-        <query>SELECT barcode FROM asset_copy_legacy WHERE barcode ~* 'no_barocde' AND x_migrate</query>
+        <query>SELECT barcode FROM m_asset_copy_legacy WHERE barcode ~* 'no_barocde' AND x_migrate</query>
     </report>
 
     <report>
-        <name>asset_barcode_patterns</name>
+        <name>m_asset_barcode_patterns</name>
         <report_title>Common Barcode Starting Patterns</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Count of Barcodes (greater than 10).Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM asset_copy_legacy ac WHERE ac.x_migrate = TRUE GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE ac.x_migrate = TRUE GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
-        <name>asset_barcode_collisions</name>
+        <name>m_asset_barcode_collisions</name>
         <report_title>Copy Barcode Collisions</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM asset_copy_legacy WHERE x_migrate = TRUE AND barcode LIKE 'x_%'</query>
+        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode LIKE 'x_%'</query>
         <note>Incumbent collisions are those where the migrated barcodes collide with existing barcodes in the database.</note>
     </report>
 
     <report>
-        <name>asset_barcode_collisions</name>
+        <name>m_asset_barcode_collisions</name>
         <report_title>Copy Barcode Collisions</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM asset_copy WHERE barcode LIKE 'x_%'</query>
+        <query>SELECT COUNT(id) FROM m_asset_copy WHERE barcode LIKE 'x_%'</query>
         <note>Incumbent collisions are those where the migrated barcodes collide with existing barcodes in the database.</note>
     </report>
 
     <report>
-        <name>asset_barcode_collisions_shortlist</name>
+        <name>m_asset_barcode_collisions_shortlist</name>
         <report_title>Copy Barcode Collisions (first 20)</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM asset_copy_legacy ac WHERE ac.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of copy barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
     <report>
-        <name>asset_barcode_collisions_shortlist</name>
+        <name>m_asset_barcode_collisions_shortlist</name>
         <report_title>Copy Barcode Collisions (first 20)</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM asset_copy ac WHERE ac.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM m_asset_copy ac WHERE ac.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
     <report>
-        <name>asset_barcode_collision_patterns</name>
+        <name>m_asset_barcode_collision_patterns</name>
         <report_title>Common Copy Barcode Collision Patterns</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM asset_copy_legacy ac WHERE barcode LIKE 'x_%' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE barcode LIKE 'x_%' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
-        <name>asset_barcode_collision_patterns</name>
+        <name>m_asset_barcode_collision_patterns</name>
         <report_title>Common Copy Barcode Collision Patterns</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM asset_copy ac WHERE barcode LIKE 'x_%' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy ac WHERE barcode LIKE 'x_%' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
-         <name>asset_stat_cats</name>
+         <name>m_asset_stat_cats</name>
         <report_title>Copy Statistical Categories</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Stat Cat Count.Library.Statistical Category</heading>
-        <query>SELECT COUNT(ac_sc.id), aou.name, ac_sc.name FROM asset_stat_cat_legacy ac_sc JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
+        <query>SELECT COUNT(ac_sc.id), aou.name, ac_sc.name FROM m_asset_stat_cat_legacy ac_sc JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
-         <name>asset_stat_cats</name>
+         <name>m_asset_stat_cats</name>
         <report_title>Copy Statistical Categories</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Stat Cat Count.Library.Statistical Category</heading>
-        <query>SELECT COUNT(ac_sc.id), aou.name, ac_sc.name FROM asset_stat_cat ac_sc JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
+        <query>SELECT COUNT(ac_sc.id), aou.name, ac_sc.name FROM m_asset_stat_cat ac_sc JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
-        <name>asset_stat_cat_entries</name>
+        <name>m_asset_stat_cat_entries</name>
         <report_title>Copy Stat Cat User Entries</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Stat Count.Library.Statistical Category</heading>
-        <query>SELECT COUNT(map.id), aou.name, ac_sc.name FROM asset_stat_cat_entry_copy_map_legacy map JOIN asset_stat_cat_legacy ac_sc ON ac_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
+        <query>SELECT COUNT(map.id), aou.name, ac_sc.name FROM m_asset_stat_cat_entry_copy_map_legacy map JOIN m_asset_stat_cat_legacy ac_sc ON ac_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
-        <name>asset_stat_cat_entries</name>
+        <name>m_asset_stat_cat_entries</name>
         <report_title>Copy Stat Cat User Entries</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Copy Stat Count.Library.Statistical Category</heading>
-        <query>SELECT COUNT(map.id), aou.name, ac_sc.name FROM asset_stat_cat_entry_copy_map map JOIN asset_stat_cat ac_sc ON ac_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.
+        <query>SELECT COUNT(map.id), aou.name, ac_sc.name FROM m_asset_stat_cat_entry_copy_map map JOIN m_asset_stat_cat ac_sc ON ac_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.
 id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
-         <name>asset_copy_tags</name>
+         <name>m_asset_copy_tags</name>
         <report_title>Copy Tags</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Tag Count.Copy Tag Type.Copy Tag Label.Staff Note.Public</heading>
-        <query>SELECT COUNT(map.id), tag.tag_type, tag.label, tag.staff_note, tag.pub FROM asset_copy_tag tag JOIN asset_copy_tag_copy_map map ON map.tag = tag.id GROUP BY 2,3,4,5 ORDER BY 2,3</query>
+        <query>SELECT COUNT(map.id), tag.tag_type, tag.label, tag.staff_note, tag.pub FROM m_asset_copy_tag tag JOIN m_asset_copy_tag_copy_map map ON map.tag = tag.id GROUP BY 2,3,4,5 ORDER BY 2,3</query>
     </report>
 
     <report>
-         <name>asset_copy_alerts</name>
+         <name>m_asset_copy_alerts</name>
         <report_title>Copy Alerts</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Alert Count.Alert Type</heading>
-		<query>SELECT COUNT(*), cat.name FROM asset_copy_alert aca JOIN config.copy_alert_type cat ON cat.id = aca.alert_type GROUP BY 2</query>
+		<query>SELECT COUNT(*), cat.name FROM m_asset_copy_alert aca JOIN config.copy_alert_type cat ON cat.id = aca.alert_type GROUP BY 2</query>
     </report>
 
     <!-- MONEY REPORTS -->
 
     <report>
-        <name>money_billing_voided</name>
+        <name>m_money_billing_voided</name>
         <report_title>Bills Voided And Not</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Voided.Sum.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM money_billing_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_billing_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
     <report>
-        <name>money_billing_voided</name>
+        <name>m_money_billing_voided</name>
         <report_title>Bills Voided And Not</report_title>
         <tag>money</tag>
         <iteration>1</iteration>
         <heading>Count.Voided.Sum</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money_billing a GROUP BY 2 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM m_money_billing a GROUP BY 2 ORDER BY 2, 3</query>
     </report>
 
     <report>
-        <name>money_billing_by_type</name>
+        <name>m_money_billing_by_type</name>
         <report_title>Bills by Type</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Billing Type.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.billing_type, a.x_migrate::TEXT FROM money_billing_legacy a GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(a.id), a.billing_type, a.x_migrate::TEXT FROM m_money_billing_legacy a GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
-        <name>money_billing_by_type</name>
+        <name>m_money_billing_by_type</name>
         <report_title>Bills by Type</report_title>
         <tag>money</tag>
         <iteration>1</iteration>
         <heading>Count.Billing Type</heading>
-        <query>SELECT COUNT(a.id), a.billing_type FROM money_billing a GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(a.id), a.billing_type FROM m_money_billing a GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
-        <name>money_cash_payment</name>
+        <name>m_money_cash_payment</name>
         <report_title>Cash Payments</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Voided.Sum.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM money_cash_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_cash_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
     <report>
-        <name>money_cash_payment</name>
+        <name>m_money_cash_payment</name>
         <report_title>Cash Payments</report_title>
         <tag>money</tag>
         <iteration>1</iteration>
         <heading>Count.Voided.Sum</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money_cash_payment a GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM m_money_cash_payment a GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
-        <name>money_check_payment</name>
+        <name>m_money_check_payment</name>
         <report_title>Check Payments</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Voided.Sum.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM money_check_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_check_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
     <report>
-        <name>money_forgive_payment</name>
+        <name>m_money_forgive_payment</name>
         <report_title>Forgive Payments</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Voided.Sum.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM money_forgive_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_forgive_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
     <report>
-        <name>money_forgive_payment</name>
+        <name>m_money_forgive_payment</name>
         <report_title>Forgive Payments</report_title>
         <tag>money</tag>
         <iteration>1</iteration>
         <heading>Count.Voided.Sum</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM money_forgive_paymen a GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount) FROM m_money_forgive_paymen a GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
-        <name>money_goods_payment</name>
+        <name>m_money_goods_payment</name>
         <report_title>Goods Payments</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Voided.Sum.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM money_goods_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_goods_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
     <report>
-        <name>money_work_payment</name>
+        <name>m_money_work_payment</name>
         <report_title>Work Payments</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Voided.Sum.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM money_work_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_work_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
     <report>
-        <name>money_credit_card_payment</name>
+        <name>m_money_credit_card_payment</name>
         <report_title>Credit Card Payments</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Voided.Sum.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM money_credit_card_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_credit_card_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
     <report>
-        <name>money_credit_payment</name>
+        <name>m_money_credit_payment</name>
         <report_title>Credit Payments</report_title>
         <tag>money</tag>
         <iteration>0</iteration>
         <heading>Count.Voided.Sum.Migrated</heading>
-        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM money_credit_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
+        <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_credit_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
 
@@ -691,7 +691,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(bre.id) FROM biblio_record_entry_legacy bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
+        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry_legacy bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
     </report>
 
     <report>
@@ -700,7 +700,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>1</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(bre.id) FROM biblio_record_entry bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
+        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
     </report>
 
     <report>
@@ -709,7 +709,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(id) FROM biblio_record_entry where id NOT IN (SELECT DISTINCT record FROM asset_call_number)</query>
+        <query>SELECT COUNT(id) FROM m_biblio_record_entry where id NOT IN (SELECT DISTINCT record FROM m_asset_call_number)</query>
 		<note>These records would not have been loaded.</note>
     </report>
 
@@ -719,7 +719,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(id) FROM biblio_record_entry where id IN (SELECT record FROM asset.call_number WHERE label ~* '##URI##')</query>
+        <query>SELECT COUNT(id) FROM m_biblio_record_entry where id IN (SELECT record FROM asset.call_number WHERE label ~* '##URI##')</query>
     </report>
 
 	<report>
@@ -728,7 +728,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
 		<tag>bibs</tag>
 		<iteration>0</iteration>
 		<heading>Count.Original Search Format.New Search Format</heading>
-		<query>SELECT COUNT(*), ARRAY_TO_STRING(x_search_format,','), ARRAY_TO_STRING(x_after_search_format,',') FROM biblio_record_entry_legacy WHERE x_migrate AND x_after_search_format IS NOT NULL GROUP BY 2, 3 ORDER BY 3,2</query>
+		<query>SELECT COUNT(*), ARRAY_TO_STRING(x_search_format,','), ARRAY_TO_STRING(x_after_search_format,',') FROM m_biblio_record_entry_legacy WHERE x_migrate AND x_after_search_format IS NOT NULL GROUP BY 2, 3 ORDER BY 3,2</query>
 	</report>
 
     <report>
@@ -737,7 +737,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count.Migrated</heading>
-        <query>SELECT COUNT(b.id), b.x_migrate::TEXT FROM biblio_record_note_legacy b GROUP BY 2</query>
+        <query>SELECT COUNT(b.id), b.x_migrate::TEXT FROM m_biblio_record_note_legacy b GROUP BY 2</query>
     </report>
 
     <report>
@@ -746,7 +746,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>1</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(b.id) FROM biblio_record_note b</query>
+        <query>SELECT COUNT(b.id) FROM m_biblio_record_note b</query>
     </report>
 
     <report>
@@ -755,7 +755,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count.Migrated</heading>
-        <query>SELECT COUNT(b.id), b.x_migrate::TEXT FROM biblio_peer_bib_copy_map_legacy b GROUP BY 2</query>
+        <query>SELECT COUNT(b.id), b.x_migrate::TEXT FROM m_biblio_peer_bib_copy_map_legacy b GROUP BY 2</query>
     </report>
 
     <report>
@@ -764,7 +764,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>1</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(b.id) FROM biblio_peer_bib_copy_map b</query>
+        <query>SELECT COUNT(b.id) FROM m_biblio_peer_bib_copy_map b</query>
     </report>
 
     <report>
@@ -773,7 +773,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count.Migrated</heading>
-        <query>SELECT COUNT(b.id), b.x_migrate::TEXT FROM biblio_monograph_part_legacy b GROUP BY 2</query>
+        <query>SELECT COUNT(b.id), b.x_migrate::TEXT FROM m_biblio_monograph_part_legacy b GROUP BY 2</query>
     </report>
 
     <report>
@@ -782,7 +782,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>1</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(b.id) FROM biblio_monograph_part b</query>
+        <query>SELECT COUNT(b.id) FROM m_biblio_monograph_part b</query>
     </report>
 
     <report>
@@ -812,7 +812,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT LEFT(ARRAY_TO_STRING(oils_xpath( '//*[@tag="245"]/*[@code="a"]/text()', a.marc),''),50) AS "Title",
 				LEFT(ARRAY_TO_STRING(oils_xpath( '//*[@tag="100"]/*[@code="a"]/text()', a.marc),''),50) AS "Author",
 				ARRAY_TO_STRING(oils_xpath( '//*[@tag="001"]/text()', a.marc),'') AS "001"
-				FROM biblio_record_entry a LEFT JOIN biblio.record_entry b ON b.id = a.id WHERE b.id IS NULL AND a.x_migrate
+				FROM m_biblio_record_entry a LEFT JOIN biblio.record_entry b ON b.id = a.id WHERE b.id IS NULL AND a.x_migrate
 		</query>
     </report>
 
@@ -825,7 +825,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Library.Deleted.Migrated</heading>
-        <query>SELECT COUNT(au.id), aou.name, au.deleted::TEXT, au.x_migrate::TEXT FROM actor_usr_legacy au JOIN actor.org_unit aou ON aou.id = au.home_ou GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
+        <query>SELECT COUNT(au.id), aou.name, au.deleted::TEXT, au.x_migrate::TEXT FROM m_actor_usr_legacy au JOIN actor.org_unit aou ON aou.id = au.home_ou GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
     </report>
 
     <report>
@@ -834,7 +834,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Permission Group.Migrated</heading>
-        <query>SELECT COUNT(au.id), pgt.name, au.x_migrate::TEXT FROM actor_usr_legacy au JOIN permission.grp_tree pgt ON pgt.id = au.profile GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(au.id), pgt.name, au.x_migrate::TEXT FROM m_actor_usr_legacy au JOIN permission.grp_tree pgt ON pgt.id = au.profile GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
@@ -843,7 +843,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Users.Active.Migrated</heading>
-        <query>SELECT COUNT(id), active::TEXT, x_migrate::TEXT FROM actor_usr_legacy GROUP BY 2, 3</query>
+        <query>SELECT COUNT(id), active::TEXT, x_migrate::TEXT FROM m_actor_usr_legacy GROUP BY 2, 3</query>
     </report>
 
     <report>
@@ -852,7 +852,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count of Users.Active</heading>
-        <query>SELECT COUNT(id), active::TEXT FROM actor_usr GROUP BY 2</query>
+        <query>SELECT COUNT(id), active::TEXT FROM m_actor_usr GROUP BY 2</query>
     </report>
 
     <report>
@@ -861,7 +861,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Barcodes.Active.Migrated</heading>
-        <query>SELECT COUNT(id), active::TEXT, x_migrate::TEXT FROM actor_card_legacy GROUP BY 2, 3</query>
+        <query>SELECT COUNT(id), active::TEXT, x_migrate::TEXT FROM m_actor_card_legacy GROUP BY 2, 3</query>
     </report>
 
     <report>
@@ -870,7 +870,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count of Barcodes.Active</heading>
-        <query>SELECT COUNT(id), active::TEXT FROM actor_card GROUP BY 2</query>
+        <query>SELECT COUNT(id), active::TEXT FROM m_actor_card GROUP BY 2</query>
     </report>
 
     <!-- report>
@@ -879,7 +879,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Barcode.Barcode Length.Library</heading>
-        <query>SELECT COUNT(acard.id), LENGTH(acard.barcode), aou.name FROM actor_card_legacy acard JOIN actor_usr_legacy au ON au.id = acard.usr JOIN actor.org_unit aou ON aou.id = au.home_ou WHERE acard.x_migrate = TRUE GROUP BY 2, 3 ORDER BY 3, 2</query>
+        <query>SELECT COUNT(acard.id), LENGTH(acard.barcode), aou.name FROM m_actor_card_legacy acard JOIN m_actor_usr_legacy au ON au.id = acard.usr JOIN actor.org_unit aou ON aou.id = au.home_ou WHERE acard.x_migrate = TRUE GROUP BY 2, 3 ORDER BY 3, 2</query>
     </report -->
 
     <!-- report>
@@ -888,7 +888,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count of Barcode.Barcode Length.Library</heading>
-        <query>SELECT COUNT(acard.id), LENGTH(acard.barcode), aou.name FROM actor_card acard JOIN actor_usr au ON au.id = acard.usr JOIN actor.org_unit aou ON aou.id = au.home_ou GROUP BY 2, 3 ORDER BY 3, 2</query>
+        <query>SELECT COUNT(acard.id), LENGTH(acard.barcode), aou.name FROM m_actor_card acard JOIN m_actor_usr au ON au.id = acard.usr JOIN actor.org_unit aou ON aou.id = au.home_ou GROUP BY 2, 3 ORDER BY 3, 2</query>
     </report -->
 
     <report>
@@ -897,7 +897,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Barcodes (greater than 10).Left 60% of Characters</heading>
-        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor_card_legacy acard WHERE acard.x_migrate = TRUE GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM m_actor_card_legacy acard WHERE acard.x_migrate = TRUE GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -906,7 +906,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count of Barcodes (greater than 10).Left 60% of Characters</heading>
-        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor_card acard GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM m_actor_card acard GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
     </report>
  
    <report>
@@ -915,7 +915,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM actor_card_legacy acard WHERE barcode LIKE 'x_%' AND x_migrate = TRUE</query>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card_legacy acard WHERE barcode LIKE 'x_%' AND x_migrate = TRUE</query>
     </report>
 
     <report>
@@ -924,7 +924,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM actor_card acard WHERE barcode LIKE 'x_%'</query>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card acard WHERE barcode LIKE 'x_%'</query>
     </report>
 
     <report>
@@ -933,7 +933,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM actor_card_legacy acard WHERE acard.barcode LIKE 'x_' AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM m_actor_card_legacy acard WHERE acard.barcode LIKE 'x_' AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
     </report>
 
@@ -943,7 +943,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM actor_card acard WHERE acard.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM m_actor_card acard WHERE acard.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
     </report>
 
@@ -953,7 +953,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor_card_legacy acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') AND acard.x_migrate = TRUE GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM m_actor_card_legacy acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') AND acard.x_migrate = TRUE GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -962,7 +962,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM actor_card acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM m_actor_card acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -971,7 +971,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Valid.Migrated</heading>
-        <query>SELECT COUNT(aua.id), valid::TEXT, x_migrate::TEXT FROM actor_usr_address_legacy aua GROUP BY 2, 3</query>
+        <query>SELECT COUNT(aua.id), valid::TEXT, x_migrate::TEXT FROM m_actor_usr_address_legacy aua GROUP BY 2, 3</query>
     </report>
 
     <report>
@@ -980,7 +980,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count.Valid</heading>
-        <query>SELECT COUNT(aua.id), valid::TEXT FROM actor_usr_address aua GROUP BY 2</query>
+        <query>SELECT COUNT(aua.id), valid::TEXT FROM m_actor_usr_address aua GROUP BY 2</query>
     </report>
 
     <report>
@@ -989,7 +989,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Addresses.Pending.Migrated</heading>
-        <query>SELECT COUNT(aua.id), pending::TEXT, x_migrate::TEXT FROM actor_usr_address_legacy aua GROUP BY 2, 3</query>
+        <query>SELECT COUNT(aua.id), pending::TEXT, x_migrate::TEXT FROM m_actor_usr_address_legacy aua GROUP BY 2, 3</query>
     </report>
 
     <report>
@@ -998,7 +998,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count of Addresses.Pending</heading>
-        <query>SELECT COUNT(aua.id), pending::TEXT FROM actor_usr_address aua GROUP BY 2</query>
+        <query>SELECT COUNT(aua.id), pending::TEXT FROM m_actor_usr_address aua GROUP BY 2</query>
     </report>
 
     <report>
@@ -1007,7 +1007,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Deleted.Migrated</heading>
-        <query>SELECT COUNT(aum.id), deleted::TEXT, x_migrate::TEXT FROM actor_usr_message_legacy aum GROUP BY 2, 3</query>
+        <query>SELECT COUNT(aum.id), deleted::TEXT, x_migrate::TEXT FROM m_actor_usr_message_legacy aum GROUP BY 2, 3</query>
     </report>
 
     <report>
@@ -1016,7 +1016,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count.Deleted</heading>
-        <query>SELECT COUNT(aum.id), deleted::TEXT FROM actor_usr_message_legacy aum GROUP BY 2</query>
+        <query>SELECT COUNT(aum.id), deleted::TEXT FROM m_actor_usr_message_legacy aum GROUP BY 2</query>
     </report>
 
     <report>
@@ -1025,7 +1025,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Public.Migrated</heading>
-        <query>SELECT COUNT(aun.id), pub::TEXT, x_migrate::TEXT FROM actor_usr_note_legacy aun GROUP BY 2, 3</query>
+        <query>SELECT COUNT(aun.id), pub::TEXT, x_migrate::TEXT FROM m_actor_usr_note_legacy aun GROUP BY 2, 3</query>
     </report>
 
     <report>
@@ -1034,7 +1034,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Count.Public</heading>
-        <query>SELECT COUNT(aun.id), pub::TEXT FROM actor_usr_note aun GROUP BY 2</query>
+        <query>SELECT COUNT(aun.id), pub::TEXT FROM m_actor_usr_note aun GROUP BY 2</query>
     </report>
 
     <report>
@@ -1043,7 +1043,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Stat Cat Count.Library.Statistical Category.Migrated</heading>
-        <query>SELECT COUNT(au_sc.id), aou.name, au_sc.name, au_sc.x_migrate::TEXT FROM actor_stat_cat_legacy au_sc JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
+        <query>SELECT COUNT(au_sc.id), aou.name, au_sc.name, au_sc.x_migrate::TEXT FROM m_actor_stat_cat_legacy au_sc JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3, 4 ORDER BY 2, 3, 4</query>
     </report>
 
     <report>
@@ -1052,7 +1052,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Stat Cat Count.Library.Statistical Category</heading>
-        <query>SELECT COUNT(au_sc.id), aou.name, au_sc.name FROM actor_stat_cat au_sc JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(au_sc.id), aou.name, au_sc.name FROM m_actor_stat_cat au_sc JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
@@ -1061,7 +1061,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Patron Stat Count.Library.Statistical Category.Migrated</heading>
-        <query>SELECT COUNT(map.id), aou.name, au_sc.name, map.x_migrate::TEXT FROM actor_stat_cat_entry_usr_map_legacy map JOIN actor_stat_cat_legacy au_sc ON au_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3, 4 ORDER BY 2,3, 4</query>
+        <query>SELECT COUNT(map.id), aou.name, au_sc.name, map.x_migrate::TEXT FROM m_actor_stat_cat_entry_usr_map_legacy map JOIN m_actor_stat_cat_legacy au_sc ON au_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3, 4 ORDER BY 2,3, 4</query>
     </report>
 
     <report>
@@ -1070,7 +1070,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Patron Stat Count.Library.Statistical Category</heading>
-        <query>SELECT COUNT(map.id), aou.name, au_sc.name FROM actor_stat_cat_entry_usr_map map JOIN actor_stat_cat au_sc ON au_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3 ORDER BY 2,3</query>
+        <query>SELECT COUNT(map.id), aou.name, au_sc.name FROM m_actor_stat_cat_entry_usr_map map JOIN m_actor_stat_cat au_sc ON au_sc.id = map.stat_cat JOIN actor.org_unit aou ON aou.id = au_sc.owner GROUP BY 2, 3 ORDER BY 2,3</query>
     </report>
 
     <report>
@@ -1090,9 +1090,9 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Setting.Value</heading>
-        <query>SELECT COUNT(*), name, 'User''s Phone' FROM actor_usr_setting WHERE name IN ('opac.default_phone') GROUP BY 2, 3 
-			UNION ALL SELECT COUNT(*), name, value FROM actor_usr_setting WHERE name IN ('opac.hold_notify') GROUP BY 2, 3 
-			UNION ALL SELECT COUNT(*), a.name, aou.shortname FROM actor_usr_setting a JOIN actor.org_unit aou ON aou.id = REPLACE(a.value,'"','')::INTEGER 
+        <query>SELECT COUNT(*), name, 'User''s Phone' FROM m_actor_usr_setting WHERE name IN ('opac.default_phone') GROUP BY 2, 3 
+			UNION ALL SELECT COUNT(*), name, value FROM m_actor_usr_setting WHERE name IN ('opac.hold_notify') GROUP BY 2, 3 
+			UNION ALL SELECT COUNT(*), a.name, aou.shortname FROM m_actor_usr_setting a JOIN actor.org_unit aou ON aou.id = REPLACE(a.value,'"','')::INTEGER 
 				WHERE a.name IN ('opac.default_pickup_location','opac.default_search_location') GROUP BY 2, 3 ORDER BY 2, 3;</query>
     </report>
 
@@ -1103,7 +1103,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>acq</tag>
         <report_title>Migrated Funds</report_title>
         <heading>Number of Funds.Migrated</heading>
-        <query>SELECT COUNT(id), x_migrate::TEXT FROM acq_fund_legacy GROUP BY 2;</query>
+        <query>SELECT COUNT(id), x_migrate::TEXT FROM m_acq_fund_legacy GROUP BY 2;</query>
     </report>
 
     <report>                                                                        
@@ -1112,7 +1112,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>acq</tag>
         <report_title>Migrated Funds</report_title>
         <heading>Number of Funds</heading>
-        <query>SELECT COUNT(id) FROM acq_fund;</query>
+        <query>SELECT COUNT(id) FROM m_acq_fund;</query>
     </report>
 
     <report>
@@ -1121,7 +1121,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>acq</tag>
         <report_title>Migrated Invoices</report_title>
         <heading>Number of Invoices.Migrated</heading>
-        <query>SELECT COUNT(id), x_migrate::TEXT FROM acq_invoice_legacy GROUP BY 2;</query>
+        <query>SELECT COUNT(id), x_migrate::TEXT FROM m_acq_invoice_legacy GROUP BY 2;</query>
     </report>
 
     <report>
@@ -1130,7 +1130,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>acq</tag>
         <report_title>Migrated Invoices</report_title>
         <heading>Number of Funds</heading>
-        <query>SELECT COUNT(id) FROM acq_invoice;</query>
+        <query>SELECT COUNT(id) FROM m_acq_invoice;</query>
     </report>    
 
     <!-- SERIALS REPORTS -->
@@ -1140,7 +1140,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <iteration>0</iteration>
         <report_title>Migrated Serial MFHDs</report_title>
         <heading>Number of MFHDs</heading>
-        <query>SELECT COUNT(id) FROM serial_record_entry</query>
+        <query>SELECT COUNT(id) FROM m_serial_record_entry</query>
     </report>
 
     <!-- DEDUPE REPORTS -->
@@ -1208,10 +1208,10 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <report_title>Action Triggers Setup for Notices</report_title>
         <heading>ID.Active.Owner.Name</heading>
         <query>SELECT ed.id, ed.active, aou.shortname, ed.name
-            FROM action_trigger.event_definition ed 
+            FROM m_action_trigger.event_definition ed 
             JOIN actor.org_unit aou ON aou.id = ed.owner 
-            WHERE ed.owner IN (SELECT DISTINCT home_ou FROM actor_usr)
-            OR ed.owner IN (SELECT DISTINCT parent_ou FROM actor.org_unit WHERE id in (SELECT DISTINCT home_ou FROM actor_usr));
+            WHERE ed.owner IN (SELECT DISTINCT home_ou FROM m_actor_usr)
+            OR ed.owner IN (SELECT DISTINCT parent_ou FROM actor.org_unit WHERE id in (SELECT DISTINCT home_ou FROM m_actor_usr));
         </query>
     </report>
 
@@ -1222,11 +1222,11 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <report_title>Count of Notices Run with State</report_title>
         <heading>Count of Notices.State.ID.Owner.Name</heading>
         <query>SELECT COUNT(ate.id), ate.state, ed.id, aou.shortname, ed.name 
-            FROM action_trigger.event_definition ed 
+            FROM m_action_trigger.event_definition ed 
             JOIN actor.org_unit aou ON aou.id = ed.owner 
-            JOIN action_trigger.event ate ON ate.event_def = ed.id 
-            WHERE ed.owner IN (SELECT DISTINCT home_ou FROM actor_usr)
-            OR ed.owner IN (SELECT DISTINCT parent_ou FROM actor.org_unit WHERE id in (SELECT DISTINCT home_ou FROM actor_usr))
+            JOIN m_action_trigger.event ate ON ate.event_def = ed.id 
+            WHERE ed.owner IN (SELECT DISTINCT home_ou FROM m_actor_usr)
+            OR ed.owner IN (SELECT DISTINCT parent_ou FROM actor.org_unit WHERE id in (SELECT DISTINCT home_ou FROM m_actor_usr))
             GROUP BY 2,3,4;
         </query>
     </report>

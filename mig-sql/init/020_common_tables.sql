@@ -158,7 +158,7 @@ CREATE TABLE map_create_shelving_location (
     ,l_note               TEXT
     ,x_migrate            BOOLEAN NOT NULL DEFAULT TRUE
     ,x_shelf              INTEGER
-) INHERITS (asset_copy_location);
+) INHERITS (m_asset_copy_location);
 
 INSERT INTO gsheet_tracked_table 
     (sheet_name,table_name,tab_name,created)
