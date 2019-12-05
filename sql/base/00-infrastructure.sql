@@ -115,7 +115,7 @@ CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_from (TEXT
     BEGIN
         create_sql := 'CREATE TABLE ' || migration_schema || '.' || parent_table || '_legacy ( ';
         FOR columns IN
-            SELECT table_schema, table_name, column_name, data_type
+            SELECT table_schema, table_name, column_name, data_type, numeric_precision, numeric_scale
             FROM information_schema.columns
             WHERE table_schema = migration_schema AND table_name = source_table
         LOOP
@@ -127,6 +127,8 @@ CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_from (TEXT
             create_sql := create_sql || columns.column_name || ' ';
             if columns.data_type = 'ARRAY' then
                 create_sql := create_sql || 'TEXT[]';
+            elsif columns.data_type = 'numeric' then
+                create_sql := create_sql || 'NUMERIC('||columns.numeric_precision||','||columns.numeric_scale||')';
             else
                 create_sql := create_sql || columns.data_type;
             end if;
