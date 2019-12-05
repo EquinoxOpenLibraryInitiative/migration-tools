@@ -144,7 +144,7 @@ CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_from (TEXT
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
 -- creates other child table so you can have more than one child table in a schema from a base table 
-CREATE OR REPLACE FUNCTION build_variant_staging_table(text, text, text)
+CREATE OR REPLACE FUNCTION migration_tools.build_variant_staging_table(text, text, text)
  RETURNS void
  LANGUAGE plpgsql
  STRICT
