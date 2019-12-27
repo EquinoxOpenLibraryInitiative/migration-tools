@@ -60,8 +60,8 @@ pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $append = 0;
-my $base_table = 'biblio_record_entry';
-my $stage_table = 'biblio_record_entry_legacy';
+my $base_table = 'm_biblio_record_entry';
+my $stage_table = 'm_biblio_record_entry_legacy';
 my $auth = '';
 my $serial = '';
 my $source = 2;
@@ -86,13 +86,13 @@ my $ret = GetOptions(
 #if auth and serial = 1 fail 
 
 if ($serial == 1) { 
-    $base_table = 'authority_record_entry';
-    $stage_table = 'authority_record_entry_legacy';
+    $base_table = 'm_authority_record_entry';
+    $stage_table = 'm_authority_record_entry_legacy';
 }
 
 if ($auth == 1) {
-    $base_table = 'serial_record_entry';
-    $stage_table = 'serial_record_entry_legacy';	
+    $base_table = 'm_serial_record_entry';
+    $stage_table = 'm_serial_record_entry_legacy';	
 }
 
 if ($auth == 1 and $serial == 1) { abort('are you sure you want to load these as authorities and serials?'); }
