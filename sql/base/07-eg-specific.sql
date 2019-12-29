@@ -86,7 +86,7 @@ CREATE OR REPLACE FUNCTION migration_tools.apply_circ_matrix( tablename TEXT ) R
 --   circ_lib, target_copy, usr, and *_renewal).  User profiles and
 --   circ modifiers must also be in place.
 --
---   SELECT migration_tools.apply_circ_matrix('m_pioneer.action_circulation');
+--   SELECT migration_tools.apply_circ_matrix('m_pioneer.m_action_circulation');
 --
 
 DECLARE
@@ -191,7 +191,7 @@ CREATE OR REPLACE FUNCTION migration_tools.apply_circ_matrix_to_specific_circ( t
 --   circ_lib, target_copy, usr, and *_renewal).  User profiles and
 --   circ modifiers must also be in place.
 --
---   SELECT migration_tools.apply_circ_matrix_to_specific_circ('m_nwrl.action_circulation', 18391960);
+--   SELECT migration_tools.apply_circ_matrix_to_specific_circ('m_nwrl.m_action_circulation', 18391960);
 --
 
 DECLARE
@@ -356,12 +356,12 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION migration_tools.create_cards( schemaname TEXT ) RETURNS VOID AS $$
 
--- USAGE: Make sure the patrons are staged in schemaname.actor_usr_legacy and have 'usrname' assigned.
+-- USAGE: Make sure the patrons are staged in schemaname.m_actor_usr_legacy and have 'usrname' assigned.
 --        Then SELECT migration_tools.create_cards('m_foo');
 
 DECLARE
-	u                    TEXT := schemaname || '.actor_usr_legacy';
-	c                    TEXT := schemaname || '.actor_card';
+	u                    TEXT := schemaname || '.m_actor_usr_legacy';
+	c                    TEXT := schemaname || '.m_actor_card';
   
 BEGIN
 
@@ -461,42 +461,42 @@ CREATE OR REPLACE FUNCTION migration_tools.simple_export_library_config(dir TEXT
 BEGIN
    EXECUTE $$COPY (SELECT * FROM actor.hours_of_operation WHERE id IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/actor_hours_of_operation'$$;
+           $$) TO '$$ ||  dir || $$/m_actor_hours_of_operation'$$;
    EXECUTE $$COPY (SELECT org_unit, close_start, close_end, reason FROM actor.org_unit_closed WHERE org_unit IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/actor_org_unit_closed'$$;
+           $$) TO '$$ ||  dir || $$/m_actor_org_unit_closed'$$;
    EXECUTE $$COPY (SELECT org_unit, name, value FROM actor.org_unit_setting WHERE org_unit IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/actor_org_unit_setting'$$;
+           $$) TO '$$ ||  dir || $$/m_actor_org_unit_setting'$$;
    EXECUTE $$COPY (SELECT name, owning_lib, holdable, hold_verify, opac_visible, circulate FROM asset.copy_location WHERE owning_lib IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/asset_copy_location'$$;
+           $$) TO '$$ ||  dir || $$/m_asset_copy_location'$$;
    EXECUTE $$COPY (SELECT grp, org_unit, penalty, threshold FROM permission.grp_penalty_threshold WHERE org_unit IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/permission_grp_penalty_threshold'$$;
+           $$) TO '$$ ||  dir || $$/m_permission_grp_penalty_threshold'$$;
    EXECUTE $$COPY (SELECT owning_lib, label, label_sortkey FROM asset.call_number_prefix WHERE owning_lib IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/asset_call_number_prefix'$$;
+           $$) TO '$$ ||  dir || $$/m_asset_call_number_prefix'$$;
    EXECUTE $$COPY (SELECT owning_lib, label, label_sortkey FROM asset.call_number_suffix WHERE owning_lib IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/asset_call_number_suffix'$$;
-   EXECUTE $$COPY config.rule_circ_duration TO '$$ ||  dir || $$/config_rule_circ_duration'$$;
-   EXECUTE $$COPY config.rule_age_hold_protect TO '$$ ||  dir || $$/config_rule_age_hold_protect'$$;
-   EXECUTE $$COPY config.rule_max_fine TO '$$ ||  dir || $$/config_rule_max_fine'$$;
-   EXECUTE $$COPY config.rule_recurring_fine TO '$$ ||  dir || $$/config_rule_recurring_fine'$$;
-   EXECUTE $$COPY permission.grp_tree TO '$$ ||  dir || $$/permission_grp_tree'$$;
+           $$) TO '$$ ||  dir || $$/m_asset_call_number_suffix'$$;
+   EXECUTE $$COPY config.rule_circ_duration TO '$$ ||  dir || $$/m_config_rule_circ_duration'$$;
+   EXECUTE $$COPY config.rule_age_hold_protect TO '$$ ||  dir || $$/m_config_rule_age_hold_protect'$$;
+   EXECUTE $$COPY config.rule_max_fine TO '$$ ||  dir || $$/m_config_rule_max_fine'$$;
+   EXECUTE $$COPY config.rule_recurring_fine TO '$$ ||  dir || $$/m_config_rule_recurring_fine'$$;
+   EXECUTE $$COPY permission.grp_tree TO '$$ ||  dir || $$/m_permission_grp_tree'$$;
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
 CREATE OR REPLACE FUNCTION migration_tools.simple_import_library_config(dir TEXT) RETURNS VOID AS $FUNC$
 BEGIN
-   EXECUTE $$COPY actor.hours_of_operation FROM '$$ ||  dir || $$/actor_hours_of_operation'$$;
-   EXECUTE $$COPY actor.org_unit_closed (org_unit, close_start, close_end, reason) FROM '$$ ||  dir || $$/actor_org_unit_closed'$$;
-   EXECUTE $$COPY actor.org_unit_setting (org_unit, name, value) FROM '$$ ||  dir || $$/actor_org_unit_setting'$$;
-   EXECUTE $$COPY asset.copy_location (name, owning_lib, holdable, hold_verify, opac_visible, circulate) FROM '$$ ||  dir || $$/asset_copy_location'$$;
-   EXECUTE $$COPY permission.grp_penalty_threshold (grp, org_unit, penalty, threshold) FROM '$$ ||  dir || $$/permission_grp_penalty_threshold'$$;
-   EXECUTE $$COPY asset.call_number_prefix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_prefix'$$;
-   EXECUTE $$COPY asset.call_number_suffix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_suffix'$$;
+   EXECUTE $$COPY actor.hours_of_operation FROM '$$ ||  dir || $$/m_actor_hours_of_operation'$$;
+   EXECUTE $$COPY actor.org_unit_closed (org_unit, close_start, close_end, reason) FROM '$$ ||  dir || $$/m_actor_org_unit_closed'$$;
+   EXECUTE $$COPY actor.org_unit_setting (org_unit, name, value) FROM '$$ ||  dir || $$/m_actor_org_unit_setting'$$;
+   EXECUTE $$COPY asset.copy_location (name, owning_lib, holdable, hold_verify, opac_visible, circulate) FROM '$$ ||  dir || $$/m_asset_copy_location'$$;
+   EXECUTE $$COPY permission.grp_penalty_threshold (grp, org_unit, penalty, threshold) FROM '$$ ||  dir || $$/m_permission_grp_penalty_threshold'$$;
+   EXECUTE $$COPY asset.call_number_prefix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/m_asset_call_number_prefix'$$;
+   EXECUTE $$COPY asset.call_number_suffix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/m_asset_call_number_suffix'$$;
 
    -- import any new circ rules
    PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_circ_duration', 'id', 'name');
@@ -893,7 +893,7 @@ CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER
         IF x_org_found THEN
             RAISE INFO 'Found x_org column';
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = b.id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM m_asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = x_org'
                 || ' AND NOT b.deleted';
@@ -906,13 +906,13 @@ CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER
         ELSE
             RAISE INFO 'Did not find x_org column';
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = b.id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM m_asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1'
                 || ' AND NOT b.deleted'
             USING org;
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_shelf = b.id FROM asset_copy_location b'
+                || ' SET x_shelf = b.id FROM m_asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
                 || ' AND b.owning_lib = $1'
                 || ' AND x_shelf IS NULL'
@@ -1263,7 +1263,7 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_actor_sc_and_sce (TEXT,TEXT,
         SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
 
         -- caller responsible for their own truncates though we try to prevent duplicates
-        EXECUTE 'INSERT INTO actor_stat_cat (owner, name)
+        EXECUTE 'INSERT INTO m_actor_stat_cat (owner, name)
             SELECT DISTINCT
                  $1
                 ,BTRIM('||sc||')
@@ -1279,14 +1279,14 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_actor_sc_and_sce (TEXT,TEXT,
                 )
                 AND NOT EXISTS (
                     SELECT id
-                    FROM actor_stat_cat
+                    FROM m_actor_stat_cat
                     WHERE owner = ANY ($2)
                     AND name = BTRIM('||sc||')
                 )
             ORDER BY 2;'
         USING org, org_list;
 
-        EXECUTE 'INSERT INTO actor_stat_cat_entry (stat_cat, owner, value)
+        EXECUTE 'INSERT INTO m_actor_stat_cat_entry (stat_cat, owner, value)
             SELECT DISTINCT
                 COALESCE(
                     (SELECT id
@@ -1294,7 +1294,7 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_actor_sc_and_sce (TEXT,TEXT,
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name))
                    ,(SELECT id
-                        FROM actor_stat_cat
+                        FROM m_actor_stat_cat
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name))
                 )
@@ -1318,10 +1318,10 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_actor_sc_and_sce (TEXT,TEXT,
                 )
                 AND NOT EXISTS (
                     SELECT id
-                    FROM actor_stat_cat_entry
+                    FROM m_actor_stat_cat_entry
                     WHERE stat_cat = (
                         SELECT id
-                        FROM actor_stat_cat
+                        FROM m_actor_stat_cat
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name)
                     ) AND value = BTRIM('||sce||')
@@ -1393,7 +1393,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_actor_sc_and_sce (TEXT,TEXT,TE
             SET
                 x_sc' || field_suffix || ' = id
             FROM
-                (SELECT id, name, owner FROM actor_stat_cat
+                (SELECT id, name, owner FROM m_actor_stat_cat
                     UNION SELECT id, name, owner FROM actor.stat_cat) u
             WHERE
                     BTRIM(UPPER(u.name)) = BTRIM(UPPER(' || sc || '))
@@ -1404,7 +1404,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_actor_sc_and_sce (TEXT,TEXT,TE
             SET
                 x_sce' || field_suffix || ' = id
             FROM
-                (SELECT id, stat_cat, owner, value FROM actor_stat_cat_entry
+                (SELECT id, stat_cat, owner, value FROM m_actor_stat_cat_entry
                     UNION SELECT id, stat_cat, owner, value FROM actor.stat_cat_entry) u
             WHERE
                     u.stat_cat = x_sc' || field_suffix || '
@@ -1465,7 +1465,7 @@ BEGIN
         SELECT INTO cur_id id FROM actor.org_unit_ancestor_at_depth(org_id,d);
         
         SELECT INTO return_id id FROM 
-            (SELECT * FROM asset.copy_location UNION ALL SELECT * FROM asset_copy_location) x
+            (SELECT * FROM asset.copy_location UNION ALL SELECT * FROM m_asset_copy_location) x
             WHERE owning_lib = cur_id AND name ILIKE shelf_name;
         IF return_id IS NOT NULL THEN
                 RETURN return_id;
@@ -1503,11 +1503,11 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_item_barcode (TEXT,TEXT,TEXT,T
             SELECT 1
             FROM information_schema.columns
             WHERE table_schema = $1
-            AND table_name = ''asset_copy_legacy''
+            AND table_name = ''m_asset_copy_legacy''
             and column_name = $2
         )' INTO proceed USING table_schema, main_column_name;
         IF NOT proceed THEN
-            RAISE EXCEPTION 'No %.asset_copy_legacy with column %', table_schema, main_column_name; 
+            RAISE EXCEPTION 'No %.m_asset_copy_legacy with column %', table_schema, main_column_name; 
         END IF;
 
         EXECUTE 'ALTER TABLE '
@@ -1519,12 +1519,12 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_item_barcode (TEXT,TEXT,TEXT,T
 
         IF btrim_desired THEN
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_item = b.id FROM asset_copy_legacy b'
+                || ' SET x_item = b.id FROM m_asset_copy_legacy b'
                 || ' WHERE BTRIM(a.' || quote_ident(foreign_column_name)
                 || ') = BTRIM(b.' || quote_ident(main_column_name) || ')';
         ELSE
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_item = b.id FROM asset_copy_legacy b'
+                || ' SET x_item = b.id FROM m_asset_copy_legacy b'
                 || ' WHERE a.' || quote_ident(foreign_column_name)
                 || ' = b.' || quote_ident(main_column_name);
         END IF;
@@ -1564,11 +1564,11 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_user_barcode (TEXT,TEXT,TEXT,T
             SELECT 1
             FROM information_schema.columns
             WHERE table_schema = $1
-            AND table_name = ''actor_usr_legacy''
+            AND table_name = ''m_actor_usr_legacy''
             and column_name = $2
         )' INTO proceed USING table_schema, main_column_name;
         IF NOT proceed THEN
-            RAISE EXCEPTION 'No %.actor_usr_legacy with column %', table_schema, main_column_name; 
+            RAISE EXCEPTION 'No %.m_actor_usr_legacy with column %', table_schema, main_column_name; 
         END IF;
 
         EXECUTE 'ALTER TABLE '
@@ -1580,12 +1580,12 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_user_barcode (TEXT,TEXT,TEXT,T
 
         IF btrim_desired THEN
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_user = b.id FROM actor_usr_legacy b'
+                || ' SET x_user = b.id FROM m_actor_usr_legacy b'
                 || ' WHERE BTRIM(a.' || quote_ident(foreign_column_name)
                 || ') = BTRIM(b.' || quote_ident(main_column_name) || ')';
         ELSE
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
-                || ' SET x_user = b.id FROM actor_usr_legacy b'
+                || ' SET x_user = b.id FROM m_actor_usr_legacy b'
                 || ' WHERE a.' || quote_ident(foreign_column_name)
                 || ' = b.' || quote_ident(main_column_name);
         END IF;
@@ -1645,7 +1645,7 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_asset_sc_and_sce (TEXT,TEXT,
         SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
 
         -- caller responsible for their own truncates though we try to prevent duplicates
-        EXECUTE 'INSERT INTO asset_stat_cat (owner, name)
+        EXECUTE 'INSERT INTO m_asset_stat_cat (owner, name)
             SELECT DISTINCT
                  $1
                 ,BTRIM('||sc||')
@@ -1661,14 +1661,14 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_asset_sc_and_sce (TEXT,TEXT,
                 )
                 AND NOT EXISTS (
                     SELECT id
-                    FROM asset_stat_cat
+                    FROM m_asset_stat_cat
                     WHERE owner = ANY ($2)
                     AND name = BTRIM('||sc||')
                 )
             ORDER BY 2;'
         USING org, org_list;
 
-        EXECUTE 'INSERT INTO asset_stat_cat_entry (stat_cat, owner, value)
+        EXECUTE 'INSERT INTO m_asset_stat_cat_entry (stat_cat, owner, value)
             SELECT DISTINCT
                 COALESCE(
                     (SELECT id
@@ -1676,7 +1676,7 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_asset_sc_and_sce (TEXT,TEXT,
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name))
                    ,(SELECT id
-                        FROM asset_stat_cat
+                        FROM m_asset_stat_cat
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name))
                 )
@@ -1700,10 +1700,10 @@ CREATE OR REPLACE FUNCTION migration_tools.vivicate_asset_sc_and_sce (TEXT,TEXT,
                 )
                 AND NOT EXISTS (
                     SELECT id
-                    FROM asset_stat_cat_entry
+                    FROM m_asset_stat_cat_entry
                     WHERE stat_cat = (
                         SELECT id
-                        FROM asset_stat_cat
+                        FROM m_asset_stat_cat
                         WHERE owner = ANY ($2)
                         AND BTRIM('||sc||') = BTRIM(name)
                     ) AND value = BTRIM('||sce||')
@@ -1775,7 +1775,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_asset_sc_and_sce (TEXT,TEXT,TE
             SET
                 x_sc' || field_suffix || ' = id
             FROM
-                (SELECT id, name, owner FROM asset_stat_cat
+                (SELECT id, name, owner FROM m_asset_stat_cat
                     UNION SELECT id, name, owner FROM asset.stat_cat) u
             WHERE
                     BTRIM(UPPER(u.name)) = BTRIM(UPPER(' || sc || '))
@@ -1786,7 +1786,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_asset_sc_and_sce (TEXT,TEXT,TE
             SET
                 x_sce' || field_suffix || ' = id
             FROM
-                (SELECT id, stat_cat, owner, value FROM asset_stat_cat_entry
+                (SELECT id, stat_cat, owner, value FROM m_asset_stat_cat_entry
                     UNION SELECT id, stat_cat, owner, value FROM asset.stat_cat_entry) u
             WHERE
                     u.stat_cat = x_sc' || field_suffix || '
@@ -1809,7 +1809,7 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_asset_sc_and_sce (TEXT,TEXT,TE
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
--- convenience function for handling item barcode collisions in asset_copy_legacy
+-- convenience function for handling item barcode collisions in m_asset_copy_legacy
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_asset_barcode_collisions(migration_schema TEXT) RETURNS VOID AS $function$
 DECLARE
@@ -1819,21 +1819,21 @@ DECLARE
     internal_collision_count NUMERIC := 0;
     incumbent_collision_count NUMERIC := 0;
 BEGIN
-    FOR x_barcode IN SELECT barcode FROM asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    FOR x_barcode IN SELECT barcode FROM m_asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
     LOOP
-        FOR x_id IN SELECT id FROM asset_copy WHERE barcode = x_barcode
+        FOR x_id IN SELECT id FROM m_asset_copy WHERE barcode = x_barcode
         LOOP
-            UPDATE asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
+            UPDATE m_asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             internal_collision_count := internal_collision_count + row_count;
         END LOOP;
     END LOOP;
     RAISE INFO '% internal collisions', internal_collision_count;
-    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
+    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, m_asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
     LOOP
-        FOR x_id IN SELECT id FROM asset_copy_legacy WHERE barcode = x_barcode
+        FOR x_id IN SELECT id FROM m_asset_copy_legacy WHERE barcode = x_barcode
         LOOP
-            UPDATE asset_copy_legacy SET barcode = migration_schema || '_incumbent_collision_' || id || '_' || barcode WHERE id = x_id;
+            UPDATE m_asset_copy_legacy SET barcode = migration_schema || '_incumbent_collision_' || id || '_' || barcode WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_collision_count := incumbent_collision_count + row_count;
         END LOOP;
@@ -1842,8 +1842,8 @@ BEGIN
 END
 $function$ LANGUAGE plpgsql;
 
--- convenience function for handling patron barcode/usrname collisions in actor_usr_legacy
--- this should be ran prior to populating actor_card
+-- convenience function for handling patron barcode/usrname collisions in m_actor_usr_legacy
+-- this should be ran prior to populating m_actor_card
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_actor_barcode_collisions(migration_schema TEXT) RETURNS VOID AS $function$
 DECLARE
@@ -1854,11 +1854,11 @@ DECLARE
     incumbent_barcode_collision_count NUMERIC := 0;
     incumbent_usrname_collision_count NUMERIC := 0;
 BEGIN
-    FOR x_barcode IN SELECT usrname FROM actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    FOR x_barcode IN SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
     LOOP
-        FOR x_id IN SELECT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR x_id IN SELECT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
         LOOP
-            UPDATE actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             internal_collision_count := internal_collision_count + row_count;
         END LOOP;
@@ -1866,11 +1866,11 @@ BEGIN
     RAISE INFO '% internal usrname/barcode collisions', internal_collision_count;
 
     FOR x_barcode IN
-        SELECT a.barcode FROM actor.card a, actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
+        SELECT a.barcode FROM actor.card a, m_actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
     LOOP
-        FOR x_id IN SELECT DISTINCT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
         LOOP
-            UPDATE actor_usr_legacy SET usrname = migration_schema || '_incumbent_barcode_collision_' || id || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_incumbent_barcode_collision_' || id || '_' || usrname WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_barcode_collision_count := incumbent_barcode_collision_count + row_count;
         END LOOP;
@@ -1878,11 +1878,11 @@ BEGIN
     RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
 
     FOR x_barcode IN
-        SELECT a.usrname FROM actor.usr a, actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
+        SELECT a.usrname FROM actor.usr a, m_actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
     LOOP
-        FOR x_id IN SELECT DISTINCT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
         LOOP
-            UPDATE actor_usr_legacy SET usrname = migration_schema || '_incumbent_usrname_collision_' || id || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_incumbent_usrname_collision_' || id || '_' || usrname WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_usrname_collision_count := incumbent_usrname_collision_count + row_count;
         END LOOP;
@@ -1891,7 +1891,7 @@ BEGIN
 END
 $function$ LANGUAGE plpgsql;
 
--- alternate version: convenience function for handling item barcode collisions in asset_copy_legacy
+-- alternate version: convenience function for handling item barcode collisions in m_asset_copy_legacy
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_asset_barcode_collisions2(migration_schema TEXT) RETURNS VOID AS $function$
 DECLARE
@@ -1901,21 +1901,21 @@ DECLARE
     internal_collision_count NUMERIC := 0;
     incumbent_collision_count NUMERIC := 0;
 BEGIN
-    FOR x_barcode IN SELECT barcode FROM asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    FOR x_barcode IN SELECT barcode FROM m_asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
     LOOP
-        FOR x_id IN SELECT id FROM asset_copy WHERE barcode = x_barcode
+        FOR x_id IN SELECT id FROM m_asset_copy WHERE barcode = x_barcode
         LOOP
-            UPDATE asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
+            UPDATE m_asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             internal_collision_count := internal_collision_count + row_count;
         END LOOP;
     END LOOP;
     RAISE INFO '% internal collisions', internal_collision_count;
-    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
+    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, m_asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
     LOOP
-        FOR x_id IN SELECT id FROM asset_copy_legacy WHERE barcode = x_barcode
+        FOR x_id IN SELECT id FROM m_asset_copy_legacy WHERE barcode = x_barcode
         LOOP
-            UPDATE asset_copy_legacy SET barcode = migration_schema || '_' || barcode WHERE id = x_id;
+            UPDATE m_asset_copy_legacy SET barcode = migration_schema || '_' || barcode WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_collision_count := incumbent_collision_count + row_count;
         END LOOP;
@@ -1924,8 +1924,8 @@ BEGIN
 END
 $function$ LANGUAGE plpgsql;
 
--- alternate version: convenience function for handling patron barcode/usrname collisions in actor_usr_legacy
--- this should be ran prior to populating actor_card
+-- alternate version: convenience function for handling patron barcode/usrname collisions in m_actor_usr_legacy
+-- this should be ran prior to populating m_actor_card
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_actor_barcode_collisions2(migration_schema TEXT) RETURNS VOID AS $function$
 DECLARE
@@ -1936,11 +1936,11 @@ DECLARE
     incumbent_barcode_collision_count NUMERIC := 0;
     incumbent_usrname_collision_count NUMERIC := 0;
 BEGIN
-    FOR x_barcode IN SELECT usrname FROM actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    FOR x_barcode IN SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
     LOOP
-        FOR x_id IN SELECT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR x_id IN SELECT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
         LOOP
-            UPDATE actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             internal_collision_count := internal_collision_count + row_count;
         END LOOP;
@@ -1948,11 +1948,11 @@ BEGIN
     RAISE INFO '% internal usrname/barcode collisions', internal_collision_count;
 
     FOR x_barcode IN
-        SELECT a.barcode FROM actor.card a, actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
+        SELECT a.barcode FROM actor.card a, m_actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
     LOOP
-        FOR x_id IN SELECT DISTINCT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
         LOOP
-            UPDATE actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_barcode_collision_count := incumbent_barcode_collision_count + row_count;
         END LOOP;
@@ -1960,11 +1960,11 @@ BEGIN
     RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
 
     FOR x_barcode IN
-        SELECT a.usrname FROM actor.usr a, actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
+        SELECT a.usrname FROM actor.usr a, m_actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
     LOOP
-        FOR x_id IN SELECT DISTINCT id FROM actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
         LOOP
-            UPDATE actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = x_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_usrname_collision_count := incumbent_usrname_collision_count + row_count;
         END LOOP;
