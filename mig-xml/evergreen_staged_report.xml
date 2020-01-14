@@ -402,7 +402,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode LIKE 'x_%' AND ac.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of copy barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
@@ -422,7 +422,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE barcode LIKE 'x_%' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE barcode LIKE 'x_%' AND ac.x_migrate = TRUE GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
