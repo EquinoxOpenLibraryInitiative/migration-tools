@@ -63,7 +63,7 @@ use open ':encoding(utf8)';
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
-my $analyst;
+my $analyst = 'Equinox Open Library Initiative';;
 my $report_title;
 my $reports_xml = 'evergreen_staged_report.xml';
 my $tags;
@@ -80,6 +80,7 @@ my $fh;
 my $ret = GetOptions(
     'analyst:s'           => \$analyst,
     'report_title:s'      => \$report_title,
+    'title:s'             => \$report_title,
     'reports_xml:s'       => \$reports_xml,
     'tags:s'              => \$tags,
     'added_page_title:s'  => \$added_page_title,
@@ -89,7 +90,7 @@ my $ret = GetOptions(
 );
 
 if (!defined $tags) {$tags = 'circs.holds.actors.bibs.assets.money.notices'};
-if (!defined $report_title) { abort('--report_title must be supplied'); }
+if (!defined $report_title) { abort('--report_title or --title must be supplied'); }
 if (!defined $analyst) { abort('--analyst must be supplied'); }
 
 my $mig_path = abs_path($0);
