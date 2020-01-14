@@ -86,7 +86,7 @@ CREATE OR REPLACE FUNCTION migration_tools.apply_circ_matrix( tablename TEXT ) R
 --   circ_lib, target_copy, usr, and *_renewal).  User profiles and
 --   circ modifiers must also be in place.
 --
---   SELECT migration_tools.apply_circ_matrix('m_pioneer.action_circulation');
+--   SELECT migration_tools.apply_circ_matrix('m_pioneer.m_action_circulation');
 --
 
 DECLARE
@@ -191,7 +191,7 @@ CREATE OR REPLACE FUNCTION migration_tools.apply_circ_matrix_to_specific_circ( t
 --   circ_lib, target_copy, usr, and *_renewal).  User profiles and
 --   circ modifiers must also be in place.
 --
---   SELECT migration_tools.apply_circ_matrix_to_specific_circ('m_nwrl.action_circulation', 18391960);
+--   SELECT migration_tools.apply_circ_matrix_to_specific_circ('m_nwrl.m_action_circulation', 18391960);
 --
 
 DECLARE
@@ -356,12 +356,12 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION migration_tools.create_cards( schemaname TEXT ) RETURNS VOID AS $$
 
--- USAGE: Make sure the patrons are staged in schemaname.actor_usr_legacy and have 'usrname' assigned.
+-- USAGE: Make sure the patrons are staged in schemaname.m_actor_usr_legacy and have 'usrname' assigned.
 --        Then SELECT migration_tools.create_cards('m_foo');
 
 DECLARE
-	u                    TEXT := schemaname || '.actor_usr_legacy';
-	c                    TEXT := schemaname || '.actor_card';
+	u                    TEXT := schemaname || '.m_actor_usr_legacy';
+	c                    TEXT := schemaname || '.m_actor_card';
   
 BEGIN
 
@@ -461,42 +461,42 @@ CREATE OR REPLACE FUNCTION migration_tools.simple_export_library_config(dir TEXT
 BEGIN
    EXECUTE $$COPY (SELECT * FROM actor.hours_of_operation WHERE id IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/actor_hours_of_operation'$$;
+           $$) TO '$$ ||  dir || $$/m_actor_hours_of_operation'$$;
    EXECUTE $$COPY (SELECT org_unit, close_start, close_end, reason FROM actor.org_unit_closed WHERE org_unit IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/actor_org_unit_closed'$$;
+           $$) TO '$$ ||  dir || $$/m_actor_org_unit_closed'$$;
    EXECUTE $$COPY (SELECT org_unit, name, value FROM actor.org_unit_setting WHERE org_unit IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/actor_org_unit_setting'$$;
+           $$) TO '$$ ||  dir || $$/m_actor_org_unit_setting'$$;
    EXECUTE $$COPY (SELECT name, owning_lib, holdable, hold_verify, opac_visible, circulate FROM asset.copy_location WHERE owning_lib IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/asset_copy_location'$$;
+           $$) TO '$$ ||  dir || $$/m_asset_copy_location'$$;
    EXECUTE $$COPY (SELECT grp, org_unit, penalty, threshold FROM permission.grp_penalty_threshold WHERE org_unit IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/permission_grp_penalty_threshold'$$;
+           $$) TO '$$ ||  dir || $$/m_permission_grp_penalty_threshold'$$;
    EXECUTE $$COPY (SELECT owning_lib, label, label_sortkey FROM asset.call_number_prefix WHERE owning_lib IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/asset_call_number_prefix'$$;
+           $$) TO '$$ ||  dir || $$/m_asset_call_number_prefix'$$;
    EXECUTE $$COPY (SELECT owning_lib, label, label_sortkey FROM asset.call_number_suffix WHERE owning_lib IN ($$ ||
            ARRAY_TO_STRING(orgs, ',') || $$)$$ ||
-           $$) TO '$$ ||  dir || $$/asset_call_number_suffix'$$;
-   EXECUTE $$COPY config.rule_circ_duration TO '$$ ||  dir || $$/config_rule_circ_duration'$$;
-   EXECUTE $$COPY config.rule_age_hold_protect TO '$$ ||  dir || $$/config_rule_age_hold_protect'$$;
-   EXECUTE $$COPY config.rule_max_fine TO '$$ ||  dir || $$/config_rule_max_fine'$$;
-   EXECUTE $$COPY config.rule_recurring_fine TO '$$ ||  dir || $$/config_rule_recurring_fine'$$;
-   EXECUTE $$COPY permission.grp_tree TO '$$ ||  dir || $$/permission_grp_tree'$$;
+           $$) TO '$$ ||  dir || $$/m_asset_call_number_suffix'$$;
+   EXECUTE $$COPY config.rule_circ_duration TO '$$ ||  dir || $$/m_config_rule_circ_duration'$$;
+   EXECUTE $$COPY config.rule_age_hold_protect TO '$$ ||  dir || $$/m_config_rule_age_hold_protect'$$;
+   EXECUTE $$COPY config.rule_max_fine TO '$$ ||  dir || $$/m_config_rule_max_fine'$$;
+   EXECUTE $$COPY config.rule_recurring_fine TO '$$ ||  dir || $$/m_config_rule_recurring_fine'$$;
+   EXECUTE $$COPY permission.grp_tree TO '$$ ||  dir || $$/m_permission_grp_tree'$$;
 END;
 $FUNC$ LANGUAGE PLPGSQL;
 
 CREATE OR REPLACE FUNCTION migration_tools.simple_import_library_config(dir TEXT) RETURNS VOID AS $FUNC$
 BEGIN
-   EXECUTE $$COPY actor.hours_of_operation FROM '$$ ||  dir || $$/actor_hours_of_operation'$$;
-   EXECUTE $$COPY actor.org_unit_closed (org_unit, close_start, close_end, reason) FROM '$$ ||  dir || $$/actor_org_unit_closed'$$;
-   EXECUTE $$COPY actor.org_unit_setting (org_unit, name, value) FROM '$$ ||  dir || $$/actor_org_unit_setting'$$;
-   EXECUTE $$COPY asset.copy_location (name, owning_lib, holdable, hold_verify, opac_visible, circulate) FROM '$$ ||  dir || $$/asset_copy_location'$$;
-   EXECUTE $$COPY permission.grp_penalty_threshold (grp, org_unit, penalty, threshold) FROM '$$ ||  dir || $$/permission_grp_penalty_threshold'$$;
-   EXECUTE $$COPY asset.call_number_prefix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_prefix'$$;
-   EXECUTE $$COPY asset.call_number_suffix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/asset_call_number_suffix'$$;
+   EXECUTE $$COPY actor.hours_of_operation FROM '$$ ||  dir || $$/m_actor_hours_of_operation'$$;
+   EXECUTE $$COPY actor.org_unit_closed (org_unit, close_start, close_end, reason) FROM '$$ ||  dir || $$/m_actor_org_unit_closed'$$;
+   EXECUTE $$COPY actor.org_unit_setting (org_unit, name, value) FROM '$$ ||  dir || $$/m_actor_org_unit_setting'$$;
+   EXECUTE $$COPY asset.copy_location (name, owning_lib, holdable, hold_verify, opac_visible, circulate) FROM '$$ ||  dir || $$/m_asset_copy_location'$$;
+   EXECUTE $$COPY permission.grp_penalty_threshold (grp, org_unit, penalty, threshold) FROM '$$ ||  dir || $$/m_permission_grp_penalty_threshold'$$;
+   EXECUTE $$COPY asset.call_number_prefix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/m_asset_call_number_prefix'$$;
+   EXECUTE $$COPY asset.call_number_suffix (owning_lib, label, label_sortkey) FROM '$$ ||  dir || $$/m_asset_call_number_suffix'$$;
 
    -- import any new circ rules
    PERFORM migration_tools.simple_import_new_rows_by_value(dir, 'config', 'rule_circ_duration', 'id', 'name');
@@ -816,3 +816,1347 @@ CREATE OR REPLACE FUNCTION migration_tools.find_circ_matrix_matchpoint (INTEGER)
         )
     );
 $$ LANGUAGE SQL;
+
+-- set a new salted password
+
+CREATE OR REPLACE FUNCTION migration_tools.set_salted_passwd(INTEGER,TEXT) RETURNS BOOLEAN AS $$
+    DECLARE
+        usr_id              ALIAS FOR $1;
+        plain_passwd        ALIAS FOR $2;
+        plain_salt          TEXT;
+        md5_passwd          TEXT;
+    BEGIN
+
+        SELECT actor.create_salt('main') INTO plain_salt;
+
+        SELECT MD5(plain_passwd) INTO md5_passwd;
+        
+        PERFORM actor.set_passwd(usr_id, 'main', MD5(plain_salt || md5_passwd), plain_salt);
+
+        RETURN TRUE;
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- internal function for handle_shelf
+
+CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER,BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        org_shortname ALIAS FOR $3;
+        org_range ALIAS FOR $4;
+        make_assertion ALIAS FOR $5;
+        proceed BOOLEAN;
+        org INTEGER;
+        -- if x_org is on the mapping table, it'll take precedence over the passed org_shortname param
+        -- though we'll still use the passed org for the full path traversal when needed
+        x_org_found BOOLEAN;
+        x_org INTEGER;
+        org_list INTEGER[];
+        o INTEGER;
+        row_count NUMERIC;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_shelf''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_shelf';
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''x_org''
+        )' INTO x_org_found USING table_schema, table_name;
+
+        SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
+        IF org IS NULL THEN
+            RAISE EXCEPTION 'Cannot find org by shortname';
+        END IF;
+
+        SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_shelf';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_shelf INTEGER';
+
+        IF x_org_found THEN
+            RAISE INFO 'Found x_org column';
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = b.id FROM m_asset_copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = x_org'
+                || ' AND NOT b.deleted';
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = b.id FROM asset.copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = x_org'
+                || ' AND x_shelf IS NULL'
+                || ' AND NOT b.deleted';
+        ELSE
+            RAISE INFO 'Did not find x_org column';
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = b.id FROM m_asset_copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = $1'
+                || ' AND NOT b.deleted'
+            USING org;
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = b.id FROM m_asset_copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = $1'
+                || ' AND x_shelf IS NULL'
+                || ' AND NOT b.deleted'
+            USING org;
+        END IF;
+
+        FOREACH o IN ARRAY org_list LOOP
+            RAISE INFO 'Considering org %', o;
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_shelf = b.id FROM asset.copy_location b'
+                || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND b.owning_lib = $1 AND x_shelf IS NULL'
+                || ' AND NOT b.deleted'
+            USING o;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            RAISE INFO 'Updated % rows', row_count;
+        END LOOP;
+
+        IF make_assertion THEN
+            EXECUTE 'SELECT migration_tools.assert(
+                NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_shelf <> '''' AND x_shelf IS NULL),
+                ''Cannot find a desired location'',
+                ''Found all desired locations''
+            );';
+        END IF;
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience functions for handling copy_location maps
+CREATE OR REPLACE FUNCTION migration_tools.handle_shelf (TEXT,TEXT,TEXT,INTEGER) RETURNS VOID AS $$
+    SELECT migration_tools._handle_shelf($1,$2,$3,$4,TRUE);
+$$ LANGUAGE SQL;
+
+-- convenience functions for handling circmod maps
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_circmod (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_circmod''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_circmod'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_circmod';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_circmod TEXT';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_circmod = code FROM config.circ_modifier b'
+            || ' WHERE BTRIM(UPPER(a.desired_circmod)) = BTRIM(UPPER(b.code))';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_circmod = code FROM config.circ_modifier b'
+            || ' WHERE BTRIM(UPPER(a.desired_circmod)) = BTRIM(UPPER(b.name))'
+            || ' AND x_circmod IS NULL';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_circmod = code FROM config.circ_modifier b'
+            || ' WHERE BTRIM(UPPER(a.desired_circmod)) = BTRIM(UPPER(b.description))'
+            || ' AND x_circmod IS NULL';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_circmod <> '''' AND x_circmod IS NULL),
+            ''Cannot find a desired circulation modifier'',
+            ''Found all desired circulation modifiers''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience functions for handling item status maps
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_status (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_status''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_status'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_status';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_status INTEGER';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_status = id FROM config.copy_status b'
+            || ' WHERE BTRIM(UPPER(a.desired_status)) = BTRIM(UPPER(b.name))';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_status <> '''' AND x_status IS NULL),
+            ''Cannot find a desired copy status'',
+            ''Found all desired copy statuses''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience functions for handling org maps
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_org (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_org''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_org'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_org';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_org INTEGER';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_org = b.id FROM actor.org_unit b'
+            || ' WHERE BTRIM(a.desired_org) = BTRIM(b.shortname)';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_org <> '''' AND x_org IS NULL),
+            ''Cannot find a desired org unit'',
+            ''Found all desired org units''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for handling desired_not_migrate
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_not_migrate (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_not_migrate''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_not_migrate'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_migrate';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_migrate BOOLEAN';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_migrate = CASE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''TRUE'' THEN FALSE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''DNM'' THEN FALSE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''Do Not Migrate'' THEN FALSE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''FALSE'' THEN TRUE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''Migrate'' THEN TRUE'
+            || ' WHEN BTRIM(desired_not_migrate) = '''' THEN TRUE'
+            || ' END';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE x_migrate IS NULL),
+            ''Not all desired_not_migrate values understood'',
+            ''All desired_not_migrate values understood''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for handling desired_not_migrate
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_barred_or_blocked (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_barred_or_blocked''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_barred_or_blocked'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_barred';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_barred BOOLEAN';
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_blocked';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_blocked BOOLEAN';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_barred = CASE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Barred'' THEN TRUE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Blocked'' THEN FALSE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Neither'' THEN FALSE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = '''' THEN FALSE'
+            || ' END';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_blocked = CASE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Blocked'' THEN TRUE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Barred'' THEN FALSE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = ''Neither'' THEN FALSE'
+            || ' WHEN BTRIM(desired_barred_or_blocked) = '''' THEN FALSE'
+            || ' END';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE x_barred IS NULL or x_blocked IS NULL),
+            ''Not all desired_barred_or_blocked values understood'',
+            ''All desired_barred_or_blocked values understood''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for handling desired_profile
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_profile (TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = ''desired_profile''
+        )' INTO proceed USING table_schema, table_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column desired_profile'; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_profile';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_profile INTEGER';
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+            || ' SET x_profile = b.id FROM permission.grp_tree b'
+            || ' WHERE BTRIM(UPPER(a.desired_profile)) = BTRIM(UPPER(b.name))';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_profile <> '''' AND x_profile IS NULL),
+            ''Cannot find a desired profile'',
+            ''Found all desired profiles''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for handling desired actor stat cats
+
+CREATE OR REPLACE FUNCTION migration_tools.vivicate_actor_sc_and_sce (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        field_suffix ALIAS FOR $3; -- for distinguishing between desired_sce1, desired_sce2, etc.
+        org_shortname ALIAS FOR $4;
+        proceed BOOLEAN;
+        org INTEGER;
+        org_list INTEGER[];
+        sc TEXT;
+        sce TEXT;
+    BEGIN
+
+        SELECT 'desired_sc' || field_suffix INTO sc;
+        SELECT 'desired_sce' || field_suffix INTO sce;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sc;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sc; 
+        END IF;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sce;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sce; 
+        END IF;
+
+        SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
+        IF org IS NULL THEN
+            RAISE EXCEPTION 'Cannot find org by shortname';
+        END IF;
+        SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
+
+        -- caller responsible for their own truncates though we try to prevent duplicates
+        EXECUTE 'INSERT INTO m_actor_stat_cat (owner, name)
+            SELECT DISTINCT
+                 $1
+                ,BTRIM('||sc||')
+            FROM 
+                ' || quote_ident(table_name) || '
+            WHERE
+                NULLIF(BTRIM('||sc||'),'''') IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM actor.stat_cat
+                    WHERE owner = ANY ($2)
+                    AND name = BTRIM('||sc||')
+                )
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM m_actor_stat_cat
+                    WHERE owner = ANY ($2)
+                    AND name = BTRIM('||sc||')
+                )
+            ORDER BY 2;'
+        USING org, org_list;
+
+        EXECUTE 'INSERT INTO m_actor_stat_cat_entry (stat_cat, owner, value)
+            SELECT DISTINCT
+                COALESCE(
+                    (SELECT id
+                        FROM actor.stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name))
+                   ,(SELECT id
+                        FROM m_actor_stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name))
+                )
+                ,$1
+                ,BTRIM('||sce||')
+            FROM 
+                ' || quote_ident(table_name) || '
+            WHERE
+                    NULLIF(BTRIM('||sc||'),'''') IS NOT NULL
+                AND NULLIF(BTRIM('||sce||'),'''') IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM actor.stat_cat_entry
+                    WHERE stat_cat = (
+                        SELECT id
+                        FROM actor.stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name)
+                    ) AND value = BTRIM('||sce||')
+                    AND owner = ANY ($2)
+                )
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM m_actor_stat_cat_entry
+                    WHERE stat_cat = (
+                        SELECT id
+                        FROM m_actor_stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name)
+                    ) AND value = BTRIM('||sce||')
+                    AND owner = ANY ($2)
+                )
+            ORDER BY 1,3;'
+        USING org, org_list;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_actor_sc_and_sce (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        field_suffix ALIAS FOR $3; -- for distinguishing between desired_sce1, desired_sce2, etc.
+        org_shortname ALIAS FOR $4;
+        proceed BOOLEAN;
+        org INTEGER;
+        org_list INTEGER[];
+        o INTEGER;
+        sc TEXT;
+        sce TEXT;
+    BEGIN
+        SELECT 'desired_sc' || field_suffix INTO sc;
+        SELECT 'desired_sce' || field_suffix INTO sce;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sc;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sc; 
+        END IF;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sce;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sce; 
+        END IF;
+
+        SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
+        IF org IS NULL THEN
+            RAISE EXCEPTION 'Cannot find org by shortname';
+        END IF;
+
+        SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_sc' || field_suffix;
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_sc' || field_suffix || ' INTEGER';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_sce' || field_suffix;
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_sce' || field_suffix || ' INTEGER';
+
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || '
+            SET
+                x_sc' || field_suffix || ' = id
+            FROM
+                (SELECT id, name, owner FROM m_actor_stat_cat
+                    UNION SELECT id, name, owner FROM actor.stat_cat) u
+            WHERE
+                    BTRIM(UPPER(u.name)) = BTRIM(UPPER(' || sc || '))
+                AND u.owner = ANY ($1);'
+        USING org_list;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || '
+            SET
+                x_sce' || field_suffix || ' = id
+            FROM
+                (SELECT id, stat_cat, owner, value FROM m_actor_stat_cat_entry
+                    UNION SELECT id, stat_cat, owner, value FROM actor.stat_cat_entry) u
+            WHERE
+                    u.stat_cat = x_sc' || field_suffix || '
+                AND BTRIM(UPPER(u.value)) = BTRIM(UPPER(' || sce || '))
+                AND u.owner = ANY ($1);'
+        USING org_list;
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_sc' || field_suffix || ' <> '''' AND x_sc' || field_suffix || ' IS NULL),
+            ''Cannot find a desired stat cat'',
+            ''Found all desired stat cats''
+        );';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_sce' || field_suffix || ' <> '''' AND x_sce' || field_suffix || ' IS NULL),
+            ''Cannot find a desired stat cat entry'',
+            ''Found all desired stat cat entries''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience functions for adding shelving locations
+DROP FUNCTION IF EXISTS migration_tools.find_shelf(INT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.find_shelf(org_id INT, shelf_name TEXT) RETURNS INTEGER AS $$
+DECLARE
+    return_id   INT;
+    d           INT;
+    cur_id      INT;
+BEGIN
+    SELECT INTO d MAX(distance) FROM actor.org_unit_ancestors_distance(org_id);
+    WHILE d >= 0
+    LOOP
+        SELECT INTO cur_id id FROM actor.org_unit_ancestor_at_depth(org_id,d);
+        SELECT INTO return_id id FROM asset.copy_location WHERE owning_lib = cur_id AND name ILIKE shelf_name;
+        IF return_id IS NOT NULL THEN
+                RETURN return_id;
+        END IF;
+        d := d - 1;
+    END LOOP;
+
+    RETURN NULL;
+END
+$$ LANGUAGE plpgsql;
+
+-- may remove later but testing using this with new migration scripts and not loading acls until go live
+
+DROP FUNCTION IF EXISTS migration_tools.find_mig_shelf(INT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.find_mig_shelf(org_id INT, shelf_name TEXT) RETURNS INTEGER AS $$
+DECLARE
+    return_id   INT;
+    d           INT;
+    cur_id      INT;
+BEGIN
+    SELECT INTO d MAX(distance) FROM actor.org_unit_ancestors_distance(org_id);
+    WHILE d >= 0
+    LOOP
+        SELECT INTO cur_id id FROM actor.org_unit_ancestor_at_depth(org_id,d);
+        
+        SELECT INTO return_id id FROM 
+            (SELECT * FROM asset.copy_location UNION ALL SELECT * FROM m_asset_copy_location) x
+            WHERE owning_lib = cur_id AND name ILIKE shelf_name;
+        IF return_id IS NOT NULL THEN
+                RETURN return_id;
+        END IF;
+        d := d - 1;
+    END LOOP;
+
+    RETURN NULL;
+END
+$$ LANGUAGE plpgsql;
+
+-- convenience function for linking to the item staging table
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_item_barcode (TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        foreign_column_name ALIAS FOR $3;
+        main_column_name ALIAS FOR $4;
+        btrim_desired ALIAS FOR $5;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, foreign_column_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_name, foreign_column_name; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = ''m_asset_copy_legacy''
+            and column_name = $2
+        )' INTO proceed USING table_schema, main_column_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'No %.m_asset_copy_legacy with column %', table_schema, main_column_name; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_item';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_item BIGINT';
+
+        IF btrim_desired THEN
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_item = b.id FROM m_asset_copy_legacy b'
+                || ' WHERE BTRIM(a.' || quote_ident(foreign_column_name)
+                || ') = BTRIM(b.' || quote_ident(main_column_name) || ')';
+        ELSE
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_item = b.id FROM m_asset_copy_legacy b'
+                || ' WHERE a.' || quote_ident(foreign_column_name)
+                || ' = b.' || quote_ident(main_column_name);
+        END IF;
+
+        --EXECUTE 'SELECT migration_tools.assert(
+        --    NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE ' || quote_ident(foreign_column_name) || ' <> '''' AND x_item IS NULL),
+        --    ''Cannot link every barcode'',
+        --    ''Every barcode linked''
+        --);';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for linking to the user staging table
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_user_barcode (TEXT,TEXT,TEXT,TEXT,BOOLEAN) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        foreign_column_name ALIAS FOR $3;
+        main_column_name ALIAS FOR $4;
+        btrim_desired ALIAS FOR $5;
+        proceed BOOLEAN;
+    BEGIN
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, foreign_column_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION '%.% missing column %', table_schema, table_name, foreign_column_name; 
+        END IF;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = ''m_actor_usr_legacy''
+            and column_name = $2
+        )' INTO proceed USING table_schema, main_column_name;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'No %.m_actor_usr_legacy with column %', table_schema, main_column_name; 
+        END IF;
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_user';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_user INTEGER';
+
+        IF btrim_desired THEN
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_user = b.id FROM m_actor_usr_legacy b'
+                || ' WHERE BTRIM(a.' || quote_ident(foreign_column_name)
+                || ') = BTRIM(b.' || quote_ident(main_column_name) || ')';
+        ELSE
+            EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
+                || ' SET x_user = b.id FROM m_actor_usr_legacy b'
+                || ' WHERE a.' || quote_ident(foreign_column_name)
+                || ' = b.' || quote_ident(main_column_name);
+        END IF;
+
+        --EXECUTE 'SELECT migration_tools.assert(
+        --    NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE ' || quote_ident(foreign_column_name) || ' <> '''' AND x_user IS NULL),
+        --    ''Cannot link every barcode'',
+        --    ''Every barcode linked''
+        --);';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for handling desired asset stat cats
+
+CREATE OR REPLACE FUNCTION migration_tools.vivicate_asset_sc_and_sce (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        field_suffix ALIAS FOR $3; -- for distinguishing between desired_sce1, desired_sce2, etc.
+        org_shortname ALIAS FOR $4;
+        proceed BOOLEAN;
+        org INTEGER;
+        org_list INTEGER[];
+        sc TEXT;
+        sce TEXT;
+    BEGIN
+
+        SELECT 'desired_sc' || field_suffix INTO sc;
+        SELECT 'desired_sce' || field_suffix INTO sce;
+
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sc;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sc; 
+        END IF;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sce;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sce; 
+        END IF;
+
+        SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
+        IF org IS NULL THEN
+            RAISE EXCEPTION 'Cannot find org by shortname';
+        END IF;
+        SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
+
+        -- caller responsible for their own truncates though we try to prevent duplicates
+        EXECUTE 'INSERT INTO m_asset_stat_cat (owner, name)
+            SELECT DISTINCT
+                 $1
+                ,BTRIM('||sc||')
+            FROM 
+                ' || quote_ident(table_name) || '
+            WHERE
+                NULLIF(BTRIM('||sc||'),'''') IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM asset.stat_cat
+                    WHERE owner = ANY ($2)
+                    AND name = BTRIM('||sc||')
+                )
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM m_asset_stat_cat
+                    WHERE owner = ANY ($2)
+                    AND name = BTRIM('||sc||')
+                )
+            ORDER BY 2;'
+        USING org, org_list;
+
+        EXECUTE 'INSERT INTO m_asset_stat_cat_entry (stat_cat, owner, value)
+            SELECT DISTINCT
+                COALESCE(
+                    (SELECT id
+                        FROM asset.stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name))
+                   ,(SELECT id
+                        FROM m_asset_stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name))
+                )
+                ,$1
+                ,BTRIM('||sce||')
+            FROM 
+                ' || quote_ident(table_name) || '
+            WHERE
+                    NULLIF(BTRIM('||sc||'),'''') IS NOT NULL
+                AND NULLIF(BTRIM('||sce||'),'''') IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM asset.stat_cat_entry
+                    WHERE stat_cat = (
+                        SELECT id
+                        FROM asset.stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name)
+                    ) AND value = BTRIM('||sce||')
+                    AND owner = ANY ($2)
+                )
+                AND NOT EXISTS (
+                    SELECT id
+                    FROM m_asset_stat_cat_entry
+                    WHERE stat_cat = (
+                        SELECT id
+                        FROM m_asset_stat_cat
+                        WHERE owner = ANY ($2)
+                        AND BTRIM('||sc||') = BTRIM(name)
+                    ) AND value = BTRIM('||sce||')
+                    AND owner = ANY ($2)
+                )
+            ORDER BY 1,3;'
+        USING org, org_list;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_asset_sc_and_sce (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        table_schema ALIAS FOR $1;
+        table_name ALIAS FOR $2;
+        field_suffix ALIAS FOR $3; -- for distinguishing between desired_sce1, desired_sce2, etc.
+        org_shortname ALIAS FOR $4;
+        proceed BOOLEAN;
+        org INTEGER;
+        org_list INTEGER[];
+        o INTEGER;
+        sc TEXT;
+        sce TEXT;
+    BEGIN
+        SELECT 'desired_sc' || field_suffix INTO sc;
+        SELECT 'desired_sce' || field_suffix INTO sce;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sc;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sc; 
+        END IF;
+        EXECUTE 'SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = $1
+            AND table_name = $2
+            and column_name = $3
+        )' INTO proceed USING table_schema, table_name, sce;
+        IF NOT proceed THEN
+            RAISE EXCEPTION 'Missing column %', sce; 
+        END IF;
+
+        SELECT id INTO org FROM actor.org_unit WHERE shortname = org_shortname;
+        IF org IS NULL THEN
+            RAISE EXCEPTION 'Cannot find org by shortname';
+        END IF;
+
+        SELECT INTO org_list ARRAY_ACCUM(id) FROM actor.org_unit_full_path( org );
+
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_sc' || field_suffix;
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_sc' || field_suffix || ' INTEGER';
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' DROP COLUMN IF EXISTS x_sce' || field_suffix;
+        EXECUTE 'ALTER TABLE '
+            || quote_ident(table_name)
+            || ' ADD COLUMN x_sce' || field_suffix || ' INTEGER';
+
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || '
+            SET
+                x_sc' || field_suffix || ' = id
+            FROM
+                (SELECT id, name, owner FROM m_asset_stat_cat
+                    UNION SELECT id, name, owner FROM asset.stat_cat) u
+            WHERE
+                    BTRIM(UPPER(u.name)) = BTRIM(UPPER(' || sc || '))
+                AND u.owner = ANY ($1);'
+        USING org_list;
+
+        EXECUTE 'UPDATE ' || quote_ident(table_name) || '
+            SET
+                x_sce' || field_suffix || ' = id
+            FROM
+                (SELECT id, stat_cat, owner, value FROM m_asset_stat_cat_entry
+                    UNION SELECT id, stat_cat, owner, value FROM asset.stat_cat_entry) u
+            WHERE
+                    u.stat_cat = x_sc' || field_suffix || '
+                AND BTRIM(UPPER(u.value)) = BTRIM(UPPER(' || sce || '))
+                AND u.owner = ANY ($1);'
+        USING org_list;
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_sc' || field_suffix || ' <> '''' AND x_sc' || field_suffix || ' IS NULL),
+            ''Cannot find a desired stat cat'',
+            ''Found all desired stat cats''
+        );';
+
+        EXECUTE 'SELECT migration_tools.assert(
+            NOT EXISTS (SELECT 1 FROM ' || quote_ident(table_name) || ' WHERE desired_sce' || field_suffix || ' <> '''' AND x_sce' || field_suffix || ' IS NULL),
+            ''Cannot find a desired stat cat entry'',
+            ''Found all desired stat cat entries''
+        );';
+
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+-- convenience function for handling item barcode collisions in m_asset_copy_legacy
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_asset_barcode_collisions(migration_schema TEXT) RETURNS VOID AS $function$
+DECLARE
+    x_barcode TEXT;
+    x_id BIGINT;
+    row_count NUMERIC;
+    internal_collision_count NUMERIC := 0;
+    incumbent_collision_count NUMERIC := 0;
+BEGIN
+    FOR x_barcode IN SELECT barcode FROM m_asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    LOOP
+        FOR x_id IN SELECT id FROM m_asset_copy WHERE barcode = x_barcode
+        LOOP
+            UPDATE m_asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            internal_collision_count := internal_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% internal collisions', internal_collision_count;
+    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, m_asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
+    LOOP
+        FOR x_id IN SELECT id FROM m_asset_copy_legacy WHERE barcode = x_barcode
+        LOOP
+            UPDATE m_asset_copy_legacy SET barcode = migration_schema || '_incumbent_collision_' || id || '_' || barcode WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_collision_count := incumbent_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent collisions', incumbent_collision_count;
+END
+$function$ LANGUAGE plpgsql;
+
+-- convenience function for handling patron barcode/usrname collisions in m_actor_usr_legacy
+-- this should be ran prior to populating m_actor_card
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_actor_barcode_collisions(migration_schema TEXT) RETURNS VOID AS $function$
+DECLARE
+    x_barcode TEXT;
+    x_id BIGINT;
+    row_count NUMERIC;
+    internal_collision_count NUMERIC := 0;
+    incumbent_barcode_collision_count NUMERIC := 0;
+    incumbent_usrname_collision_count NUMERIC := 0;
+BEGIN
+    FOR x_barcode IN SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    LOOP
+        FOR x_id IN SELECT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            internal_collision_count := internal_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% internal usrname/barcode collisions', internal_collision_count;
+
+    FOR x_barcode IN
+        SELECT a.barcode FROM actor.card a, m_actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
+    LOOP
+        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_incumbent_barcode_collision_' || id || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_barcode_collision_count := incumbent_barcode_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
+
+    FOR x_barcode IN
+        SELECT a.usrname FROM actor.usr a, m_actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
+    LOOP
+        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_incumbent_usrname_collision_' || id || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_usrname_collision_count := incumbent_usrname_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent usrname collisions (post barcode collision munging)', incumbent_usrname_collision_count;
+END
+$function$ LANGUAGE plpgsql;
+
+-- alternate version: convenience function for handling item barcode collisions in m_asset_copy_legacy
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_asset_barcode_collisions2(migration_schema TEXT) RETURNS VOID AS $function$
+DECLARE
+    x_barcode TEXT;
+    x_id BIGINT;
+    row_count NUMERIC;
+    internal_collision_count NUMERIC := 0;
+    incumbent_collision_count NUMERIC := 0;
+BEGIN
+    FOR x_barcode IN SELECT barcode FROM m_asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    LOOP
+        FOR x_id IN SELECT id FROM m_asset_copy WHERE barcode = x_barcode
+        LOOP
+            UPDATE m_asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            internal_collision_count := internal_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% internal collisions', internal_collision_count;
+    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, m_asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
+    LOOP
+        FOR x_id IN SELECT id FROM m_asset_copy_legacy WHERE barcode = x_barcode
+        LOOP
+            UPDATE m_asset_copy_legacy SET barcode = migration_schema || '_' || barcode WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_collision_count := incumbent_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent collisions', incumbent_collision_count;
+END
+$function$ LANGUAGE plpgsql;
+
+-- alternate version: convenience function for handling patron barcode/usrname collisions in m_actor_usr_legacy
+-- this should be ran prior to populating m_actor_card
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_actor_barcode_collisions2(migration_schema TEXT) RETURNS VOID AS $function$
+DECLARE
+    x_barcode TEXT;
+    x_id BIGINT;
+    row_count NUMERIC;
+    internal_collision_count NUMERIC := 0;
+    incumbent_barcode_collision_count NUMERIC := 0;
+    incumbent_usrname_collision_count NUMERIC := 0;
+BEGIN
+    FOR x_barcode IN SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    LOOP
+        FOR x_id IN SELECT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            internal_collision_count := internal_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% internal usrname/barcode collisions', internal_collision_count;
+
+    FOR x_barcode IN
+        SELECT a.barcode FROM actor.card a, m_actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
+    LOOP
+        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_barcode_collision_count := incumbent_barcode_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
+
+    FOR x_barcode IN
+        SELECT a.usrname FROM actor.usr a, m_actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
+    LOOP
+        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        LOOP
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = x_id;
+            GET DIAGNOSTICS row_count = ROW_COUNT;
+            incumbent_usrname_collision_count := incumbent_usrname_collision_count + row_count;
+        END LOOP;
+    END LOOP;
+    RAISE INFO '% incumbent usrname collisions (post barcode collision munging)', incumbent_usrname_collision_count;
+END
+$function$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION migration_tools.is_circ_rule_safe_to_delete( test_matchpoint INTEGER ) RETURNS BOOLEAN AS $func$
+-- WARNING: Use at your own risk
+-- FIXME: not considering marc_type, marc_form, marc_bib_level, marc_vr_format, usr_age_lower_bound, usr_age_upper_bound, item_age
+DECLARE
+    item_object asset.copy%ROWTYPE;
+    user_object actor.usr%ROWTYPE;
+    test_rule_object config.circ_matrix_matchpoint%ROWTYPE;
+    result_rule_object config.circ_matrix_matchpoint%ROWTYPE;
+    safe_to_delete BOOLEAN := FALSE;
+    m action.found_circ_matrix_matchpoint;
+    n action.found_circ_matrix_matchpoint;
+    -- ( success BOOL, matchpoint config.circ_matrix_matchpoint, buildrows INT[] )
+    result_matchpoint INTEGER;
+BEGIN
+    SELECT INTO test_rule_object * FROM config.circ_matrix_matchpoint WHERE id = test_matchpoint;
+    RAISE INFO 'testing rule: %', test_rule_object;
+
+    INSERT INTO actor.usr (
+        profile,
+        usrname,
+        passwd,
+        ident_type,
+        first_given_name,
+        family_name,
+        home_ou,
+        juvenile
+    ) SELECT
+        COALESCE(test_rule_object.grp, 2),
+        'is_circ_rule_safe_to_delete_' || test_matchpoint || '_' || NOW()::text,
+        MD5(NOW()::TEXT),
+        1,
+        'Ima',
+        'Test',
+        COALESCE(test_rule_object.user_home_ou, test_rule_object.org_unit),
+        COALESCE(test_rule_object.juvenile_flag, FALSE)
+    ;
+    
+    SELECT INTO user_object * FROM actor.usr WHERE id = currval('actor.usr_id_seq');
+
+    INSERT INTO asset.call_number (
+        creator,
+        editor,
+        record,
+        owning_lib,
+        label,
+        label_class
+    ) SELECT
+        1,
+        1,
+        -1,
+        COALESCE(test_rule_object.copy_owning_lib,test_rule_object.org_unit),
+        'is_circ_rule_safe_to_delete_' || test_matchpoint || '_' || NOW()::text,
+        1
+    ;
+
+    INSERT INTO asset.copy (
+        barcode,
+        circ_lib,
+        creator,
+        call_number,
+        editor,
+        location,
+        loan_duration,
+        fine_level,
+        ref,
+        circ_modifier
+    ) SELECT
+        'is_circ_rule_safe_to_delete_' || test_matchpoint || '_' || NOW()::text,
+        COALESCE(test_rule_object.copy_circ_lib,test_rule_object.org_unit),
+        1,
+        currval('asset.call_number_id_seq'),
+        1,
+        COALESCE(test_rule_object.copy_location,1),
+        2,
+        2,
+        COALESCE(test_rule_object.ref_flag,FALSE),
+        test_rule_object.circ_modifier
+    ;
+
+    SELECT INTO item_object * FROM asset.copy WHERE id = currval('asset.copy_id_seq');
+
+    SELECT INTO m * FROM action.find_circ_matrix_matchpoint(
+        test_rule_object.org_unit,
+        item_object,
+        user_object,
+        COALESCE(test_rule_object.is_renewal,FALSE)
+    );
+    RAISE INFO '   action.find_circ_matrix_matchpoint(%,%,%,%) = (%,%,%)',
+        test_rule_object.org_unit,
+        item_object.id,
+        user_object.id,
+        COALESCE(test_rule_object.is_renewal,FALSE),
+        m.success,
+        m.matchpoint,
+        m.buildrows
+    ;
+
+    --  disable the rule being tested to see if the outcome changes
+    UPDATE config.circ_matrix_matchpoint SET active = FALSE WHERE id = (m.matchpoint).id;
+
+    SELECT INTO n * FROM action.find_circ_matrix_matchpoint(
+        test_rule_object.org_unit,
+        item_object,
+        user_object,
+        COALESCE(test_rule_object.is_renewal,FALSE)
+    );
+    RAISE INFO 'VS action.find_circ_matrix_matchpoint(%,%,%,%) = (%,%,%)',
+        test_rule_object.org_unit,
+        item_object.id,
+        user_object.id,
+        COALESCE(test_rule_object.is_renewal,FALSE),
+        n.success,
+        n.matchpoint,
+        n.buildrows
+    ;
+
+    -- FIXME: We could dig deeper and see if the referenced config.rule_*
+    -- entries are effectively equivalent, but for now, let's assume no
+    -- duplicate rules at that level
+    IF (
+            (m.matchpoint).circulate = (n.matchpoint).circulate
+        AND (m.matchpoint).duration_rule = (n.matchpoint).duration_rule
+        AND (m.matchpoint).recurring_fine_rule = (n.matchpoint).recurring_fine_rule
+        AND (m.matchpoint).max_fine_rule = (n.matchpoint).max_fine_rule
+        AND (
+                (m.matchpoint).hard_due_date = (n.matchpoint).hard_due_date
+                OR (
+                        (m.matchpoint).hard_due_date IS NULL
+                    AND (n.matchpoint).hard_due_date IS NULL
+                )
+        )
+        AND (
+                (m.matchpoint).renewals = (n.matchpoint).renewals
+                OR (
+                        (m.matchpoint).renewals IS NULL
+                    AND (n.matchpoint).renewals IS NULL
+                )
+        )
+        AND (
+                (m.matchpoint).grace_period = (n.matchpoint).grace_period
+                OR (
+                        (m.matchpoint).grace_period IS NULL
+                    AND (n.matchpoint).grace_period IS NULL
+                )
+        )
+        AND (
+                (m.matchpoint).total_copy_hold_ratio = (n.matchpoint).total_copy_hold_ratio
+                OR (
+                        (m.matchpoint).total_copy_hold_ratio IS NULL
+                    AND (n.matchpoint).total_copy_hold_ratio IS NULL
+                )
+        )
+        AND (
+                (m.matchpoint).available_copy_hold_ratio = (n.matchpoint).available_copy_hold_ratio
+                OR (
+                        (m.matchpoint).available_copy_hold_ratio IS NULL
+                    AND (n.matchpoint).available_copy_hold_ratio IS NULL
+                )
+        )
+        AND NOT EXISTS (
+            SELECT limit_set, fallthrough
+            FROM config.circ_matrix_limit_set_map
+            WHERE active and matchpoint = (m.matchpoint).id
+            EXCEPT
+            SELECT limit_set, fallthrough
+            FROM config.circ_matrix_limit_set_map
+            WHERE active and matchpoint = (n.matchpoint).id
+        )
+
+    ) THEN
+        RAISE INFO 'rule has same outcome';
+        safe_to_delete := TRUE;
+    ELSE
+        RAISE INFO 'rule has different outcome';
+        safe_to_delete := FALSE;
+    END IF;
+
+    RAISE EXCEPTION 'rollback the temporary changes';
+
+EXCEPTION WHEN OTHERS THEN
+
+    RAISE INFO 'inside exception block: %, %', SQLSTATE, SQLERRM;
+    RETURN safe_to_delete;
+
+END;
+$func$ LANGUAGE plpgsql;
+

@@ -6,7 +6,7 @@
         <tag>money</tag>  arbitrary tags, each should go in separate tag
         <report_title>Migrated Billings</report_title>  title used in the asciidoc output
         <heading column='1'>Number of Billings.Migrated.Total</heading> period delimited 
-        <query>SELECT COUNT(id),x_migrate,SUM(amount) FROM money_billing_legacy GROUP BY 2;</query>  query itself, will be replaced
+        <query>SELECT COUNT(id),x_migrate,SUM(amount) FROM m_money_billing_legacy GROUP BY 2;</query>  query itself, will be replaced
         <note>Arbitrary note that can be included in the entries.</note>
     </report>
 -->
@@ -14,31 +14,31 @@
    <!-- evergreen -->
 
     <report>
-        <name>evg_asset_copy_statuses</name>
+        <name>evg_m_asset_copy_statuses</name>
         <report_title>Statuses</report_title>
         <tag>evergreen</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Migrating Status.New Evergreen Status.Notes</heading>
-        <query>SELECT COUNT(ac.l_id), cs.l_name FROM asset_copy_legacy ac JOIN config_copy_status_legacy cs ON cs.l_id = ac.l_status GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.l_id), cs.l_name FROM m_asset_copy_legacy ac JOIN config_copy_status_legacy cs ON cs.l_id = ac.l_status GROUP BY 2 ORDER BY 2</query>
         <note>You only need to fill this sheet out if you use custom statuses that need to be migrated.</note>
     </report>
 
     <report>
-        <name>evg_asset_circ_mods</name>
+        <name>evg_m_asset_circ_mods</name>
         <report_title>Circulation Modifiers</report_title>
         <tag>evergreen</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Migrating Circ Mod.New Circ Mod.Notes</heading>
-        <query>SELECT COUNT(ac.l_id), ac.l_circ_modifier FROM asset_copy_legacy ac GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.l_id), ac.l_circ_modifier FROM m_asset_copy_legacy ac GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
-        <name>evg_asset_copy_locs</name>
+        <name>evg_m_asset_copy_locs</name>
         <report_title>Copy Locations</report_title>
         <tag>evergreen</tag>
         <iteration>0</iteration>
         <heading>Count.Library.Migrating Copy Location.New Copy Location.Notes</heading>
-        <query>SELECT COUNT(ac.l_id), aou.l_name, acl.l_name FROM asset_copy_location_legacy acl JOIN actor_org_unit_legacy aou ON aou.l_id = acl.l_owning_lib JOIN asset_copy_legacy ac ON ac.l_location = acl.l_id GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(ac.l_id), aou.l_name, acl.l_name FROM m_asset_copy_location_legacy acl JOIN m_actor_org_unit_legacy aou ON aou.l_id = acl.l_owning_lib JOIN m_asset_copy_legacy ac ON ac.l_location = acl.l_id GROUP BY 2, 3 ORDER BY 2, 3</query>
         <note>Any locations not mapped can be moved over as their existing locations.</note>
     </report>
 
@@ -48,7 +48,7 @@
         <tag>evergreen</tag>
         <iteration>0</iteration>
         <heading>Count.Migrating Permission Group.New Permission Group.Notes</heading>
-        <query>SELECT COUNT(au.l_id), pgt.l_name FROM actor_usr_legacy au JOIN permission_grp_tree_legacy pgt ON pgt.l_id = au.l_profile GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(au.l_id), pgt.l_name FROM m_actor_usr_legacy au JOIN permission_grp_tree_legacy pgt ON pgt.l_id = au.l_profile GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <!-- tlc -->
@@ -62,7 +62,7 @@
     </report>
 
     <report>
-        <name>tlc_load_asset_notes</name>
+        <name>tlc_load_m_asset_notes</name>
         <report_title>Item Notes</report_title>
         <tag>tlc</tag>
         <iteration>0</iteration>
@@ -77,7 +77,7 @@
     </report>
 
     <report>
-        <name>tlc_load_asset_holdings_codes</name>
+        <name>tlc_load_m_asset_holdings_codes</name>
         <report_title>Holdings Codes</report_title>
         <tag>tlc</tag>
         <iteration>0</iteration>
@@ -86,7 +86,7 @@
     </report>
 <!--
     <report>
-        <name>tlc_load_asset_callnumbertype</name>
+        <name>tlc_load_m_asset_callnumbertype</name>
         <report_title>Call Number Types</report_title>
         <tag>tlc</tag>
         <iteration>0</iteration>
@@ -97,7 +97,7 @@
 -->
 <!-- 
     <report>
-        <name>tlc_load_asset_callnumberparts</name>
+        <name>tlc_load_m_asset_callnumberparts</name>
         <report_title>Call Number Parts</report_title>
         <tag>tlc</tag>
         <iteration>0</iteration>
@@ -106,7 +106,7 @@
     </report>
 -->
     <report>
-        <name>tlc_load_money_migrating_bills</name>
+        <name>tlc_load_m_money_migrating_bills</name>
         <report_title>Migrating Bills By Bill Type</report_title>
         <tag>tlc</tag>
         <iteration>0</iteration>
@@ -308,7 +308,7 @@
     </report>
     
     <report>
-        <name>destiny_load_asset_categories</name>
+        <name>destiny_load_m_asset_categories</name>
         <report_title>Count of Categories</report_title>
         <tag>destiny</tag>
         <iteration>0</iteration>
@@ -317,7 +317,7 @@
     </report>
     
     <report>
-        <name>destiny_load_asset_notes</name>
+        <name>destiny_load_m_asset_notes</name>
         <report_title>Copies by Note Types</report_title>
         <tag>destiny</tag>
         <iteration>0</iteration>
@@ -327,7 +327,7 @@
     </report>
     
         <report>
-        <name>destiny_load_asset_sublocation</name>
+        <name>destiny_load_m_asset_sublocation</name>
         <report_title>Copies by Sub Location</report_title>
         <tag>destiny</tag>
         <iteration>0</iteration>
@@ -336,7 +336,7 @@
     </report>
     
     <report>
-        <name>destiny_load_asset_vendor</name>
+        <name>destiny_load_m_asset_vendor</name>
         <report_title>Copies by Vendor</report_title>
         <tag>destiny</tag>
         <iteration>0</iteration>
@@ -346,7 +346,7 @@
     </report>
     
     <report>
-        <name>destiny_load_asset_descriptions</name>
+        <name>destiny_load_m_asset_descriptions</name>
         <report_title>Copies with Description Fields</report_title>
         <tag>destiny</tag>
         <iteration>0</iteration>
@@ -373,7 +373,7 @@
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Status.Type</heading>
-        <query>SELECT COUNT(id), l_status, l_type FROM action_circulation_legacy GROUP BY 2, 3</query>
+        <query>SELECT COUNT(id), l_status, l_type FROM m_action_circulation_legacy GROUP BY 2, 3</query>
         <note>Circulations will only not be migrated if they can't be attached to a migrated patron and holding.</note>
     </report>
 
@@ -383,37 +383,37 @@
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Status</heading>
-        <query> SELECT COUNT(id), l_status FROM action_hold_request_legacy GROUP BY 2</query>
+        <query> SELECT COUNT(id), l_status FROM m_action_hold_request_legacy GROUP BY 2</query>
         <note>Only unfilled holds are being migrated.</note>
     </report>
 
     <report>
-        <name>asset_pending_bibs</name>
+        <name>m_asset_pending_bibs</name>
         <report_title>Pending Records</report_title>
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Year of Last Edit.Count of Copies Attached</heading>
-        <query>SELECT COUNT(bre.id), CASE WHEN LENGTH(bre.l_edited) > 1 THEN EXTRACT(YEAR FROM bre.l_edited::TIMESTAMP) ELSE '1900' END, COUNT(ac.id) FROM biblio_record_entry_legacy bre LEFT JOIN asset_copy_legacy ac ON ac.l_biblio = bre.l_id WHERE bre.l_status = 'pending' GROUP BY 2 ORDER BY 2
+        <query>SELECT COUNT(bre.id), CASE WHEN LENGTH(bre.l_edited) > 1 THEN EXTRACT(YEAR FROM bre.l_edited::TIMESTAMP) ELSE '1900' END, COUNT(ac.id) FROM m_biblio_record_entry_legacy bre LEFT JOIN m_asset_copy_legacy ac ON ac.l_biblio = bre.l_id WHERE bre.l_status = 'pending' GROUP BY 2 ORDER BY 2
 </query>
     </report>
 
     <report>
-        <name>asset_copies_by_status</name>
+        <name>m_asset_copies_by_status</name>
         <report_title>Copies by Status</report_title>
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Status</heading>
-        <query>SELECT COUNT(id), l_status FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(id), l_status FROM m_asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
         <note>Deleted copies with a delete date were not exported additionally those with the deleted status won't get loaded.</note>
     </report>
 
     <report>
-        <name>asset_pending_copies</name>
+        <name>m_asset_pending_copies</name>
         <report_title>Pending Copies by Last Edit</report_title>
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Last Edited</heading>
-        <query>SELECT COUNT(id), CASE WHEN LENGTH(l_edited) > 1 THEN EXTRACT(YEAR FROM l_edited::TIMESTAMP) ELSE '1900' END FROM asset_copy_legacy WHERE l_status = 'pending' GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(id), CASE WHEN LENGTH(l_edited) > 1 THEN EXTRACT(YEAR FROM l_edited::TIMESTAMP) ELSE '1900' END FROM m_asset_copy_legacy WHERE l_status = 'pending' GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
@@ -422,56 +422,56 @@
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Membership Number.Membership Name</heading>
-        <query>SELECT COUNT(ac.id), acl.l_membership_number, acl.l_membership_name FROM asset_copy_legacy ac JOIN asset_copy_location_legacy acl ON acl.l_membership_name = ac.l_memberships GROUP BY 2,3 ORDER BY 2
+        <query>SELECT COUNT(ac.id), acl.l_membership_number, acl.l_membership_name FROM m_asset_copy_legacy ac JOIN m_asset_copy_location_legacy acl ON acl.l_membership_name = ac.l_memberships GROUP BY 2,3 ORDER BY 2
 </query>
     </report>
 
    <report>
-        <name>money_bills</name>
+        <name>m_money_bills</name>
         <report_title>Bills</report_title>
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Status</heading>
-        <query>SELECT COUNT(id), l_status FROM money_billing_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(id), l_status FROM m_money_billing_legacy GROUP BY 2 ORDER BY 2</query>
         <note>Unless there is a good reason to do so forgiven and paid bills will not be migrated.</note>
     </report>
 
    <report>
-        <name>actor_groups</name>
+        <name>m_actor_groups</name>
         <report_title>Patron Membership Groups</report_title>
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Membership List Name.Membership List ID.Membership Number.Membership Name.Membership Length in Monthst</heading>
-        <query>SELECT l_membership_list_name, l_membership_list_id, l_membership_number, l_membership_name, l_membership_length_months FROM actor_usr_legacy_groups_tsv ORDER BY 1, 3</query>
+        <query>SELECT l_membership_list_name, l_membership_list_id, l_membership_number, l_membership_name, l_membership_length_months FROM m_actor_usr_legacy_groups_tsv ORDER BY 1, 3</query>
         <note>Age looks like a good target for a stat cat and / or juvenile setting while the patron type can map to profiles.</note>
     </report>
 
     <report>
-        <name>actor_by_groups</name>
+        <name>m_actor_by_groups</name>
         <report_title>Patrons by Membership Groups</report_title>
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Membership List Name.Membership Number</heading>
-        <query>SELECT COUNT(*), l_membership_list_name, l_membership_number FROM (SELECT id, UNNEST(STRING_TO_ARRAY(l_memberships,'|')) AS m FROM actor_usr_legacy ) x JOIN actor_usr_legacy_groups_tsv t ON t.l_membership_name = x.m GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(*), l_membership_list_name, l_membership_number FROM (SELECT id, UNNEST(STRING_TO_ARRAY(l_memberships,'|')) AS m FROM m_actor_usr_legacy ) x JOIN m_actor_usr_legacy_groups_tsv t ON t.l_membership_name = x.m GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
-        <name>actor_addresses_nulls</name>
+        <name>m_actor_addresses_nulls</name>
         <report_title>Patron Addresses</report_title>
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Address Field.Nulls</heading>
-        <query>SELECT 'Street Address', COUNT(id) FROM actor_usr_address_legacy WHERE l_lines IS NULL UNION ALL SELECT 'City', COUNT(id) FROM actor_usr_address_legacy UNION ALL SELECT 'State', COUNT(id) FROM actor_usr_address_legacy WHERE l_country_division IS NULL UNION ALL SELECT 'Postal Code', COUNT(id) FROM actor_usr_address_legacy WHERE l_postal_code IS NULL </query>
+        <query>SELECT 'Street Address', COUNT(id) FROM m_actor_usr_address_legacy WHERE l_lines IS NULL UNION ALL SELECT 'City', COUNT(id) FROM m_actor_usr_address_legacy UNION ALL SELECT 'State', COUNT(id) FROM m_actor_usr_address_legacy WHERE l_country_division IS NULL UNION ALL SELECT 'Postal Code', COUNT(id) FROM m_actor_usr_address_legacy WHERE l_postal_code IS NULL </query>
         <note>If any of these fields are null then we need defaults to fill in, note the extract had no city data.</note>
     </report>
 
     <report>
-        <name>actor_phones</name>
+        <name>m_actor_phones</name>
         <report_title>Patron Phones</report_title>
         <tag>apollo</tag>
         <iteration>0</iteration>
         <heading>Count.Type</heading>
-        <query>SELECT COUNT(*), l_type FROM actor_usr_phones_tsv GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_type FROM m_actor_usr_phones_tsv GROUP BY 2 ORDER BY 2</query>
         <note>These need to be mapped to Evergreen phone types.</note>
     </report>
 
@@ -484,7 +484,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count.Borrower Type</heading>
-        <query>SELECT COUNT(id), l_borrower_btype FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;</query>
+        <query>SELECT COUNT(id), l_borrower_btype FROM m_actor_usr_legacy GROUP BY 2 ORDER BY 2;</query>
     </report>
 
     <report>
@@ -502,7 +502,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count of Migratable Passwords / PINs</heading>
-        <query>SELECT COUNT(l_borrower_pin) FROM actor_usr_legacy WHERE LENGTH(l_borrower_pin) > 1;</query>
+        <query>SELECT COUNT(l_borrower_pin) FROM m_actor_usr_legacy WHERE LENGTH(l_borrower_pin) > 1;</query>
     </report>
 
     <report>
@@ -529,7 +529,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Sample of Migratable Notes</heading>
-        <query>SELECT l_borrower_borrower_note FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1 LIMIT 20;</query>
+        <query>SELECT l_borrower_borrower_note FROM m_actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1 LIMIT 20;</query>
     </report>
 
     <report>
@@ -547,7 +547,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(l_borrower_borrower_note) FROM actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1;</query>
+        <query>SELECT COUNT(l_borrower_borrower_note) FROM m_actor_usr_legacy WHERE LENGTH(l_borrower_borrower_note) > 1;</query>
     </report>
 
     <report>
@@ -565,7 +565,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT l_borrower_note2 FROM actor_usr_legacy WHERE LENGTH(l_borrower_note2) > 1 LIMIT 20;</query>
+        <query>SELECT l_borrower_note2 FROM m_actor_usr_legacy WHERE LENGTH(l_borrower_note2) > 1 LIMIT 20;</query>
     </report>
 
     <report>
@@ -574,7 +574,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT l_borrower_note3 FROM actor_usr_legacy WHERE LENGTH(l_borrower_note3) > 1 LIMIT 20;</query>
+        <query>SELECT l_borrower_note3 FROM m_actor_usr_legacy WHERE LENGTH(l_borrower_note3) > 1 LIMIT 20;</query>
     </report>
 
     <report>
@@ -585,10 +585,10 @@
         <heading>Count.Borrower Phone Type</heading>
         <query>
         SELECT COUNT(*), b 
-        FROM (SELECT l_borrower_phone_1_phone_type AS b FROM actor_usr_legacy
-        UNION ALL SELECT l_borrower_phone_2_phone_type AS b FROM actor_usr_legacy
-        UNION ALL SELECT l_borrower_phone_3_phone_type AS b FROM actor_usr_legacy
-        UNION ALL SELECT l_borrower_phone_4_phone_type AS b FROM actor_usr_legacy) x 
+        FROM (SELECT l_borrower_phone_1_phone_type AS b FROM m_actor_usr_legacy
+        UNION ALL SELECT l_borrower_phone_2_phone_type AS b FROM m_actor_usr_legacy
+        UNION ALL SELECT l_borrower_phone_3_phone_type AS b FROM m_actor_usr_legacy
+        UNION ALL SELECT l_borrower_phone_4_phone_type AS b FROM m_actor_usr_legacy) x 
         GROUP BY 2 ORDER BY 2
         </query>
     </report>
@@ -615,11 +615,11 @@
         <iteration>0</iteration>
         <heading>Count.BStat</heading>
         <query>SELECT COUNT(*), b 
-        FROM (SELECT l_borrower_bstat_1_bstat AS b FROM actor_usr_legacy
+        FROM (SELECT l_borrower_bstat_1_bstat AS b FROM m_actor_usr_legacy
         UNION ALL
-        SELECT l_borrower_bstat_2_bstat AS b FROM actor_usr_legacy
+        SELECT l_borrower_bstat_2_bstat AS b FROM m_actor_usr_legacy
         UNION ALL
-        SELECT l_borrower_bstat_3_bstat AS b FROM actor_usr_legacy) x
+        SELECT l_borrower_bstat_3_bstat AS b FROM m_actor_usr_legacy) x
         GROUP BY 2 ORDER BY 1;
         </query>
     </report>
@@ -640,7 +640,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count.Collection</heading>
-        <query>SELECT COUNT(id), l_collection FROM asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
+        <query>SELECT COUNT(id), l_collection FROM m_asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
     </report>
 
 	<report>    
@@ -658,7 +658,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count.Item Type (itype)</heading>
-        <query>SELECT COUNT(id), l_itype FROM asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
+        <query>SELECT COUNT(id), l_itype FROM m_asset_copy_legacy GROUP BY 2 ORDER BY 2;</query>
     </report>
   
     <report>
@@ -676,7 +676,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(l_internal_note) FROM asset_copy_legacy WHERE LENGTH(l_internal_note) > 1;</query>
+        <query>SELECT COUNT(l_internal_note) FROM m_asset_copy_legacy WHERE LENGTH(l_internal_note) > 1;</query>
     </report>
 
     <report>
@@ -694,7 +694,7 @@
         <tag>horizon</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT l_internal_note FROM asset_copy_legacy WHERE LENGTH(l_internal_note) > 1 LIMIT 20;</query>
+        <query>SELECT l_internal_note FROM m_asset_copy_legacy WHERE LENGTH(l_internal_note) > 1 LIMIT 20;</query>
     </report>
 
     <report>
@@ -714,96 +714,96 @@
         <iteration>0</iteration>
         <report_title>Circs by Status</report_title>
         <heading>Count of Circs.Status</heading>
-        <query>SELECT COUNT(id), l_is_checked_out FROM asset_copy_legacy GROUP BY 2</query>
+        <query>SELECT COUNT(id), l_is_checked_out FROM m_asset_copy_legacy GROUP BY 2</query>
     </report>
 
    <report>
-        <name>rm_load_asset_by_resource_type</name>
+        <name>rm_load_m_asset_by_resource_type</name>
         <report_title>Resource Type</report_title>
         <tag>rm</tag>
         <iteration>0</iteration>
         <heading>Count.Resource Type</heading>
-        <query>SELECT COUNT(*), l_resource_type FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_resource_type FROM m_asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
 
    <report>
-        <name>rm_load_asset_by_location</name>
+        <name>rm_load_m_asset_by_location</name>
         <report_title>Copies by Location</report_title>
         <tag>rm</tag>
         <iteration>0</iteration>
         <heading>Count.Location</heading>
-        <query>SELECT COUNT(*), l_location FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_location FROM m_asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
-        <name>rm_load_asset_by_category</name>
+        <name>rm_load_m_asset_by_category</name>
         <report_title>Copies by Category</report_title>
         <tag>rm</tag>
         <iteration>0</iteration>
         <heading>Count.Category</heading>
-        <query>SELECT COUNT(*), l_category FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_category FROM m_asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
    
     <report>
-        <name>rm_load_asset_by_status</name>
+        <name>rm_load_m_asset_by_status</name>
         <report_title>Copies by Status</report_title>
         <tag>rm</tag>
         <iteration>0</iteration>
         <heading>Count.Status</heading>
-        <query>SELECT COUNT(*), l_status FROM asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(*), l_status FROM m_asset_copy_legacy GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
-        <name>rm_actor_groups</name>
+        <name>rm_m_actor_groups</name>
         <report_title>Patrons by User Groups</report_title>
         <tag>rm</tag>
         <iteration>0</iteration>
         <heading>Count.Group</heading>
-        <query>SELECT COUNT(id), l_user_group FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;
+        <query>SELECT COUNT(id), l_user_group FROM m_actor_usr_legacy GROUP BY 2 ORDER BY 2;
         </query>
     </report>
 
     <report>
-        <name>rm_actor_access</name>
+        <name>rm_m_actor_access</name>
         <report_title>Patrons by Access Field</report_title>
         <tag>rm</tag>
         <iteration>0</iteration>
         <heading>Count.Access</heading>
-        <query>SELECT COUNT(id), l_access_if_applicable FROM actor_usr_legacy GROUP BY 2 ORDER BY 2;
+        <query>SELECT COUNT(id), l_access_if_applicable FROM m_actor_usr_legacy GROUP BY 2 ORDER BY 2;
         </query>
     </report>
 
     <report>
-        <name>rm_actor_comments</name>
+        <name>rm_m_actor_comments</name>
         <report_title>Patron Comments</report_title>
         <tag>rm</tag>
         <iteration>0</iteration>
         <heading>Count.Sample</heading>
-        <query>SELECT COUNT(id), 'All Comments' FROM actor_usr_legacy WHERE LENGTH(l_comments) > 1
-            UNION ALL SELECT NULL, l_comments FROM  actor_usr_legacy WHERE LENGTH(l_comments) > 1 LIMIT 10
+        <query>SELECT COUNT(id), 'All Comments' FROM m_actor_usr_legacy WHERE LENGTH(l_comments) > 1
+            UNION ALL SELECT NULL, l_comments FROM  m_actor_usr_legacy WHERE LENGTH(l_comments) > 1 LIMIT 10
         </query>
     </report>
 
     <report>
-        <name>rm_actor_circulation_note</name>
+        <name>rm_m_actor_circulation_note</name>
         <report_title>Patron Circ Notes</report_title>
         <tag>rm</tag>
         <iteration>0</iteration>
         <heading>Count.Sample</heading>
-        <query>SELECT COUNT(id), 'All Notes' FROM actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1
-            UNION ALL SELECT NULL, l_circulation_note FROM  actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1 LIMIT 10
+        <query>SELECT COUNT(id), 'All Notes' FROM m_actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1
+            UNION ALL SELECT NULL, l_circulation_note FROM  m_actor_usr_legacy WHERE LENGTH(l_circulation_note) > 1 LIMIT 10
         </query>
     </report>
 
 <!-- tlc reports 
 
     <report>
-        <name>tlc_reports_load_asset_holdings_codes</name>
+        <name>tlc_reports_load_m_asset_holdings_codes</name>
         <report_title>Holdings Codes</report_title>
         <tag>tlc_reports</tag>
         <iteration>0</iteration>
         <heading>Count.Library.Holdings Codes.Evergreen Circulation Modifier.Evergreen Shelving Locatione</heading>
-        <query>SELECT COUNT(id), x_source, l_holdingscode FROM asset_copy_legacy GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(id), x_source, l_holdingscode FROM m_asset_copy_legacy GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
@@ -812,7 +812,7 @@
         <tag>tlc_reports</tag>
         <iteration>0</iteration>
         <heading>Count.Library.Permission Group.Evergreen Permission Group</heading>
-        <query>SELECT COUNT(id), l_location, l_borrower_type FROM actor_usr_legacy GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(id), l_location, l_borrower_type FROM m_actor_usr_legacy GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
     <report>
@@ -821,7 +821,7 @@
         <tag>tlc_reports</tag>
         <iteration>0</iteration>
         <heading>Count.SUM.Migrate?</heading>
-        <query>SELECT COUNT(id), SUM(l_current_fine_balance::NUMERIC(6,2)) FROM actor_usr_address_legacy WHERE l_current_fine_balance != '0' AND l_current_fine_balance IS NOT NULL</query>
+        <query>SELECT COUNT(id), SUM(l_current_fine_balance::NUMERIC(6,2)) FROM m_actor_usr_address_legacy WHERE l_current_fine_balance != '0' AND l_current_fine_balance IS NOT NULL</query>
     </report>
 
     <report>
@@ -830,7 +830,7 @@
         <tag>tlc_reports</tag>
         <iteration>0</iteration>
         <heading>Count.Blocked.Migrate?</heading>
-        <query>SELECT COUNT(id), l_blocked FROM actor_usr_address_legacy GROUP BY 2</query>
+        <query>SELECT COUNT(id), l_blocked FROM m_actor_usr_address_legacy GROUP BY 2</query>
     </report>
 
     <report>
@@ -839,7 +839,7 @@
         <tag>tlc_reports</tag>
         <iteration>0</iteration>
         <heading>Count.Phone Type.Phone Type</heading>
-        <query>SELECT COUNT(id), 'Phone 1' FROM actor_usr_address_legacy WHERE l_phone_1 IS NOT NULL GROUP BY 2 UNION ALL SELECT COUNT(id), 'Phone 2' FROM actor_usr_address_legacy WHERE l_phone_2 IS NOT NULL GROUP BY 2</query>
+        <query>SELECT COUNT(id), 'Phone 1' FROM m_actor_usr_address_legacy WHERE l_phone_1 IS NOT NULL GROUP BY 2 UNION ALL SELECT COUNT(id), 'Phone 2' FROM m_actor_usr_address_legacy WHERE l_phone_2 IS NOT NULL GROUP BY 2</query>
     </report>
 -->
 </reports_file>
