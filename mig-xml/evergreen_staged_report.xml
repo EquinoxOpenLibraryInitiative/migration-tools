@@ -755,7 +755,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Users.Active</heading>
-        <query>SELECT COUNT(id), active::TEXT FROM m_actor_usr_legacy GROUP BY 2</query>
+        <query>SELECT COUNT(id), active::TEXT FROM m_actor_usr_legacy WHERE x_migrate = TRUE GROUP BY 2</query>
     </report>
 
     <report>
