@@ -382,7 +382,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode LIKE 'x_%'</query>
+        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* '^x_'</query>
         <note>Incumbent collisions are those where the migrated barcodes collide with existing barcodes in the database.</note>
     </report>
 
@@ -392,7 +392,7 @@
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM m_asset_copy WHERE barcode LIKE 'x_%'</query>
+        <query>SELECT COUNT(id) FROM m_asset_copy WHERE barcode ~* '^x_'</query>
         <note>Incumbent collisions are those where the migrated barcodes collide with existing barcodes in the database.</note>
     </report>
 
@@ -402,7 +402,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode LIKE 'x_%' AND ac.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode ~* '^x_' AND ac.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of copy barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
@@ -412,7 +412,7 @@
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM m_asset_copy ac WHERE ac.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM m_asset_copy ac WHERE ac.barcode ~* '^x_' ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
@@ -422,7 +422,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE barcode LIKE 'x_%' AND ac.x_migrate = TRUE GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE barcode ~* '^x_' AND ac.x_migrate = TRUE GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -431,7 +431,7 @@
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy ac WHERE barcode LIKE 'x_%' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy ac WHERE barcode ~* '^x_' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -809,7 +809,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM m_actor_card_legacy acard WHERE barcode LIKE 'x_%' AND x_migrate = TRUE</query>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card_legacy acard WHERE barcode ~* '^x_' AND x_migrate = TRUE</query>
     </report>
 
     <report>
@@ -818,7 +818,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM m_actor_card acard WHERE barcode LIKE 'x_%'</query>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card acard WHERE barcode ~* '^x_'</query>
     </report>
 
     <report>
@@ -827,7 +827,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM m_actor_card_legacy acard WHERE acard.barcode LIKE 'x_' AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM m_actor_card_legacy acard WHERE acard.barcode ~* '^x_' AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
     </report>
 
@@ -837,7 +837,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM m_actor_card acard WHERE acard.barcode LIKE 'x_%' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM m_actor_card acard WHERE acard.barcode ~* '^x_%' ORDER BY 1 LIMIT 20</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
     </report>
 
