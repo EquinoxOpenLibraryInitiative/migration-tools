@@ -60,12 +60,14 @@ pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $append = 0;
-my $base_table = 'm_biblio_record_entry';
-my $stage_table = 'm_biblio_record_entry_legacy';
+my $base_table;
+my $stage_table;
+my $marc_column = 'marc';
 my $auth = '';
 my $serial = '';
 my $source = 2;
 my $x_source = 'default';
+my $no_source_or_last_xact_id;
 my $dbh = Mig::db_connect();
 my $infile;
 my $i = 0;
@@ -79,7 +81,9 @@ my $ret = GetOptions(
     'x_source:s'          => \$x_source,
     'source:i'            => \$source,
     'base_table:s'        => \$base_table,
-    'stage_table:s'       => \$stage_table
+    'stage_table:s'       => \$stage_table,
+    'marc_column:s'       => \$marc_column,
+    'no_source_or_last_xact_id' => \$no_source_or_last_xact_id
 );
 
 #if in file is empty then fail
@@ -87,15 +91,21 @@ my $ret = GetOptions(
 
 if ($serial == 1) { 
     $base_table = 'm_authority_record_entry';
-    $stage_table = 'm_authority_record_entry_legacy';
 }
 
 if ($auth == 1) {
     $base_table = 'm_serial_record_entry';
-    $stage_table = 'm_serial_record_entry_legacy';	
 }
 
 if ($auth == 1 and $serial == 1) { abort('are you sure you want to load these as authorities and serials?'); }
+
+if (!$base_table) {
+    $base_table = 'm_biblio_record_entry';
+}
+
+if (!$stage_table) {
+    $stage_table = $base_table . '_legacy';
+}
 
 my $bre_test = check_for_table($dbh,$base_table);
 my $bre_legacy_test = check_for_table($dbh,$stage_table);
@@ -107,6 +117,10 @@ if ($xmig_test == 0) { add_column($dbh,$stage_table,'x_migrate','BOOLEAN DEFAULT
 
 my $xx_source_test = check_for_column($dbh,$stage_table,'x_source');
 if ($xx_source_test == 0) { add_column($dbh,$stage_table,'x_source','TEXT'); }
+
+my $xmarc_test = check_for_column($dbh,$stage_table,$marc_column);
+if ($xmarc_test == 0) { add_column($dbh,$stage_table,$marc_column,'TEXT'); }
+
 
 #flatten out MARC XML FILE
 open my $xml, "<:encoding(utf8)", $infile or abort('could not open MARC XML file');
@@ -178,8 +192,15 @@ sub stage_record {
 	my $last_xact = "'$MIGSCHEMA'";
 	$record = '$_$' . $record . '$_$';
 	my $sql;
-	if ($x_source eq 'default') { $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,marc,source) VALUES ($last_xact,$record,$source);"; }
-		else { $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,marc,x_source,source) VALUES ($last_xact,$record,'$x_source',$source);";  }
+    if ($no_source_or_last_xact_id) {
+        $sql = "INSERT INTO $MIGSCHEMA.$stage_table ($marc_column) VALUES ($record);";
+    } else {
+        if ($x_source eq 'default') {
+            $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,$marc_column,source) VALUES ($last_xact,$record,$source);";
+        } else {
+            $sql = "INSERT INTO $MIGSCHEMA.$stage_table (last_xact_id,$marc_column,x_source,source) VALUES ($last_xact,$record,'$x_source',$source);";
+        }
+    }
     my $sth = $dbh->prepare($sql);
     $sth->execute();
 	return;
