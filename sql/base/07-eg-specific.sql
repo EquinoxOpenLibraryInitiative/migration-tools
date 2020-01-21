@@ -1813,27 +1813,27 @@ $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_asset_barcode_collisions(migration_schema TEXT) RETURNS VOID AS $function$
 DECLARE
-    x_barcode TEXT;
-    x_id BIGINT;
+    xxx_barcode TEXT;
+    xxx_id BIGINT;
     row_count NUMERIC;
     internal_collision_count NUMERIC := 0;
     incumbent_collision_count NUMERIC := 0;
 BEGIN
-    FOR x_barcode IN SELECT barcode FROM m_asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    FOR xxx_barcode IN SELECT barcode FROM m_asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
     LOOP
-        FOR x_id IN SELECT id FROM m_asset_copy WHERE barcode = x_barcode
+        FOR xxx_id IN SELECT id FROM m_asset_copy WHERE barcode = xxx_barcode
         LOOP
-            UPDATE m_asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
+            UPDATE m_asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             internal_collision_count := internal_collision_count + row_count;
         END LOOP;
     END LOOP;
     RAISE INFO '% internal collisions', internal_collision_count;
-    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, m_asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
+    FOR xxx_barcode IN SELECT a.barcode FROM asset.copy a, m_asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
     LOOP
-        FOR x_id IN SELECT id FROM m_asset_copy_legacy WHERE barcode = x_barcode
+        FOR xxx_id IN SELECT id FROM m_asset_copy_legacy WHERE barcode = xxx_barcode
         LOOP
-            UPDATE m_asset_copy_legacy SET barcode = migration_schema || '_incumbent_collision_' || id || '_' || barcode WHERE id = x_id;
+            UPDATE m_asset_copy_legacy SET barcode = migration_schema || '_incumbent_collision_' || id || '_' || barcode WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_collision_count := incumbent_collision_count + row_count;
         END LOOP;
@@ -1847,42 +1847,42 @@ $function$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_actor_barcode_collisions(migration_schema TEXT) RETURNS VOID AS $function$
 DECLARE
-    x_barcode TEXT;
-    x_id BIGINT;
+    xxx_barcode TEXT;
+    xxx_id BIGINT;
     row_count NUMERIC;
     internal_collision_count NUMERIC := 0;
     incumbent_barcode_collision_count NUMERIC := 0;
     incumbent_usrname_collision_count NUMERIC := 0;
 BEGIN
-    FOR x_barcode IN SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    FOR xxx_barcode IN SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
     LOOP
-        FOR x_id IN SELECT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR xxx_id IN SELECT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
         LOOP
-            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             internal_collision_count := internal_collision_count + row_count;
         END LOOP;
     END LOOP;
     RAISE INFO '% internal usrname/barcode collisions', internal_collision_count;
 
-    FOR x_barcode IN
+    FOR xxx_barcode IN
         SELECT a.barcode FROM actor.card a, m_actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
     LOOP
-        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR xxx_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = xxx_barcode
         LOOP
-            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_incumbent_barcode_collision_' || id || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_incumbent_barcode_collision_' || id || '_' || usrname WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_barcode_collision_count := incumbent_barcode_collision_count + row_count;
         END LOOP;
     END LOOP;
     RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
 
-    FOR x_barcode IN
+    FOR xxx_barcode IN
         SELECT a.usrname FROM actor.usr a, m_actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
     LOOP
-        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR xxx_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = xxx_barcode
         LOOP
-            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_incumbent_usrname_collision_' || id || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_incumbent_usrname_collision_' || id || '_' || usrname WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_usrname_collision_count := incumbent_usrname_collision_count + row_count;
         END LOOP;
@@ -1895,27 +1895,27 @@ $function$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_asset_barcode_collisions2(migration_schema TEXT) RETURNS VOID AS $function$
 DECLARE
-    x_barcode TEXT;
-    x_id BIGINT;
+    xxx_barcode TEXT;
+    xxx_id BIGINT;
     row_count NUMERIC;
     internal_collision_count NUMERIC := 0;
     incumbent_collision_count NUMERIC := 0;
 BEGIN
-    FOR x_barcode IN SELECT barcode FROM m_asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    FOR xxx_barcode IN SELECT barcode FROM m_asset_copy_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
     LOOP
-        FOR x_id IN SELECT id FROM m_asset_copy WHERE barcode = x_barcode
+        FOR xxx_id IN SELECT id FROM m_asset_copy WHERE barcode = xxx_barcode
         LOOP
-            UPDATE m_asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = x_id;
+            UPDATE m_asset_copy SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             internal_collision_count := internal_collision_count + row_count;
         END LOOP;
     END LOOP;
     RAISE INFO '% internal collisions', internal_collision_count;
-    FOR x_barcode IN SELECT a.barcode FROM asset.copy a, m_asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
+    FOR xxx_barcode IN SELECT a.barcode FROM asset.copy a, m_asset_copy_legacy b WHERE x_migrate AND a.deleted IS FALSE AND a.barcode = b.barcode
     LOOP
-        FOR x_id IN SELECT id FROM m_asset_copy_legacy WHERE barcode = x_barcode
+        FOR xxx_id IN SELECT id FROM m_asset_copy_legacy WHERE barcode = xxx_barcode
         LOOP
-            UPDATE m_asset_copy_legacy SET barcode = migration_schema || '_' || barcode WHERE id = x_id;
+            UPDATE m_asset_copy_legacy SET barcode = migration_schema || '_' || barcode WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_collision_count := incumbent_collision_count + row_count;
         END LOOP;
@@ -1929,42 +1929,42 @@ $function$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION migration_tools.handle_actor_barcode_collisions2(migration_schema TEXT) RETURNS VOID AS $function$
 DECLARE
-    x_barcode TEXT;
-    x_id BIGINT;
+    xxx_barcode TEXT;
+    xxx_id BIGINT;
     row_count NUMERIC;
     internal_collision_count NUMERIC := 0;
     incumbent_barcode_collision_count NUMERIC := 0;
     incumbent_usrname_collision_count NUMERIC := 0;
 BEGIN
-    FOR x_barcode IN SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
+    FOR xxx_barcode IN SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 1 HAVING COUNT(*) > 1
     LOOP
-        FOR x_id IN SELECT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR xxx_id IN SELECT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = xxx_barcode
         LOOP
-            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             internal_collision_count := internal_collision_count + row_count;
         END LOOP;
     END LOOP;
     RAISE INFO '% internal usrname/barcode collisions', internal_collision_count;
 
-    FOR x_barcode IN
+    FOR xxx_barcode IN
         SELECT a.barcode FROM actor.card a, m_actor_usr_legacy b WHERE x_migrate AND a.barcode = b.usrname
     LOOP
-        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR xxx_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = xxx_barcode
         LOOP
-            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_barcode_collision_count := incumbent_barcode_collision_count + row_count;
         END LOOP;
     END LOOP;
     RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
 
-    FOR x_barcode IN
+    FOR xxx_barcode IN
         SELECT a.usrname FROM actor.usr a, m_actor_usr_legacy b WHERE x_migrate AND a.usrname = b.usrname
     LOOP
-        FOR x_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = x_barcode
+        FOR xxx_id IN SELECT DISTINCT id FROM m_actor_usr_legacy WHERE x_migrate AND usrname = xxx_barcode
         LOOP
-            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = x_id;
+            UPDATE m_actor_usr_legacy SET usrname = migration_schema || '_' || usrname WHERE id = xxx_id;
             GET DIAGNOSTICS row_count = ROW_COUNT;
             incumbent_usrname_collision_count := incumbent_usrname_collision_count + row_count;
         END LOOP;
