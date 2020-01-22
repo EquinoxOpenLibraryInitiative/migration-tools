@@ -135,6 +135,18 @@ foreach my $func ($dom->findnodes('//function')) {
     $screate->execute();
 }
 
+foreach my $table ($dom->findnodes('//table')) {
+    my $tdrop = $table->findvalue('./drop');
+    my $tcreate = $table->findvalue('./create');
+    my $tname = $table->findvalue('./name');
+    my $sdrop = $dbh->prepare($tdrop);
+    my $screate = $dbh->prepare($tcreate);
+    print "dropping table $tname ... ";
+    $sdrop->execute();
+    print "creating table $tname\n\n";
+    $screate->execute();
+}
+
 $tags = lc($tags);
 my @report_tags = split(/\./,$tags);
 foreach my $t (@report_tags) {
@@ -200,6 +212,14 @@ foreach my $t (@report_tags) {
 }
 
 print "\n";
+
+foreach my $table ($dom->findnodes('//table')) {
+    my $tdrop = $table->findvalue('./drop');
+    my $tname = $table->findvalue('./name');
+    my $sdrop = $dbh->prepare($tdrop);
+    print "cleaning up table $tname ... \n";
+    $sdrop->execute();
+}
 
 close $fh;
 
