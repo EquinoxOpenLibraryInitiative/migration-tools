@@ -649,7 +649,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <report_title>Bibliographic Records Without Volumes And Recognized URI</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
-        <heading>Service, Domain, Count</heading>
+        <heading>Service.Domain.Count</heading>
         <query>SELECT '3M','ebook.3m.com', COUNT(*) FROM subfield_u WHERE value ~* 'ebook.3m.com' GROUP BY 1, 2 UNION ALL
 		SELECT 'Axis 360','axis360.baker-taylor.com', COUNT(*) FROM subfield_u WHERE value ~* 'axis360.baker-taylor.com' GROUP BY 1, 2 UNION ALL
 		SELECT 'Book Flix','bookflix.digital.scholastic.com', COUNT(*) FROM subfield_u WHERE value ~* 'bookflix.digital.scholastic.com' GROUP BY 1, 2 UNION ALL
@@ -666,7 +666,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
 		SELECT 'Overdrive','overdrive.com', COUNT(*) FROM subfield_u WHERE value ~* 'overdrive.com' GROUP BY 1, 2 UNION ALL
 		SELECT 'ProQuest','ebookcentral.proquest.com', COUNT(*) FROM subfield_u WHERE value ~* 'ebookcentral.proquest.com' GROUP BY 1, 2 UNION ALL
 		SELECT 'RB Digital','rbdigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'rbdigital.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'U.S. Government Sites','\.gov', COUNT(*) FROM subfield_u WHERE value ~* '\.gov' GROUP BY 1,2;;
+		SELECT 'U.S. Government Sites','.gov', COUNT(*) FROM subfield_u WHERE value ~* '\.gov' GROUP BY 1,2;;
 		</query>
         <note>This list is built from known services and domains. If you have records for electronic resources that are not here please let us know.</note>
     </report>
