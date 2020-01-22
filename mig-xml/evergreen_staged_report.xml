@@ -640,6 +640,33 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
+        <name>bibswovolumesanduri</name>
+        <report_title>Bibliographic Records Without Volumes And Recognized URI</report_title>
+        <tag>bibs</tag>
+        <iteration>0</iteration>
+        <heading>Service, Domain, Count</heading>
+        <query>DROP TABLE IF EXISTS subfield_u;
+CREATE UNLOGGED TABLE subfield_u AS SELECT UNNEST(oils_xpath( '//*[@tag="856"]/*[@code="u"]/text()', marc)) AS value FROM m_biblio_record_entry_legacy WHERE x_migrate;
+SELECT '3M','ebook.3m.com', COUNT(*) FROM subfield_u WHERE value ~* 'ebook.3m.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Axis 360','axis360.baker-taylor.com', COUNT(*) FROM subfield_u WHERE value ~* 'axis360.baker-taylor.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Book Flix','bookflix.digital.scholastic.com', COUNT(*) FROM subfield_u WHERE value ~* 'bookflix.digital.scholastic.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Book Flix','bkflix.grolier.com', COUNT(*) FROM subfield_u WHERE value ~* 'bkflix.grolier.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Comics Plus','library.comicsplusapp.com', COUNT(*) FROM subfield_u WHERE value ~* 'library.comicsplusapp.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Ebrary','site.ebrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'site.ebrary.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Hoopla','hoopladigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'hoopladigital.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Infobase','avod.infobase.com', COUNT(*) FROM subfield_u WHERE value ~* 'avod.infobase.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Learning Express','learningexpresslibrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'learningexpresslibrary.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Missouri Overdrive','molib2go.org', COUNT(*) FROM subfield_u WHERE value ~* 'molib2go.org' GROUP BY 1, 2 UNION ALL
+SELECT 'netLibrary','netLibrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'netLibrary.com' GROUP BY 1, 2 UNION ALL
+SELECT 'OneClickDigital','oneclickdigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'oneclickdigital.com' GROUP BY 1, 2 UNION ALL
+SELECT 'Overdrive','overdrive.com', COUNT(*) FROM subfield_u WHERE value ~* 'overdrive.com' GROUP BY 1, 2 UNION ALL
+SELECT 'ProQuest','ebookcentral.proquest.com', COUNT(*) FROM subfield_u WHERE value ~* 'ebookcentral.proquest.com' GROUP BY 1, 2 UNION ALL
+SELECT 'RB Digital','rbdigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'rbdigital.com' GROUP BY 1, 2;
+DROP TABLE IF EXISTS subfield_u;</query>
+        <note>This list is built from known services and domains. If you have records for electronic resources that are not here please let us know.</note>
+    </report>
+
+    <report>
         <name>bibswuri</name>
         <report_title>Bibliographic Records With 856$9s</report_title>
         <tag>bibs</tag>
