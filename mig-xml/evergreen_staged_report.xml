@@ -1133,7 +1133,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <iteration>0</iteration>
         <report_title>Action Triggers Setup for Notices</report_title>
         <heading>ID.Active.Owner.Name</heading>
-        <query>SELECT ed.id, ed.active, aou.shortname, ed.name
+        <query>SELECT ed.id, ed.active::TEXT, aou.shortname, ed.name
             FROM m_action_trigger.event_definition ed 
             JOIN actor.org_unit aou ON aou.id = ed.owner 
             WHERE ed.owner IN (SELECT DISTINCT home_ou FROM m_actor_usr)
