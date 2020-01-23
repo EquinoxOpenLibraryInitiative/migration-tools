@@ -1135,8 +1135,6 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <heading>ID.Active.Owner.Name</heading>
         <query>SELECT ed.id, ed.active::TEXT, aou.shortname, ed.name
             FROM action_trigger.event_definition ed 
-        <query>SELECT ed.id, ed.active::TEXT, aou.shortname, ed.name
-            FROM action_trigger.event_definition ed 
             JOIN actor.org_unit aou ON aou.id = ed.owner 
             WHERE ed.owner IN (SELECT DISTINCT home_ou FROM m_actor_usr)
             OR ed.owner IN (SELECT DISTINCT parent_ou FROM actor.org_unit WHERE id in (SELECT DISTINCT home_ou FROM m_actor_usr));
