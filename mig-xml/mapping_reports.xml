@@ -706,6 +706,15 @@
         <query>SELECT cki_notes FROM item_csv_clean WHERE LENGTH(cki_notes) > 1 LIMIT 20;</query>
     </report>
 
+    <report>
+        <name>hz_burbbills</name>
+        <report_title>Count of Bills by Type</report_title>
+        <tag>horizon2</tag>
+        <iteration>0</iteration>
+        <heading>Count.Bill Type</heading>
+        <query>SELECT COUNT(*), block FROM burb_csv_clean WHERE amount::INTEGER > 0 GROUP BY 2;</query>
+    </report>
+
 <!-- resource mate -->
 
     <report>
