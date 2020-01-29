@@ -64,7 +64,7 @@ BEGIN
         );
     END IF;
     IF rmarc IS NULL THEN
-        SELECT marc INTO rmarc FROM biblio_record_entry_legacy WHERE id = rid;
+        SELECT marc INTO rmarc FROM m_biblio_record_entry_legacy WHERE id = rid;
     END IF;
 
     FOR attr_def IN SELECT * FROM config.record_attr_definition WHERE NOT composite AND name = ANY( attr_list ) ORDER BY format LOOP
@@ -265,7 +265,7 @@ BEGIN
 	SELECT ARRAY_AGG(code) FROM config.coded_value_map WHERE id IN (SELECT UNNEST(vlist)) 
 		AND ctype = 'search_format' INTO search;
 
-	UPDATE biblio_record_entry_legacy SET x_search_format = search  WHERE id = rid;
+	UPDATE m_biblio_record_entry_legacy SET x_search_format = search  WHERE id = rid;
 END;
 $func$ LANGUAGE PLPGSQL;
 
@@ -294,7 +294,7 @@ BEGIN
     SELECT ARRAY_AGG(code) FROM config.coded_value_map WHERE id IN (SELECT UNNEST(vlist))
         AND ctype = 'search_format' INTO search;
 
-    UPDATE biblio_record_entry_legacy SET x_after_search_format = search WHERE id = rid;
+    UPDATE m_biblio_record_entry_legacy SET x_after_search_format = search WHERE id = rid;
 END;
 $func$ LANGUAGE PLPGSQL;
 
@@ -305,14 +305,14 @@ DECLARE
     y   TEXT;
     w   TEXT[];
 BEGIN
-	SELECT circ_mods FROM biblio_record_entry_legacy WHERE id = rid INTO cms;
+	SELECT circ_mods FROM m_biblio_record_entry_legacy WHERE id = rid INTO cms;
     IF cms IS NOT NULL THEN
     	FOREACH y IN ARRAY cms LOOP
         	w := w || (SELECT sf1 FROM circ_mod_to_sf_map WHERE circ_mod = y);
             w := w || (SELECT sf2 FROM circ_mod_to_sf_map WHERE circ_mod = y);
             w := w || (SELECT sf3 FROM circ_mod_to_sf_map WHERE circ_mod = y);
         END LOOP;
-	UPDATE biblio_record_entry_legacy SET expected_sfs = w WHERE id = rid;
+	UPDATE m_biblio_record_entry_legacy SET expected_sfs = w WHERE id = rid;
     END IF;
 END;
 $func$ LANGUAGE PLPGSQL;
@@ -347,8 +347,8 @@ BEGIN
 	ELSE
 		ysrform_exclude := '';
 	END IF;
-    SELECT migration_tools.modify_fixed_fields(marc,xcode,xitype,xiform,xphy,xphyv,xphyp,xbiblevel,yiform_exclude,ysrform_exclude) FROM biblio_record_entry_legacy WHERE id = bib_id INTO r;
-    UPDATE biblio_record_entry_legacy SET marc = r WHERE id = bib_id;
+    SELECT migration_tools.modify_fixed_fields(marc,xcode,xitype,xiform,xphy,xphyv,xphyp,xbiblevel,yiform_exclude,ysrform_exclude) FROM m_biblio_record_entry_legacy WHERE id = bib_id INTO r;
+    UPDATE m_biblio_record_entry_legacy SET marc = r WHERE id = bib_id;
     RETURN TRUE;
 END;
 $function$;
