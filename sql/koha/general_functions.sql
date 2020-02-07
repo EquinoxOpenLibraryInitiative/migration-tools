@@ -29,3 +29,17 @@ CREATE FUNCTION
     END
 $
 DELIMITER ;
+
+DROP FUNCTION IF EXISTS remove_bracketed_text;
+DELIMITER $
+CREATE FUNCTION 
+   remove_bracketed_text(str TEXT)
+   RETURNS TEXT
+   DETERMINISTIC
+    BEGIN
+    RETURN REPLACE(str, SUBSTRING(str, LOCATE('(', str), LENGTH(str) - LOCATE(')', REVERSE(str)) - LOCATE('(', str) + 2), '');
+    END
+$
+DELIMITER ;
+
+
