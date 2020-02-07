@@ -16,4 +16,16 @@ CREATE FUNCTION
 $
 DELIMITER ;
 
-
+DROP FUNCTION IF EXISTS string_segment_count;
+DELIMITER $
+CREATE FUNCTION 
+   string_segment_count(s TEXT, del VARCHAR(10))
+   RETURNS TEXT
+   DETERMINISTIC
+    BEGIN
+        DECLARE n INT ;
+        SET n = LENGTH(s) - LENGTH(REPLACE(s, del, '')) + 1;
+        RETURN n;
+    END
+$
+DELIMITER ;
