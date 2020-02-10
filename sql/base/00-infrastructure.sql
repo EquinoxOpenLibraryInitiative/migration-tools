@@ -21,7 +21,6 @@
 -- \i base.sql
 -- SELECT migration_tools.init('foo');
 -- SELECT migration_tools.build('foo');
--- SELECT * FROM foo.fields_requiring_mapping;
 -- \d foo.actor_usr
 -- create some incoming ILS specific staging tables, like CREATE foo.legacy_items ( l_barcode TEXT, .. ) INHERITS (foo.asset_copy);
 -- Do some mapping, like UPDATE foo.legacy_items SET barcode = TRIM(BOTH ' ' FROM l_barcode);
@@ -157,12 +156,6 @@ AS $function$
     BEGIN
         --RAISE INFO 'In migration_tools.build_specific_base_staging_table(%,%) -> %', migration_schema, production_table, base_staging_table;
         EXECUTE 'CREATE TABLE ' || migration_schema || '.' || base_staging_table || ' ( LIKE ' || production_table || ' INCLUDING DEFAULTS EXCLUDING CONSTRAINTS );';
-        EXECUTE '
-            INSERT INTO ' || migration_schema || '.fields_requiring_mapping
-                SELECT table_schema, table_name, column_name, data_type
-                FROM information_schema.columns
-                WHERE table_schema = ''' || migration_schema || ''' AND table_name = ''' || base_staging_table || ''' AND is_nullable = ''NO'' AND column_default IS NULL;
-        ';
         FOR columns IN
             SELECT table_schema, table_name, column_name, data_type
             FROM information_schema.columns
