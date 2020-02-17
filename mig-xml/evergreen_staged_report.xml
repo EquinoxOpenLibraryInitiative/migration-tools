@@ -350,7 +350,7 @@
         <report_title>Copies by Location</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
-        <heading>Copy Count.Library.Circ Library</heading>
+        <heading>Copy Count.Location.Circ Library</heading>
         <query>SELECT COUNT(ac.id), acl.name, aou.name FROM m_asset_copy_legacy ac JOIN asset.copy_location acl ON acl.id = ac.location JOIN actor.org_unit aou ON aou.id = ac.circ_lib WHERE ac.x_migrate = TRUE GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
