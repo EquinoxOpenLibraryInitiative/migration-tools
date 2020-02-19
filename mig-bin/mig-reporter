@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-
+# -*- coding: iso-8859-15 -*-
 ###############################################################################
 =pod
 
@@ -110,6 +110,7 @@ $report_file = $MIGGITDIR . $report_file;
 
 open($fh, '>', $report_file) or abort("Could not open output file $report_file!");
 write_title_page($report_title,$fh,$analyst,$captions);
+load_javascript($fh);
 
 if (defined $added_page_file and defined $added_page_title) { 
     print $fh "<<<\n";
@@ -200,7 +201,7 @@ foreach my $t (@report_tags) {
         if ($debug eq 'on') {print "\nchecking for $rname ... ";}
         %report0 = find_report($dom,$t,$rname,'0',$debug);
         $check_tables0 = check_table($report0{query},$MIGSCHEMA,$debug,$rname);
-        if ($check_tables0 == 1) { $r =  print_query($fh,%report0); } else {
+        if ($check_tables0 == 1) { $r = print_query($fh,%report0); } else {
         	%report1 = find_report($dom,$t,$rname,'1',$debug);
             if (defined $report1{query}) {
             	$check_tables1 = check_table($report1{query},$MIGSCHEMA,$debug,$rname);
@@ -261,7 +262,9 @@ sub find_report {
                 tag => $node->findvalue('./tag'),
                 iteration => $node->findvalue('./iteration'),
                 note => $node->findvalue('./note'),
-            );
+				display => $node->findvalue('./display'),
+    			chart_labels => $node->findvalue('./chart_labels'),
+	        );
             return %report;
         }
     }
@@ -312,6 +315,14 @@ sub write_title_page {
     print $fh ":toc:\n";
     if ($captions eq 'on') { print $fh ":caption:\n"; }
     print $fh "\n";
+}
+
+sub load_javascript {
+	my $fh = shift;
+
+	print $fh "++++\n";
+	print $fh "<script type=\"text/javascript\" src=\"https://www.gstatic.com/charts/loader.js\"></script>\n";
+	print $fh "++++\n";
 }
 
 sub check_table {
@@ -383,13 +394,20 @@ sub clean_query_string {
 sub print_query {
     my $fh = shift;
     my %report = @_;
+
+	my $display = $report{display};
+	if (!defined $display) { $display = 'table'; }
+	my $rname = $report{name};
     my $query = $report{query};
+	my $title = $report{report_title};
     my $sth = $dbh->prepare($query);
     $sth->execute();
 
     my $header_flag = 0;
 
-    while (my @row = $sth->fetchrow_array) {
+	#print asciidoc
+	if ($display eq 'table') {
+    	while (my @row = $sth->fetchrow_array) {
             if ($header_flag == 0) {
                 print $fh "\n.*$report{report_title}*\n";
                 print $fh "|===\n";
@@ -414,11 +432,45 @@ sub print_query {
             }
             print $fh "\n";
         }
-    if ($header_flag == 1) { 
-        print $fh "|===\n\n"; 
-        print $fh $report{note};
-        print $fh "\n\n";
-    }
+    	if ($header_flag == 1) { 
+        	print $fh "|===\n\n"; 
+        	print $fh $report{note};
+        	print $fh "\n\n";
+    	}
+	}
+
+    #print pie chart 
+	if ($display eq 'pie_chart') {
+		my @h = split(/\./,$report{heading});
+	    my @l = split(/\./,$report{chart_labels});
+	
+		print $fh "++++\n";
+		print $fh "<div id=\"$rname\"></div>\n";
+		print $fh "<script type=\"text/javascript\">\n";
+		print $fh "google.charts.load('current', {'packages':['corechart']});\n";
+		print $fh "google.charts.setOnLoadCallback(drawChart);\n";
+		print $fh "function drawChart() {\n";
+		print $fh "  var data = google.visualization.arrayToDataTable([\n";
+		#loop through data here 
+		print $fh "['$l[0]', '$l[1]' ],\n";
+		while (my @row = $sth->fetchrow_array) {
+			my $row_length = @row;
+			my $r = 1;
+			while ($r < $row_length) {
+                print $fh "['$h[$r-1]', $row[$r-1] ],\n";
+                $r++;
+            }
+			if ($r = $row_length) { print $fh "['$h[$r-1]', $row[$r-1] ]\n"; }	
+		}
+		print $fh "]);\n";
+		print $fh "var options = {'title':'$title'};\n";
+		print $fh "var chart = new google.visualization.PieChart(document.getElementById('$rname'));\n";
+        print $fh "chart.draw(data, options);\n";
+		print $fh "}\n";
+		print $fh "</script>\n";
+		print $fh "++++\n";
+	}
+
     print "successfully wrote output for $report{name}.\n\n";
 }
 
