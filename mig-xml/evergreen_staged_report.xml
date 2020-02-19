@@ -44,6 +44,26 @@
     </report>
 -->
 
+<!-- adding sample pie chart report
+    <report>
+        <name>current_holds_by_state</name>
+        <tag>holds</tag>
+        <iteration>0</iteration>
+        <display>pie_chart</display>
+        <report_title>Holds by Current State (7 days)</report_title>
+        <heading>Captured.Fulfilled.Canceled.Targeted.Waiting</heading>
+        <chart_labels>Hold Type.Count</chart_labels>
+        <query> SELECT
+            (SELECT COUNT(*) FROM action.hold_request WHERE fulfillment_time IS NULL AND capture_time > NOW() - '7 days'::INTERVAL AND cancel_time IS NULL),
+            (SELECT COUNT(*) FROM action.hold_request WHERE fulfillment_time > NOW() - '7 days'::INTERVAL AND capture_time IS NOT NULL AND cancel_time IS NULL),
+            (SELECT COUNT(*) FROM action.hold_request WHERE fulfillment_time IS NULL AND cancel_time > NOW() - '7 days'::INTERVAL),
+            (SELECT COUNT(*) FROM action.hold_request WHERE fulfillment_time IS NULL AND capture_time IS NULL AND cancel_time IS NULL AND current_copy IS NOT NULL),
+            (SELECT COUNT(*) FROM action.hold_request WHERE fulfillment_time IS NULL AND capture_time IS NULL AND cancel_time IS NULL AND current_copy IS NULL)
+        </query>
+    </report>
+
+-->
+
     <!-- CIRC REPORTS -->
     <report>
         <name>circ_count</name>
