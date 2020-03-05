@@ -1,0 +1,141 @@
+#!/usr/bin/perl
+# -*- coding: iso-8859-15 -*-
+###############################################################################
+=pod
+
+=item B<bibstats> --file foo.mrc
+
+Reads through a marc file to generate statistical information about the file 
+for quick analysis.
+
+--uri_threshold defaults to 1, only shows URI values with more than that 
+frequency
+
+=back
+
+=cut
+
+###############################################################################
+
+use strict;
+use warnings;
+
+use Data::Dumper;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use Switch;
+use Getopt::Long;
+use MARC::Batch;
+use MARC::Record;
+use MARC::Field;
+use Cwd 'abs_path';
+use Cwd qw(getcwd);
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+use open ':encoding(utf8)';
+
+pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
+pod2usage(-verbose => 1) if ! $ARGV[1];
+
+my $file;
+my $uri_threshold = 1;
+
+my $ret = GetOptions(
+    'file:s'           => \$file,
+	'uri_threshold:i'  => \$uri_threshold
+);
+
+my $batch = MARC::Batch->new('USMARC', $file);
+$batch->strict_off();
+my $filetype = `file $file`;
+if ($filetype =~ m/MARC21/) { print "$filetype.\n" }
+    else { abort("File is not MARC21."); }
+
+my $i = 0;
+my $uri_count = 0;
+my $uri_valid_count = 0;
+my $uri_sub9_count = 0;
+my $author_sub0 = 0;
+my $title_sub0 = 0;
+my @uris;
+my @fields;
+my @codes;
+while ( my $record = $batch->next() ) {
+    $i++;
+	@fields = $record->field('856');
+	my $ldr = substr $record->leader(), 9, 1;
+	push @codes, $ldr;
+	foreach my $f (@fields) {
+		my $u = $f->subfield('u');
+        my $n = $f->subfield('9');
+        if (defined $n) { $uri_sub9_count++; }
+		if (defined $u) {
+			$uri_count++;
+			my $ind1 = $f->indicator('1');
+			my $ind2 = $f->indicator('2');
+			if ($ind1 eq '4') {
+				if ($ind2 eq '0' or $ind2 eq '1') { $uri_valid_count++; }
+			}
+			my $ustring = lc $f->as_string('u');
+			$ustring =~ s/http:\/\///;
+            $ustring =~ s/ftp:\/\///;
+			$ustring =~ s/https:\/\///;
+			$ustring =~ s/\/.*//;
+			push @uris, $ustring;
+		}
+	}
+	@fields = $record->field('100');
+	foreach my $f (@fields) {
+		my $t = $f->subfield('0');
+		if (defined $t) { $title_sub0++; }	
+	}
+    @fields = $record->field('245');
+    foreach my $f (@fields) {
+        my $t = $f->subfield('0');
+        if (defined $t) { $author_sub0++; }
+    }
+    if(($i % 1000) == 0) { print "Processing bib $i.\n"; }
+}
+
+my %uri_counts;
+$uri_counts{$_}++ for @uris;
+
+my %code_counts;
+$code_counts{$_}++ for @codes;
+
+print "\n$filetype\n";
+print "$i bibs read in file\n\n";
+
+print "=== codes\n";
+foreach my $key (keys %code_counts) {
+    my $value = $code_counts{$key};
+    print "=== $key   $value\n"; 
+}
+print "\n";
+
+print "$uri_count 856 fields with a subfield u\n";
+print "$uri_valid_count 856 fields with a subfield u and valid indicators\n";
+print "$uri_sub9_count 856 fields have subfield 9s\n";
+print "$title_sub0 100 fields have a subfield 0\n";
+print "$author_sub0 245 fields have a subfield 0\n";
+
+print "\nURI values are domains and filtered to only show those with more than $uri_threshold\n";
+foreach my $key (keys %uri_counts) {
+	my $value = $uri_counts{$key};
+	if ($value > $uri_threshold) { print "=== $key   $value\n"; } 
+}
+
+close $file;
+
+########### functions
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    exit 1;
+}
