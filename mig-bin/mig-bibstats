@@ -44,11 +44,45 @@ pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $file;
 my $uri_threshold = 1;
+my $p_holding_code;
+my $p_barcode_subfield;
+my $p_ils_name = 'Runtime ILS';
+my $holding_threshold = 50;
 
 my $ret = GetOptions(
-    'file:s'           => \$file,
-	'uri_threshold:i'  => \$uri_threshold
+    'file:s'           		=> \$file,
+	'uri_threshold:i'  		=> \$uri_threshold,
+	'holding_code:s'   		=> \$p_holding_code,
+	'barcode:s'        		=> \$p_barcode_subfield,
+	'ils_name:s'	   		=> \$p_ils_name,
+	'holding_threshold:s'	=> \$holding_threshold
 );
+
+if ($p_holding_code and length $p_holding_code != 3) { abort('Holdings codes must be three characters.'); }
+
+if ($p_barcode_subfield) {
+	if (!defined $p_holding_code) { abort('A barcode field can not be used without a holding code.'); }
+	if (length $p_barcode_subfield != 1) { abort('Barcode subfields must be a single character code.'); }
+}
+
+my @ilses = (
+	['Mandarin','852','p'],
+	['Evergreen','852','p'],
+	['Polaris','852','p'],
+	['TLC','949','g'],
+	['Koha','952','p'],
+	['Sympony','999','i']
+);
+
+my @temp;
+if ($p_holding_code) {
+	push @temp, $p_ils_name;
+	push @temp, $p_holding_code;
+	if ($p_barcode_subfield) { push @temp, lc $p_barcode_subfield; }
+}
+push @ilses, @temp;
+
+
 
 my $batch = MARC::Batch->new('USMARC', $file);
 $batch->strict_off();
@@ -65,8 +99,28 @@ my $title_sub0 = 0;
 my @uris;
 my @fields;
 my @codes;
+my @holding_code_strings;
+my %holding_counts;
+my %barcode_counts;
+
+foreach (@ilses) { 
+	$holding_counts{@$_[0]} = 0; 
+	$barcode_counts{@$_[0]} = 0;
+}
+
 while ( my $record = $batch->next() ) {
     $i++;
+	#check holdings, bit time consuming but more future proof
+	foreach (@ilses) {
+		my $ils = @$_[0];
+		my $hcode = @$_[1];
+		my $barcode = @$_[2];
+		my @holding_fields = $record->field($hcode);
+		my $l = scalar @holding_fields;
+		my $v = $holding_counts{$ils};
+		if ($l) { $holding_counts{$ils} = $v + $l; }
+	}
+    #process 856s
 	@fields = $record->field('856');
 	my $ldr = substr $record->leader(), 9, 1;
 	push @codes, $ldr;
@@ -89,6 +143,7 @@ while ( my $record = $batch->next() ) {
 			push @uris, $ustring;
 		}
 	}
+    #check for authority linking on 100s and 245s, if present may need to scrub them
 	@fields = $record->field('100');
 	foreach my $f (@fields) {
 		my $t = $f->subfield('0');
@@ -111,7 +166,7 @@ $code_counts{$_}++ for @codes;
 print "\n$filetype\n";
 print "$i bibs read in file\n\n";
 
-print "=== codes\n";
+print "=== Leader 09 codes\n";
 foreach my $key (keys %code_counts) {
     my $value = $code_counts{$key};
     print "=== $key   $value\n"; 
@@ -123,6 +178,12 @@ print "$uri_valid_count 856 fields with a subfield u and valid indicators\n";
 print "$uri_sub9_count 856 fields have subfield 9s\n";
 print "$title_sub0 100 fields have a subfield 0\n";
 print "$author_sub0 245 fields have a subfield 0\n";
+
+print "\n=== Holdings Analysis\n";
+foreach my $key (keys %holding_counts) {
+	my $c = $holding_counts{$key};
+	if (((100/$i)*$c) >= $holding_threshold) { print "Could be $key $holding_counts{$key} holdings tags\n"; }
+}
 
 print "\nURI values are domains and filtered to only show those with more than $uri_threshold\n";
 foreach my $key (keys %uri_counts) {
