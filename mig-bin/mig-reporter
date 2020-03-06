@@ -264,6 +264,8 @@ sub find_report {
                 note => $node->findvalue('./note'),
 				display => $node->findvalue('./display'),
     			chart_labels => $node->findvalue('./chart_labels'),
+				divwidth => $node->findvalue('./divwidth'),
+				divheight => $node->findvalue('./divheight'),
 	        );
             return %report;
         }
@@ -396,6 +398,8 @@ sub print_query {
     my %report = @_;
 
 	my $display = $report{display};
+	my $height = $report{divheight};
+	my $width = $report{divwidth};
 	if (!defined $display) { $display = 'table'; }
 	my $rname = $report{name};
     my $query = $report{query};
@@ -403,6 +407,8 @@ sub print_query {
     my $sth = $dbh->prepare($query);
     $sth->execute();
 
+	if ($height) { $height = $height . 'px'; }
+	if ($width)  { $width = $width . 'px'; }
     my $header_flag = 0;
 
 	#print asciidoc
@@ -440,12 +446,13 @@ sub print_query {
 	}
 
     #print pie chart 
-	if ($display eq 'pie_chart') {
+	if ($display eq 'pie_chart' or $display eq 'donut_chart') {
 		my @h = split(/\./,$report{heading});
 	    my @l = split(/\./,$report{chart_labels});
 	
 		print $fh "++++\n";
-		print $fh "<div id=\"$rname\"></div>\n";
+		if (defined $height and defined $width) { print $fh "<div id=\"$rname\" style=\"width: $width; height: $height;\"></div>\n"; }
+			else { print $fh "<div id=\"$rname\"></div>\n"; }
 		print $fh "<script type=\"text/javascript\">\n";
 		print $fh "google.charts.load('current', {'packages':['corechart']});\n";
 		print $fh "google.charts.setOnLoadCallback(drawChart);\n";
@@ -463,7 +470,8 @@ sub print_query {
 			if ($r = $row_length) { print $fh "['$h[$r-1]', $row[$r-1] ]\n"; }	
 		}
 		print $fh "]);\n";
-		print $fh "var options = {'title':'$title'};\n";
+		if ($display eq 'pie_chart') { print $fh "var options = {'title':'$title'};\n"; }
+        if ($display eq 'donut_chart') { print $fh "var options = {'title':'$title', pieHole: 0.4};\n"; }
 		print $fh "var chart = new google.visualization.PieChart(document.getElementById('$rname'));\n";
         print $fh "chart.draw(data, options);\n";
 		print $fh "}\n";
