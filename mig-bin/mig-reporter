@@ -3,12 +3,16 @@
 ###############################################################################
 =pod
 
-=item B<reporter> --analyst "Analyst Name" --report_title "Report Title"
+=item B<reporter> --title "Report Title"
 
 Generates an asciidoc file in the git working directory that can be converted to 
 any appropriate format.  The analyst and report parameters are required.
 
 Optional parameters are : 
+
+-- analyst
+
+Default to "Equinox Open Library Initiative"
 
 --added_page_title and --added_page_file 
 
@@ -445,7 +449,7 @@ sub print_query {
     	}
 	}
 
-    #print pie chart 
+    #print chart 
 	if ($display eq 'pie_chart' or $display eq 'donut_chart') {
 		my @h = split(/\./,$report{heading});
 	    my @l = split(/\./,$report{chart_labels});
