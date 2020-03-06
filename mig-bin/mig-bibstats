@@ -11,6 +11,8 @@ for quick analysis.
 --uri_threshold defaults to 1, only shows URI values with more than that 
 frequency
 
+--ingore_filetype true will have it not care what file returns as the type and 
+always treat it as marc21
 =back
 
 =cut
@@ -48,12 +50,14 @@ my $p_holding_code;
 my $p_barcode_subfield;
 my $p_ils_name = 'Runtime ILS';
 my $holding_threshold = 50;
+my $p_ignore_filetype = 'false';
 
 my $ret = GetOptions(
     'file:s'           		=> \$file,
 	'uri_threshold:i'  		=> \$uri_threshold,
 	'holding_code:s'   		=> \$p_holding_code,
 	'barcode:s'        		=> \$p_barcode_subfield,
+	'ignore_filetype:s'		=> \$p_ignore_filetype,
 	'ils_name:s'	   		=> \$p_ils_name,
 	'holding_threshold:s'	=> \$holding_threshold
 );
@@ -87,7 +91,7 @@ push @ilses, @temp;
 my $batch = MARC::Batch->new('USMARC', $file);
 $batch->strict_off();
 my $filetype = `file $file`;
-if ($filetype =~ m/MARC21/) { print "$filetype.\n" }
+if ($filetype =~ m/MARC21/ or $p_ignore_filetype eq 'true') { print "$filetype.\n" }
     else { abort("File is not MARC21."); }
 
 my $i = 0;
