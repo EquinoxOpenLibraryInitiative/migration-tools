@@ -404,7 +404,7 @@ sub print_query {
 	my $display = $report{display};
 	my $height = $report{divheight};
 	my $width = $report{divwidth};
-	if (!defined $display) { $display = 'table'; }
+	if (!defined $display or length $display == 0) { $display = 'table'; }
 	my $rname = $report{name};
     my $query = $report{query};
 	my $title = $report{report_title};
