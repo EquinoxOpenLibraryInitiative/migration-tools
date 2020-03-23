@@ -1105,9 +1105,11 @@ CREATE OR REPLACE FUNCTION migration_tools.handle_not_migrate (TEXT,TEXT) RETURN
             || ' SET x_migrate = CASE'
             || ' WHEN BTRIM(desired_not_migrate) = ''TRUE'' THEN FALSE'
             || ' WHEN BTRIM(desired_not_migrate) = ''DNM'' THEN FALSE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''Delete'' THEN FALSE'
             || ' WHEN BTRIM(desired_not_migrate) = ''Do Not Migrate'' THEN FALSE'
             || ' WHEN BTRIM(desired_not_migrate) = ''FALSE'' THEN TRUE'
             || ' WHEN BTRIM(desired_not_migrate) = ''Migrate'' THEN TRUE'
+            || ' WHEN BTRIM(desired_not_migrate) = ''Keep'' THEN TRUE'
             || ' WHEN BTRIM(desired_not_migrate) = '''' THEN TRUE'
             || ' END';
 
