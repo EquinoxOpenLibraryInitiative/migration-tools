@@ -286,6 +286,7 @@ sub write_worksheets {
         };
     }
 
+    handle_list();
     handle_columns();
 
     if ($outfile) {
@@ -318,6 +319,46 @@ sub close_workbook {
 exit 0;
 
 ###############################################################################
+
+sub handle_list {
+    my $dbh = Mig::db_connect();
+    my $sth = $dbh->prepare("
+        SELECT *
+        FROM " . $MIGSCHEMA. "." . $table . "
+        LIMIT 65530;
+    ");
+    my $rv = $sth->execute()
+        || die "Error retrieving data from staging table: $!";
+    my $list_sheet;
+
+    $sheet_row_offset = 0;
+    $has_x_source = 0;
+    if ($outfile) {
+        print "Sheet: $table\n";
+        $list_sheet = $workbook->add_worksheet( $table );
+    }
+
+    my $handle_headers = 1;
+
+    while (my $data = $sth->fetchrow_hashref) {
+        if ($handle_headers) {
+            my $_idx = 0;
+            foreach my $col (sort keys %{ $data }) {
+                $list_sheet->write($sheet_row_start + $sheet_row_offset,$_idx++,$col,$bold);
+            }
+            $handle_headers = 0;
+        }
+        $sheet_row_offset++;
+        my $idx = 0;
+        foreach my $col (sort keys %{ $data }) {
+            my $cdata = $$data{$col};
+            if (!defined $cdata) { $cdata = '\N'; }
+            if ($outfile) {
+                $list_sheet->write($sheet_row_start + $sheet_row_offset,$idx++,$cdata,$left);
+            }
+        }
+    }
+}
 
 sub handle_columns {
     my $dbh = Mig::db_connect();
