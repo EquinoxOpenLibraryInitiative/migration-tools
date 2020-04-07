@@ -1,0 +1,334 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig - git-like program for tracking and manipulating legacy data files for
+migrations
+
+=head1 SYNOPSIS
+
+B<mig> <command> [argument] [...]
+
+=head1 DESCRIPTION
+
+B<mig> is used to track and manipulate CSV or CSV-like text files exported from
+legacy systems for migration into Evergreen.  It can be a wrapper for some
+other migration tools and tracks state using a PostgreSQL table in a given
+migration schema.
+
+It makes use of certain environment variables that may be set by the B<mig-env>
+tool: PGHOST, PGPORT, PGUSER, PGDATABASE, MIGSCHEMA, and MIGWORKDIR
+
+For most commands, if the current working directory falls outside of the
+directory specified by MIGWORKDIR, then mig will assume that environment is
+also incorrect and bail before doing any actual work.
+
+~/.pgpass should also be configured, as B<mig> will not prompt for a database
+password.
+
+Only the B<env> and B<help> commands work without the MIGSCHEMA environment
+variable being set.
+
+=head1 OVERVIEW
+
+Using B<mig> should go something like this:
+
+=over 15
+
+=item mig env create m_foo # Sets up the environment
+
+=item mig env use m_foo # Spawns a shell using the configured environment
+
+=item mig init # creates the m_foo schema in the database if needed, and other tables
+
+=item mig add patrons.tsv # tracks an incoming data file; repeat for additional files
+
+=item mig iconv patrons.tsv # convert it to UTF8, creating patrons.tsv.utf8
+
+=item mig clean patrons.tsv # cleans the file, creating patrons.tsv.utf8.clean
+
+=item mig link patrons.tsv actor_usr # makes the soon-to-be staging table a child of m_foo.actor_usr
+
+=item mig convert patrons.tsv # creates a .sql file for staging the data
+
+=item mig stage patrons.tsv # load said .sql file
+
+=item mig mapper patrons.tsv # interactive tool for analyzing/mapping the staging table
+
+=item mig analysis patrons.tsv # writes a summary .tsv file of mapped/flagged fields from the staging table
+
+=item mig map patrons.tsv # apply configured mappings
+
+=item mig write_prod patrons.tsv # creates a .sql file for pushing the staging data into production
+
+=item mig reporter --analyst "Foo Fooer" --report_title "Foo Load Analysis" #creates an asciidoc report
+
+=item mig gsheet --pull foo_tab_name OR --push foo_pg_table_name 
+
+=item mig stagebibs --file foo.xml 
+
+=back
+
+=head1 COMMANDS
+
+=over 15
+
+=item B<help> [command]
+
+Display this very same documentation, or specific documentation for one of the
+commands listed here.
+
+=item B<env> <create|use|show> <schema>
+
+Invokes B<mig-env> with the same arguments.  I<mig-env> can set important
+environment variables and spawn a shell with those variables, and it also does
+some directory creation and symlinking.
+
+=item B<init>
+
+Create or re-create the PostgreSQL tracking table for the schema specified by
+the MIGSCHEMA environment variable.  If needed, create the migration schema
+itself and run migration_tools.init() and build() if the migration_tools schema
+exists.
+
+=item B<status> [file] [...]
+
+Show status information for either the specified files or all tracked files if
+no argument is given.
+
+=item B<add> [--no-headers|--headers] <file> [file|--no-headers|--headers] [...]
+
+Add the specified files to the migration tracker.  Until --no-headers is
+specified, the tracker will assume the files have headers.
+
+You can do crazy stuff like
+B<mig add file1 --no-headers file2 file3 --headers file4>
+
+=item B<remove> <file> [file] [...]
+
+Remove the specified files from the migration tracker.
+
+=item B<iconv> <file> [other arguments...]
+
+Attempts to invoke B<iconv> on the specified tracked file, placing the output in
+<file>.utf8
+
+If given no other arguments, the invocation will lool like
+
+=over 5
+
+iconv -f ISO-8859-1 -t UTF-8 -o <file>.utf8 <file>
+
+=back
+
+otherwise, the arguments will be passed through like so
+
+=over 5
+
+iconv [other arguments...] -o <file>.utf8 <file>
+
+=back
+
+=item B<skip-iconv> <file>
+
+If this is used instead of B<iconv>, then B<mig> will look for an existing
+<file>.utf8 and use it instead of attempting to create one.
+
+=item B<clean> <file> [other arguments...]
+
+Attempts to invoke B<clean_csv> on the iconv-converted specified tracked file,
+placing the output in <file>.utf8.clean
+
+If given no other arguments, the invocation will lool like
+
+=over 5
+
+clean_csv --config scripts/clean.conf --fix --apply <--create-headers> <file>
+
+=back
+
+otherwise, the arguments will be passed through like so
+
+=over 5
+
+clean_csv [other arguments...] <file>
+
+=back
+
+=item B<skip-clean> <file>
+
+If this is used instead of B<clean>, then B<mig> will look for an existing
+<file>.utf8.clean and use it instead of attempting to create one.
+
+=item B<link> <file> <parent table>
+
+Associate the specified file with a parent table within the migration schema.
+
+Linking multiple files to the same parent table is not allowed currently.
+
+=item B<unlink> <file>
+
+Removes any association between the specified file and a parent table within
+the migration schema.
+
+=item B<convert> <file>
+
+Attempts to invoke B<csv2sql> on the .utf8.clean version of the specified
+tracked file, creating either [file].utf8.clean.stage.sql or
+<parent table>_stage.sql depending on whether the file has been linked to a
+parent table within the migration schema or not.
+
+If given no other arguments, the invocation will lool like
+
+=over 5
+
+csv2sql --config scripts/clean.conf --add-x-migrate --schema <MIGSCHEMA> [--parent <PARENT TABLE>] -o <[<file>.utf8.clean.stage.sql]|[parent_table_stage.sql]> <FILE>.utf8.clean
+
+=back
+
+otherwise, the arguments will be passed through like so
+
+=over 5
+
+csv2sql [other arguments...] -o <[<file>.utf8.clean.stage.sql]|[parent_table_stage.sql]> <file>.utf8.clean
+
+=back
+
+=item B<stage> <file> [other arguments...]
+
+Load the SQL-converted version of the specified file into the migration schema.
+
+Extra arguments are passed to the underlying call to psql
+
+=item B<mapper> <file>
+
+Interactive session for analyzing, flagging, and mapping legacy field data to
+Evergreen fields.
+
+Upon exit, generate either [file].clean.map.sql or <parent table>_map.sql. The
+SQL generated will be UPDATE's for setting the Evergreen-specific columns for a
+given file's staging tables, and TRUNCATE's and INSERT's for auxilary tables.
+The files will have \include hooks for pulling in additional mapping files
+(for example, end-user mappings for circ modifiers, etc.)
+
+=item B<analysis> [file]
+
+Writes a MIGSCHEMA.tsv file containing a break-down of mapped and flagged
+fields from the specified file, or all staged files if no file is specified.
+
+The main goal of the tsv file is to present end-user mappable data for circ
+modifiers, shelving locations, patron profiles, etc.  We use spreadsheets for
+this now but may move to a dedicated UI in the future.
+
+=item B<map> [file]
+
+Applies the mapping sql to the migration schema for the specified mapped file,
+or for all mapped files if no file is specified.
+
+=item B<write_prod> [file]
+
+Generates <parent table>_prod.sql for the specified linked and mapped file, or
+all such files if no file is specified.
+
+=item B<sql> [arguments...]
+
+A wrapper around the psql command.  At some point the plan is to shove mig-tracked variables into psql sessions.
+
+=item B<reporter> --analyst "Analyst Name" --report_title "Report Title"
+
+Generates an asciidoc file in the git working directory that can be converted to 
+any appropriate format.  The analyst and report parameters are required.
+
+Optional parameters are : 
+
+--added_page_title and --added_page_file 
+
+If one is used both must be.  The added page file can be plain text or asciidoc.  This
+adds an extra arbitrary page of notes to the report.  Mig assumes the page file is in the mig git directory.
+
+--tags
+
+This will define a set of tags to use, if not set it will default to Circs, 
+Holds, Actors, Bibs, Assets & Money. 
+
+--debug
+
+Gives more information about what is happening.
+
+--reports_xml 
+
+Allows you to override the default evergreen_staged_report.xml in the mig-xml folder.
+
+=item B<gsheet> --pull or --push spreadsheet_tab
+
+This uses the gsheet_tracked_table and gsheet_tracked column tables to map a Google Docs Spreadsheet tabs
+with Postgres tables in the mig schema.  The spreadsheet is assumed to share the name as the mig schema. 
+Tab names must be unique.  Each spreadsheet column needs a header that matches the column name in the matching 
+table.  An oauth session key is also needed for your Google account and mig gsheet will look for it in the 
+.mig directory.
+
+=back
+
+=cut
+
+###############################################################################
+
+use strict;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use FindBin;
+my $mig_bin = "$FindBin::Bin/mig-bin/";
+use lib "$FindBin::Bin/mig-bin";
+use Mig;
+
+pod2usage(-verbose => 2) if ! $ARGV[0];
+switch($ARGV[0]) {
+    case "help" {
+        if (defined $ARGV[1]) {
+            my $cmd = $mig_bin . "mig-$ARGV[1]";
+            if (-e $cmd) {
+                system( $mig_bin . "mig-$ARGV[1]", '--help' );
+            } else {
+                pod2usage(-verbose => 2);
+            }
+        } else {
+            pod2usage(-verbose => 2);
+        }
+    }
+    case "map" {
+    }
+    case "load" {
+    }
+    case "wdir" {
+        print "$MIGWORKDIR\n";
+    }
+    case "gdir" {
+        print "$MIGBASEGITDIR\n";
+    }
+    case "sdir" {
+        print "$MIGGITDIR\n";
+    }
+    else {
+        standard_invocation(@ARGV);
+    }
+}
+
+sub standard_invocation {
+    my $cmd = shift;
+
+    if ($cmd ne 'env') { Mig::die_if_no_env_migschema(); }
+    if (-e $mig_bin . "mig-$cmd") {
+        system( $mig_bin . "mig-$cmd", @_ );
+    } else {
+        system( "mig-$cmd", @_ ) == 0 or die pod2usage(1);
+    }
+
+}
+
+
