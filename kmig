@@ -4,70 +4,65 @@
 
 =head1 NAME
 
-mig - git-like program for tracking and manipulating legacy data files for
-migrations
+kmig - git-like program for tracking and manipulating legacy data files for
+migrations. This variant of <mig> and is geared toward the Koha ILS and
+MySql/MariaDB.
 
 =head1 SYNOPSIS
 
-B<mig> <command> [argument] [...]
+B<kmig> <command> [argument] [...]
 
 =head1 DESCRIPTION
 
-B<mig> is used to track and manipulate CSV or CSV-like text files exported from
+B<kmig> is used to track and manipulate CSV or CSV-like text files exported from
 legacy systems for migration into Evergreen.  It can be a wrapper for some
-other migration tools and tracks state using a PostgreSQL table in a given
-migration schema.
-
-It makes use of certain environment variables that may be set by the B<mig-env>
-tool: PGHOST, PGPORT, PGUSER, PGDATABASE, MIGSCHEMA, and MIGWORKDIR
+other migration tools and tracks state using a MySQL table for a given
+database.
 
 For most commands, if the current working directory falls outside of the
-directory specified by MIGWORKDIR, then mig will assume that environment is
+directory specified by MIGWORKDIR, then kmig will assume that environment is
 also incorrect and bail before doing any actual work.
 
-~/.pgpass should also be configured, as B<mig> will not prompt for a database
-password.
-
-Only the B<env> and B<help> commands work without the MIGSCHEMA environment
+Only the B<env> and B<help> commands work without the MIGDATABASE environment
 variable being set.
 
 =head1 OVERVIEW
 
-Using B<mig> should go something like this:
+Using B<kmig> should go something like this:
 
 =over 15
 
-=item mig env create m_foo # Sets up the environment
+=item kmig env create m_foo # Sets up the environment
 
-=item mig env use m_foo # Spawns a shell using the configured environment
+=item kmig env use m_foo # Spawns a shell using the configured environment
 
-=item mig init # creates the m_foo schema in the database if needed, and other tables
+=item kmig init # creates any needed auxilary tables
 
-=item mig add patrons.tsv # tracks an incoming data file; repeat for additional files
+=item kmig add patrons.tsv # tracks an incoming data file; repeat for additional files
 
-=item mig iconv patrons.tsv # convert it to UTF8, creating patrons.tsv.utf8
+=item kmig iconv patrons.tsv # convert it to UTF8, creating patrons.tsv.utf8
 
-=item mig clean patrons.tsv # cleans the file, creating patrons.tsv.utf8.clean
+=item kmig clean patrons.tsv # cleans the file, creating patrons.tsv.utf8.clean
 
-=item mig link patrons.tsv actor_usr # makes the soon-to-be staging table a child of m_foo.actor_usr
+=item kmig link patrons.tsv borrowers # models the soon-to-be staging table after table 'borrowers'
 
-=item mig convert patrons.tsv # creates a .sql file for staging the data
+=item kmig convert patrons.tsv # creates a .sql file for staging the data
 
-=item mig stage patrons.tsv # load said .sql file
+=item kmig stage patrons.tsv # load said .sql file
 
-=item mig mapper patrons.tsv # interactive tool for analyzing/mapping the staging table
+=item kmig mapper patrons.tsv # interactive tool for analyzing/mapping the staging table
 
-=item mig analysis patrons.tsv # writes a summary .tsv file of mapped/flagged fields from the staging table
+=item kmig analysis patrons.tsv # writes a summary .tsv file of mapped/flagged fields from the staging table
 
-=item mig map patrons.tsv # apply configured mappings
+=item kmig map patrons.tsv # apply configured mappings
 
-=item mig write_prod patrons.tsv # creates a .sql file for pushing the staging data into production
+=item kmig write_prod patrons.tsv # creates a .sql file for pushing the staging data into production
 
-=item mig reporter --analyst "Foo Fooer" --report_title "Foo Load Analysis" #creates an asciidoc report
+=item kmig reporter --analyst "Foo Fooer" --report_title "Foo Load Analysis" #creates an asciidoc report
 
-=item mig gsheet --pull foo_tab_name OR --push foo_pg_table_name 
+=item kmig gsheet --pull foo_tab_name OR --push foo_pg_table_name 
 
-=item mig stagebibs --file foo.xml 
+=item kmig stagebibs --file foo.xml 
 
 =back
 
@@ -89,7 +84,7 @@ some directory creation and symlinking.
 =item B<init>
 
 Create or re-create the PostgreSQL tracking table for the schema specified by
-the MIGSCHEMA environment variable.  If needed, create the migration schema
+the MIGDATABASE environment variable.  If needed, create the migration schema
 itself and run migration_tools.init() and build() if the migration_tools schema
 exists.
 
@@ -104,7 +99,7 @@ Add the specified files to the migration tracker.  Until --no-headers is
 specified, the tracker will assume the files have headers.
 
 You can do crazy stuff like
-B<mig add file1 --no-headers file2 file3 --headers file4>
+B<kmig add file1 --no-headers file2 file3 --headers file4>
 
 =item B<remove> <file> [file] [...]
 
@@ -133,7 +128,7 @@ iconv [other arguments...] -o <file>.utf8 <file>
 
 =item B<skip-iconv> <file>
 
-If this is used instead of B<iconv>, then B<mig> will look for an existing
+If this is used instead of B<iconv>, then B<kmig> will look for an existing
 <file>.utf8 and use it instead of attempting to create one.
 
 =item B<clean> <file> [other arguments...]
@@ -159,7 +154,7 @@ clean_csv [other arguments...] <file>
 
 =item B<skip-clean> <file>
 
-If this is used instead of B<clean>, then B<mig> will look for an existing
+If this is used instead of B<clean>, then B<kmig> will look for an existing
 <file>.utf8.clean and use it instead of attempting to create one.
 
 =item B<link> <file> <parent table>
@@ -184,7 +179,7 @@ If given no other arguments, the invocation will lool like
 
 =over 5
 
-csv2sql --config scripts/clean.conf --add-x-migrate --schema <MIGSCHEMA> [--parent <PARENT TABLE>] -o <[<file>.utf8.clean.stage.sql]|[parent_table_stage.sql]> <FILE>.utf8.clean
+csv2sql --config scripts/clean.conf --add-x-migrate --schema <MIGDATABASE> [--parent <PARENT TABLE>] -o <[<file>.utf8.clean.stage.sql]|[parent_table_stage.sql]> <FILE>.utf8.clean
 
 =back
 
@@ -215,7 +210,7 @@ The files will have \include hooks for pulling in additional mapping files
 
 =item B<analysis> [file]
 
-Writes a MIGSCHEMA.tsv file containing a break-down of mapped and flagged
+Writes a MIGDATABASE.tsv file containing a break-down of mapped and flagged
 fields from the specified file, or all staged files if no file is specified.
 
 The main goal of the tsv file is to present end-user mappable data for circ
@@ -246,7 +241,7 @@ Optional parameters are :
 --added_page_title and --added_page_file 
 
 If one is used both must be.  The added page file can be plain text or asciidoc.  This
-adds an extra arbitrary page of notes to the report.  Mig assumes the page file is in the mig git directory.
+adds an extra arbitrary page of notes to the report.  Mig assumes the page file is in the kmig git directory.
 
 --tags
 
@@ -264,10 +259,10 @@ Allows you to override the default evergreen_staged_report.xml in the mig-xml fo
 =item B<gsheet> --pull or --push spreadsheet_tab
 
 This uses the gsheet_tracked_table and gsheet_tracked column tables to map a Google Docs Spreadsheet tabs
-with Postgres tables in the mig schema.  The spreadsheet is assumed to share the name as the mig schema. 
+with Postgres tables in the kmig schema.  The spreadsheet is assumed to share the name as the kmig schema. 
 Tab names must be unique.  Each spreadsheet column needs a header that matches the column name in the matching 
-table.  An oauth session key is also needed for your Google account and mig gsheet will look for it in the 
-.mig directory.
+table.  An oauth session key is also needed for your Google account and kmig gsheet will look for it in the 
+.kmig directory.
 
 =back
 
@@ -278,14 +273,14 @@ table.  An oauth session key is also needed for your Google account and mig gshe
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGDATABASE
     MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use FindBin;
-my $mig_bin = "$FindBin::Bin/mig-bin/";
-use lib "$FindBin::Bin/mig-bin";
-use Mig;
+my $mig_bin = "$FindBin::Bin/kmig.d/bin/";
+use lib "$FindBin::Bin/kmig.d/bin";
+use KMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0];
 switch($ARGV[0]) {
@@ -323,12 +318,11 @@ sub standard_invocation {
     my $cmd = shift;
 
     if ($cmd ne 'env') { Mig::die_if_no_env_migschema(); }
-    if (-e $mig_bin . "mig-$cmd") {
-        system( $mig_bin . "mig-$cmd", @_ );
+    if (-e $mig_bin . "kmig-$cmd") {
+        system( $mig_bin . "kmig-$cmd", @_ );
     } else {
-        system( "mig-$cmd", @_ ) == 0 or die pod2usage(1);
+        system( "kmig-$cmd", @_ ) == 0 or die pod2usage(1);
     }
-
 }
 
 
