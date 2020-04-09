@@ -1,4 +1,4 @@
-package Mig;
+package KMig;
 
 use strict;
 use Exporter;
@@ -14,22 +14,21 @@ $VERSION        = 1.00;
 
 use DBI;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 
 sub db_connect {
     my $dbh;
-    if ($PGHOST) {
+    if ($MYSQL_HOST) {
         $dbh = DBI->connect(
-         "dbi:Pg:host=$PGHOST;dbname=$PGDATABASE;port=$PGPORT"
-        ,$PGUSER
-        ,undef
-        ) || die "Unable to connect to $PGHOST:$PGPORT:$PGDATABASE:$PGUSER : $!\n";
+         "dbi:mysql:host=$MYSQL_HOST;dbname=$MYSQL_DATABASE;port=$MYSQL_TCP_PORT"
+        ,$MYSQL_USER
+        ,$MYSQL_PW
+        ) || die "Unable to connect to $MYSQL_HOST:$MYSQL_TCP_PORT:$MYSQL_DATABASE:$MYSQL_USER : $!\n";
     } else {
-        $dbh = DBI->connect("dbi:Pg:dbname=$PGDATABASE", "", "") || die "Unable to connect to $PGDATABASE : $!\n";
+        $dbh = DBI->connect("dbi:Pg:dbname=$MYSQL_DATABASE", "", "") || die "Unable to connect to $MYSQL_DATABASE : $!\n";
     }
-    $dbh->do("SET search_path TO $MIGSCHEMA, evergreen, pg_catalog, public");
     return $dbh;
 }
 
@@ -52,34 +51,13 @@ sub die_if_no_env_migschema {
 }
 
 sub check_for_db_migschema {
-    my $dbh = db_connect();
-    my $sth = $dbh->prepare("
-        SELECT EXISTS(
-            SELECT 1
-            FROM pg_namespace 
-            WHERE nspname = ?
-        );"
-    );
-    my $rv = $sth->execute($MIGSCHEMA)
-        || die "Error checking for migration schema ($MIGSCHEMA): $!";
-    my @cols = $sth->fetchrow_array;
-    $sth->finish;
-    my $found;
-    if ($cols[0]) {
-        print "Found migration schema ($MIGSCHEMA) at $PGHOST:$PGPORT:$PGDATABASE:$PGUSER\n";
-        $found = 1;
-    } else {
-        print "Migration schema ($MIGSCHEMA) does not exist at $PGHOST:$PGPORT:$PGDATABASE:$PGUSER\n";
-        $found = 0;
-    }
-    db_disconnect($dbh);
-    return $found;
+    return 1; # the schema is the same as the database name, which is the same as the koha instance name, in most cases
 }
 
 sub check_db_migschema_for_migration_tables {
-    my $found = check_db_migschema_for_specific_table('asset_copy');
+    my $found = check_db_migschema_for_specific_table('m_borrowers');
     if (!$found) {
-        print "Missing migration tables (such as $MIGSCHEMA.asset_copy)\n";
+        print "Missing migration tables (such as m_borrowers)\n";
     }
     return $found;
 }
@@ -91,7 +69,7 @@ sub check_db_migschema_for_specific_table {
         SELECT EXISTS(
             SELECT 1
             FROM information_schema.tables
-            WHERE table_schema = " . $dbh->quote( $MIGSCHEMA ) . "
+            WHERE table_schema = " . $dbh->quote( $MYSQL_DATABASE ) . "
             AND table_name = " . $dbh->quote( $table ) . "
         );"
     );
@@ -114,12 +92,13 @@ sub check_for_migration_tools {
     my $sth = $dbh->prepare("
         SELECT EXISTS(
             SELECT 1
-            FROM pg_namespace
-            WHERE nspname = 'migration_tools'
+            FROM information_schema.tables
+            WHERE table_schema = " . $dbh->quote( $MYSQL_DATABASE ) . "
+            AND table_name = " . $dbh->quote( 'mt_init' ) . "
         );"
     );
     my $rv = $sth->execute()
-        || die "Error checking for migration_tools schema: $!";
+        || die "Error checking for migration_tools: $!";
     my @cols = $sth->fetchrow_array;
     $sth->finish;
     db_disconnect($dbh);
@@ -128,9 +107,9 @@ sub check_for_migration_tools {
 
 sub die_if_no_migration_tools {
     if (check_for_migration_tools()) {
-        print "Found migration_tools schema\n";
+        print "Found migration_tools\n";
     } else {
-        die "Missing migration_tools schema\n";
+        die "Missing migration_tools\n";
     }
 }
 
@@ -140,12 +119,12 @@ sub check_for_mig_tracking_table {
         SELECT EXISTS(
             SELECT 1
             FROM information_schema.tables
-            WHERE table_schema = " . $dbh->quote( $MIGSCHEMA ) . "
-            AND table_name = 'tracked_file'
+            WHERE table_schema = " . $dbh->quote( $MYSQL_DATABASE ) . "
+            AND table_name = 'm_tracked_file'
         );"
     );
     my $rv = $sth->execute()
-        || die "Error checking for table (tracked_file): $!";
+        || die "Error checking for table (m_tracked_file): $!";
     my @cols = $sth->fetchrow_array;
     $sth->finish;
     db_disconnect($dbh);
@@ -154,13 +133,13 @@ sub check_for_mig_tracking_table {
 
 sub die_if_mig_tracking_table_exists {
     if (check_for_mig_tracking_table()) {
-        die "Table $MIGSCHEMA.tracked_file already exists.  Bailing init...\n";
+        die "Table m_tracked_file already exists.  Bailing init...\n";
     }
 }
 
 sub die_if_mig_tracking_table_does_not_exist {
     if (!check_for_mig_tracking_table()) {
-        die "Table $MIGSCHEMA.tracked_file does not exist.  Bailing...\n";
+        die "Table m_tracked_file does not exist.  Bailing...\n";
     }
 }
 
@@ -170,12 +149,12 @@ sub check_for_mig_column_tracking_table {
         SELECT EXISTS(
             SELECT 1
             FROM information_schema.tables
-            WHERE table_schema = " . $dbh->quote( $MIGSCHEMA ) . "
-            AND table_name = 'tracked_column'
+            WHERE table_schema = " . $dbh->quote( $MYSQL_DATABASE ) . "
+            AND table_name = 'm_tracked_column'
         );"
     );
     my $rv = $sth->execute()
-        || die "Error checking for table (tracked_column): $!";
+        || die "Error checking for table (m_tracked_column): $!";
     my @cols = $sth->fetchrow_array;
     $sth->finish;
     db_disconnect($dbh);
@@ -184,13 +163,13 @@ sub check_for_mig_column_tracking_table {
 
 sub die_if_mig_column_tracking_table_exists {
     if (check_for_mig_column_tracking_table()) {
-        die "Table $MIGSCHEMA.tracked_column already exists.  Bailing init...\n";
+        die "Table m_tracked_column already exists.  Bailing init...\n";
     }
 }
 
 sub die_if_mig_column_tracking_table_does_not_exist {
     if (!check_for_mig_column_tracking_table()) {
-        die "Table $MIGSCHEMA.tracked_column does not exist.  Bailing...\n";
+        die "Table m_tracked_column does not exist.  Bailing...\n";
     }
 }
 
@@ -203,11 +182,11 @@ sub check_for_tracked_file {
     my $dbh = db_connect();
     my $sth = $dbh->prepare("
         SELECT id
-        FROM $MIGSCHEMA.tracked_file
+        FROM m_tracked_file
         WHERE base_filename = " . $dbh->quote( $file ) . ";"
     );
     my $rv = $sth->execute()
-        || die "Error checking table (tracked_file) for base_filename ($file): $!";
+        || die "Error checking table (m_tracked_file) for base_filename ($file): $!";
     my @cols = $sth->fetchrow_array;
     $sth->finish;
     db_disconnect($dbh);
@@ -219,12 +198,12 @@ sub check_for_tracked_column {
     my $dbh = db_connect();
     my $sth = $dbh->prepare("
         SELECT id
-        FROM $MIGSCHEMA.tracked_column
+        FROM m_tracked_column
         WHERE staged_table = " . $dbh->quote( $table ) . "
         AND staged_column = " . $dbh->quote( $column ) . ";"
     );
     my $rv = $sth->execute()
-        || die "Error checking table (tracked_column) for $table.$column: $!";
+        || die "Error checking table (m_tracked_column) for $table.$column: $!";
     my @cols = $sth->fetchrow_array;
     $sth->finish;
     db_disconnect($dbh);
@@ -236,11 +215,11 @@ sub status_this_file {
     my $dbh = db_connect();
     my $sth = $dbh->prepare("
         SELECT *
-        FROM $MIGSCHEMA.tracked_file
+        FROM m_tracked_file
         WHERE base_filename = " . $dbh->quote( $file ) . ";"
     );
     my $rv = $sth->execute()
-        || die "Error retrieving data from table (tracked_file) for base_filename ($file): $!";
+        || die "Error retrieving data from table (m_tracked_file) for base_filename ($file): $!";
     my $data = $sth->fetchrow_hashref;
     $sth->finish;
     db_disconnect($dbh);
@@ -252,12 +231,12 @@ sub status_this_column {
     my $dbh = db_connect();
     my $sth = $dbh->prepare("
         SELECT *
-        FROM $MIGSCHEMA.tracked_column
+        FROM m_tracked_column
         WHERE staged_table = " . $dbh->quote( $table ) . "
         AND staged_column = " . $dbh->quote( $column ) . ";"
     );
     my $rv = $sth->execute()
-        || die "Error checking table (tracked_column) for $table.$column: $!";
+        || die "Error checking table (m_tracked_column) for $table.$column: $!";
     my $data = $sth->fetchrow_hashref;
     $sth->finish;
     db_disconnect($dbh);
