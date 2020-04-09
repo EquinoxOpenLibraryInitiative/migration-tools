@@ -1,0 +1,268 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-env - This tool is for tracking and setting environment variables used by
+B<mig> and its sub-tools.
+
+=head1 SYNOPSIS
+
+B<mig-env> <create|use> <migration_schema>
+
+B<mig-env> <show> [migration_schema]
+
+B<mig-env> <clone> [orig_migration_schema] [new_migration_schema]
+
+B<mig-env> <list>
+
+B<mig-env> <help>
+
+=head1 DESCRIPTION
+
+For most invocations, B<mig-env> will either create or use a migration-specific
+file (~/.mig/<migration_schema>.env) for setting the following environment
+variables:
+
+=over 15
+
+=item MIGSCHEMA
+
+The name of the migration schema.  Convention has this being a single lowercased
+word or acronym identifying the library, prefixed with 'm_'.
+
+=item MIGWORKDIR
+
+The base working directory for containing migration data, scripts, and other
+files.
+
+=item PGHOST
+
+The IP address or hostname for the PostgreSQL database used for a migration.
+
+=item PGPORT
+
+The TCP port for the PostgreSQL database.
+
+=item PGUSER
+
+The PostgreSQL user to use for the database.
+
+=item PGDATABASE
+
+The name of the actual database containing the migration schema.
+
+=back
+
+This script may also setup a symlink from a specified Git repository to a
+scripts/ directory within the migration work directory.  The default for this is
+~/git/migration-work/MIGSCHEMA --> MIGWORKDIR/scripts
+
+It may also create the migration work directory if necessary.
+
+=head1 COMMANDS
+
+=over 15
+
+=item B<create> <schema>
+
+This invocation will prompt for various values and create a .env file for the
+specified migration schema, and a symlink between the specified Git repository
+and migration work directory (which will also be created if needed).
+
+=item B<use> <schema>
+
+This command will spawn a bash shell that executes the corresponding
+~/.mig/<schema>.env script for setting up environment variables encoded during
+B<create>.
+
+=item B<show> [schema]
+
+This command will show the contents of the corresponding ~/.mig/<schema>.env
+script, or, if no schema is specified, then it will list pertinent variables in
+the current environment if they exist.
+
+=item B<clone> [orig schema] [new schema]
+
+This command will create a "shallow" clone of the orig schema, in that it will
+share database credentials as well as git and data directories, but will have a
+separate schema name.
+
+=item B<list>
+
+This command will list migration schemas found in ~/.mig
+
+=item B<help>
+
+Display the documentation you're reading now.
+
+=back
+
+=cut
+
+###############################################################################
+
+use strict;
+use 5.012;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use File::Path qw(make_path);
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+
+pod2usage(-verbose => 2) if ! $ARGV[0];
+
+my $migration_schema = $ARGV[1] || '';
+my $filename = "$HOME/.mig/$migration_schema.env";
+switch($ARGV[0]) {
+    case "--help" {
+        pod2usage(-verbose => 2);
+    }
+    case "help" {
+        pod2usage(-verbose => 2);
+    }
+    case "create" {
+        pod2usage(-verbose => 1) if ! $ARGV[1];
+        mig_env_create();
+    }
+    case "clone" {
+        pod2usage(-verbose => 1) if ! $ARGV[2];
+        $migration_schema = $ARGV[2] || '';
+        $filename = "$HOME/.mig/$migration_schema.env";
+        mig_env_clone();
+    }
+    case "use" {
+        pod2usage(-verbose => 1) if ! $ARGV[1];
+        if (-e $filename) {
+            exec '/bin/bash', '--init-file', $filename;
+        } else {
+            die "\n$filename does not exist\n";
+        }
+    }
+    case "show" {
+        if (-e $filename) {
+            exec '/bin/cat', $filename;
+        } else {
+            print `env | sort | egrep 'MIG|PG'`;
+        }
+    }
+    case "list" {
+        opendir(my $dh, "$HOME/.mig") || die "can't open $HOME/.mig: $!";
+        while (readdir $dh) {
+            if (/^(.*)\.env$/) {
+                print "$1\n";
+            }
+        }
+        closedir $dh;
+    }
+    else {
+        pod2usage(1);
+    }
+}
+
+sub mig_env_create {
+    if (-e $filename) {
+        print "Re-Creating $filename\n";
+        print `cat $filename`;
+    } else {
+        print "Creating $filename\n";
+    }
+    print "\n";
+
+    # directories
+
+    $MIGBASEWORKDIR = "$HOME/data/" unless $MIGBASEWORKDIR;
+    my $migworkdir_default = "$MIGBASEWORKDIR$migration_schema/";
+    print "Main work directory (default $migworkdir_default): ";
+    my $MIGWORKDIR = <STDIN>;
+    chomp $MIGWORKDIR;
+    if (! $MIGWORKDIR) {
+        $MIGWORKDIR = $migworkdir_default;
+    }
+    $MIGBASEGITDIR = "$HOME/git/migration-work/" unless $MIGBASEGITDIR;
+    my $miggitdir_default = "${MIGBASEGITDIR}/$migration_schema/";
+    print "git repo for migration-specific scripts (default $miggitdir_default): ";
+    my $MIGGITDIR = <STDIN>;
+    chomp $MIGGITDIR;
+    if (! $MIGGITDIR) {
+        $MIGGITDIR = $miggitdir_default;
+    }
+
+    # PostgreSQL
+
+    $PGHOST = 'localhost' unless $PGHOST;
+    my $pghost_default = $PGHOST;
+    print "PGHOST (default $pghost_default): ";
+    $PGHOST = <STDIN>;
+    chomp $PGHOST;
+    if (! $PGHOST) {
+        $PGHOST = $pghost_default;
+    }
+    $PGPORT = 5432 unless $PGPORT;
+    my $pgport_default = $PGPORT;
+    print "PGPORT (default $pgport_default): ";
+    $PGPORT = <STDIN>;
+    chomp $PGPORT;
+    if (! $PGPORT) {
+        $PGPORT = $pgport_default;
+    }
+    $PGDATABASE = 'evergreen' unless $PGDATABASE;
+    my $pgdatabase_default = $PGDATABASE;
+    print "PGDATABASE (default $pgdatabase_default): ";
+    $PGDATABASE = <STDIN>;
+    chomp $PGDATABASE;
+    if (! $PGDATABASE) {
+        $PGDATABASE = $pgdatabase_default;
+    }
+    $PGUSER = $PGDATABASE unless $PGUSER;
+    my $pguser_default = $PGUSER;
+    print "PGUSER (default $pguser_default): ";
+    my $PGUSER = <STDIN>;
+    chomp $PGUSER;
+    if (! $PGUSER) {
+        $PGUSER = $pguser_default;
+    }
+
+    # create files and directories if needed
+
+    mkdir "$HOME/.mig";
+    make_path($MIGGITDIR, { verbose => 1 });
+    `touch $MIGGITDIR/README`;
+    make_path($MIGWORKDIR, { verbose => 1 });
+    symlink $MIGGITDIR, "$MIGWORKDIR/scripts";
+    open FILE, ">$filename";
+    print FILE "export PGHOST=$PGHOST\n";
+    print FILE "export PGPORT=$PGPORT\n";
+    print FILE "export PGDATABASE=$PGDATABASE\n";
+    print FILE "export PGUSER=$PGUSER\n";
+    print FILE "export PGOPTIONS='-c search_path=$migration_schema,public,evergreen'\n";
+    print FILE "export MIGENVPROMPT=$migration_schema\n";
+    print FILE "export MIGSCHEMA=$migration_schema\n";
+    print FILE "export MIGBASEWORKDIR=$MIGBASEWORKDIR\n";
+    print FILE "export MIGWORKDIR=$MIGWORKDIR\n";
+    print FILE "export MIGBASEGITDIR=$MIGBASEGITDIR\n";
+    print FILE "export MIGGITDIR=$MIGGITDIR\n";
+    print FILE "alias wcd='cd `mig wdir`'\n";
+    print FILE "alias gcd='cd `mig gdir`'\n";
+    print FILE "alias scd='cd `mig sdir`'\n";
+    print FILE "source ~/.profile\n";
+    print FILE "env | sort | egrep 'PG|MIG'\n";
+    print FILE 'echo shell PID = $$' . "\n";
+    close FILE;
+}
+
+sub mig_env_clone {
+    my $orig_migration_schema = $ARGV[1] || '';
+    my $orig_filename = "$HOME/.mig/$orig_migration_schema.env";
+    `cp $orig_filename $filename`;
+    `sed -i 's/export PGOPTIONS=.*/export PGOPTIONS='"'"'-c search_path=$migration_schema,public,evergreen'"'"'/' $filename`;
+    `sed -i 's/export MIGENVPROMPT=.*/export MIGENVPROMPT=$migration_schema/' $filename`;
+    `sed -i 's/export MIGSCHEMA=.*/export MIGSCHEMA=$migration_schema/' $filename`;
+}
+
