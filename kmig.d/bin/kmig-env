@@ -4,54 +4,59 @@
 
 =head1 NAME
 
-mig-env - This tool is for tracking and setting environment variables used by
-B<mig> and its sub-tools.
+kmig-env - This tool is for tracking and setting environment variables used by
+B<kmig> and its sub-tools.
 
 =head1 SYNOPSIS
 
-B<mig-env> <create|use> <migration_schema>
+B<kmig-env> <create|use> <migration_schema>
 
-B<mig-env> <show> [migration_schema]
+B<kmig-env> <show> [migration_schema]
 
-B<mig-env> <clone> [orig_migration_schema] [new_migration_schema]
+B<kmig-env> <clone> [orig_migration_schema] [new_migration_schema]
 
-B<mig-env> <list>
+B<kmig-env> <list>
 
-B<mig-env> <help>
+B<kmig-env> <help>
 
 =head1 DESCRIPTION
 
-For most invocations, B<mig-env> will either create or use a migration-specific
-file (~/.mig/<migration_schema>.env) for setting the following environment
+For most invocations, B<kmig-env> will either create or use a migration-specific
+file (~/.kmig/<migration_schema>.env) for setting the following environment
 variables:
 
 =over 15
 
 =item MIGSCHEMA
 
-The name of the migration schema.  Convention has this being a single lowercased
-word or acronym identifying the library, prefixed with 'm_'.
+The name of the migration schema.  In practice, this will match the name of the
+Koha instance.
 
 =item MIGWORKDIR
 
 The base working directory for containing migration data, scripts, and other
 files.
 
-=item PGHOST
+=item MYSQL_HOST
 
-The IP address or hostname for the PostgreSQL database used for a migration.
+The IP address or hostname for the MySQL/MariaDB database used for a migration.
 
-=item PGPORT
+=item MYSQL_TCP_PORT
 
-The TCP port for the PostgreSQL database.
+The TCP port for the database.
 
-=item PGUSER
+=item MYSQL_USER
 
-The PostgreSQL user to use for the database.
+The user to use for the database.
 
-=item PGDATABASE
+=item MYSQL_PW
 
-The name of the actual database containing the migration schema.
+The password to use for the database.
+
+=item MYSQL_DATABASE
+
+The name of the actual database/schema.  In practice, this will match the
+migration schema or Koha instance name, prefixed with 'koha_'.
 
 =back
 
@@ -74,16 +79,18 @@ and migration work directory (which will also be created if needed).
 =item B<use> <schema>
 
 This command will spawn a bash shell that executes the corresponding
-~/.mig/<schema>.env script for setting up environment variables encoded during
+~/.kmig/<schema>.env script for setting up environment variables encoded during
 B<create>.
 
 =item B<show> [schema]
 
-This command will show the contents of the corresponding ~/.mig/<schema>.env
+This command will show the contents of the corresponding ~/.kmig/<schema>.env
 script, or, if no schema is specified, then it will list pertinent variables in
 the current environment if they exist.
 
 =item B<clone> [orig schema] [new schema]
+
+FIXME: need to re-think this in a MySQL/MariaDB/Koha context
 
 This command will create a "shallow" clone of the orig schema, in that it will
 share database credentials as well as git and data directories, but will have a
@@ -91,7 +98,7 @@ separate schema name.
 
 =item B<list>
 
-This command will list migration schemas found in ~/.mig
+This command will list migration schemas found in ~/.kmig
 
 =item B<help>
 
@@ -107,8 +114,8 @@ use strict;
 use 5.012;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use File::Path qw(make_path);
@@ -119,7 +126,7 @@ use lib "$FindBin::Bin/";
 pod2usage(-verbose => 2) if ! $ARGV[0];
 
 my $migration_schema = $ARGV[1] || '';
-my $filename = "$HOME/.mig/$migration_schema.env";
+my $filename = "$HOME/.kmig/$migration_schema.env";
 switch($ARGV[0]) {
     case "--help" {
         pod2usage(-verbose => 2);
@@ -134,7 +141,7 @@ switch($ARGV[0]) {
     case "clone" {
         pod2usage(-verbose => 1) if ! $ARGV[2];
         $migration_schema = $ARGV[2] || '';
-        $filename = "$HOME/.mig/$migration_schema.env";
+        $filename = "$HOME/.kmig/$migration_schema.env";
         mig_env_clone();
     }
     case "use" {
@@ -153,7 +160,7 @@ switch($ARGV[0]) {
         }
     }
     case "list" {
-        opendir(my $dh, "$HOME/.mig") || die "can't open $HOME/.mig: $!";
+        opendir(my $dh, "$HOME/.kmig") || die "can't open $HOME/.kmig: $!";
         while (readdir $dh) {
             if (/^(.*)\.env$/) {
                 print "$1\n";
@@ -194,54 +201,77 @@ sub mig_env_create {
         $MIGGITDIR = $miggitdir_default;
     }
 
-    # PostgreSQL
+    # MySQL/MariaDB
 
-    $PGHOST = 'localhost' unless $PGHOST;
-    my $pghost_default = $PGHOST;
-    print "PGHOST (default $pghost_default): ";
-    $PGHOST = <STDIN>;
-    chomp $PGHOST;
-    if (! $PGHOST) {
-        $PGHOST = $pghost_default;
+    my $mysqlhost; my $mysqldb; my $mysqlport;
+    my $mysqluser; my $mysqlpass;
+    if (-e '/usr/sbin/koha-list' && `/usr/sbin/koha-list` =~ $migration_schema
+        && `sudo -nl xmlstarlet` =~ 'xmlstarlet') {
+        my $kohaconfig="/etc/koha/sites/$migration_schema/koha-conf.xml";
+        $mysqlhost=`sudo -n xmlstarlet sel -t -v 'yazgfs/config/hostname' $kohaconfig`;
+        $mysqldb=`sudo -n xmlstarlet sel -t -v 'yazgfs/config/database' $kohaconfig`;
+        $mysqlport=`sudo -n xmlstarlet sel -t -v 'yazgfs/config/port' $kohaconfig`;
+        $mysqluser=`sudo -n xmlstarlet sel -t -v 'yazgfs/config/user' $kohaconfig`;
+        $mysqlpass=`sudo -n xmlstarlet sel -t -v 'yazgfs/config/pass' $kohaconfig`;
+        chomp $mysqlhost; chomp $mysqldb; chomp $mysqlport;
+        chomp $mysqluser; chomp $mysqlpass;
     }
-    $PGPORT = 5432 unless $PGPORT;
-    my $pgport_default = $PGPORT;
-    print "PGPORT (default $pgport_default): ";
-    $PGPORT = <STDIN>;
-    chomp $PGPORT;
-    if (! $PGPORT) {
-        $PGPORT = $pgport_default;
+
+    $MYSQL_HOST = $mysqlhost || 'localhost' unless $MYSQL_HOST;
+    my $mysql_host_default = $MYSQL_HOST;
+    print "MYSQL_HOST (default $mysql_host_default): ";
+    $MYSQL_HOST = <STDIN>;
+    chomp $MYSQL_HOST;
+    if (! $MYSQL_HOST) {
+        $MYSQL_HOST = $mysql_host_default;
     }
-    $PGDATABASE = 'evergreen' unless $PGDATABASE;
-    my $pgdatabase_default = $PGDATABASE;
-    print "PGDATABASE (default $pgdatabase_default): ";
-    $PGDATABASE = <STDIN>;
-    chomp $PGDATABASE;
-    if (! $PGDATABASE) {
-        $PGDATABASE = $pgdatabase_default;
+    $MYSQL_TCP_PORT = $mysqlport || 3306 unless $MYSQL_TCP_PORT;
+    my $mysql_port_default = $MYSQL_TCP_PORT;
+    print "MYSQL_TCP_PORT (default $mysql_port_default): ";
+    $MYSQL_TCP_PORT = <STDIN>;
+    chomp $MYSQL_TCP_PORT;
+    if (! $MYSQL_TCP_PORT) {
+        $MYSQL_TCP_PORT = $mysql_port_default;
     }
-    $PGUSER = $PGDATABASE unless $PGUSER;
-    my $pguser_default = $PGUSER;
-    print "PGUSER (default $pguser_default): ";
-    my $PGUSER = <STDIN>;
-    chomp $PGUSER;
-    if (! $PGUSER) {
-        $PGUSER = $pguser_default;
+    $MYSQL_DATABASE = $mysqldb || 'koha_demo' unless $MYSQL_DATABASE;
+    my $mysql_database_default = $MYSQL_DATABASE;
+    print "MYSQL_DATABASE (default $mysql_database_default): ";
+    $MYSQL_DATABASE = <STDIN>;
+    chomp $MYSQL_DATABASE;
+    if (! $MYSQL_DATABASE) {
+        $MYSQL_DATABASE = $mysql_database_default;
+    }
+    $MYSQL_USER = $mysqluser || $MYSQL_DATABASE unless $MYSQL_USER;
+    my $mysql_user_default = $MYSQL_USER;
+    print "MYSQL_USER (default $mysql_user_default): ";
+    my $MYSQL_USER = <STDIN>;
+    chomp $MYSQL_USER;
+    if (! $MYSQL_USER) {
+        $MYSQL_USER = $mysql_user_default;
+    }
+    $MYSQL_PW = $mysqlpass || $MYSQL_USER unless $MYSQL_PW;
+    my $mysql_pw_default = $MYSQL_PW;
+    print "MYSQL_PW (default $mysql_pw_default): ";
+    my $MYSQL_PW = <STDIN>;
+    chomp $MYSQL_PW;
+    if (! $MYSQL_PW) {
+        $MYSQL_PW = $mysql_pw_default;
     }
 
     # create files and directories if needed
 
-    mkdir "$HOME/.mig";
+    mkdir "$HOME/.kmig";
     make_path($MIGGITDIR, { verbose => 1 });
     `touch $MIGGITDIR/README`;
     make_path($MIGWORKDIR, { verbose => 1 });
     symlink $MIGGITDIR, "$MIGWORKDIR/scripts";
     open FILE, ">$filename";
-    print FILE "export PGHOST=$PGHOST\n";
-    print FILE "export PGPORT=$PGPORT\n";
-    print FILE "export PGDATABASE=$PGDATABASE\n";
-    print FILE "export PGUSER=$PGUSER\n";
-    print FILE "export PGOPTIONS='-c search_path=$migration_schema,public,evergreen'\n";
+    print FILE "export MYSQL_HOST=$MYSQL_HOST\n";
+    print FILE "export MYSQL_TCP_PORT=$MYSQL_TCP_PORT\n";
+    print FILE "export MYSQL_DATABASE=$MYSQL_DATABASE\n";
+    print FILE "export MYSQL_USER=$MYSQL_USER\n";
+    #TODO - brittle; need to escape the password string
+    print FILE "export MYSQL_PW=$MYSQL_PW\n";
     print FILE "export MIGENVPROMPT=$migration_schema\n";
     print FILE "export MIGSCHEMA=$migration_schema\n";
     print FILE "export MIGBASEWORKDIR=$MIGBASEWORKDIR\n";
@@ -252,16 +282,16 @@ sub mig_env_create {
     print FILE "alias gcd='cd `mig gdir`'\n";
     print FILE "alias scd='cd `mig sdir`'\n";
     print FILE "source ~/.profile\n";
-    print FILE "env | sort | egrep 'PG|MIG'\n";
+    print FILE "env | sort | egrep 'MYSQL|MIG'\n";
     print FILE 'echo shell PID = $$' . "\n";
     close FILE;
+    chmod 0600, $filename; # TODO: race condition worth worrying about? couldn't get sysopen to work
 }
 
 sub mig_env_clone {
     my $orig_migration_schema = $ARGV[1] || '';
-    my $orig_filename = "$HOME/.mig/$orig_migration_schema.env";
+    my $orig_filename = "$HOME/.kmig/$orig_migration_schema.env";
     `cp $orig_filename $filename`;
-    `sed -i 's/export PGOPTIONS=.*/export PGOPTIONS='"'"'-c search_path=$migration_schema,public,evergreen'"'"'/' $filename`;
     `sed -i 's/export MIGENVPROMPT=.*/export MIGENVPROMPT=$migration_schema/' $filename`;
     `sed -i 's/export MIGSCHEMA=.*/export MIGSCHEMA=$migration_schema/' $filename`;
 }

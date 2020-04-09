@@ -51,7 +51,9 @@ sub die_if_no_env_migschema {
 }
 
 sub check_for_db_migschema {
-    return 1; # the schema is the same as the database name, which is the same as the koha instance name, in most cases
+    # the schema is the same as the database name, which is the same
+    # as the koha instance name prefixed with 'koha_', in most cases
+    return 1;
 }
 
 sub check_db_migschema_for_migration_tables {
