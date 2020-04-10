@@ -1,0 +1,127 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-add - This will add the specified files to the mig tracking table for the
+schema pointed to by the MIGSCHEMA environment variable in the PostgreSQL
+database specified by various PG environment variables. <inhales, exhales>
+
+--headers (the default) and --no-headers are repeatable, and indicate whether
+subsequent files have headers or not
+
+--headers-file specifies a text file <hfile> defining the column headers for
+the next added <file>, which should contain one line per header
+
+--headers-file will automatically invoke --no-headers
+
+You'll need to invoke B<mig-init> prior to using commands like B<mig-add>
+
+=head1 SYNOPSIS
+
+B<mig-add> [--no-headers|--headers|--headers-file <hfile>] <file> [file|--no-headers|--headers|--headers-file <hfile>] [...]
+
+=cut
+
+###############################################################################
+
+use strict;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use DBI;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+
+pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
+
+Mig::die_if_no_env_migschema();
+Mig::die_if_mig_tracking_table_does_not_exist();
+
+my $has_headers = 1;
+my $headers_file;
+my $next_arg_is_headers_file = 0;
+
+foreach my $arg (@ARGV) {
+    if ($next_arg_is_headers_file) {
+        $next_arg_is_headers_file = 0;
+        $headers_file = abs_path($arg);
+        next;
+    }
+    if ($arg eq '--headers') {
+        $has_headers = 1;
+        next;
+    }
+    if ($arg eq '--no-headers') {
+        $has_headers = 0;
+        next;
+    }
+    if ($arg eq '--headers-file') {
+        $next_arg_is_headers_file = 1;
+        $has_headers = 0;
+        next;
+    }
+    my $file = abs_path($arg);
+    if ($file =~ /^$MIGBASEWORKDIR/) {
+        if (-e $file) {
+            if (-f $file) {
+                add_this_file($file,$has_headers,$headers_file);
+                $headers_file = ''; # clear after applying to just one file
+            } else {
+                print "Not a real file: $file\n";
+            }
+        } else {
+            print "Could not find file: $file\n";
+        }
+    } else {
+        print "File falls outside of MIGWORKDIR ($MIGWORKDIR): $file\n";
+    }
+}
+
+exit 0;
+
+###############################################################################
+
+sub add_this_file {
+    my $file = shift;
+    my $headers = shift;
+    my $headers_file = shift;
+    if ($headers_file) {
+        if (! (-e $headers_file && -f $headers_file)) {
+            print "Could not find headers file $headers_file, skipping $file\n";
+            return;
+        }
+    }
+    if (Mig::check_for_tracked_file($file)) {
+        print "File already tracked: $file\n";
+    } else {
+        print 'Adding (';
+        if ($headers_file) {
+            print "with headers file = $headers_file";
+        } else {
+            print ($headers ? '   with headers' : 'without headers');
+        }
+        print '): ' . "$file\n";
+        my $dbh = Mig::db_connect();
+        my $rv = $dbh->do("
+            INSERT INTO $MIGSCHEMA.tracked_file (
+                 base_filename
+                ,has_headers
+                ,headers_file
+            ) VALUES (
+                 " . $dbh->quote($file) . "
+                ," . $dbh->quote($headers) . "
+                ," . $dbh->quote($headers_file) . "
+            );
+        ") || die "Error inserting into table $MIGSCHEMA.tracked_file: $!\n";
+        Mig::db_disconnect($dbh);
+    }
+}
+
