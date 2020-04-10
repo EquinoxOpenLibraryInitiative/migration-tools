@@ -55,7 +55,7 @@ sub link_table {
     }
 
     if (! KMig::check_db_migschema_for_specific_table($table)) {
-        die "table not found in MIGSCHEMA ($MIGSCHEMA): $table\n";
+        warn "table $table not found, but will attempt to be vivicated during staging\n";
     }
 
     my $tracked_file_id = KMig::check_for_tracked_file($file);

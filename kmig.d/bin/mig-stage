@@ -25,8 +25,8 @@ B<mig-stage> <file> [other arguments...]
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use DBI;
@@ -34,12 +34,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use EMig;
+use KMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-EMig::die_if_no_env_migschema();
-EMig::die_if_mig_tracking_table_does_not_exist();
+KMig::die_if_no_env_migschema();
+KMig::die_if_mig_tracking_table_does_not_exist();
 
 my $file = abs_path($ARGV[0]);
 if ($file =~ /^$MIGBASEWORKDIR/) {
@@ -56,9 +56,9 @@ sub stage_csv {
     my $file = abs_path(shift);
     my @args = @_;
 
-    my $tracked_file_id = EMig::check_for_tracked_file($file);
+    my $tracked_file_id = KMig::check_for_tracked_file($file);
     if ($tracked_file_id) {
-        my $data = EMig::status_this_file($file);
+        my $data = KMig::status_this_file($file);
 
         if (! $data->{'utf8_filename'}) {
             die "mig-iconv or mig-skip-iconv needed for UTF8 version of file: $file\n";
@@ -77,51 +77,50 @@ sub stage_csv {
             die "missing file: $stage_sql_filename\n";
         }
 
-        my $schema_table = `grep 'CREATE UNLOGGED TABLE' $stage_sql_filename  | cut -f4 -d\\  | head -1`;
-        chomp $schema_table;
-        my ($schema,$table) = split /\./, $schema_table;
+        my $table = `grep 'CREATE TABLE' $stage_sql_filename  | cut -f3 -d\\  | head -1`;
+        chomp $table;
 
         if (defined $data->{'staged_table'} && $data->{'staged_table'} ne $table) {
-            my $dbh2 = EMig::db_connect();
-            print "dropping previously staged table: $MIGSCHEMA.$data->{staged_table}\n";
+            if ($data->{staged_table} !~ '^m_') {
+                die "Previously staged table $data->{staged_table} does not have a m_ prefix; afraid to drop.";
+            }
+            my $dbh2 = KMig::db_connect();
+            print "dropping previously staged table: $data->{staged_table}\n";
             my $rv2 = $dbh2->do("
-                DROP TABLE $MIGSCHEMA.$data->{staged_table};
+                DROP TABLE $data->{staged_table};
             ") || die "Error dropping table $data->{staged_table}: $!\n";
             print "changing references to old tables\n";
             my $rv3 = $dbh2->do("
-                UPDATE $MIGSCHEMA.tracked_column
+                UPDATE m_tracked_column
                 SET staged_table = " . $dbh2->quote($table) . "
                 WHERE staged_table = " . $dbh2->quote($data->{staged_table}) . "
             ") || die "Error changing references to $data->{staged_table}: $!\n";
             my $rv4 = $dbh2->do("
-                UPDATE $MIGSCHEMA.tracked_column
+                UPDATE m_tracked_column
                 SET target_table = " . $dbh2->quote($table) . "
                 WHERE target_table = " . $dbh2->quote($data->{staged_table}) . "
             ") || die "Error changing references to $data->{staged_table}: $!\n";
-            EMig::db_disconnect($dbh2);
+            KMig::db_disconnect($dbh2);
         }
 
         print "running staging SQL: $stage_sql_filename\n";
 
-        system('psql', @args, '-f', $stage_sql_filename);
+        system($mig_bin . 'mig-sql', @args, '-e', ("SOURCE $stage_sql_filename;"));
 
-        if ($schema ne $MIGSCHEMA) {
-            die "Schema mismatch: env => $MIGSCHEMA sql => $schema\n";
-        }
-        if (! EMig::check_db_migschema_for_specific_table($table)) {
-            die "Missing staged table: $schema_table\n";
+        if (! KMig::check_db_migschema_for_specific_table($table)) {
+            die "Missing staged table: $table\n";
         } else {
-            print "table staged: $schema_table\n";
+            print "table staged: $table\n";
         }
 
-        my $dbh = EMig::db_connect();
+        my $dbh = KMig::db_connect();
         my $rv = $dbh->do("
-            UPDATE $MIGSCHEMA.tracked_file
+            UPDATE m_tracked_file
             SET staged_table = " . $dbh->quote($table) . "
             WHERE base_filename = " . $dbh->quote($file) . "
             ;
-        ") || die "Error updating table $MIGSCHEMA.tracked_file: $!\n";
-        EMig::db_disconnect($dbh);
+        ") || die "Error updating table m_tracked_file: $!\n";
+        KMig::db_disconnect($dbh);
     } else {
         print "File not currently tracked: $file\n";
     }
