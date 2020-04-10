@@ -1,0 +1,29 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig - git-like program for tracking and manipulating legacy data files for
+migrations.  This is a smart wrapper around emig and kmig (for Evergreen and
+Koha migrations, respectively).  It'll fail if the MIGCMD environment variable
+is not set.  Environments created through kmig env and emig env should set
+MIGCMD accordingly.
+
+=cut
+
+###############################################################################
+
+use strict;
+use Env qw(
+    MIGCMD
+);
+use Pod::Usage;
+
+pod2usage(-verbose => 2) if ! $ARGV[0];
+if ($MIGCMD) {
+    system($MIGCMD,@ARGV);
+} else {
+    die "Please use emig/kmig to load an environment.";
+}
+

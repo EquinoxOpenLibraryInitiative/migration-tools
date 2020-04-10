@@ -272,6 +272,7 @@ sub mig_env_create {
     print FILE "export MYSQL_USER=$MYSQL_USER\n";
     #TODO - brittle; need to escape the password string
     print FILE "export MYSQL_PW=$MYSQL_PW\n";
+    print FILE "export MIGCMD=kmig\n";
     print FILE "export MIGENVPROMPT=$migration_schema\n";
     print FILE "export MIGSCHEMA=$migration_schema\n";
     print FILE "export MIGBASEWORKDIR=$MIGBASEWORKDIR\n";
