@@ -20,8 +20,8 @@ B<mig-unlink> <file>
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use DBI;
@@ -29,12 +29,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use EMig;
+use KMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-EMig::die_if_no_env_migschema();
-EMig::die_if_mig_tracking_table_does_not_exist();
+KMig::die_if_no_env_migschema();
+KMig::die_if_mig_tracking_table_does_not_exist();
 
 my $file = abs_path($ARGV[0]);
 if ($file =~ /^$MIGBASEWORKDIR/) {
@@ -50,21 +50,21 @@ exit 0;
 sub unlink_table {
     my $file = abs_path(shift);
 
-    my $tracked_file_id = EMig::check_for_tracked_file($file);
+    my $tracked_file_id = KMig::check_for_tracked_file($file);
     if ($tracked_file_id) {
-        my $data = EMig::status_this_file($file);
+        my $data = KMig::status_this_file($file);
         my $table = $data->{'parent_table'} || '';
 
         print "unlinking table ($table) from file: $file\n";
 
-        my $dbh = EMig::db_connect();
+        my $dbh = KMig::db_connect();
         my $rv = $dbh->do("
-            UPDATE $MIGSCHEMA.tracked_file
+            UPDATE m_tracked_file
             SET parent_table = ''
             WHERE base_filename = " . $dbh->quote($file) . "
             ;
-        ") || die "Error updating table $MIGSCHEMA.tracked_file: $!\n";
-        EMig::db_disconnect($dbh);
+        ") || die "Error updating table m_tracked_file: $!\n";
+        KMig::db_disconnect($dbh);
     } else {
         print "File not currently tracked: $file\n";
     }
