@@ -6,9 +6,7 @@
 
 kmig-sql 
 
-A wrapper around the mysql client.  For the Postgres/EG version of this, we
-were injecting the mig schema as a session variable, but it doesn't look like
-we can do this through the command line for mysql.
+A wrapper around the mysql client.
 
 =head1 SYNOPSIS
 
@@ -38,6 +36,7 @@ my @MYARGV = (
     ,'--port=' . $MYSQL_TCP_PORT
     ,'--user=' . $MYSQL_USER
     ,'--password=' . $MYSQL_PW
+    ,"--init-command=set \@migschema = \"$MIGSCHEMA\";"
     ,$MYSQL_DATABASE
 );
 
