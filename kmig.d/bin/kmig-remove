@@ -4,16 +4,13 @@
 
 =head1 NAME
 
-mig-remove - This will remove the specified files from the mig tracking table
-for the schema pointed to by the MIGSCHEMA environment variable in the
-PostgreSQL database specified by various PG environment variables. <inhales,
-exhales, phew>
+kmig-remove - This will remove the specified files from the mig tracking table
 
-You'll need to invoke B<mig-init> prior to using commands like B<mig-remove>
+You'll need to invoke B<kmig-init> prior to using commands like B<kmig-remove>
 
 =head1 SYNOPSIS
 
-B<mig-remove> <file> [file] [...]
+B<kmig-remove> <file> [file] [...]
 
 =cut
 
@@ -22,8 +19,8 @@ B<mig-remove> <file> [file] [...]
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use DBI;
@@ -31,12 +28,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use KMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+KMig::die_if_no_env_migschema();
+KMig::die_if_mig_tracking_table_does_not_exist();
 
 foreach my $arg (@ARGV) {
     my $file = abs_path($arg);
@@ -53,14 +50,14 @@ exit 0;
 
 sub remove_this_file {
     my $file = shift;
-    my $tracked_file_id = Mig::check_for_tracked_file($file,{'allow_missing'=>1});
+    my $tracked_file_id = KMig::check_for_tracked_file($file,{'allow_missing'=>1});
     if ($tracked_file_id) {
         print "removing tracked file: $file\n";
-        my $dbh = Mig::db_connect();
+        my $dbh = KMig::db_connect();
         my $rv = $dbh->do("
-            DELETE FROM $MIGSCHEMA.tracked_file WHERE id = $tracked_file_id;
-        ") || die "Error deleting from table $MIGSCHEMA.tracked_file (id = $tracked_file_id): $!\n";
-        Mig::db_disconnect($dbh);
+            DELETE FROM m_tracked_file WHERE id = $tracked_file_id;
+        ") || die "Error deleting from table m_tracked_file (id = $tracked_file_id): $!\n";
+        KMig::db_disconnect($dbh);
     } else {
         print "File not currently tracked: $file\n";
     }
