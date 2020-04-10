@@ -4,9 +4,7 @@
 
 =head1 NAME
 
-mig-add - This will add the specified files to the mig tracking table for the
-schema pointed to by the MIGSCHEMA environment variable in the PostgreSQL
-database specified by various PG environment variables. <inhales, exhales>
+kmig-add - This will add the specified files to the mig tracking table
 
 --headers (the default) and --no-headers are repeatable, and indicate whether
 subsequent files have headers or not
@@ -16,11 +14,11 @@ the next added <file>, which should contain one line per header
 
 --headers-file will automatically invoke --no-headers
 
-You'll need to invoke B<mig-init> prior to using commands like B<mig-add>
+You'll need to invoke B<kmig-init> prior to using commands like B<kmig-add>
 
 =head1 SYNOPSIS
 
-B<mig-add> [--no-headers|--headers|--headers-file <hfile>] <file> [file|--no-headers|--headers|--headers-file <hfile>] [...]
+B<kmig-add> [--no-headers|--headers|--headers-file <hfile>] <file> [file|--no-headers|--headers|--headers-file <hfile>] [...]
 
 =cut
 
@@ -29,8 +27,8 @@ B<mig-add> [--no-headers|--headers|--headers-file <hfile>] <file> [file|--no-hea
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use DBI;
@@ -38,12 +36,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use KMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+KMig::die_if_no_env_migschema();
+KMig::die_if_mig_tracking_table_does_not_exist();
 
 my $has_headers = 1;
 my $headers_file;
@@ -99,7 +97,7 @@ sub add_this_file {
             return;
         }
     }
-    if (Mig::check_for_tracked_file($file)) {
+    if (KMig::check_for_tracked_file($file)) {
         print "File already tracked: $file\n";
     } else {
         print 'Adding (';
@@ -109,9 +107,9 @@ sub add_this_file {
             print ($headers ? '   with headers' : 'without headers');
         }
         print '): ' . "$file\n";
-        my $dbh = Mig::db_connect();
+        my $dbh = KMig::db_connect();
         my $rv = $dbh->do("
-            INSERT INTO $MIGSCHEMA.tracked_file (
+            INSERT INTO m_tracked_file (
                  base_filename
                 ,has_headers
                 ,headers_file
@@ -120,8 +118,8 @@ sub add_this_file {
                 ," . $dbh->quote($headers) . "
                 ," . $dbh->quote($headers_file) . "
             );
-        ") || die "Error inserting into table $MIGSCHEMA.tracked_file: $!\n";
-        Mig::db_disconnect($dbh);
+        ") || die "Error inserting into table m_tracked_file: $!\n";
+        KMig::db_disconnect($dbh);
     }
 }
 
