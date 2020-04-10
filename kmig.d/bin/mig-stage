@@ -1,0 +1,128 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-stage 
+
+Load the SQL-converted version of the specified file into the migration schema.
+
+Extra arguments are passed to the underlying call to psql
+
+If the tracked file was previously staged with a different table, drop that
+table.
+
+
+=head1 SYNOPSIS
+
+B<mig-stage> <file> [other arguments...]
+
+=cut
+
+###############################################################################
+
+use strict;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use DBI;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use EMig;
+
+pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
+
+EMig::die_if_no_env_migschema();
+EMig::die_if_mig_tracking_table_does_not_exist();
+
+my $file = abs_path($ARGV[0]);
+if ($file =~ /^$MIGBASEWORKDIR/) {
+    stage_csv(@ARGV);
+} else {
+    print "File falls outside of MIGWORKDIR ($MIGWORKDIR): $file\n";
+}
+
+exit 0;
+
+###############################################################################
+
+sub stage_csv {
+    my $file = abs_path(shift);
+    my @args = @_;
+
+    my $tracked_file_id = EMig::check_for_tracked_file($file);
+    if ($tracked_file_id) {
+        my $data = EMig::status_this_file($file);
+
+        if (! $data->{'utf8_filename'}) {
+            die "mig-iconv or mig-skip-iconv needed for UTF8 version of file: $file\n";
+        }
+
+        if (! $data->{'clean_filename'}) {
+            die "mig-clean or mig-skip-clean needed for .clean version of file: $file\n";
+        }
+
+        if (! $data->{'stage_sql_filename'}) {
+            die "mig-convert needed for .stage.sql version of file: $file\n";
+        }
+
+        my $stage_sql_filename = $data->{'stage_sql_filename'};
+        if (! -e $stage_sql_filename) {
+            die "missing file: $stage_sql_filename\n";
+        }
+
+        my $schema_table = `grep 'CREATE UNLOGGED TABLE' $stage_sql_filename  | cut -f4 -d\\  | head -1`;
+        chomp $schema_table;
+        my ($schema,$table) = split /\./, $schema_table;
+
+        if (defined $data->{'staged_table'} && $data->{'staged_table'} ne $table) {
+            my $dbh2 = EMig::db_connect();
+            print "dropping previously staged table: $MIGSCHEMA.$data->{staged_table}\n";
+            my $rv2 = $dbh2->do("
+                DROP TABLE $MIGSCHEMA.$data->{staged_table};
+            ") || die "Error dropping table $data->{staged_table}: $!\n";
+            print "changing references to old tables\n";
+            my $rv3 = $dbh2->do("
+                UPDATE $MIGSCHEMA.tracked_column
+                SET staged_table = " . $dbh2->quote($table) . "
+                WHERE staged_table = " . $dbh2->quote($data->{staged_table}) . "
+            ") || die "Error changing references to $data->{staged_table}: $!\n";
+            my $rv4 = $dbh2->do("
+                UPDATE $MIGSCHEMA.tracked_column
+                SET target_table = " . $dbh2->quote($table) . "
+                WHERE target_table = " . $dbh2->quote($data->{staged_table}) . "
+            ") || die "Error changing references to $data->{staged_table}: $!\n";
+            EMig::db_disconnect($dbh2);
+        }
+
+        print "running staging SQL: $stage_sql_filename\n";
+
+        system('psql', @args, '-f', $stage_sql_filename);
+
+        if ($schema ne $MIGSCHEMA) {
+            die "Schema mismatch: env => $MIGSCHEMA sql => $schema\n";
+        }
+        if (! EMig::check_db_migschema_for_specific_table($table)) {
+            die "Missing staged table: $schema_table\n";
+        } else {
+            print "table staged: $schema_table\n";
+        }
+
+        my $dbh = EMig::db_connect();
+        my $rv = $dbh->do("
+            UPDATE $MIGSCHEMA.tracked_file
+            SET staged_table = " . $dbh->quote($table) . "
+            WHERE base_filename = " . $dbh->quote($file) . "
+            ;
+        ") || die "Error updating table $MIGSCHEMA.tracked_file: $!\n";
+        EMig::db_disconnect($dbh);
+    } else {
+        print "File not currently tracked: $file\n";
+    }
+}
