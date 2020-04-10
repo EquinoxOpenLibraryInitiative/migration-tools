@@ -6,7 +6,7 @@
 
 mig-convert 
 
-Attempts to invoke B<csv2sql> on the .utf8.clean version of the specified
+Attempts to invoke B<csv2mysql> on the .utf8.clean version of the specified
 tracked file, creating either [file].utf8.clean.stage.sql or
 <parent table>_stage.sql depending on whether the file has been linked to a
 parent table within the migration schema or not.
@@ -15,7 +15,7 @@ If given no other arguments, the invocation will lool like
 
 =over 5
 
-csv2sql --config scripts/clean.conf --add-x-migrate --schema <MIGSCHEMA> [--parent <PARENT TABLE>] --outfile <[<FILE>.utf8.clean.stage.sql]|[parent_table_stage.sql]> <FILE>.utf8.clean
+csv2mysql --config scripts/clean.conf --add-x-migrate --schema <MIGSCHEMA> [--parent <PARENT TABLE>] --outfile <[<FILE>.utf8.clean.stage.sql]|[parent_table_stage.sql]> <FILE>.utf8.clean
 
 =back
 
@@ -23,7 +23,7 @@ otherwise, the arguments will be passed through like so
 
 =over 5
 
-csv2sql [other arguments...] --schema <MIGSCHEMA> [--parent <PARENT TABLE>] --outfile <[<FILE>.utf8.clean.stage.sql]|[parent_table_stage.sql]> <FILE>.utf8.clean
+csv2mysql [other arguments...] --schema <MIGSCHEMA> [--parent <PARENT TABLE>] --outfile <[<FILE>.utf8.clean.stage.sql]|[parent_table_stage.sql]> <FILE>.utf8.clean
 
 =back
 
@@ -38,8 +38,8 @@ B<mig-convert> <file> [other arguments...]
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use DBI;
@@ -47,12 +47,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use EMig;
+use KMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-EMig::die_if_no_env_migschema();
-EMig::die_if_mig_tracking_table_does_not_exist();
+KMig::die_if_no_env_migschema();
+KMig::die_if_mig_tracking_table_does_not_exist();
 
 my $file = abs_path($ARGV[0]);
 if ($file =~ /^$MIGBASEWORKDIR/) {
@@ -70,9 +70,9 @@ sub call_convert_csv {
     my @args = @_;
 
     my $stage_sql_filename;
-    my $tracked_file_id = EMig::check_for_tracked_file($file);
+    my $tracked_file_id = KMig::check_for_tracked_file($file);
     if ($tracked_file_id) {
-        my $data = EMig::status_this_file($file);
+        my $data = KMig::status_this_file($file);
 
         if (! $data->{'utf8_filename'}) {
             die "mig-iconv or mig-skip-iconv needed for UTF8 version of file: $file\n";
@@ -110,21 +110,21 @@ sub call_convert_csv {
         push @args, $stage_sql_filename;
 
         print "args: " . join(',',@args) . "\n";
-        system('csv2sql', @args, $clean_file);
+        system($mig_bin . 'csv2mysql', @args, $clean_file);
 
-        my $dbh = EMig::db_connect();
+        my $dbh = KMig::db_connect();
         if (! -e $stage_sql_filename) {
             print "SQL converted file does not exist: $stage_sql_filename\n";
             $stage_sql_filename = '';
         }
 
         my $rv = $dbh->do("
-            UPDATE $MIGSCHEMA.tracked_file
+            UPDATE m_tracked_file
             SET stage_sql_filename = " . $dbh->quote($stage_sql_filename) . "
             WHERE base_filename = " . $dbh->quote($file) . "
             ;
         ") || die "Error updating table $MIGSCHEMA.tracked_file: $!\n";
-        EMig::db_disconnect($dbh);
+        KMig::db_disconnect($dbh);
     } else {
         print "File not currently tracked: $file\n";
     }

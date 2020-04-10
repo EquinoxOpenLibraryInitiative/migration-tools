@@ -1,27 +1,29 @@
 #!/usr/bin/perl -w
+use strict;
+use Switch;
+use Env qw(
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use DBI;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use KMig;
+
 use Getopt::Long;
 use Text::CSV::Auto;
 use Data::Dumper;
-use DBI;
 use File::Basename;
-use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
-);
 
 my $dbh;
 my $cfg;
 my $csv_config;
+my $help;
 
 sub init {
-    if ($PGHOST and $PGPORT and $PGUSER and $PGDATABASE) 
-    {
-        $dbh = connect_db($PGDATABASE,$PGUSER,undef,$PGHOST) or die $DBI::errstr;
-    } else {
-        our %config;
-        eval `cat /openils/conf/offline-config.pl`;
-        $dbh = DBI->connect( $config{dsn}, $config{usr}, $config{pw} ) or die $DBI::errstr;
-    }
+    $dbh = KMig::db_connect();
 
 	$cfg = {
 		schema => 'm_foo',
@@ -59,23 +61,6 @@ sub init {
 	}
 }
 
-sub connect_db {
-    my ($db, $dbuser, $dbpw, $dbhost) = @_;
-
-    my $dsn = "dbi:Pg:host=$dbhost;dbname=$db;port=5432";
-
-    my $attrs = {
-        ShowErrorStatement => 1,
-        RaiseError => 1,
-        PrintError => 1,
-        pg_enable_utf8 => 1,
-    };
-    my $dbh = DBI->connect($dsn, $dbuser, $dbpw, $attrs);
-
-    return $dbh;
-}
-
-
 sub write_sql_sample {
 	my $cfg = shift;
 	my $info = shift;
@@ -104,18 +89,20 @@ sub write_sql_table {
 
 	print "\twriting table definition\n";
     if ($cfg->{parent}) {
-        $cfg->{table_name} = $cfg->{parent} . '_legacy';
+        if ($cfg->{parent} !~ '^m_') {
+            die "parent table is not a m_ prefixed table; afraid to drop and recreate";
+        }
+        $cfg->{table_name} = $cfg->{parent};
+	    print $sql "DROP TABLE IF EXISTS $cfg->{table_name};\n";
+        my $prod_table = $cfg->{parent}; $prod_table =~ s/^m_//;
+        print $sql "CREATE TABLE $cfg->{table_name} LIKE $prod_table;\n";
+        print $sql "ALTER TABLE $cfg->{table_name} ADD COLUMN x_migrate BOOLEAN;\n";
     } else {
-	    $cfg->{table_name} = lc(basename($fn)); $cfg->{table_name} =~ s/[\-\. ]/_/g;
+	    $cfg->{table_name} = 'm_' . lc(basename($fn)); $cfg->{table_name} =~ s/[\-\. ]/_/g;
+	    print $sql "DROP TABLE IF EXISTS $cfg->{table_name};\n";
+	    print $sql "CREATE TABLE $cfg->{table_name} (x_migrate BOOLEAN);\n";
     }
-	print $sql "DROP TABLE IF EXISTS $cfg->{schema}.$cfg->{table_name};\n";
-	print $sql "CREATE UNLOGGED TABLE $cfg->{schema}.$cfg->{table_name} (\n";
-	my $idx = 0;
-	if ($cfg->{add_x_migrate}) {
-		print $sql "    x_migrate BOOLEAN\n";
-		$idx++;
-		push @indices, 'x_migrate';
-	}
+    push @indices, 'x_migrate';
 	foreach my $column (@{ $info }) {
 		my $cn = $column->{'header'};
 		if ($cn =~ /^x_/) {
@@ -123,18 +110,13 @@ sub write_sql_table {
 		}
 		my $col_info = Dumper($column);
 		$col_info =~ s/^\$VAR1 = //;
-		print $sql "   " . ($idx++ ? ',' : ' ');
+		print $sql "ALTER TABLE $cfg->{table_name} ADD COLUMN ";
 		print $sql "l_" unless $cfg->{no_legacy_prefix} or $column->{'header'} =~ /^x_/ or $column->{'header'} =~ /^l_/;
-        print $sql "$cn " . ($cn eq 'x_eg_bib_id' ? 'BIGINT' : 'TEXT');
+        print $sql "$cn TEXT; ";
         print $sql " /*\n         $col_info   */\n";
 	}
-    if ($cfg->{parent}) {
-	    print $sql ') INHERITS (' . $cfg->{schema} . '.' . $cfg->{parent} . ");\n";
-    } else {
-	    print $sql ");\n";
-    }
 	foreach my $cn (@indices) {
-		print $sql "CREATE INDEX ON $cfg->{schema}.$cfg->{table_name} ($cn);\n";
+		print $sql "CREATE INDEX " . $cn . "_idx ON $cfg->{table_name} ($cn);\n";
 	}
 }
 
@@ -146,25 +128,28 @@ sub write_sql_loader {
 	my $fn = $cfg->{auto_options}->{file} . ($cfg->{use_no_headers_file} ? '.no_headers' : '');
 
 	print "\twriting copy statement\n";
-	print $sql "\n\\COPY $cfg->{schema}.$cfg->{table_name} (";
-    my $idx = 0;
-    foreach my $column (@{ $info }) {
-        print $sql ($idx++ ? ',' : '');
-        print $sql "l_" unless $cfg->{no_legacy_prefix} or $column->{'header'} =~ /^x_/ or $column->{'header'} =~ /^l_/;
-        print $sql $column->{'header'};
-    }
-    print $sql ") FROM '$fn'";
+	print $sql "\nLOAD DATA LOCAL INFILE '$fn' INTO TABLE $cfg->{table_name} ";
     if ($auto->csv->sep_char eq chr(9) && ! defined $auto->csv->quote_char && ! defined $auto->csv->escape_char) {
         # true .tsv, don't treat as csv
     } elsif ($auto->csv->sep_char eq chr(9)) {
         # probably good enough .tsv, don't treat as csv
     } else {
-        print $sql " WITH csv " . ($cfg->{use_no_headers_file} ? "" : "header");
-        print $sql " delimiter " . $dbh->quote( $auto->csv->sep_char ) unless $dbh->quote( $auto->csv->sep_char ) eq 'NULL';
-        print $sql " quote " . $dbh->quote( $auto->csv->quote_char ) unless $dbh->quote( $auto->csv->quote_char ) eq 'NULL';
-        print $sql " escape " . $dbh->quote( $auto->csv->escape_char ) unless $dbh->quote( $auto->csv->escape_char ) eq 'NULL';
+        print $sql "FIELDS";
+        print $sql " TERMINATED BY " . $dbh->quote( $auto->csv->sep_char ) unless $dbh->quote( $auto->csv->sep_char ) eq 'NULL';
+        print $sql " OPTIONALLY ENCLOSED BY " . $dbh->quote( $auto->csv->quote_char ) unless $dbh->quote( $auto->csv->quote_char ) eq 'NULL';
+        print $sql " ESCAPED BY " . $dbh->quote( $auto->csv->escape_char ) unless $dbh->quote( $auto->csv->escape_char ) eq 'NULL';
+        if (!$cfg->{use_no_headers_file}) {
+            print $sql " IGNORE 1 LINES "
+        }
     }
-	print $sql "\n";
+    my $idx = 0;
+    print $sql "(";
+    foreach my $column (@{ $info }) {
+        print $sql ($idx++ ? ',' : '');
+        print $sql "l_" unless $cfg->{no_legacy_prefix} or $column->{'header'} =~ /^x_/ or $column->{'header'} =~ /^l_/;
+        print $sql $column->{'header'};
+    }
+    print $sql ");\n";
 }
 
 sub main {

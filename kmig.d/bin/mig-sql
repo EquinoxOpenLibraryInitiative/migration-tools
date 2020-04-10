@@ -36,6 +36,7 @@ my @MYARGV = (
     ,'--port=' . $MYSQL_TCP_PORT
     ,'--user=' . $MYSQL_USER
     ,'--password=' . $MYSQL_PW
+    ,'--local-infile'
     ,"--init-command=set \@migschema = \"$MIGSCHEMA\";"
     ,$MYSQL_DATABASE
 );
