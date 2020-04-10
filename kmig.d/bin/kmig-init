@@ -4,18 +4,17 @@
 
 =head1 NAME
 
-mig-init - This will add or recreate tracking tables for the B<mig> toolset to
-the migration schema specified by the MIGSCHEMA environment variable, in the
-PostgreSQL database specified by various PG environment variables.
+kmig-init - This will add or recreate tracking tables for the B<kmig> toolset
+to the database specified by the current kmig environment.
 
-In practice, you should invoke 'mig env use schema_name' prior to calling
+In practice, you should invoke 'kmig env use schema_name' prior to calling
 B<init>
 
 =head1 SYNOPSIS
 
-B<mig-init>
+B<kmig-init>
 
-B<mig-init> <help>
+B<kmig-init> <help>
 
 =cut
 
@@ -24,69 +23,58 @@ B<mig-init> <help>
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use DBI;
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
-my $mig_sql = $mig_bin . "../mig-sql/init/";
+my $mig_sql = $mig_bin . "../sql/init/";
 use lib "$FindBin::Bin/";
-use Mig;
+use KMig;
 
 pod2usage(-verbose => 2) if $ARGV[0];
 
-Mig::die_if_no_env_migschema();
+KMig::die_if_no_env_migschema();
 
-if (! Mig::check_for_db_migschema()) {
-    try_to_create_schema();
+if (! KMig::check_for_db_migschema()) {
+    die "could not find the schema";
 }
 
-if (! Mig::check_db_migschema_for_migration_tables()) {
+if (! KMig::check_db_migschema_for_migration_tables()) {
     try_to_init_schema_with_migration_tools();
 }
-Mig::die_if_mig_tracking_table_exists();
-Mig::die_if_mig_column_tracking_table_exists();
+KMig::die_if_mig_tracking_table_exists();
+KMig::die_if_mig_column_tracking_table_exists();
 loop_through_mig_sql_templates();
 
 exit 0;
 
 ###############################################################################
 
-sub try_to_create_schema {
-    if ($MIGSCHEMA =~ /[^\w_]/) {
-        die "$MIGSCHEMA is not suitable for a schema name in PostgreSQL\n";
-    }
-    my $dbh = Mig::db_connect();
-    my $rv = $dbh->do("CREATE SCHEMA $MIGSCHEMA;")
-        || die "Error creating migration schema ($MIGSCHEMA): $!\n";
-    print "Created schema $MIGSCHEMA\n";
-    Mig::db_disconnect($dbh);
-}
-
 sub try_to_init_schema_with_migration_tools {
-    Mig::die_if_no_migration_tools();
-    print "Calling migration_tools.init() and .build()\n";
-    my $dbh = Mig::db_connect();
-    my $rv = $dbh->do("SELECT migration_tools.init(" . $dbh->quote($MIGSCHEMA) . ");")
-        || die "Error running migration_tools.init($MIGSCHEMA): $!\n";
-    print "migration_tools.init() finished\n";
-    my $rv2 = $dbh->do("SELECT migration_tools.build(" . $dbh->quote($MIGSCHEMA) . ");")
-        || die "Error running migration_tools.build($MIGSCHEMA): $!\n";
+    KMig::die_if_no_migration_tools();
+    print "Calling mt_init() and mt_build()\n";
+    my $dbh = KMig::db_connect();
+    my $rv = $dbh->do("SELECT mt_init();")
+        || die "Error running mt_init(): $!\n";
+    print "mt_init() finished\n";
+    my $rv2 = $dbh->do("SELECT mt_build();")
+        || die "Error running mt_build(): $!\n";
     print "migration_tools.build() finished\n";
-    Mig::db_disconnect($dbh);
+    KMig::db_disconnect($dbh);
 }
 
 sub loop_through_mig_sql_templates {
-    print "Looping through mig-sql/init/ templates\n";
+    print "Looping through kmig.d/sql/init/ templates\n";
     opendir my $dir, $mig_sql or die "Cannot open directory: $!";
     my @files = sort readdir $dir;
     closedir $dir;
     foreach my $file (@files) {
         if ($file =~ /.sql$/) {
             print "executing $file:\n";
-            system( $mig_bin . "mig-sql", ('-f',$mig_sql . $file) )
+            system( $mig_bin . "kmig-sql", ('-e',"source $mig_sql$file") )
         }
     }
 }
