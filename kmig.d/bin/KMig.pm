@@ -89,32 +89,6 @@ sub check_db_migschema_for_specific_table {
     return $found;
 }
 
-sub check_for_migration_tools {
-    my $dbh = db_connect();
-    my $sth = $dbh->prepare("
-        SELECT EXISTS(
-            SELECT 1
-            FROM information_schema.tables
-            WHERE table_schema = " . $dbh->quote( $MYSQL_DATABASE ) . "
-            AND table_name = " . $dbh->quote( 'mt_init' ) . "
-        );"
-    );
-    my $rv = $sth->execute()
-        || die "Error checking for migration_tools: $!";
-    my @cols = $sth->fetchrow_array;
-    $sth->finish;
-    db_disconnect($dbh);
-    return $cols[0];
-}
-
-sub die_if_no_migration_tools {
-    if (check_for_migration_tools()) {
-        print "Found migration_tools\n";
-    } else {
-        die "Missing migration_tools\n";
-    }
-}
-
 sub check_for_mig_tracking_table {
     my $dbh = db_connect();
     my $sth = $dbh->prepare("

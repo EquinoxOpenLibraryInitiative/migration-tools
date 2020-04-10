@@ -42,9 +42,6 @@ if (! KMig::check_for_db_migschema()) {
     die "could not find the schema";
 }
 
-if (! KMig::check_db_migschema_for_migration_tables()) {
-    try_to_init_schema_with_migration_tools();
-}
 KMig::die_if_mig_tracking_table_exists();
 KMig::die_if_mig_column_tracking_table_exists();
 loop_through_mig_sql_templates();
@@ -52,19 +49,6 @@ loop_through_mig_sql_templates();
 exit 0;
 
 ###############################################################################
-
-sub try_to_init_schema_with_migration_tools {
-    KMig::die_if_no_migration_tools();
-    print "Calling mt_init() and mt_build()\n";
-    my $dbh = KMig::db_connect();
-    my $rv = $dbh->do("SELECT mt_init();")
-        || die "Error running mt_init(): $!\n";
-    print "mt_init() finished\n";
-    my $rv2 = $dbh->do("SELECT mt_build();")
-        || die "Error running mt_build(): $!\n";
-    print "migration_tools.build() finished\n";
-    KMig::db_disconnect($dbh);
-}
 
 sub loop_through_mig_sql_templates {
     print "Looping through kmig.d/sql/init/ templates\n";
