@@ -241,7 +241,7 @@ Optional parameters are :
 --added_page_title and --added_page_file 
 
 If one is used both must be.  The added page file can be plain text or asciidoc.  This
-adds an extra arbitrary page of notes to the report.  Mig assumes the page file is in the kmig git directory.
+adds an extra arbitrary page of notes to the report.  KMig assumes the page file is in the kmig git directory.
 
 --tags
 
@@ -317,7 +317,7 @@ switch($ARGV[0]) {
 sub standard_invocation {
     my $cmd = shift;
 
-    if ($cmd ne 'env') { Mig::die_if_no_env_migschema(); }
+    if ($cmd ne 'env') { KMig::die_if_no_env_migschema(); }
     if (-e $mig_bin . "kmig-$cmd") {
         system( $mig_bin . "kmig-$cmd", @_ );
     } else {

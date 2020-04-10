@@ -4,9 +4,11 @@
 
 =head1 NAME
 
-mig-sql 
+kmig-sql 
 
-A wrapper around the psql command.  At some point the plan is to shove mig-tracked variables into psql sessions.
+A wrapper around the mysql client.  For the Postgres/EG version of this, we
+were injecting the mig schema as a session variable, but it doesn't look like
+we can do this through the command line for mysql.
 
 =head1 SYNOPSIS
 
@@ -19,9 +21,8 @@ B<mig-sql> [arguments...]
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
-    BIBSTART
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use DBI;
@@ -29,18 +30,16 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use KMig;
 
 my @MYARGV = (
-     'psql'
-    ,'-vmigschema=' . $MIGSCHEMA
-    ,'-vmigschema_text=\'' . $MIGSCHEMA . '\''
-    ,'-F ' . "\t"
+     'mysql'
+    ,'--host=' . $MYSQL_HOST
+    ,'--port=' . $MYSQL_TCP_PORT
+    ,'--user=' . $MYSQL_USER
+    ,'--password=' . $MYSQL_PW
+    ,$MYSQL_DATABASE
 );
-if (defined $BIBSTART) {
-    push @MYARGV, '-vbibstart=' . $BIBSTART;
-}
-# TODO inject more mig-tracked variables here
 
 system(@MYARGV, @ARGV);
 
