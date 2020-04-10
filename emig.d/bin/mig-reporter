@@ -166,7 +166,7 @@ foreach my $t (@report_tags) {
     }
 
     foreach my $fname (@asset_files) {
-        my $asset_path = $mig_path . '../mig-asc/' . $fname;
+        my $asset_path = $mig_path . '../asc/' . $fname;
         open my $a, $asset_path or abort("Could not open $fname.");
         while ( my $l = <$a> ) {
             print $fh $l;
@@ -236,7 +236,7 @@ sub find_xml {
 
     if ($reports_xml =~ m/\//) { return $reports_xml; }
 
-    my $mig_test_file =  $mig_path . '/../mig-xml/' . $reports_xml;
+    my $mig_test_file =  $mig_path . '/../xml/' . $reports_xml;
     my $working_test_dir = getcwd();
     my $working_test_file = $working_test_dir . '/' . $reports_xml;
 
