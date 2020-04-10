@@ -4,14 +4,14 @@
 
 =head1 NAME
 
-kmig-status -  This will show tracking information for either the specified files
+mig-status -  This will show tracking information for either the specified files
 or all tracked files if no argument is given.
 
-You'll need to invoke B<kmig-init> prior to using commands like B<mig-status>
+You'll need to invoke B<mig-init> prior to using commands like B<mig-status>
 
 =head1 SYNOPSIS
 
-B<kmig-status> [file] [...]
+B<mig-status> [file] [...]
 
 =cut
 

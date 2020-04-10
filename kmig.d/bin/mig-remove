@@ -4,13 +4,13 @@
 
 =head1 NAME
 
-kmig-remove - This will remove the specified files from the mig tracking table
+mig-remove - This will remove the specified files from the mig tracking table
 
-You'll need to invoke B<kmig-init> prior to using commands like B<kmig-remove>
+You'll need to invoke B<mig-init> prior to using commands like B<mig-remove>
 
 =head1 SYNOPSIS
 
-B<kmig-remove> <file> [file] [...]
+B<mig-remove> <file> [file] [...]
 
 =cut
 

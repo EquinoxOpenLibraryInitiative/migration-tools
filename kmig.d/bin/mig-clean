@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-kmig-clean 
+mig-clean 
 
 Attempts to invoke B<clean_csv> on the specified tracked file, placing the
 output in [file].clean
@@ -25,12 +25,12 @@ clean_csv [other arguments...] <file>
 
 =back
 
-You'll need to invoke B<kmig-iconv> or B<kmig-skip-iconv> prior to using commands
-like B<kmig-clean>
+You'll need to invoke B<mig-iconv> or B<mig-skip-iconv> prior to using commands
+like B<mig-clean>
 
 =head1 SYNOPSIS
 
-B<kmig-clean> <file> [other arguments...]
+B<mig-clean> <file> [other arguments...]
 
 =cut
 
@@ -75,7 +75,7 @@ sub call_clean_csv {
         my $data = KMig::status_this_file($file);
 
         if (! $data->{'utf8_filename'}) {
-            die "kmig-iconv or kmig-skip-iconv needed for UTF8 version of file: $file\n";
+            die "mig-iconv or mig-skip-iconv needed for UTF8 version of file: $file\n";
         }
 
         my $utf8_file = $data->{'utf8_filename'};

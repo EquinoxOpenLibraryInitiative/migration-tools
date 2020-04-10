@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-kmig-add - This will add the specified files to the mig tracking table
+mig-add - This will add the specified files to the mig tracking table
 
 --headers (the default) and --no-headers are repeatable, and indicate whether
 subsequent files have headers or not
@@ -14,11 +14,11 @@ the next added <file>, which should contain one line per header
 
 --headers-file will automatically invoke --no-headers
 
-You'll need to invoke B<kmig-init> prior to using commands like B<kmig-add>
+You'll need to invoke B<mig-init> prior to using commands like B<mig-add>
 
 =head1 SYNOPSIS
 
-B<kmig-add> [--no-headers|--headers|--headers-file <hfile>] <file> [file|--no-headers|--headers|--headers-file <hfile>] [...]
+B<mig-add> [--no-headers|--headers|--headers-file <hfile>] <file> [file|--no-headers|--headers|--headers-file <hfile>] [...]
 
 =cut
 

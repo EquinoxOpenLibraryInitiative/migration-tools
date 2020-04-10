@@ -4,17 +4,17 @@
 
 =head1 NAME
 
-kmig-init - This will add or recreate tracking tables for the B<kmig> toolset
-to the database specified by the current kmig environment.
+mig-init - This will add or recreate tracking tables for the B<mig> toolset
+to the database specified by the current mig environment.
 
-In practice, you should invoke 'kmig env use schema_name' prior to calling
+In practice, you should invoke 'mig env use schema_name' prior to calling
 B<init>
 
 =head1 SYNOPSIS
 
-B<kmig-init>
+B<mig-init>
 
-B<kmig-init> <help>
+B<mig-init> <help>
 
 =cut
 
@@ -51,14 +51,14 @@ exit 0;
 ###############################################################################
 
 sub loop_through_mig_sql_templates {
-    print "Looping through kmig.d/sql/init/ templates\n";
+    print "Looping through mig.d/sql/init/ templates\n";
     opendir my $dir, $mig_sql or die "Cannot open directory: $!";
     my @files = sort readdir $dir;
     closedir $dir;
     foreach my $file (@files) {
         if ($file =~ /.sql$/) {
             print "executing $file:\n";
-            system( $mig_bin . "kmig-sql", ('-e',"source $mig_sql$file") )
+            system( $mig_bin . "mig-sql", ('-e',"source $mig_sql$file") )
         }
     }
 }

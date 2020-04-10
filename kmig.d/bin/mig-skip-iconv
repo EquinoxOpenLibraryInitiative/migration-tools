@@ -4,14 +4,14 @@
 
 =head1 NAME
 
-kmig-skip-iconv 
+mig-skip-iconv 
 
 Allows you to either use an existing file named <file>.utf8 or a named
 [utf8 file] as if it were the one created by mig-iconv
 
 =head1 SYNOPSIS
 
-B<kmig-skip-iconv> <file> [utf8 file]
+B<mig-skip-iconv> <file> [utf8 file]
 
 =cut
 
