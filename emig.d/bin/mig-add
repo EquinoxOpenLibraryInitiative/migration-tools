@@ -38,12 +38,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+EMig::die_if_no_env_migschema();
+EMig::die_if_mig_tracking_table_does_not_exist();
 
 my $has_headers = 1;
 my $headers_file;
@@ -99,7 +99,7 @@ sub add_this_file {
             return;
         }
     }
-    if (Mig::check_for_tracked_file($file)) {
+    if (EMig::check_for_tracked_file($file)) {
         print "File already tracked: $file\n";
     } else {
         print 'Adding (';
@@ -109,7 +109,7 @@ sub add_this_file {
             print ($headers ? '   with headers' : 'without headers');
         }
         print '): ' . "$file\n";
-        my $dbh = Mig::db_connect();
+        my $dbh = EMig::db_connect();
         my $rv = $dbh->do("
             INSERT INTO $MIGSCHEMA.tracked_file (
                  base_filename
@@ -121,7 +121,7 @@ sub add_this_file {
                 ," . $dbh->quote($headers_file) . "
             );
         ") || die "Error inserting into table $MIGSCHEMA.tracked_file: $!\n";
-        Mig::db_disconnect($dbh);
+        EMig::db_disconnect($dbh);
     }
 }
 

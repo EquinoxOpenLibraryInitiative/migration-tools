@@ -61,7 +61,7 @@ use Cwd qw(getcwd);
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 use open ':encoding(utf8)';
 
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
@@ -108,7 +108,7 @@ if (defined $added_page_file or defined $added_page_title) {
     }
 if (defined $added_page_file) { $added_page_file = $MIGGITDIR . $added_page_file; }
 
-my $dbh = Mig::db_connect();
+my $dbh = EMig::db_connect();
 my $report_file = create_report_name($report_title);
 $report_file = $MIGGITDIR . $report_file;
 

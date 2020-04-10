@@ -53,7 +53,7 @@ use FindBin;
 use UNIVERSAL;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 use Getopt::Long;
 
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
@@ -68,7 +68,7 @@ my $serial = '';
 my $source = 2;
 my $x_source = 'default';
 my $no_source_or_last_xact_id;
-my $dbh = Mig::db_connect();
+my $dbh = EMig::db_connect();
 my $infile;
 my $i = 0;
 my $batch;

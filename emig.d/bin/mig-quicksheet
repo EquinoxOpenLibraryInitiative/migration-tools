@@ -54,7 +54,7 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 
 my $outtable = '';
 my $outfile = '';
@@ -79,8 +79,8 @@ if (! $outtable && ! $outfile) {
     }
 }
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+EMig::die_if_no_env_migschema();
+EMig::die_if_mig_tracking_table_does_not_exist();
 
 my $workbook;
 my @worksheets = ();
@@ -111,15 +111,15 @@ if (!$drop) {
     }
     close_workbook();
 } else {
-    if (Mig::check_db_migschema_for_specific_table($outtable)) {
+    if (EMig::check_db_migschema_for_specific_table($outtable)) {
         drop_existing_outtable();
     }
 }
 
 sub handle_file {
-    my $tracked_file_id = Mig::check_for_tracked_file($file);
+    my $tracked_file_id = EMig::check_for_tracked_file($file);
     if ($tracked_file_id) {
-        $fdata = Mig::status_this_file($file);
+        $fdata = EMig::status_this_file($file);
     } else {
         die "File not currently tracked: $file\n";
     }
@@ -143,7 +143,7 @@ sub init_workbook {
         }
     }
     if ($outtable) {
-        if (Mig::check_db_migschema_for_specific_table($outtable)) {
+        if (EMig::check_db_migschema_for_specific_table($outtable)) {
             if ($force) {
                 drop_existing_outtable();
             } else {
@@ -157,7 +157,7 @@ sub init_workbook {
 sub drop_existing_outtable {
 
     # we want a transaction for this one
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     $dbh->{AutoCommit} = 0;
     $dbh->{RaiseError} = 1;
 
@@ -195,11 +195,11 @@ sub drop_existing_outtable {
         die "Aborting mig-quicksheet\n";
     };
 
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 sub create_new_outtable {
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     print "Creating table $MIGSCHEMA.$outtable\n";
     my $rv = $dbh->do("
         CREATE UNLOGGED TABLE $MIGSCHEMA.$outtable (
@@ -207,12 +207,12 @@ sub create_new_outtable {
             summary_table TEXT UNIQUE
         );
     ") || die "Error creating outtable ($MIGSCHEMA.$outtable): $!\n";
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 sub create_new_subtable {
     my $subtable = shift;
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     $dbh->{AutoCommit} = 0;
     $dbh->{RaiseError} = 1;
 
@@ -231,7 +231,7 @@ sub create_new_subtable {
         die "Aborting mig-quicksheet\n";
     };
 
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 sub write_worksheets {
@@ -248,7 +248,7 @@ sub write_worksheets {
         create_new_subtable( $first_table );
     }
 
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth = $dbh->prepare("
         SELECT COUNT(*)
         FROM $MIGSCHEMA.$table
@@ -307,7 +307,7 @@ sub write_worksheets {
         };
     }
 
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 sub close_workbook {
@@ -321,7 +321,7 @@ exit 0;
 ###############################################################################
 
 sub handle_list {
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth = $dbh->prepare("
         SELECT *
         FROM " . $MIGSCHEMA. "." . $table . "
@@ -361,7 +361,7 @@ sub handle_list {
 }
 
 sub handle_columns {
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth = $dbh->prepare("
         SELECT *
         FROM information_schema.columns
@@ -416,14 +416,14 @@ sub handle_columns {
         }
     }
     $sth->finish;
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 sub column_summary {
 
     my $column = shift;
 
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
 
     ### non_empty_count
     my $sth = $dbh->prepare("
@@ -505,7 +505,7 @@ sub column_summary {
 sub group_by {
     my ($column,$option) = (shift,"GROUP BY 2 ORDER BY 2");
 
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth;
     my $rv;
 

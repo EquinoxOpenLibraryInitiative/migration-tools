@@ -1,4 +1,4 @@
-package Mig;
+package EMig;
 
 use strict;
 use Exporter;

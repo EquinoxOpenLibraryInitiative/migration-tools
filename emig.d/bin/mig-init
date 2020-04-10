@@ -31,23 +31,23 @@ use Pod::Usage;
 use DBI;
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
-my $mig_sql = $mig_bin . "../mig-sql/init/";
+my $mig_sql = $mig_bin . "../sql/init/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 
 pod2usage(-verbose => 2) if $ARGV[0];
 
-Mig::die_if_no_env_migschema();
+EMig::die_if_no_env_migschema();
 
-if (! Mig::check_for_db_migschema()) {
+if (! EMig::check_for_db_migschema()) {
     try_to_create_schema();
 }
 
-if (! Mig::check_db_migschema_for_migration_tables()) {
+if (! EMig::check_db_migschema_for_migration_tables()) {
     try_to_init_schema_with_migration_tools();
 }
-Mig::die_if_mig_tracking_table_exists();
-Mig::die_if_mig_column_tracking_table_exists();
+EMig::die_if_mig_tracking_table_exists();
+EMig::die_if_mig_column_tracking_table_exists();
 loop_through_mig_sql_templates();
 
 exit 0;
@@ -58,24 +58,24 @@ sub try_to_create_schema {
     if ($MIGSCHEMA =~ /[^\w_]/) {
         die "$MIGSCHEMA is not suitable for a schema name in PostgreSQL\n";
     }
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $rv = $dbh->do("CREATE SCHEMA $MIGSCHEMA;")
         || die "Error creating migration schema ($MIGSCHEMA): $!\n";
     print "Created schema $MIGSCHEMA\n";
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 sub try_to_init_schema_with_migration_tools {
-    Mig::die_if_no_migration_tools();
+    EMig::die_if_no_migration_tools();
     print "Calling migration_tools.init() and .build()\n";
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $rv = $dbh->do("SELECT migration_tools.init(" . $dbh->quote($MIGSCHEMA) . ");")
         || die "Error running migration_tools.init($MIGSCHEMA): $!\n";
     print "migration_tools.init() finished\n";
     my $rv2 = $dbh->do("SELECT migration_tools.build(" . $dbh->quote($MIGSCHEMA) . ");")
         || die "Error running migration_tools.build($MIGSCHEMA): $!\n";
     print "migration_tools.build() finished\n";
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 sub loop_through_mig_sql_templates {

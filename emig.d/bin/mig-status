@@ -29,17 +29,17 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 
 pod2usage(-verbose => 2) if scalar(@ARGV) > 0 && $ARGV[0] eq '--help';
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+EMig::die_if_no_env_migschema();
+EMig::die_if_mig_tracking_table_does_not_exist();
 
 my @files = @ARGV;
 if (scalar(@files) == 0) {
     @files = ();
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth = $dbh->prepare("
         SELECT base_filename
         FROM $MIGSCHEMA.tracked_file
@@ -52,12 +52,12 @@ if (scalar(@files) == 0) {
         push @files, $row->[0]
     }
     $sth->finish;
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 foreach my $arg (sort @files) {
     my $file = abs_path($arg);
-    my $data = Mig::status_this_file($file);
+    my $data = EMig::status_this_file($file);
     print "=-=-=\n";
     foreach my $key (
          'base_filename'

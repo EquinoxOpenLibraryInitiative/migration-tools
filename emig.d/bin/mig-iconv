@@ -47,12 +47,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+EMig::die_if_no_env_migschema();
+EMig::die_if_mig_tracking_table_does_not_exist();
 
 my $file = abs_path($ARGV[0]);
 if ($file =~ /^$MIGBASEWORKDIR/) {
@@ -69,9 +69,9 @@ sub call_iconv {
     my $file = abs_path(shift);
     my @args = @_;
 
-    my $tracked_file_id = Mig::check_for_tracked_file($file);
+    my $tracked_file_id = EMig::check_for_tracked_file($file);
     if ($tracked_file_id) {
-        my $data = Mig::status_this_file($file);
+        my $data = EMig::status_this_file($file);
         print "iconv'ing tracked file: $file\n";
 
         if (scalar(@args) == 0) {
@@ -87,7 +87,7 @@ sub call_iconv {
         system('iconv', @args, '-o', $file . '.utf8', $file);
         system('touch', $file . '.utf8'); # handle 0-byte files
 
-        my $dbh = Mig::db_connect();
+        my $dbh = EMig::db_connect();
         my $utf8_file = $dbh->quote($file . '.utf8');
         if (! -e $file . '.utf8') {
             print "utf8 file does not exist: $utf8_file\n";
@@ -100,7 +100,7 @@ sub call_iconv {
             WHERE base_filename = " . $dbh->quote($file) . "
             ;
         ") || die "Error inserting into table $MIGSCHEMA.tracked_file: $!\n";
-        Mig::db_disconnect($dbh);
+        EMig::db_disconnect($dbh);
     } else {
         print "File not currently tracked: $file\n";
     }

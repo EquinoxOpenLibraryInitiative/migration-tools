@@ -22,7 +22,7 @@ B<mig-env> <help>
 =head1 DESCRIPTION
 
 For most invocations, B<mig-env> will either create or use a migration-specific
-file (~/.mig/<migration_schema>.env) for setting the following environment
+file (~/.kmig/<migration_schema>.env) for setting the following environment
 variables:
 
 =over 15
@@ -79,12 +79,12 @@ and migration work directory (which will also be created if needed).
 =item B<use> <schema>
 
 This command will spawn a bash shell that executes the corresponding
-~/.mig/<schema>.env script for setting up environment variables encoded during
+~/.kmig/<schema>.env script for setting up environment variables encoded during
 B<create>.
 
 =item B<show> [schema]
 
-This command will show the contents of the corresponding ~/.mig/<schema>.env
+This command will show the contents of the corresponding ~/.kmig/<schema>.env
 script, or, if no schema is specified, then it will list pertinent variables in
 the current environment if they exist.
 
@@ -98,7 +98,7 @@ separate schema name.
 
 =item B<list>
 
-This command will list migration schemas found in ~/.mig
+This command will list migration schemas found in ~/.kmig
 
 =item B<help>
 
@@ -126,7 +126,7 @@ use lib "$FindBin::Bin/";
 pod2usage(-verbose => 2) if ! $ARGV[0];
 
 my $migration_schema = $ARGV[1] || '';
-my $filename = "$HOME/.mig/$migration_schema.env";
+my $filename = "$HOME/.kmig/$migration_schema.env";
 switch($ARGV[0]) {
     case "--help" {
         pod2usage(-verbose => 2);
@@ -141,7 +141,7 @@ switch($ARGV[0]) {
     case "clone" {
         pod2usage(-verbose => 1) if ! $ARGV[2];
         $migration_schema = $ARGV[2] || '';
-        $filename = "$HOME/.mig/$migration_schema.env";
+        $filename = "$HOME/.kmig/$migration_schema.env";
         mig_env_clone();
     }
     case "use" {
@@ -160,7 +160,7 @@ switch($ARGV[0]) {
         }
     }
     case "list" {
-        opendir(my $dh, "$HOME/.mig") || die "can't open $HOME/.mig: $!";
+        opendir(my $dh, "$HOME/.kmig") || die "can't open $HOME/.kmig: $!";
         while (readdir $dh) {
             if (/^(.*)\.env$/) {
                 print "$1\n";
@@ -260,7 +260,7 @@ sub mig_env_create {
 
     # create files and directories if needed
 
-    mkdir "$HOME/.mig";
+    mkdir "$HOME/.kmig";
     make_path($MIGGITDIR, { verbose => 1 });
     `touch $MIGGITDIR/README`;
     make_path($MIGWORKDIR, { verbose => 1 });

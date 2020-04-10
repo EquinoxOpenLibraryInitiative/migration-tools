@@ -4,23 +4,23 @@
 
 =head1 NAME
 
-kmig - git-like program for tracking and manipulating legacy data files for
+mig - git-like program for tracking and manipulating legacy data files for
 migrations. This variant of <mig> and is geared toward the Koha ILS and
 MySql/MariaDB.
 
 =head1 SYNOPSIS
 
-B<kmig> <command> [argument] [...]
+B<mig> <command> [argument] [...]
 
 =head1 DESCRIPTION
 
-B<kmig> is used to track and manipulate CSV or CSV-like text files exported from
+B<mig> is used to track and manipulate CSV or CSV-like text files exported from
 legacy systems for migration into Evergreen.  It can be a wrapper for some
 other migration tools and tracks state using a MySQL table for a given
 database.
 
 For most commands, if the current working directory falls outside of the
-directory specified by MIGWORKDIR, then kmig will assume that environment is
+directory specified by MIGWORKDIR, then mig will assume that environment is
 also incorrect and bail before doing any actual work.
 
 Only the B<env> and B<help> commands work without the MIGDATABASE environment
@@ -28,41 +28,41 @@ variable being set.
 
 =head1 OVERVIEW
 
-Using B<kmig> should go something like this:
+Using B<mig> should go something like this:
 
 =over 15
 
-=item kmig env create m_foo # Sets up the environment
+=item mig env create m_foo # Sets up the environment
 
-=item kmig env use m_foo # Spawns a shell using the configured environment
+=item mig env use m_foo # Spawns a shell using the configured environment
 
-=item kmig init # creates any needed auxilary tables
+=item mig init # creates any needed auxilary tables
 
-=item kmig add patrons.tsv # tracks an incoming data file; repeat for additional files
+=item mig add patrons.tsv # tracks an incoming data file; repeat for additional files
 
-=item kmig iconv patrons.tsv # convert it to UTF8, creating patrons.tsv.utf8
+=item mig iconv patrons.tsv # convert it to UTF8, creating patrons.tsv.utf8
 
-=item kmig clean patrons.tsv # cleans the file, creating patrons.tsv.utf8.clean
+=item mig clean patrons.tsv # cleans the file, creating patrons.tsv.utf8.clean
 
-=item kmig link patrons.tsv borrowers # models the soon-to-be staging table after table 'borrowers'
+=item mig link patrons.tsv borrowers # models the soon-to-be staging table after table 'borrowers'
 
-=item kmig convert patrons.tsv # creates a .sql file for staging the data
+=item mig convert patrons.tsv # creates a .sql file for staging the data
 
-=item kmig stage patrons.tsv # load said .sql file
+=item mig stage patrons.tsv # load said .sql file
 
-=item kmig mapper patrons.tsv # interactive tool for analyzing/mapping the staging table
+=item mig mapper patrons.tsv # interactive tool for analyzing/mapping the staging table
 
-=item kmig analysis patrons.tsv # writes a summary .tsv file of mapped/flagged fields from the staging table
+=item mig analysis patrons.tsv # writes a summary .tsv file of mapped/flagged fields from the staging table
 
-=item kmig map patrons.tsv # apply configured mappings
+=item mig map patrons.tsv # apply configured mappings
 
-=item kmig write_prod patrons.tsv # creates a .sql file for pushing the staging data into production
+=item mig write_prod patrons.tsv # creates a .sql file for pushing the staging data into production
 
-=item kmig reporter --analyst "Foo Fooer" --report_title "Foo Load Analysis" #creates an asciidoc report
+=item mig reporter --analyst "Foo Fooer" --report_title "Foo Load Analysis" #creates an asciidoc report
 
-=item kmig gsheet --pull foo_tab_name OR --push foo_pg_table_name 
+=item mig gsheet --pull foo_tab_name OR --push foo_pg_table_name 
 
-=item kmig stagebibs --file foo.xml 
+=item mig stagebibs --file foo.xml 
 
 =back
 
@@ -99,7 +99,7 @@ Add the specified files to the migration tracker.  Until --no-headers is
 specified, the tracker will assume the files have headers.
 
 You can do crazy stuff like
-B<kmig add file1 --no-headers file2 file3 --headers file4>
+B<mig add file1 --no-headers file2 file3 --headers file4>
 
 =item B<remove> <file> [file] [...]
 
@@ -128,7 +128,7 @@ iconv [other arguments...] -o <file>.utf8 <file>
 
 =item B<skip-iconv> <file>
 
-If this is used instead of B<iconv>, then B<kmig> will look for an existing
+If this is used instead of B<iconv>, then B<mig> will look for an existing
 <file>.utf8 and use it instead of attempting to create one.
 
 =item B<clean> <file> [other arguments...]
@@ -154,7 +154,7 @@ clean_csv [other arguments...] <file>
 
 =item B<skip-clean> <file>
 
-If this is used instead of B<clean>, then B<kmig> will look for an existing
+If this is used instead of B<clean>, then B<mig> will look for an existing
 <file>.utf8.clean and use it instead of attempting to create one.
 
 =item B<link> <file> <parent table>
@@ -241,7 +241,7 @@ Optional parameters are :
 --added_page_title and --added_page_file 
 
 If one is used both must be.  The added page file can be plain text or asciidoc.  This
-adds an extra arbitrary page of notes to the report.  KMig assumes the page file is in the kmig git directory.
+adds an extra arbitrary page of notes to the report.  KMig assumes the page file is in the mig git directory.
 
 --tags
 
@@ -259,10 +259,10 @@ Allows you to override the default evergreen_staged_report.xml in the mig-xml fo
 =item B<gsheet> --pull or --push spreadsheet_tab
 
 This uses the gsheet_tracked_table and gsheet_tracked column tables to map a Google Docs Spreadsheet tabs
-with Postgres tables in the kmig schema.  The spreadsheet is assumed to share the name as the kmig schema. 
+with Postgres tables in the mig schema.  The spreadsheet is assumed to share the name as the mig schema. 
 Tab names must be unique.  Each spreadsheet column needs a header that matches the column name in the matching 
-table.  An oauth session key is also needed for your Google account and kmig gsheet will look for it in the 
-.kmig directory.
+table.  An oauth session key is also needed for your Google account and mig gsheet will look for it in the 
+.mig directory.
 
 =back
 
@@ -318,10 +318,10 @@ sub standard_invocation {
     my $cmd = shift;
 
     if ($cmd ne 'env') { KMig::die_if_no_env_migschema(); }
-    if (-e $mig_bin . "kmig-$cmd") {
-        system( $mig_bin . "kmig-$cmd", @_ );
+    if (-e $mig_bin . "mig-$cmd") {
+        system( $mig_bin . "mig-$cmd", @_ );
     } else {
-        system( "kmig-$cmd", @_ ) == 0 or die pod2usage(1);
+        system( "mig-$cmd", @_ ) == 0 or die pod2usage(1);
     }
 }
 

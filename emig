@@ -283,9 +283,9 @@ use Env qw(
 );
 use Pod::Usage;
 use FindBin;
-my $mig_bin = "$FindBin::Bin/mig-bin/";
-use lib "$FindBin::Bin/mig-bin";
-use Mig;
+my $mig_bin = "$FindBin::Bin/emig.d/bin/";
+use lib "$FindBin::Bin/emig.d/bin";
+use EMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0];
 switch($ARGV[0]) {
@@ -322,7 +322,7 @@ switch($ARGV[0]) {
 sub standard_invocation {
     my $cmd = shift;
 
-    if ($cmd ne 'env') { Mig::die_if_no_env_migschema(); }
+    if ($cmd ne 'env') { EMig::die_if_no_env_migschema(); }
     if (-e $mig_bin . "mig-$cmd") {
         system( $mig_bin . "mig-$cmd", @_ );
     } else {

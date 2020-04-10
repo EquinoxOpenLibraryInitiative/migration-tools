@@ -47,12 +47,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+EMig::die_if_no_env_migschema();
+EMig::die_if_mig_tracking_table_does_not_exist();
 
 my $file = abs_path($ARGV[0]);
 if ($file =~ /^$MIGBASEWORKDIR/) {
@@ -70,9 +70,9 @@ sub call_convert_csv {
     my @args = @_;
 
     my $stage_sql_filename;
-    my $tracked_file_id = Mig::check_for_tracked_file($file);
+    my $tracked_file_id = EMig::check_for_tracked_file($file);
     if ($tracked_file_id) {
-        my $data = Mig::status_this_file($file);
+        my $data = EMig::status_this_file($file);
 
         if (! $data->{'utf8_filename'}) {
             die "mig-iconv or mig-skip-iconv needed for UTF8 version of file: $file\n";
@@ -112,7 +112,7 @@ sub call_convert_csv {
         print "args: " . join(',',@args) . "\n";
         system('csv2sql', @args, $clean_file);
 
-        my $dbh = Mig::db_connect();
+        my $dbh = EMig::db_connect();
         if (! -e $stage_sql_filename) {
             print "SQL converted file does not exist: $stage_sql_filename\n";
             $stage_sql_filename = '';
@@ -124,7 +124,7 @@ sub call_convert_csv {
             WHERE base_filename = " . $dbh->quote($file) . "
             ;
         ") || die "Error updating table $MIGSCHEMA.tracked_file: $!\n";
-        Mig::db_disconnect($dbh);
+        EMig::db_disconnect($dbh);
     } else {
         print "File not currently tracked: $file\n";
     }

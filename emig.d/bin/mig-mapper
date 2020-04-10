@@ -36,19 +36,19 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use EMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+EMig::die_if_no_env_migschema();
+EMig::die_if_mig_tracking_table_does_not_exist();
 
 my $column_filter = 1; # show all fields
 my $file = abs_path($ARGV[0]);
 my $fdata;
-my $tracked_file_id = Mig::check_for_tracked_file($file);
+my $tracked_file_id = EMig::check_for_tracked_file($file);
 if ($tracked_file_id) {
-    $fdata = Mig::status_this_file($file);
+    $fdata = EMig::status_this_file($file);
 } else {
     die "File not currently tracked: $file\n";
 }
@@ -131,7 +131,7 @@ sub table_menu {
     printf "%-30s", "---------";
     printf "%-30s", "--------------";
     print "\n";
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth = $dbh->prepare("
         SELECT *
         FROM information_schema.columns
@@ -177,12 +177,12 @@ sub table_menu {
     print "\n";
     $sth->finish;
     $sth2->finish;
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 }
 
 sub column_menu {
     my $dtd_identifier = shift;
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth = $dbh->prepare("
         SELECT *
         FROM information_schema.columns
@@ -194,7 +194,7 @@ sub column_menu {
         || die "Error retrieving data from information_schema: $!";
     my $data = $sth->fetchrow_hashref;
     $sth->finish;
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 
     my $column = $data->{column_name};
 
@@ -285,12 +285,12 @@ sub column_menu {
 sub list_ten {
     my $column = shift;
 
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth;
     my $rv;
     my @cols;
 
-    $sth = $dbh->prepare(Mig::sql("
+    $sth = $dbh->prepare(EMig::sql("
         SELECT " . (defined $column ? $column : '*') . "
         FROM $MIGSCHEMA.$table
         LIMIT 10;
@@ -339,7 +339,7 @@ sub summarize {
     my $min_value_as_timestamptz;
     my $max_value_as_timestamptz;
 
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth;
     my $rv;
     my @cols;
@@ -611,7 +611,7 @@ sub summarize {
     $sth->finish;
     $max_value_as_timestamptz = $cols[0];
 
-    Mig::db_disconnect($dbh);
+    EMig::db_disconnect($dbh);
 
     print "\n";
     print "# of rows                             = $count\n";
@@ -649,11 +649,11 @@ sub summarize {
 sub group_browse {
     my ($column,$option) = (shift,shift||"GROUP BY 1 ORDER BY 1");
 
-    my $dbh = Mig::db_connect();
+    my $dbh = EMig::db_connect();
     my $sth;
     my $rv;
 
-    $sth = $dbh->prepare(Mig::sql("
+    $sth = $dbh->prepare(EMig::sql("
         SELECT $column, COUNT(*)
         FROM $MIGSCHEMA.$table
         $option;
@@ -680,8 +680,8 @@ sub group_browse {
 
 sub add_this_column {
     my $column = shift;
-    if (!Mig::check_for_tracked_column($table,$column)) {
-        my $dbh = Mig::db_connect();
+    if (!EMig::check_for_tracked_column($table,$column)) {
+        my $dbh = EMig::db_connect();
         my $rv = $dbh->do("
             INSERT INTO $MIGSCHEMA.tracked_column (
                  base_filename
@@ -695,19 +695,19 @@ sub add_this_column {
                 ," . $dbh->quote($column) . "
             );
         ") || die "Error inserting into table $MIGSCHEMA.tracked_column: $!\n";
-        Mig::db_disconnect($dbh);
+        EMig::db_disconnect($dbh);
     }
 }
 
 sub status_this_column {
     my $column = shift;
-    my $data = Mig::status_this_column($table,$column);
+    my $data = EMig::status_this_column($table,$column);
     if (!$data) {
         add_this_column($column);
-        $data = Mig::status_this_column($table,$column);
+        $data = EMig::status_this_column($table,$column);
     }
     if ($$data{parent_table}) {
-        my $dbh = Mig::db_connect();
+        my $dbh = EMig::db_connect();
         my $sth = $dbh->prepare("
             SELECT *
             FROM $MIGSCHEMA.fields_requiring_mapping
@@ -723,7 +723,7 @@ sub status_this_column {
             $$data{required} = 0;
         }
         $sth->finish;
-        Mig::db_disconnect($dbh);
+        EMig::db_disconnect($dbh);
     }
     return $data;
 }
@@ -732,13 +732,13 @@ sub set_comment {
     my ($column,$comment) = (shift,shift);
     if ($comment) {
         my $data = status_this_column($column);
-        my $dbh = Mig::db_connect();
+        my $dbh = EMig::db_connect();
         my $rv = $dbh->do("
             UPDATE $MIGSCHEMA.tracked_column
             SET comment = " . $dbh->quote($comment) . "
             WHERE id = " . $dbh->quote($data->{id}) . ";
         ") || die "Error updating table $MIGSCHEMA.tracked_column: $!\n";
-        Mig::db_disconnect($dbh);
+        EMig::db_disconnect($dbh);
     }
 }
 
@@ -746,13 +746,13 @@ sub set_transform {
     my ($column,$transform) = (shift,shift);
     if ($transform) {
         my $data = status_this_column($column);
-        my $dbh = Mig::db_connect();
+        my $dbh = EMig::db_connect();
         my $rv = $dbh->do("
             UPDATE $MIGSCHEMA.tracked_column
             SET transform = " . $dbh->quote($transform) . "
             WHERE id = " . $dbh->quote($data->{id}) . ";
         ") || die "Error updating table $MIGSCHEMA.tracked_column: $!\n";
-        Mig::db_disconnect($dbh);
+        EMig::db_disconnect($dbh);
     }
 }
 
@@ -766,13 +766,13 @@ sub set_target {
             $target_column = $2;
         }
         my $data = status_this_column($column);
-        my $dbh = Mig::db_connect();
+        my $dbh = EMig::db_connect();
         my $rv = $dbh->do("
             UPDATE $MIGSCHEMA.tracked_column
             SET target_table = " . $dbh->quote($target_table) . "
             ,target_column = " . $dbh->quote($target_column) . "
             WHERE id = " . $dbh->quote($data->{id}) . ";
         ") || die "Error updating table $MIGSCHEMA.tracked_column: $!\n";
-        Mig::db_disconnect($dbh);
+        EMig::db_disconnect($dbh);
     }
 }
