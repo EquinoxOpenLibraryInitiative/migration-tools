@@ -1,0 +1,87 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-status -  This will show tracking information for either the specified files
+or all tracked files if no argument is given.
+
+You'll need to invoke B<mig-init> prior to using commands like B<mig-status>
+
+=head1 SYNOPSIS
+
+B<mig-status> [file] [...]
+
+=cut
+
+###############################################################################
+
+use strict;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use DBI;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+
+pod2usage(-verbose => 2) if scalar(@ARGV) > 0 && $ARGV[0] eq '--help';
+
+Mig::die_if_no_env_migschema();
+Mig::die_if_mig_tracking_table_does_not_exist();
+
+my @files = @ARGV;
+if (scalar(@files) == 0) {
+    @files = ();
+    my $dbh = Mig::db_connect();
+    my $sth = $dbh->prepare("
+        SELECT base_filename
+        FROM $MIGSCHEMA.tracked_file
+        ORDER BY 1;"
+    );
+    my $rv = $sth->execute()
+        || die "Error retrieving data from table (tracked_file): $!";
+    my $rows = $sth->fetchall_arrayref;
+    for my $row ( @$rows ) {
+        push @files, $row->[0]
+    }
+    $sth->finish;
+    Mig::db_disconnect($dbh);
+}
+
+foreach my $arg (sort @files) {
+    my $file = abs_path($arg);
+    my $data = Mig::status_this_file($file);
+    print "=-=-=\n";
+    foreach my $key (
+         'base_filename'
+        ,'has_headers'
+        ,'headers_file'
+        ,'utf8_filename'
+        ,'clean_filename'
+        ,'parent_table'
+        ,'stage_sql_filename'
+        ,'staged_table'
+        ,'map_sql_filename'
+        ,'prod_sql_filename'
+    ) {
+        printf "%-20s:\t", $key;
+        print $data->{$key} ? $data->{$key} : "";
+        if ($key =~ /filename$/ && $data->{$key} && ! -e $data->{$key}) {
+            print "  (FILE MISSING)";
+        }
+        print "\n";
+    }
+}
+
+exit 0;
+
+###############################################################################
+
+
