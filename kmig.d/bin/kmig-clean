@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-mig-clean 
+kmig-clean 
 
 Attempts to invoke B<clean_csv> on the specified tracked file, placing the
 output in [file].clean
@@ -25,12 +25,12 @@ clean_csv [other arguments...] <file>
 
 =back
 
-You'll need to invoke B<mig-iconv> or B<mig-skip-iconv> prior to using commands
-like B<mig-clean>
+You'll need to invoke B<kmig-iconv> or B<kmig-skip-iconv> prior to using commands
+like B<kmig-clean>
 
 =head1 SYNOPSIS
 
-B<mig-clean> <file> [other arguments...]
+B<kmig-clean> <file> [other arguments...]
 
 =cut
 
@@ -39,8 +39,8 @@ B<mig-clean> <file> [other arguments...]
 use strict;
 use Switch;
 use Env qw(
-    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
-    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+    MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
 );
 use Pod::Usage;
 use DBI;
@@ -48,12 +48,12 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use Mig;
+use KMig;
 
 pod2usage(-verbose => 2) if ! $ARGV[0] || $ARGV[0] eq '--help';
 
-Mig::die_if_no_env_migschema();
-Mig::die_if_mig_tracking_table_does_not_exist();
+KMig::die_if_no_env_migschema();
+KMig::die_if_mig_tracking_table_does_not_exist();
 
 my $file = abs_path($ARGV[0]);
 if ($file =~ /^$MIGBASEWORKDIR/) {
@@ -70,12 +70,12 @@ sub call_clean_csv {
     my $file = abs_path(shift);
     my @args = @_;
 
-    my $tracked_file_id = Mig::check_for_tracked_file($file);
+    my $tracked_file_id = KMig::check_for_tracked_file($file);
     if ($tracked_file_id) {
-        my $data = Mig::status_this_file($file);
+        my $data = KMig::status_this_file($file);
 
         if (! $data->{'utf8_filename'}) {
-            die "mig-iconv or mig-skip-iconv needed for UTF8 version of file: $file\n";
+            die "kmig-iconv or kmig-skip-iconv needed for UTF8 version of file: $file\n";
         }
 
         my $utf8_file = $data->{'utf8_filename'};
@@ -107,7 +107,7 @@ sub call_clean_csv {
         print join(' ',@args) . "\n";
         system('clean_csv', @args, $utf8_file);
 
-        my $dbh = Mig::db_connect();
+        my $dbh = KMig::db_connect();
         my $clean_file = $dbh->quote($utf8_file . '.clean');
         if (! -e $utf8_file . '.clean') {
             print "clean file does not exist: $clean_file\n";
@@ -115,12 +115,12 @@ sub call_clean_csv {
         }
 
         my $rv = $dbh->do("
-            UPDATE $MIGSCHEMA.tracked_file
+            UPDATE m_tracked_file
             SET clean_filename = $clean_file
             WHERE base_filename = " . $dbh->quote($file) . "
             ;
-        ") || die "Error inserting into table $MIGSCHEMA.tracked_file: $!\n";
-        Mig::db_disconnect($dbh);
+        ") || die "Error inserting into table m_tracked_file: $!\n";
+        KMig::db_disconnect($dbh);
     } else {
         print "File not currently tracked: $file\n";
     }
