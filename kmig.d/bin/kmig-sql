@@ -1,0 +1,48 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-sql 
+
+A wrapper around the psql command.  At some point the plan is to shove mig-tracked variables into psql sessions.
+
+=head1 SYNOPSIS
+
+B<mig-sql> [arguments...]
+
+=cut
+
+###############################################################################
+
+use strict;
+use Switch;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+    BIBSTART
+);
+use Pod::Usage;
+use DBI;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use Mig;
+
+my @MYARGV = (
+     'psql'
+    ,'-vmigschema=' . $MIGSCHEMA
+    ,'-vmigschema_text=\'' . $MIGSCHEMA . '\''
+    ,'-F ' . "\t"
+);
+if (defined $BIBSTART) {
+    push @MYARGV, '-vbibstart=' . $BIBSTART;
+}
+# TODO inject more mig-tracked variables here
+
+system(@MYARGV, @ARGV);
+
+exit 0;
+
