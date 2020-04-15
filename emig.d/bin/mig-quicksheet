@@ -240,7 +240,7 @@ sub write_worksheets {
     my $tab_name = (scalar(@ARGV) > 1 ? $counter . ') ' : '') . 'Field Summary';
     $tab_name = substr($tab_name,0,31); # truncate for WriteExcel
     if ($outfile) {
-        $first_sheet = $workbook->add_worksheet( $tab_name );
+        $first_sheet = $workbook->add_worksheet( substr($tab_name,0,31) );
         $first_sheet->set_column(0,6,30);
     }
     if ($outtable) {
@@ -335,7 +335,7 @@ sub handle_list {
     $has_x_source = 0;
     if ($outfile) {
         print "Sheet: $table\n";
-        $list_sheet = $workbook->add_worksheet( $table );
+        $list_sheet = $workbook->add_worksheet( substr($table,0,31) );
     }
 
     my $handle_headers = 1;
@@ -523,7 +523,7 @@ sub group_by {
     }
 
     if ($outfile) {
-        $col_sheet = $workbook->add_worksheet( $sheet_name );
+        $col_sheet = $workbook->add_worksheet( substr($sheet_name,0,31) );
         push @worksheets, $col_sheet;
         $col_sheet->set_column(0,6,30);
         $col_sheet->write($col_sheet_row_start + $col_sheet_row_offset,0,'Count',$bold);
