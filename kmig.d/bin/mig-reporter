@@ -1,0 +1,243 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use DBI;
+use Data::Dumper;
+use Getopt::Long;
+use XML::LibXML;
+use Env qw(
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+        MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use open ':encoding(utf8)';
+use Cwd 'abs_path';
+use Cwd qw(getcwd);
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use KMig;
+
+my $analyst = 'Equinox Open Library Initiative';
+my $report_title;
+my $reports_xml = 'stock_reports.xml';
+my $tags = 'bibs.items.borrowers.circs.reserves.accounts.courses';
+my $added_page_title;
+my $added_page_file;
+my $i = 0;
+my $parser = XML::LibXML->new();
+my $lines_per_page = 42;
+my $koha_instance;
+my $koha_conf_xml;
+
+my $dbh = KMig::db_connect();
+
+my $ret = GetOptions(
+    'instance:s'         => \$koha_instance,
+    'tags:s'             => \$tags,    
+    'reports_xml:s'      => \$reports_xml,
+    'analyst:s'          => \$analyst,
+    'added_page_file:s'  => \$added_page_file,
+    'added_page_title:s' => \$added_page_title,
+    'report_title:s'     => \$report_title,
+    'title:s'            => \$report_title
+);
+
+my $mig_path = abs_path($0);
+$mig_path =~ s|[^/]+$||;
+$reports_xml = find_xml($reports_xml,$mig_path);
+if (!defined $reports_xml) { abort("Can not find xml reports file."); }
+my $dom = $parser->parse_file($reports_xml);
+
+abort('must supply a --title parameter') unless defined $report_title;
+if (defined $added_page_title) { abort ('must specify --added_page_file') unless defined $added_page_file; }
+if (defined $added_page_file) { abort ('must specify --added_page_title') unless defined $added_page_title; }
+
+my $report_file = create_report_name($report_title);
+$report_file = $MIGGITDIR . $report_file;
+open(my $fh, '>', $report_file) or die "Could not open report file!";
+
+write_title_page($report_title,$fh,$analyst);
+
+if (defined $added_page_file and defined $added_page_title) { 
+    print $fh "<<<\n";
+    print $fh "== $added_page_title\n";
+    print "$added_page_file\t$added_page_title\n";
+    open(my $an,'<:encoding(UTF-8)', $added_page_file) or die "Could not open $added_page_file !";
+    while ( my $line = <$an> ) {
+        print $fh $line;
+    }
+    print $fh "\n";
+    close $an;
+}
+
+my @report_tags = split(/\./,$tags);
+foreach my $t (@report_tags) {
+    print "\n\n=========== Starting to process tag $t\n";
+    print   "==========================================\n";
+    print_section_header(ucfirst($t),$fh);
+    my $linecount = $lines_per_page;
+    my $r;
+
+    my @report_names;
+
+    foreach my $report ($dom->findnodes('//report')) {
+        if (index($report->findvalue('./tag'),$t) != -1) {
+            push @report_names, $report->findvalue('./name');
+        }
+    }
+    
+    print Dumper(@report_names);
+
+    #only has one level of failover now but could change to array of hashes and loops
+    foreach my $rname (@report_names) {
+        print "\nchecking for $rname ... ";
+        my %report = find_report($dom,$t,$rname);
+        $r = print_query($fh,%report);
+    }
+}
+# end of main logic
+
+print "\n";
+close $fh;
+
+sub find_xml {
+    my $reports_xml = shift;
+    my $mig_path = shift;
+
+    if ($reports_xml =~ m/\//) { return $reports_xml; }
+
+    my $mig_test_file =  $mig_path . '/../xml/' . $reports_xml;
+    my $working_test_dir = getcwd();
+    my $working_test_file = $working_test_dir . '/' . $reports_xml;
+
+    if (-e $mig_test_file) { return $mig_test_file; }
+    if (-e $working_test_file) { return $working_test_file; }
+
+    return undef;
+}
+
+sub find_report {
+    my $dom = shift;
+    my $tag = shift;
+    my $name = shift;
+    my %report;
+
+    foreach my $node ($dom->findnodes('//report')) {
+        if ($node->findvalue('./tag') =~ $tag and $node->findvalue('./name') eq $name) {
+            print "succeeded ... ";
+            %report = (
+                name => $node->findvalue('./name'),
+                report_title => $node->findvalue('./report_title'),
+                query => $node->findvalue('./query'),
+                heading => $node->findvalue('./heading'),
+                tag => $node->findvalue('./tag'),
+                note => $node->findvalue('./note'),
+            );
+            return %report;
+        }
+    }
+    print "failed ... ";
+    return %report = (
+        name => "eaten by grue"
+    );
+}
+
+sub print_section_header {
+    my $t = shift;
+    my $fh = shift;
+    $t =~ s/_/ /g;
+    #$t =~ s/(\w+)/\u$1/g;;
+    print $fh "<<<\n";
+    print $fh "== $t Reports\n";
+}
+
+sub create_report_name {
+    my $rt = shift;
+    my @abbr = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $year += 1900;
+    my $date = $year . '_' . $abbr[$mon] . '_' . $mday;
+    my $report_file = $rt . ' ' . $date . '.asciidoc';
+    $report_file =~ s/ /_/g;
+    return $report_file;
+}
+
+sub write_title_page {
+    my $rt = shift;
+    my $fh = shift;
+    my $a = shift;
+
+    my @abbr = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+    my $l = length($report_title);
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $year += 1900;
+    print $fh "= $rt\n"; 
+    print $fh "$mday $abbr[$mon] $year\n";
+    print $fh "$a\n";
+    print $fh ":toc:\n";
+    print $fh "\n";
+}
+
+sub print_query {
+    my $fh = shift;
+    my %report = @_;
+    my $query = $report{query};
+    if (!defined $query) { print "No query defined, returning... \n"; return; }
+    print "$query\n";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    my $header_flag = 0;
+
+    while (my @row = $sth->fetchrow_array) {
+            if ($header_flag == 0) {
+                print $fh "\n.*$report{report_title}*\n";
+                print $fh "|===\n";
+                my @h = split(/\./,$report{heading});
+                my $h_length = @h;
+                my $h_count = 1;
+                while ($h_count <= $h_length) {
+                    print $fh "|$h[$h_count-1] ";
+                    $h_count++;
+                }
+                print $fh "\n";
+                $header_flag = 1;
+            }
+            my $row_length = @row;
+            my $r = 1;
+            while ($r <= $row_length) {
+                if (! defined $row[$r-1] ) {
+                    $row[$r-1] = 'none';
+                }
+                print $fh "|$row[$r-1] ";
+                $r++;
+            }
+            print $fh "\n";
+        }
+    if ($header_flag == 1) { 
+        print $fh "|===\n\n"; 
+        print $fh $report{note};
+        print $fh "\n\n";
+    }
+    print "successfully wrote output for $report{name}.\n\n";
+}
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    print_usage();
+    exit 1;
+}
+
+sub print_usage {
+    print <<_USAGE_;
+
+  --tags            - period delimited these are the tags that it will 
+                      use to identify reports to run with (optional)
+  --report_title 
+
+_USAGE_
+}
+
