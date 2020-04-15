@@ -70,7 +70,7 @@ pod2usage(-verbose => 1) if ! $ARGV[1];
 my $analyst = 'Equinox Open Library Initiative';;
 my $report_title;
 my $reports_xml = 'evergreen_staged_report.xml';
-my $tags;
+my $tags = 'circs.holds.actors.bibs.assets.money.notices';
 my $added_page_title;
 my $added_page_file;
 my $captions = 'off';  
@@ -93,9 +93,7 @@ my $ret = GetOptions(
 	'debug:s'             => \$debug
 );
 
-if (!defined $tags) {$tags = 'circs.holds.actors.bibs.assets.money.notices'};
 if (!defined $report_title) { abort('--report_title or --title must be supplied'); }
-if (!defined $analyst) { abort('--analyst must be supplied'); }
 
 my $mig_path = abs_path($0);
 $mig_path =~ s|[^/]+$||;
