@@ -112,7 +112,11 @@ sub write_sql_table {
 		$col_info =~ s/^\$VAR1 = //;
 		print $sql "ALTER TABLE $cfg->{table_name} ADD COLUMN ";
 		print $sql "l_" unless $cfg->{no_legacy_prefix} or $column->{'header'} =~ /^x_/ or $column->{'header'} =~ /^l_/;
-        print $sql "$cn TEXT; ";
+        if ($column->{'header'} eq 'x_egid' || $column->{'header'} eq 'x_hseq') {
+            print $sql "$cn BIGINT; ";
+        } else {
+            print $sql "$cn TEXT; ";
+        }
         print $sql " /*\n         $col_info   */\n";
 	}
 	foreach my $cn (@indices) {
