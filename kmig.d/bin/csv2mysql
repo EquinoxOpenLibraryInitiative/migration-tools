@@ -100,7 +100,7 @@ sub write_sql_table {
     } else {
 	    $cfg->{table_name} = 'm_' . lc(basename($fn)); $cfg->{table_name} =~ s/[\-\. ]/_/g;
 	    print $sql "DROP TABLE IF EXISTS $cfg->{table_name};\n";
-	    print $sql "CREATE TABLE $cfg->{table_name} (x_migrate BOOLEAN);\n";
+	    print $sql "CREATE TABLE $cfg->{table_name} (x_migrate BOOLEAN) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n";
     }
     push @indices, 'x_migrate';
 	foreach my $column (@{ $info }) {
