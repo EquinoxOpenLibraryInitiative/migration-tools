@@ -34,7 +34,6 @@ my $koha_conf_xml;
 my $dbh = KMig::db_connect();
 
 my $ret = GetOptions(
-    'instance:s'         => \$koha_instance,
     'tags:s'             => \$tags,    
     'reports_xml:s'      => \$reports_xml,
     'analyst:s'          => \$analyst,
