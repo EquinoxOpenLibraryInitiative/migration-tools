@@ -1,0 +1,66 @@
+#!/usr/bin/perl -w
+###############################################################################
+=pod
+
+=head1 NAME
+
+mig-quick 
+
+A wrapper for running the following mig commands on the specified files:
+
+=over 15
+
+mig add
+mig skip-iconv
+mig clean
+mig convert
+mig stage
+
+=back
+
+Arguments take the form of --cmd--argument or --cmd--argument=value.
+
+This form is NOT supported: --cmd--argument value
+
+cmd must be substituted with either add, skip-iconv, clean, convert, or stage,
+and determines which mig command to apply the argument toward.
+
+=head1 SYNOPSIS
+
+B<mig-quick> [arguments...] <file1> [<file2> ...]
+
+=cut
+
+###############################################################################
+
+use strict;
+use Pod::Usage;
+use Cwd 'abs_path';
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use EMig;
+
+my @files = grep {!/^--/} @ARGV;
+my %pass_thru = ('add'=>[],'skip-iconv'=>[],'clean'=>[],'convert'=>[],'stage'=>[]);
+foreach my $a (@ARGV) {
+    if ($a =~ /^--([a-z]+)-(.*)$/) {
+        $pass_thru{$1} = [] if ! defined $pass_thru{$1};
+        unshift @{ $pass_thru{$1} }, "--$2";
+    }
+}
+
+foreach my $file (@files) {
+    foreach my $cmd (('add','skip-iconv','clean','convert','stage')) {
+        print "mig $cmd $file " . (join ' ', @{ $pass_thru{$cmd} }) . "\n";
+        my @MYARGV = (
+             'mig'
+            ,$cmd
+            ,$file
+        );
+        system(@MYARGV,@{ $pass_thru{$cmd} });
+    }
+}
+
+exit 0;
+
