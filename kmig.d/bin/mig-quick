@@ -39,7 +39,7 @@ use Cwd 'abs_path';
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use EMig;
+use KMig;
 
 my @files = grep {!/^--/} @ARGV;
 my %pass_thru = ('add'=>[],'skip-iconv'=>[],'clean'=>[],'convert'=>[],'stage'=>[]);
