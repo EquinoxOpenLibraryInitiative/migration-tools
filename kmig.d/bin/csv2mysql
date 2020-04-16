@@ -105,7 +105,7 @@ sub write_sql_table {
     push @indices, 'x_migrate';
 	foreach my $column (@{ $info }) {
 		my $cn = $column->{'header'};
-		if ($cn =~ /^x_/) {
+		if ($cn =~ /^x_/ && $cn ne 'x_count') {
 			push @indices, $cn;
 		}
 		my $col_info = Dumper($column);
