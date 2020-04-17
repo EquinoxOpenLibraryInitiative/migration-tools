@@ -1,0 +1,241 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use DBI;
+use Data::Dumper;
+use Env qw(
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+        MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use open ':encoding(utf8)';
+use Cwd 'abs_path';
+use Cwd qw(getcwd);
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use KMig;
+
+my $dbh = KMig::db_connect();
+
+#to do check for array passed and if not present then use tags 
+
+my @taglist = @ARGV;
+my $arg_list_length = scalar @taglist;
+if($arg_list_length < 1) { @taglist = ("preferences","authorisedvalues","libraries","borrowerattributes"); } 
+
+my $timestamp = create_timestamp();
+
+foreach my $backup (@taglist) {
+    my $backupfile;
+    if ($backup eq 'preferences') {
+	$backupfile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.csv';
+        backup_preferences($dbh,$backupfile);
+    }
+    if ($backup eq 'authorisedvalues') {
+	$backupfile = $MIGGITDIR . 'authorised_values' . '.' . $timestamp . '.csv';
+	backup_authorised_values($dbh,$backupfile);
+        $backupfile = $MIGGITDIR . 'authorised_value_categories' . '.' . $timestamp . '.csv';
+	backup_authorised_value_categories($dbh,$backupfile);
+    }
+    if ($backup eq 'borrowerattributes') {
+        $backupfile = $MIGGITDIR . 'borrower_attribute_types' . '.' . $timestamp . '.csv';
+        backup_borrower_attribute_types($dbh,$backupfile);
+        $backupfile = $MIGGITDIR . 'authorised_values_by_bat' . '.' . $timestamp . '.csv';
+        backup_authorised_values_by_bat($dbh,$backupfile);
+        $backupfile = $MIGGITDIR . 'authorised_value_categories_by_bat' . '.' . $timestamp . '.csv';
+        backup_authorised_value_categories_by_bat($dbh,$backupfile);
+    }
+    if ($backup eq 'libraries') {
+        $backupfile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.csv';
+        backup_libraries($dbh,$backupfile);
+    }
+}
+
+sub backup_authorised_values {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    print $fh "category,authorised_value,lib,lib_opac,imageurl\n";
+    my $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    while (my @row = $sth->fetchrow_array) {
+        my $category = csvify_str($row[0]);
+        my $authvalue = csvify_str($row[1]);
+        my $lib = csvify_str($row[2]);
+        my $lib_opac = csvify_str($row[3]); 
+        my $imageurl = csvify_str($row[4]);
+        print $fh "$category,$authvalue,$lib,$lib_opac,$imageurl\n";
+    }
+    close $fh;
+    return;
+}
+
+sub backup_authorised_values_by_bat {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    print $fh "category,authorised_value,lib,lib_opac,imageurl\n";
+    my $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values where category in (select category_code from borrower_attribute_types);";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    while (my @row = $sth->fetchrow_array) {
+        my $category = csvify_str($row[0]);
+        my $authvalue = csvify_str($row[1]);
+        my $lib = csvify_str($row[2]);
+        my $lib_opac = csvify_str($row[3]); 
+        my $imageurl = csvify_str($row[4]);
+        print $fh "$category,$authvalue,$lib,$lib_opac,$imageurl\n";
+    }
+    close $fh;
+    return;
+}
+
+sub backup_authorised_value_categories {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    print $fh "category_name\n";
+    my $query = "SELECT category_name FROM authorised_value_categories";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    while (my @row = $sth->fetchrow_array) {
+        my $str = csvify_str($row[0]);
+        print $fh "$str\n";
+    }
+    close $fh;
+    return;
+}
+
+sub backup_authorised_value_categories_by_bat {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    print $fh "category_name\n";
+    my $query = "SELECT category_name FROM authorised_value_categories WHERE category_name IN (select category_name from borrower_attribute_types)";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    while (my @row = $sth->fetchrow_array) {
+        my $str = csvify_str($row[0]);
+        print $fh "$str\n";
+    }
+    close $fh;
+    return;
+}
+
+sub backup_borrower_attribute_types {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    print $fh "code,description,repeateable,opac_display,opac_editable,staff_searchable,authorised_value_category,display_checkout,category_code,class\n";
+    my $query = "SELECT code,description,repeatable,opac_display,opac_editable,staff_searchable,authorised_value_category,display_checkout,category_code,class FROM borrower_attribute_types";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    while (my @row = $sth->fetchrow_array) {
+        my $code = csvify_str($row[0]);
+	my $descr = csvify_str($row[1]);
+	my $repeat = $row[2];
+	my $opac_display = $row[3];
+	my $staff_searchable = $row[4];
+	my $auth_value_cat = csvify_str($row[5]);
+	my $display_chkout = $row[6];
+	my $cat_code = csvify_str($row[7]);
+	my $class = csvify_str($row[8]);
+        print $fh "$code,$descr,$repeat,$opac_display,$staff_searchable,$auth_value_cat,$display_chkout,$cat_code,$class\n";
+    }
+    close $fh;
+    return;
+}
+
+sub backup_libraries {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    print $fh "id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff\n";
+    my $query = "SELECT id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff FROM library_groups";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    while (my @row = $sth->fetchrow_array) {
+        my $id = $row[0];
+        my $parent_id = $row[1];
+	my $branchcode = csvify_str($row[2]);
+	my $title = csvify_str($row[3]);
+	my $description = csvify_str($row[4]);
+	my $ft_hide_patron_info = $row[5];
+	my $ft_search_groups_opac = $row[6];
+	my $ft_search_groups_staff = $row[7];
+        print $fh "$id,$parent_id,$branchcode,$title,$description,$ft_hide_patron_info,$ft_search_groups_opac,$ft_search_groups_staff\n";
+    }
+    close $fh;
+    return;
+}
+
+
+sub backup_preferences {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    print $fh "variable,value\n";
+    my $query = "SELECT variable,value FROM systempreferences WHERE value != '' AND value IS NOT NULL";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    while (my @row = $sth->fetchrow_array) {
+        my $variable = csvify_str($row[0]);
+        my $value = csvify_str($row[1]);
+        print $fh "$variable,$value\n";
+    }
+    close $fh;
+    return;
+}
+
+sub create_timestamp {
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $year += 1900;
+    $mon = sprintf("%02s",$mon);
+    $mday = sprintf("%02s",$mday);
+    $hour = sprintf("%02s",$hour);
+    $min = sprintf("%02s",$min);
+    $sec = sprintf("%02s",$sec);
+    my $str = "$year$mon$mday$hour$min$sec";
+    return $str;
+}
+
+sub csvify_str {
+    my $str = shift;
+    if (!defined $str or $str eq '') { return ''; }
+    $str =~ s/"/\"/g;
+    $str = '"' . $str . '"';
+    return $str;
+}
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    print_usage();
+    exit 1;
+}
+
+sub print_usage {
+    print <<_USAGE_;
+
+    mig export foo_a foo_b foo_c
+
+_USAGE_
+}
+

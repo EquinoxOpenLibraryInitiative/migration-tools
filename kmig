@@ -48,6 +48,8 @@ Using B<mig> should go something like this:
 
 =item mig convert patrons.tsv # creates a .sql file for staging the data
 
+=item mig export foo # exports koha setup elements for importing elsewhere 
+
 =item mig stage patrons.tsv # load said .sql file
 
 =item mig mapper patrons.tsv # interactive tool for analyzing/mapping the staging table
