@@ -15,6 +15,7 @@ use Cwd qw(getcwd);
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
+use XML::Writer;
 use KMig;
 
 my $dbh = KMig::db_connect();
@@ -24,31 +25,32 @@ my $dbh = KMig::db_connect();
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
 if($arg_list_length < 1) { @taglist = ("preferences","authorisedvalues","libraries","borrowerattributes"); } 
+$MIGGITDIR =~ s/\/\//\//;
 
 my $timestamp = create_timestamp();
 
 foreach my $backup (@taglist) {
     my $backupfile;
     if ($backup eq 'preferences') {
-	$backupfile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.csv';
+        $backupfile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.xml';
         backup_preferences($dbh,$backupfile);
     }
     if ($backup eq 'authorisedvalues') {
-	$backupfile = $MIGGITDIR . 'authorised_values' . '.' . $timestamp . '.csv';
-	backup_authorised_values($dbh,$backupfile);
-        $backupfile = $MIGGITDIR . 'authorised_value_categories' . '.' . $timestamp . '.csv';
-	backup_authorised_value_categories($dbh,$backupfile);
+        $backupfile = $MIGGITDIR . 'authorised_values' . '.' . $timestamp . '.xml';
+        backup_authorised_values($dbh,$backupfile);
+        $backupfile = $MIGGITDIR . 'authorised_value_categories' . '.' . $timestamp . '.xml';
+        backup_authorised_value_categories($dbh,$backupfile);
     }
     if ($backup eq 'borrowerattributes') {
-        $backupfile = $MIGGITDIR . 'borrower_attribute_types' . '.' . $timestamp . '.csv';
+        $backupfile = $MIGGITDIR . 'borrower_attribute_types' . '.' . $timestamp . '.xml';
         backup_borrower_attribute_types($dbh,$backupfile);
-        $backupfile = $MIGGITDIR . 'authorised_values_by_bat' . '.' . $timestamp . '.csv';
+        $backupfile = $MIGGITDIR . 'authorised_values_by_bat' . '.' . $timestamp . '.xml';
         backup_authorised_values_by_bat($dbh,$backupfile);
-        $backupfile = $MIGGITDIR . 'authorised_value_categories_by_bat' . '.' . $timestamp . '.csv';
+        $backupfile = $MIGGITDIR . 'authorised_value_categories_by_bat' . '.' . $timestamp . '.xml';
         backup_authorised_value_categories_by_bat($dbh,$backupfile);
     }
     if ($backup eq 'libraries') {
-        $backupfile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.csv';
+        $backupfile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.xml';
         backup_libraries($dbh,$backupfile);
     }
 }
@@ -58,19 +60,23 @@ sub backup_authorised_values {
     my $backupfile = shift;
 
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
-    print $fh "category,authorised_value,lib,lib_opac,imageurl\n";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('authorised_values');
     my $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values";
     my $sth = $dbh->prepare($query);
     $sth->execute();
-
     while (my @row = $sth->fetchrow_array) {
-        my $category = csvify_str($row[0]);
-        my $authvalue = csvify_str($row[1]);
-        my $lib = csvify_str($row[2]);
-        my $lib_opac = csvify_str($row[3]); 
-        my $imageurl = csvify_str($row[4]);
-        print $fh "$category,$authvalue,$lib,$lib_opac,$imageurl\n";
+        $xml->startTag('value');
+        $xml->dataElement('category', $row[0]); 
+        $xml->dataElement('authvalue', $row[1]); 
+        $xml->dataElement('lib', $row[2]); 
+        $xml->dataElement('lib_opac', $row[3]); 
+        $xml->dataElement('image_url', $row[4]); 
+        $xml->endTag('value');        
     }
+    $xml->endTag('authorised_values');
+    $xml->end();
     close $fh;
     return;
 }
@@ -80,19 +86,23 @@ sub backup_authorised_values_by_bat {
     my $backupfile = shift;
 
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
-    print $fh "category,authorised_value,lib,lib_opac,imageurl\n";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('authorised_values');
     my $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values where category in (select category_code from borrower_attribute_types);";
     my $sth = $dbh->prepare($query);
     $sth->execute();
-
     while (my @row = $sth->fetchrow_array) {
-        my $category = csvify_str($row[0]);
-        my $authvalue = csvify_str($row[1]);
-        my $lib = csvify_str($row[2]);
-        my $lib_opac = csvify_str($row[3]); 
-        my $imageurl = csvify_str($row[4]);
-        print $fh "$category,$authvalue,$lib,$lib_opac,$imageurl\n";
+        $xml->startTag('value');
+        $xml->dataElement('category', $row[0]);
+        $xml->dataElement('authvalue', $row[1]);
+        $xml->dataElement('lib', $row[2]);
+        $xml->dataElement('lib_opac', $row[3]);
+        $xml->dataElement('image_url', $row[4]);
+        $xml->endTag('value');
     }
+    $xml->endTag('authorised_values');
+    $xml->end();
     close $fh;
     return;
 }
@@ -102,15 +112,17 @@ sub backup_authorised_value_categories {
     my $backupfile = shift;
 
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
-    print $fh "category_name\n";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('authorised_value_categories');
     my $query = "SELECT category_name FROM authorised_value_categories";
     my $sth = $dbh->prepare($query);
     $sth->execute();
-
     while (my @row = $sth->fetchrow_array) {
-        my $str = csvify_str($row[0]);
-        print $fh "$str\n";
+        $xml->dataElement('value', $row[0]);
     }
+    $xml->endTag('authorised_value_categories');
+    $xml->end();
     close $fh;
     return;
 }
@@ -120,15 +132,17 @@ sub backup_authorised_value_categories_by_bat {
     my $backupfile = shift;
 
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
-    print $fh "category_name\n";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('authorised_value_categories');
     my $query = "SELECT category_name FROM authorised_value_categories WHERE category_name IN (select category_name from borrower_attribute_types)";
     my $sth = $dbh->prepare($query);
     $sth->execute();
-
     while (my @row = $sth->fetchrow_array) {
-        my $str = csvify_str($row[0]);
-        print $fh "$str\n";
+        $xml->dataElement('value', $row[0]);
     }
+    $xml->endTag('authorised_value_categories');
+    $xml->end();
     close $fh;
     return;
 }
@@ -138,23 +152,27 @@ sub backup_borrower_attribute_types {
     my $backupfile = shift;
 
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
-    print $fh "code,description,repeateable,opac_display,opac_editable,staff_searchable,authorised_value_category,display_checkout,category_code,class\n";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('borrower_attribute_types');
     my $query = "SELECT code,description,repeatable,opac_display,opac_editable,staff_searchable,authorised_value_category,display_checkout,category_code,class FROM borrower_attribute_types";
     my $sth = $dbh->prepare($query);
     $sth->execute();
-
     while (my @row = $sth->fetchrow_array) {
-        my $code = csvify_str($row[0]);
-	my $descr = csvify_str($row[1]);
-	my $repeat = $row[2];
-	my $opac_display = $row[3];
-	my $staff_searchable = $row[4];
-	my $auth_value_cat = csvify_str($row[5]);
-	my $display_chkout = $row[6];
-	my $cat_code = csvify_str($row[7]);
-	my $class = csvify_str($row[8]);
-        print $fh "$code,$descr,$repeat,$opac_display,$staff_searchable,$auth_value_cat,$display_chkout,$cat_code,$class\n";
+        $xml->startTag('value');
+        $xml->dataElement('code', $row[0]);
+        $xml->dataElement('description', $row[1]);
+        $xml->dataElement('repeat', $row[2]);
+        $xml->dataElement('opac_display', $row[3]);
+        $xml->dataElement('staff_searchable', $row[4]);
+        $xml->dataElement('auth_value_cat', $row[5]);
+        $xml->dataElement('display_checkout', $row[6]);
+        $xml->dataElement('category_code', $row[7]);
+        $xml->dataElement('class', $row[8]);
+        $xml->endTag('value');
     }
+    $xml->endTag('borrower_attribute_types');
+    $xml->end();
     close $fh;
     return;
 }
@@ -164,42 +182,49 @@ sub backup_libraries {
     my $backupfile = shift;
 
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
-    print $fh "id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff\n";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('libraries');
     my $query = "SELECT id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff FROM library_groups";
     my $sth = $dbh->prepare($query);
     $sth->execute();
-
     while (my @row = $sth->fetchrow_array) {
-        my $id = $row[0];
-        my $parent_id = $row[1];
-	my $branchcode = csvify_str($row[2]);
-	my $title = csvify_str($row[3]);
-	my $description = csvify_str($row[4]);
-	my $ft_hide_patron_info = $row[5];
-	my $ft_search_groups_opac = $row[6];
-	my $ft_search_groups_staff = $row[7];
-        print $fh "$id,$parent_id,$branchcode,$title,$description,$ft_hide_patron_info,$ft_search_groups_opac,$ft_search_groups_staff\n";
+        $xml->startTag('library');
+        $xml->dataElement('id',$row[0]);
+        $xml->dataElement('parent_id',$row[1]);
+        $xml->dataElement('branchcode',$row[2]);
+        $xml->dataElement('title',$row[3]);
+        $xml->dataElement('description',$row[4]);
+        $xml->dataElement('ft_hide_patron_info',$row[5]);
+        $xml->dataElement('ft_search_groups_opac',$row[6]);
+        $xml->dataElement('ft_search_groups_staff',$row[7]);
+        $xml->endTag('library');
     }
+    $xml->endTag('libraries');
+    $xml->end();
     close $fh;
     return;
 }
-
 
 sub backup_preferences {
     my $dbh = shift;
     my $backupfile = shift;
 
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
-    print $fh "variable,value\n";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('preferences');
     my $query = "SELECT variable,value FROM systempreferences WHERE value != '' AND value IS NOT NULL";
     my $sth = $dbh->prepare($query);
     $sth->execute();
-
     while (my @row = $sth->fetchrow_array) {
-        my $variable = csvify_str($row[0]);
-        my $value = csvify_str($row[1]);
-        print $fh "$variable,$value\n";
+        $xml->startTag('pref');
+        $xml->dataElement('variable',$row[0]);
+        $xml->dataElement('value',$row[1]);
+        $xml->endTag('pref');
     }
+    $xml->endTag('preferences');
+    $xml->end();
     close $fh;
     return;
 }
@@ -213,14 +238,6 @@ sub create_timestamp {
     $min = sprintf("%02s",$min);
     $sec = sprintf("%02s",$sec);
     my $str = "$year$mon$mday$hour$min$sec";
-    return $str;
-}
-
-sub csvify_str {
-    my $str = shift;
-    if (!defined $str or $str eq '') { return ''; }
-    $str =~ s/"/\"/g;
-    $str = '"' . $str . '"';
     return $str;
 }
 
