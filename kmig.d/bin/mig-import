@@ -1,0 +1,121 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use DBI;
+use Data::Dumper;
+use Env qw(
+    HOME MYSQL_HOST MYSQL_TCP_PORT MYSQL_USER MYSQL_DATABASE MYSQL_PW
+        MIGSCHEMA MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use open ':encoding(utf8)';
+use Cwd 'abs_path';
+use Cwd qw(getcwd);
+use FindBin;
+use XML::LibXML;
+use List::Util qw( min max );
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use KMig;
+
+my $dbh = KMig::db_connect();
+
+#to do check for array passed and if not present then use tags 
+
+my @taglist = @ARGV;
+my $arg_list_length = scalar @taglist;
+if($arg_list_length < 1) { @taglist = ("preferences","libraries"); } 
+$MIGGITDIR =~ s/\/\//\//;
+
+foreach my $restore (@taglist) {
+    my $restorefile;
+    if ($restore eq 'preferences') {
+        my $timestamp = most_recent_single($MIGGITDIR,'systempreferences');
+        $restorefile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.xml';
+        restore_preferences($dbh,$restorefile);
+    }
+}
+
+sub most_recent_single {
+    my $MGIGITDIR = shift;
+    my $str = shift;
+    my @files;
+    my @times;
+    opendir (DIR, $MIGGITDIR) or abort("could not open $MIGGITDIR");;
+    while (my $file = readdir(DIR)) {
+        if ($file =~ m/$str/) { push @files, $file; }
+    }
+    foreach my $file (@files) {
+        my @f = split /\./, $file;
+        push @times, $f[1];
+    }
+    closedir(DIR);
+    my $max = max @times; 
+    return $max;
+}
+
+
+sub restore_libraries {
+    my $dbh = shift;
+    my $restorefile = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    #with existant live data will probably need to put a truncate in here 
+
+    foreach my $node ($dom->findnodes('//library')) {
+        my $id = $node->findvalue('./id');
+        my $parent_id = $node->findvalue('./parent_id');
+        my $branchcode = sql_str($node->findvalue('./branchcode'));
+        my $title = sql_str($node->findvalue('./title'));
+        my $descr = sql_str($node->findvalue('./description'));
+        my $ft1 = $node->findvalue('./ft_hide_patron_info');
+        my $ft2 = $node->findvalue('./ft_search_groups_opac');
+        my $ft3 = $node->findvalue('./ft_search_groups_staff');
+        my $sth = $dbh->prepare($query);
+        my $query = "INSERT INTO library_groups (id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff) VALUES ($id,$parent_id,$branchcode,$title,$descr,$ft1,$ft2,$ft3)";
+        $sth->execute();
+    }
+    return;
+}
+
+sub restore_preferences {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    foreach my $node ($dom->findnodes('//pref')) {
+	my $variable = sql_str($node->findvalue('./variable'));
+        my $value = sql_str($node->findvalue('./value'));
+        my $query = "UPDATE systempreferences SET value = $value WHERE variable = $variable";
+        my $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+    return;
+}
+
+sub sql_str {
+    my $str = shift;
+    if (!defined $str or $str eq '') { return ''; }
+    $str =~ s/'/''/g;
+    $str = '\'' . $str . '\'';
+    return $str;
+}
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    print_usage();
+    exit 1;
+}
+
+sub print_usage {
+    print <<_USAGE_;
+
+    mig import foo_a foo_b foo_c
+
+_USAGE_
+}
+
