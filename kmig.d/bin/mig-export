@@ -16,64 +16,92 @@ use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
 use XML::Writer;
+use open ':std', ':encoding(UTF-8)';
+use Encode qw( decode_utf8 );
 use KMig;
 
 my $dbh = KMig::db_connect();
+$dbh->{mysql_enable_utf8mb4} = 1;
 
 #to do check for array passed and if not present then use tags 
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("preferences","authorisedvalues","libraries","borrowerattributes","itemtypes"); } 
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","calendar","circrules","itemtypes","libraries","patrontypes","preferences","smsproviders"); } #borrowerattributes
 $MIGGITDIR =~ s/\/\//\//;
 
 my $timestamp = create_timestamp();
 
 foreach my $backup (@taglist) {
     my $backupfile;
-    if ($backup eq 'preferences') {
-        $backupfile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.xml';
-        backup_preferences($dbh,$backupfile);
-    }
     if ($backup eq 'authorisedvalues') {
-        $backupfile = $MIGGITDIR . 'authorised_values' . '.' . $timestamp . '.xml';
-        backup_authorised_values($dbh,$backupfile);
+        $backupfile = $MIGGITDIR . 'authorisedvalues' . '.' . $timestamp . '.xml';
+        print "Backing up $backupfile ... \n";
+        backup_authorisedvalues($dbh,$backupfile);
     }
     if ($backup eq 'borrowerattributes') {
         $backupfile = $MIGGITDIR . 'borrower_attributes' . '.' . $timestamp . '.xml';
-        backup_borrower_attributes($dbh,$backupfile);
+        print "Restoring from $restorefile ... \n";
+	backup_borrower_attributes($dbh,$backupfile);
     }
-    if ($backup eq 'libraries') {
-        $backupfile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.xml';
-        backup_libraries($dbh,$backupfile);
+    if ($backup eq 'calendar') {
+        $backupfile = $MIGGITDIR . 'calendar' . '.' . $timestamp . '.xml';
+        print "Restoring from $restorefile ... \n";
+        backup_calendar($dbh,$backupfile);
+    }
+    if ($backup eq 'circrules') {
+        $backupfile = $MIGGITDIR . 'circrules' . '.' . $timestamp . '.xml';
+        print "Restoring from $restorefile ... \n";
+        backup_circrules($dbh,$backupfile);
     }
     if ($backup eq 'itemtypes') {
         $backupfile = $MIGGITDIR . 'itemtypes' . '.' . $timestamp . '.xml'; 
+        print "Restoring from $restorefile ... \n";
         backup_itemtypes($dbh,$backupfile);
+    }
+    if ($backup eq 'libraries') {
+        $backupfile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.xml';
+        print "Restoring from $restorefile ... \n";
+        backup_libraries($dbh,$backupfile);
+    }
+    if ($backup eq 'patrontypes') {
+        $backupfile = $MIGGITDIR . 'patrontypes' . '.' . $timestamp . '.xml';
+        print "Restoring from $restorefile ... \n";
+        backup_patrontypes($dbh,$backupfile);
+    }
+    if ($backup eq 'preferences') {
+        $backupfile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.xml';
+        print "Restoring from $restorefile ... \n";
+        backup_preferences($dbh,$backupfile);
+    }
+    if ($backup eq 'smsproviders') {
+        $backupfile = $MIGGITDIR . 'smsproviders' . '.' . $timestamp . '.xml';
+        print "Restoring from $restorefile ... \n";
+        backup_smsproviders($dbh,$backupfile);
     }
 }
 
-sub backup_authorised_values {
+sub backup_authorisedvalues {
     my $dbh = shift;
     my $backupfile = shift;
 
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
     my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
     $xml->xmlDecl('UTF-8');
-    $xml->startTag('authorised_values');
-    my $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values";
+    $xml->startTag('authorisedvalues');
+    my $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values WHERE category != 'ITEMTYPECAT'";
     my $sth = $dbh->prepare($query);
     $sth->execute();
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('category', $row[0]); 
-        $xml->dataElement('authvalue', $row[1]); 
+        $xml->dataElement('authorised_value', $row[1]); 
         $xml->dataElement('lib', $row[2]); 
         $xml->dataElement('lib_opac', $row[3]); 
-        $xml->dataElement('image_url', $row[4]); 
+        $xml->dataElement('imageurl', $row[4]); 
         $xml->endTag('value');        
     }
-    $xml->endTag('authorised_values');
+    $xml->endTag('authorisedvalues');
     $xml->end();
     close $fh;
     return;
@@ -137,6 +165,124 @@ sub backup_borrower_attributes {
     return;
 }
 
+sub backup_calendar {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('holidays');
+
+    my $query = "SELECT branchcode,weekday,day,month,title,description FROM repeatable_holidays";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('repeatable');
+        $xml->dataElement('branchcode',$row[0]);
+        $xml->dataElement('weekday',$row[1]);
+        $xml->dataElement('day',$row[2]);
+        $xml->dataElement('month',$row[3]);
+        $xml->dataElement('title',$row[4]);
+        $xml->dataElement('description',$row[5]);
+        $xml->endTag('repeatable');
+    }
+
+    $query = "SELECT branchcode,day,month,year,isexception,title,description FROM special_holidays";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('special');
+        $xml->dataElement('branchcode',$row[0]);
+        $xml->dataElement('day',$row[1]);
+        $xml->dataElement('month',$row[2]);
+        $xml->dataElement('year',$row[3]);
+        $xml->dataElement('isexception',$row[4]);
+        $xml->dataElement('title',$row[5]);
+        $xml->dataElement('description',$row[6]);
+        $xml->endTag('special');
+    }
+
+    $xml->endTag('holidays');
+    $xml->end();
+    close $fh;
+    return;
+}
+
+sub backup_circrules {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('document');
+
+    $xml->startTag('circ');
+    my $query = "SELECT branchcode, categorycode, itemtype, rule_name, rule_value FROM circulation_rules";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('rule');
+        $xml->dataElement('branchcode', $row[0]);
+        $xml->dataElement('categorycode', $row[1]);
+        $xml->dataElement('itemtype', $row[2]);
+        $xml->dataElement('rule_name', $row[3]);
+        $xml->dataElement('rule_value', $row[4]);
+        $xml->endTag('rule');
+    }
+    $xml->endTag('circ');
+
+    $xml->startTag('issuing');
+    $query = "SELECT categorycode,itemtype,restrictedtype,rentaldiscount,reservecharge,fine,finedays,maxsuspensiondays,suspension_chargeperiod,firstremind,chargeperiod,chargeperiod_charge_at,accountsent,issuelength,lengthunit,hardduedate,hardduedatecompare,renewalsallowed,renewalperiod,norenewalbefore,auto_renew,no_auto_renewal_after,no_auto_renewal_after_hard_limit,reservesallowed,holds_per_record,holds_per_day,branchcode,overduefinescap,cap_fine_to_replacement_price,onshelfholds,opacitemholds,article_requests,note FROM issuingrules";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('rule');
+        $xml->dataElement('categorycode', $row[0]);
+        $xml->dataElement('itemtype', $row[1]);
+        $xml->dataElement('restrictedtype', $row[2]);
+        $xml->dataElement('rentaldiscount', $row[3]);
+        $xml->dataElement('reservecharge', $row[4]);
+        $xml->dataElement('fine', $row[5]);
+        $xml->dataElement('finedays', $row[6]);
+        $xml->dataElement('maxsuspensiondays', $row[7]);
+        $xml->dataElement('suspension_chargeperiod', $row[8]);
+        $xml->dataElement('firstremind', $row[9]);
+        $xml->dataElement('chargeperiod', $row[10]);
+        $xml->dataElement('chargeperiod_charge_at', $row[11]);
+        $xml->dataElement('accountsent', $row[12]);
+        $xml->dataElement('issuelength', $row[13]);
+        $xml->dataElement('lengthunit', $row[14]);
+        $xml->dataElement('hardduedate', $row[15]);
+        $xml->dataElement('hardduedatecompare', $row[16]);
+        $xml->dataElement('renewalsallowed', $row[17]);
+        $xml->dataElement('renewalperiod', $row[18]);
+        $xml->dataElement('norenewalbefore', $row[19]);
+        $xml->dataElement('auto_renew', $row[20]);
+        $xml->dataElement('no_auto_renewal_after', $row[21]);
+        $xml->dataElement('no_auto_renewal_after_hard_limit', $row[22]);
+        $xml->dataElement('reservesallowed', $row[23]);
+        $xml->dataElement('holds_per_record', $row[24]);
+        $xml->dataElement('holds_per_day', $row[25]);
+        $xml->dataElement('branchcode', $row[26]);
+        $xml->dataElement('overduefinescap', $row[27]);
+        $xml->dataElement('cap_fine_to_replacement_price', $row[28]);
+        $xml->dataElement('onshelfholds', $row[29]);
+        $xml->dataElement('opacitemholds', $row[30]);
+        $xml->dataElement('article_requests', $row[31]);
+        $xml->dataElement('note', $row[32]);
+        $xml->endTag('rule');
+    }
+    $xml->endTag('issuing');
+
+    $xml->endTag('document');
+    $xml->end();
+    close $fh;
+    return;
+}
+
+
 sub backup_itemtypes {
     my $dbh = shift;
     my $backupfile = shift;
@@ -157,7 +303,7 @@ sub backup_itemtypes {
         $xml->dataElement('rentalcharge', $row[2]);
         $xml->dataElement('rentalcharge_daily', $row[3]);
         $xml->dataElement('rentalcharge_hourly', $row[4]);
-        $xml->dataElement('defaultreplacementcost', $row[5]);
+        $xml->dataElement('defaultreplacecost', $row[5]);
         $xml->dataElement('processfee', $row[6]);
         $xml->dataElement('notforloan', $row[7]);
         $xml->dataElement('imageurl', $row[8]);
@@ -186,6 +332,20 @@ sub backup_itemtypes {
     }
     $xml->endTag('authorised_values');
 
+    $xml->startTag('localizations');
+    $query = "SELECT entity, code, lang, translation FROM localization WHERE entity = 'itemtypes';";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('value');
+        $xml->dataElement('entity', $row[0]);
+        $xml->dataElement('code', $row[1]);
+        $xml->dataElement('lang', $row[2]);
+        $xml->dataElement('translation', $row[3]);
+        $xml->endTag('value');
+    }
+    $xml->endTag('localizations');
+
     $xml->endTag('document');
     $xml->end();
     close $fh;
@@ -200,11 +360,12 @@ sub backup_libraries {
     my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
     $xml->xmlDecl('UTF-8');
     $xml->startTag('libraries');
+
     my $query = "SELECT id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff FROM library_groups";
     my $sth = $dbh->prepare($query);
     $sth->execute();
     while (my @row = $sth->fetchrow_array) {
-        $xml->startTag('library');
+        $xml->startTag('library_group');
         $xml->dataElement('id',$row[0]);
         $xml->dataElement('parent_id',$row[1]);
         $xml->dataElement('branchcode',$row[2]);
@@ -213,9 +374,81 @@ sub backup_libraries {
         $xml->dataElement('ft_hide_patron_info',$row[5]);
         $xml->dataElement('ft_search_groups_opac',$row[6]);
         $xml->dataElement('ft_search_groups_staff',$row[7]);
+        $xml->endTag('library_group');
+    }
+
+    $query = "SELECT branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchprinter,branchnotes,opac_info,geolocation,marcorgcode,pickup_location FROM branches";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('library');
+        $xml->dataElement('branchcode',$row[0]);
+        $xml->dataElement('branchname',$row[1]);
+        $xml->dataElement('branchaddress1',$row[2]);
+        $xml->dataElement('branchaddress2',$row[3]);
+        $xml->dataElement('branchaddress3',$row[4]);
+        $xml->dataElement('branchzip',$row[5]);
+        $xml->dataElement('branchcity',$row[6]);
+        $xml->dataElement('branchstate',$row[7]);
+        $xml->dataElement('branchcountry',$row[8]);
+        $xml->dataElement('branchphone',$row[9]);
+        $xml->dataElement('branchfax',$row[10]);
+        $xml->dataElement('branchemail',$row[11]);
+        $xml->dataElement('branchreplyto',$row[12]);
+        $xml->dataElement('branchreturnpath',$row[13]);
+        $xml->dataElement('branchurl',$row[14]);
+        $xml->dataElement('issuing',$row[15]);
+        $xml->dataElement('branchip',$row[16]);
+        $xml->dataElement('branchprinter',$row[17]);
+        $xml->dataElement('branchnotes',$row[18]);
+        $xml->dataElement('opac_info',$row[19]);
+        $xml->dataElement('geolocation',$row[20]);
+        $xml->dataElement('marcorgcode',$row[21]);
+        $xml->dataElement('pickup_location',$row[22]);
         $xml->endTag('library');
     }
+
     $xml->endTag('libraries');
+    $xml->end();
+    close $fh;
+    return;
+}
+
+sub backup_patrontypes {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('patron');
+    my $query = "SELECT categorycode,description,enrolmentperiod,enrolmentperioddate,upperagelimit,dateofbirthrequired,finetype,bulk,enrolmentfee,overduenoticerequired,issuelimit,reservefee,hidelostitems,category_type,BlockExpiredPatronOpacActions,default_privacy,checkprevcheckout,reset_password,change_password FROM categories";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('category');
+        $xml->dataElement('categorycode',$row[0]);
+        $xml->dataElement('description',$row[1]);
+        $xml->dataElement('enrolmentperiod',$row[2]);
+        $xml->dataElement('enrolmentperioddate',$row[3]);
+        $xml->dataElement('upperagelimit',$row[4]);
+        $xml->dataElement('dateofbirthrequired',$row[5]);
+        $xml->dataElement('finetype',$row[6]);
+        $xml->dataElement('bulk',$row[7]);
+        $xml->dataElement('enrolmentfee',$row[8]);
+        $xml->dataElement('overduenoticerequired',$row[9]);
+        $xml->dataElement('issuelimit',$row[10]);
+        $xml->dataElement('reservefee',$row[11]);
+        $xml->dataElement('hidelostitems',$row[12]);
+        $xml->dataElement('category_type',$row[13]);
+        $xml->dataElement('BlockExpiredPatronOpacActions',$row[14]);
+        $xml->dataElement('default_privacy',$row[15]);
+        $xml->dataElement('checkprevcheckout',$row[16]);
+        $xml->dataElement('reset_password',$row[17]);
+        $xml->dataElement('change_password',$row[18]);
+        $xml->endTag('category');
+    }
+    $xml->endTag('patron');
     $xml->end();
     close $fh;
     return;
@@ -243,6 +476,30 @@ sub backup_preferences {
     close $fh;
     return;
 }
+
+sub backup_smsproviders {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('sms');
+    my $query = "SELECT name,domain FROM sms_providers";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('provider');
+        $xml->dataElement('name',$row[0]);
+        $xml->dataElement('domain',$row[1]);
+        $xml->endTag('provider');
+    }
+    $xml->endTag('sms');
+    $xml->end();
+    close $fh;
+    return;
+}
+
 
 sub create_timestamp {
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
