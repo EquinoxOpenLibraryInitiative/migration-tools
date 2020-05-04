@@ -10,9 +10,9 @@ any appropriate format.  The analyst and report parameters are required.
 
 Optional parameters are : 
 
--- analyst
+--analyst
 
-Default to "Equinox Open Library Initiative"
+Defaults to "Project Data Analyst"
 
 --added_page_title and --added_page_file 
 
@@ -67,7 +67,7 @@ use open ':encoding(utf8)';
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
-my $analyst = 'Equinox Open Library Initiative';;
+my $analyst = 'Project Data Analyst';
 my $report_title;
 my $reports_xml = 'evergreen_staged_report.xml';
 my $tags = 'circs.holds.actors.bibs.assets.money.notices';

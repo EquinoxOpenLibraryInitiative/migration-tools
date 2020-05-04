@@ -19,7 +19,7 @@ my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
 use KMig;
 
-my $analyst = 'Equinox Open Library Initiative';
+my $analyst = 'Project Data Analyst';
 my $report_title;
 my $reports_xml = 'stock_reports.xml';
 my $tags = 'bibs.items.borrowers.circs.reserves.accounts.courses';
