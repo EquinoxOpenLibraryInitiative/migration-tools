@@ -29,6 +29,7 @@ sub db_connect {
     } else {
         $dbh = DBI->connect("dbi:Pg:dbname=$MYSQL_DATABASE", "", "") || die "Unable to connect to $MYSQL_DATABASE : $!\n";
     }
+    $dbh->do('SET NAMES utf8mb4');
     return $dbh;
 }
 
