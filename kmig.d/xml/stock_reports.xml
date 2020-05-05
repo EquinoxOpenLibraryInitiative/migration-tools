@@ -1,5 +1,13 @@
 <reports_file>
-    <!-- CORE REPORTS -->
+
+    <report>
+        <name>total_borrowers</name>
+        <tag>borrowers</tag>
+        <iteration>0</iteration>
+        <report_title>Total Borrowers</report_title>
+        <heading>Count</heading>
+        <query>SELECT COUNT(*) FROM borrowers</query>
+    </report>
 
     <report>
         <name>borrower_counts</name>
@@ -45,6 +53,14 @@
     </report>
 
      <report>
+        <name>total_items_count</name>
+        <tag>items</tag>
+        <report_title>Total Items Count</report_title>
+        <heading>Count</heading>
+        <query>SELECT COUNT(*) FROM items;</query>
+    </report>
+
+     <report>
         <name>items_by_type_ccode_branch</name>
         <tag>items</tag>
         <report_title>Items by Item Type and Collection Code By Branch</report_title>
@@ -66,6 +82,14 @@
         <report_title>Items by Lost Value</report_title>
         <heading>Count.Lost Status</heading>
         <query> SELECT COUNT(*), CASE WHEN itemlost = 0 THEN 'Not Lost' WHEN itemlost = 1 THEN 'Lost' WHEN itemlost = 2 THEN 'Long Overdue' WHEN itemlost = 3 THEN 'Lost and Paid For' WHEN itemlost = 4 THEN 'Missing' END FROM items GROUP BY 2;</query>
+    </report>
+
+     <report>
+        <name>total_circs</name>
+        <tag>circs</tag>
+        <report_title>Migrated Circulations</report_title>
+        <heading>Count</heading>
+        <query>SELECT COUNT(*) FROM issues</query>
     </report>
 
      <report>
