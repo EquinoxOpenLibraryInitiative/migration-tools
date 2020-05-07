@@ -438,8 +438,8 @@ sub restore_preferences {
     my $dom = $parser->parse_file($restore_file);
 
     foreach my $node ($dom->findnodes('//pref')) {
-	my $variable = sql_str($node->findvalue('./variable'));
-        my $value = sql_str($node->findvalue('./value'));
+	my $variable = domain_shift(sql_str($node->findvalue('./variable')));
+        my $value = domain_shift(sql_str($node->findvalue('./value')));
         my $query = "UPDATE systempreferences SET value = $value WHERE variable = $variable";
         my $sth = $dbh->prepare($query);
         $sth->execute();
@@ -465,6 +465,13 @@ sub restore_smsproviders {
         $sth->execute();
     }
     return;
+}
+
+sub domain_shift {
+	my $str = shift;
+	$str =~ s/-test.kohacatalog.com/.kohacatalog.com/g;
+	$str =~ s/-test-staff.kohacatalog.com/-staff.kohacatalog.com/g;
+	return $str;
 }
 
 sub sql_str {
