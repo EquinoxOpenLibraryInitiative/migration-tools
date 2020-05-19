@@ -45,6 +45,8 @@ Using B<mig> should go something like this:
 
 =item mig add patrons.tsv # tracks an incoming data file; repeat for additional files
 
+=item mig bibstats foo.mrc # get summarized data about bibs and export barcode list
+
 =item mig iconv patrons.tsv # convert it to UTF8, creating patrons.tsv.utf8
 
 =item mig clean patrons.tsv # cleans the file, creating patrons.tsv.utf8.clean

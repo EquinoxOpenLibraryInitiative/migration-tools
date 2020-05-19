@@ -11,10 +11,20 @@ for quick analysis.
 --uri_threshold defaults to 1, only shows URI values with more than that 
 frequency
 
---ingore_filetype true will have it not care what file returns as the type and 
+--ignore_filetype true will have it not care what file returns as the type and 
 always treat it as marc21
-=back
 
+--ils --holding_code --barcode_subfield work together to pass an new ILS 
+definnition without it being hardcode in the script and can test arbitary 
+fields 
+
+--exportbarcodes ils_name is used if you want to export the barcodes associated 
+with one of the ILSes so provide the name 
+
+--exportbarcodesfile will use this file name for a barcode export instead 
+of the generic 'barcodes_export.txt'
+
+=back
 =cut
 
 ###############################################################################
@@ -35,10 +45,12 @@ use MARC::Record;
 use MARC::Field;
 use Cwd 'abs_path';
 use Cwd qw(getcwd);
+use List::MoreUtils qw(uniq);
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
 use EMig;
+#use KMig;
 use open ':encoding(utf8)';
 
 pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
@@ -48,19 +60,27 @@ my $file;
 my $uri_threshold = 1;
 my $p_holding_code;
 my $p_barcode_subfield;
-my $p_ils_name = 'Runtime ILS';
+my $p_ils_name = '';
 my $holding_threshold = 50;
 my $p_ignore_filetype = 'false';
+my @holdings;
+my %unique_barcodes;
+my $exportbarcodes;
+my $exportbarcodesfile;
 
 my $ret = GetOptions(
-    'file:s'           		=> \$file,
-	'uri_threshold:i'  		=> \$uri_threshold,
-	'holding_code:s'   		=> \$p_holding_code,
-	'barcode:s'        		=> \$p_barcode_subfield,
-	'ignore_filetype:s'		=> \$p_ignore_filetype,
-	'ils_name:s'	   		=> \$p_ils_name,
-	'holding_threshold:s'	=> \$holding_threshold
+    'file:s'           		 => \$file,
+	'uri_threshold:i'  		 => \$uri_threshold,
+	'holding_code:s'   		 => \$p_holding_code,
+	'barcode_subfield:s'     => \$p_barcode_subfield,
+	'ignore_filetype:s'		 => \$p_ignore_filetype,
+	'ils:s'	        		 => \$p_ils_name,
+	'exportbarcodes:s'		 => \$exportbarcodes,
+	'exportbarcodesfile:s'   => \$exportbarcodesfile,
+	'holding_threshold:s'	 => \$holding_threshold
 );
+
+if ($exportbarcodesfile and !defined $exportbarcodes) { abort('You have to provide an ILS name if you want a barcode export file.'); }
 
 if ($p_holding_code and length $p_holding_code != 3) { abort('Holdings codes must be three characters.'); }
 
@@ -69,13 +89,14 @@ if ($p_barcode_subfield) {
 	if (length $p_barcode_subfield != 1) { abort('Barcode subfields must be a single character code.'); }
 }
 
+# ils name, holding tag, barcode subfield 
 my @ilses = (
 	['Mandarin','852','p'],
 	['Evergreen','852','p'],
 	['Polaris','852','p'],
 	['TLC','949','g'],
 	['Koha','952','p'],
-	['Sympony','999','i']
+	['Sympony','999','i'],
     ['Destiny','852','p']
 );
 
@@ -84,10 +105,10 @@ if ($p_holding_code) {
 	push @temp, $p_ils_name;
 	push @temp, $p_holding_code;
 	if ($p_barcode_subfield) { push @temp, lc $p_barcode_subfield; }
+	push @ilses, [@temp];
 }
-push @ilses, @temp;
 
-
+#to do - add a check for exportbarcodes being in @ilses
 
 my $batch = MARC::Batch->new('USMARC', $file);
 $batch->strict_off();
@@ -103,7 +124,8 @@ my $author_sub0 = 0;
 my $title_sub0 = 0;
 my @uris;
 my @fields;
-my @codes;
+my @encodings;
+my @types;
 my @holding_code_strings;
 my %holding_counts;
 my %barcode_counts;
@@ -121,14 +143,23 @@ while ( my $record = $batch->next() ) {
 		my $hcode = @$_[1];
 		my $barcode = @$_[2];
 		my @holding_fields = $record->field($hcode);
+        foreach my $hf (@holding_fields) {
+			my @h;
+			my $barcode_string = $hf->subfield($barcode);
+        	push @h, $ils;
+        	push @h, $barcode_string;
+			push @holdings, [@h];
+		}
 		my $l = scalar @holding_fields;
 		my $v = $holding_counts{$ils};
 		if ($l) { $holding_counts{$ils} = $v + $l; }
 	}
     #process 856s
 	@fields = $record->field('856');
-	my $ldr = substr $record->leader(), 9, 1;
-	push @codes, $ldr;
+	my $enc = substr $record->leader(), 9, 1;
+	push @encodings, $enc;
+    my $type = substr $record->leader(), 6, 1;
+    push @types, $type;
 	foreach my $f (@fields) {
 		my $u = $f->subfield('u');
         my $n = $f->subfield('9');
@@ -162,39 +193,76 @@ while ( my $record = $batch->next() ) {
     if(($i % 1000) == 0) { print "Processing bib $i.\n"; }
 }
 
+foreach (@ilses) {
+	my $ils = @$_[0];
+    my @temp_barcodes;
+    foreach my $h (@holdings) {
+		my $temp_ils_name = @$h[0];
+    	if ($temp_ils_name eq $ils) { push @temp_barcodes, @$h[1]; }
+    }
+    my @uniq_barcodes = uniq @temp_barcodes;;
+    $barcode_counts{$ils} = scalar @uniq_barcodes;
+}
+
 my %uri_counts;
 $uri_counts{$_}++ for @uris;
 
-my %code_counts;
-$code_counts{$_}++ for @codes;
+my %encoding_counts;
+$encoding_counts{$_}++ for @encodings;
+
+my %type_counts;
+$type_counts{$_}++ for @types;
 
 print "\n$filetype\n";
 print "$i bibs read in file\n\n";
 
-print "=== Leader 09 codes\n";
-foreach my $key (keys %code_counts) {
-    my $value = $code_counts{$key};
-    print "=== $key   $value\n"; 
+print "===== Leader 09, # = MARC-8, a = UCS/Unicode\n";
+foreach my $key (keys %encoding_counts) {
+    my $value = $encoding_counts{$key};
+    print "  $key   $value\n"; 
 }
 print "\n";
 
-print "$uri_count 856 fields with a subfield u\n";
-print "$uri_valid_count 856 fields with a subfield u and valid indicators\n";
-print "$uri_sub9_count 856 fields have subfield 9s\n";
-print "$title_sub0 100 fields have a subfield 0\n";
-print "$author_sub0 245 fields have a subfield 0\n";
+print "===== Leader 06\n";
+foreach my $key (keys %type_counts) {
+    my $value = $type_counts{$key};
+    my $type = give_type($key);
+    print "  $key   $value $type\n";
+}
+print "\n";
 
-print "\n=== Holdings Analysis\n";
+print "===== Summary of Select Field Counts\n";
+print "  $uri_count 856 fields with a subfield u\n";
+print "  $uri_valid_count 856 fields with a subfield u and valid indicators\n";
+print "  $uri_sub9_count 856 fields have a subfield 9\n";
+print "  $title_sub0 100 fields have a subfield 0\n";
+print "  $author_sub0 245 fields have a subfield 0\n";
+
+print "\n===== Holdings Analysis\n";
 foreach my $key (keys %holding_counts) {
 	my $c = $holding_counts{$key};
-	if (((100/$i)*$c) >= $holding_threshold) { print "Could be $key $holding_counts{$key} holdings tags\n"; }
+	if (((100/$i)*$c) >= $holding_threshold) { print "  $key $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n"; }
 }
 
-print "\nURI values are domains and filtered to only show those with more than $uri_threshold\n";
+print "\n===== URI values are domains and filtered to only show those with more than $uri_threshold\n";
 foreach my $key (keys %uri_counts) {
 	my $value = $uri_counts{$key};
-	if ($value > $uri_threshold) { print "=== $key   $value\n"; } 
+	if ($value > $uri_threshold) { print "  $key   $value\n"; } 
 }
+
+if ($exportbarcodes) {
+    my @temp_barcodes;
+    my $outfile;
+    if ($exportbarcodesfile) { $outfile = $exportbarcodesfile; } else { $outfile = 'barcodes_export.txt'; }
+    open my $out_fh, '>:utf8', $outfile or abort('can not open output file for barcode list');
+    foreach my $h (@holdings) {
+        my $temp_ils_name = @$h[0];
+		my $barcode = @$h[1];
+		if (!defined $barcode) { $barcode = 'no barcode found'; }
+        if ($temp_ils_name eq $exportbarcodes) { print $out_fh "@$h[1]\n" }
+    }
+    close $out_fh;
+} else { print "frack\n"; }
 
 close $file;
 
@@ -204,4 +272,24 @@ sub abort {
     my $msg = shift;
     print STDERR "$0: $msg", "\n";
     exit 1;
+}
+
+sub give_type {
+	my $type = shift;
+    if ($type eq 'a') { return 'Language material'; }
+    if ($type eq 'c') { return 'Notated Music'; }
+    if ($type eq 'd') { return 'Manuscript notated music'; }
+    if ($type eq 'e') { return 'Cartographic material'; }
+    if ($type eq 'f') { return 'Manuscript cartographic material'; }
+    if ($type eq 'g') { return 'Projected Medium'; }
+    if ($type eq 'i') { return 'Nonmusical sound recording'; }
+    if ($type eq 'j') { return 'Musical sound recording'; }
+    if ($type eq 'k') { return 'Two-dimensional nonprojectable graphic'; }
+    if ($type eq 'm') { return 'Computer file'; }
+    if ($type eq 'o') { return 'Kit'; }
+    if ($type eq 'p') { return 'Mixed materials'; }
+    if ($type eq 'r') { return 'Three-dimensaional artifact or naturally occurring object'; }
+    if ($type eq 't') { return 'Manuscript language material'; }
+    if ($type eq 'z') { return 'Authority'; }
+    return 'unknown';
 }
