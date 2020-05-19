@@ -76,6 +76,7 @@ my @ilses = (
 	['TLC','949','g'],
 	['Koha','952','p'],
 	['Sympony','999','i']
+    ['Destiny','852','p']
 );
 
 my @temp;
