@@ -29,7 +29,7 @@ $dbh->do('SET NAMES utf8mb4');
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","calendar","circrules","itemtypes","libraries","patrontypes","preferences","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 foreach my $restore (@taglist) {
@@ -76,6 +76,12 @@ foreach my $restore (@taglist) {
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_preferences($dbh,$restorefile); }
         print "IMPORTANT : if you are changing system preferences you may need to run 'sudo systemctl restart apache2 memcached'\n\n";
+    }
+    if ($restore eq 'reports') {
+        my $timestamp = most_recent_single($MIGGITDIR,'reports');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'reports' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_reports($dbh,$restorefile); }
     }
     if ($restore eq 'smsproviders') {
         my $timestamp = most_recent_single($MIGGITDIR,'smsproviders');
@@ -442,6 +448,43 @@ sub restore_preferences {
         my $value = domain_shift(sql_str($node->findvalue('./value')));
         my $query = "UPDATE systempreferences SET value = $value WHERE variable = $variable";
         my $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+    return;
+}
+
+sub restore_reports {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    my $query = "DELETE FROM saved_sql WHERE 1 = 1";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    foreach my $node ($dom->findnodes('//sqlreport')) {
+        my $date_created = sql_str($node->findvalue('./date_created'));
+        my $last_modified = sql_str($node->findvalue('./last_modified'));
+        my $savedsql = domain_shift(sql_str($node->findvalue('./savedsql')));
+        my $report_name = sql_str($node->findvalue('./report_name'));
+        my $type = sql_str($node->findvalue('./type'));
+        my $notes = sql_str($node->findvalue('./notes'));
+        my $cache_expiry = sql_num($node->findvalue('./cache_expiry'));
+        my $public = sql_str($node->findvalue('./public'));
+        my $report_area = sql_str($node->findvalue('./report_area'));
+        my $report_group = sql_str($node->findvalue('./report_group'));
+        my $report_subgroup = sql_str($node->findvalue('./report_subgroup'));
+        my $userid = sql_str($node->findvalue('./userid'));
+
+        $query = "SELECT borrowernumber FROM borrowers WHERE userid = $userid";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+        my @row = $sth->fetchrow_array;
+        my $borrowernumber = sql_num($row[0]);
+
+        $query = "INSERT INTO saved_sql (date_created,last_modified,savedsql,report_name,type,notes,cache_expiry,public,report_area,report_group,report_subgroup,borrowernumber) VALUES ($date_created,$last_modified,$savedsql,$report_name,$type,$notes,$cache_expiry,$public,$report_area,$report_group,$report_subgroup,$borrowernumber)";
+        $sth = $dbh->prepare($query);
         $sth->execute();
     }
     return;

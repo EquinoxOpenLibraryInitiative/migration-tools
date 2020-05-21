@@ -27,7 +27,7 @@ $dbh->{mysql_enable_utf8mb4} = 1;
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","calendar","circrules","itemtypes","libraries","patrontypes","preferences","smsproviders"); } #borrowerattributes
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } #borrowerattributes
 $MIGGITDIR =~ s/\/\//\//;
 
 my $timestamp = create_timestamp();
@@ -41,42 +41,47 @@ foreach my $backup (@taglist) {
     }
     if ($backup eq 'borrowerattributes') {
         $backupfile = $MIGGITDIR . 'borrower_attributes' . '.' . $timestamp . '.xml';
-        print "Restoring from $restorefile ... \n";
+        print "Backing up $backupfile ... \n";
 	backup_borrower_attributes($dbh,$backupfile);
     }
     if ($backup eq 'calendar') {
         $backupfile = $MIGGITDIR . 'calendar' . '.' . $timestamp . '.xml';
-        print "Restoring from $restorefile ... \n";
+        print "Backing up $backupfile ... \n";
         backup_calendar($dbh,$backupfile);
     }
     if ($backup eq 'circrules') {
         $backupfile = $MIGGITDIR . 'circrules' . '.' . $timestamp . '.xml';
-        print "Restoring from $restorefile ... \n";
+        print "Backing up $backupfile ... \n";
         backup_circrules($dbh,$backupfile);
     }
     if ($backup eq 'itemtypes') {
         $backupfile = $MIGGITDIR . 'itemtypes' . '.' . $timestamp . '.xml'; 
-        print "Restoring from $restorefile ... \n";
+        print "Backing up $backupfile ... \n";
         backup_itemtypes($dbh,$backupfile);
     }
     if ($backup eq 'libraries') {
         $backupfile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.xml';
-        print "Restoring from $restorefile ... \n";
+        print "Backing up $backupfile ... \n";
         backup_libraries($dbh,$backupfile);
     }
     if ($backup eq 'patrontypes') {
         $backupfile = $MIGGITDIR . 'patrontypes' . '.' . $timestamp . '.xml';
-        print "Restoring from $restorefile ... \n";
+        print "Backing up $backupfile ... \n";
         backup_patrontypes($dbh,$backupfile);
     }
     if ($backup eq 'preferences') {
         $backupfile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.xml';
-        print "Restoring from $restorefile ... \n";
+        print "Backing up $backupfile ... \n";
         backup_preferences($dbh,$backupfile);
+    }
+    if ($backup eq 'reports') {
+        $backupfile = $MIGGITDIR . 'reports' . '.' . $timestamp . '.xml';
+        print "Backing up $backupfile ... \n";
+        backup_reports($dbh,$backupfile);
     }
     if ($backup eq 'smsproviders') {
         $backupfile = $MIGGITDIR . 'smsproviders' . '.' . $timestamp . '.xml';
-        print "Restoring from $restorefile ... \n";
+        print "Backing up $backupfile ... \n";
         backup_smsproviders($dbh,$backupfile);
     }
 }
@@ -472,6 +477,41 @@ sub backup_preferences {
         $xml->endTag('pref');
     }
     $xml->endTag('preferences');
+    $xml->end();
+    close $fh;
+    return;
+}
+
+sub backup_reports {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('reports');
+
+    my $query = "SELECT s.date_created, s.last_modified, s.savedsql, s.report_name, s.type, s.notes, s.cache_expiry, s.public, s.report_area, s.report_group, s.report_subgroup, b.userid FROM saved_sql s LEFT JOIN borrowers b ON b.borrowernumber = s.borrowernumber";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('sqlreport');
+        $xml->dataElement('date_created',$row[0]);
+        $xml->dataElement('last_modified',$row[1]);
+        $xml->dataElement('savedsql',$row[2]);
+        $xml->dataElement('report_name',$row[3]);
+        $xml->dataElement('type',$row[4]);
+        $xml->dataElement('notes',$row[5]);
+        $xml->dataElement('cache_expiry',$row[6]);
+        $xml->dataElement('public',$row[7]);
+        $xml->dataElement('report_area',$row[8]);
+        $xml->dataElement('report_group',$row[9]);
+        $xml->dataElement('report_subgroup',$row[10]);
+        $xml->dataElement('userid',$row[11]);
+        $xml->endTag('sqlreport');
+    }
+
+    $xml->endTag('reports');
     $xml->end();
     close $fh;
     return;
