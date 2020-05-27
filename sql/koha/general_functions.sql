@@ -1,7 +1,7 @@
-DROP FUNCTION IF EXISTS split_string;
+DROP FUNCTION IF EXISTS m_split_string;
 DELIMITER $
 CREATE FUNCTION 
-   split_string (s TEXT, del VARCHAR(10), i INT)
+   m_split_string (s TEXT, del VARCHAR(10), i INT)
    RETURNS TEXT
    DETERMINISTIC
     BEGIN
@@ -16,10 +16,10 @@ CREATE FUNCTION
 $
 DELIMITER ;
 
-DROP FUNCTION IF EXISTS string_segment_count;
+DROP FUNCTION IF EXISTS m_string_segment_count;
 DELIMITER $
 CREATE FUNCTION 
-   string_segment_count(s TEXT, del VARCHAR(10))
+   m_string_segment_count(s TEXT, del VARCHAR(10))
    RETURNS TEXT
    DETERMINISTIC
     BEGIN
@@ -30,10 +30,10 @@ CREATE FUNCTION
 $
 DELIMITER ;
 
-DROP FUNCTION IF EXISTS remove_bracketed_text;
+DROP FUNCTION IF EXISTS m_remove_bracketed_text;
 DELIMITER $
 CREATE FUNCTION 
-   remove_bracketed_text(str TEXT)
+   m_remove_bracketed_text(str TEXT)
    RETURNS TEXT
    DETERMINISTIC
     BEGIN
