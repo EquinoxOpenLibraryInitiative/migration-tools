@@ -29,7 +29,7 @@ $dbh->do('SET NAMES utf8mb4');
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","borrowerattributes","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 foreach my $restore (@taglist) {
@@ -39,6 +39,12 @@ foreach my $restore (@taglist) {
         if ($timestamp) { $restorefile = $MIGGITDIR . 'authorisedvalues' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_authorisedvalues($dbh,$restorefile); }
+    }
+    if ($restore eq 'borrowerattributes') {
+        my $timestamp = most_recent_single($MIGGITDIR,'borrowerattributes');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'borrowerattributes' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_borrowerattributes($dbh,$restorefile); }
     }
     if ($restore eq 'calendar') {
         my $timestamp = most_recent_single($MIGGITDIR,'calendar');
@@ -134,6 +140,62 @@ sub restore_authorisedvalues {
     }
     return;
 }
+
+
+sub restore_borrowerattributes {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    my $query = "DELETE FROM authorised_values WHERE category IN (select category_code from borrower_attribute_types)";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    $query = "DELETE FROM authorised_value_categories WHERE category_name IN (select category_name from borrower_attribute_types)";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    $query = "DELETE FROM borrower_attribute_types WHERE 1 = 1";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    foreach my $node ($dom->findnodes('/borrower_attribute_types/value')) {
+        my $code = sql_str($node->findvalue('./code'));
+        my $description = sql_num($node->findvalue('./description'));
+        my $repeatable = sql_num($node->findvalue('./repeat'));
+        my $opac_display = sql_num($node->findvalue('./opac_display'));
+        my $staff_searchable = sql_num($node->findvalue('./staff_searchable'));
+        my $authorised_value_category = sql_str($node->findvalue('./auth_value_cat'));
+        my $display_checkout = sql_num($node->findvalue('./display_checkout'));
+        my $category_code = sql_str($node->findvalue('./category_code'));
+        my $class = sql_str($node->findvalue('./class'));
+        $query = "INSERT INTO borrower_attribute_types (code,description,repeatable,opac_display,staff_searchable,authorised_value_category,display_checkout,category_code,class) VALUES ($code,$description,$repeatable,$opac_display,$staff_searchable,$authorised_value_category,$display_checkout,$category_code,$class)";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+
+    foreach my $node ($dom->findnodes('/authorised_value_categories/value')) {
+        my $category_name = sql_str($node->nodeValue);
+        $query = "INSERT INTO authorised_value_categories (category_name) VALUES ($category_name)";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+
+    foreach my $node ($dom->findnodes('/authorised_values/value')) {
+        my $category = sql_str($node->findvalue('./category'));
+        my $authvalue = sql_str($node->findvalue('./authvalue'));
+        my $lib = sql_str($node->findvalue('./lib'));
+        my $lib_opac = sql_str($node->findvalue('./lib_opac'));
+        my $image_url = sql_str($node->findvalue('./image_url'));
+        $query = "INSERT INTO authorised_values (category,authvalue,lib,lib_opac,image_url) VALUES ($category,$authvalue,$lib,$lib_opac,$image_url)";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+
+    return;
+}
+
 
 sub restore_calendar {
     my $dbh = shift;

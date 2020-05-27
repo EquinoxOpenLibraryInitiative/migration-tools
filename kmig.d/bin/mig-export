@@ -27,7 +27,7 @@ $dbh->{mysql_enable_utf8mb4} = 1;
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } #borrowerattributes
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","borrowerattributes","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 my $timestamp = create_timestamp();
@@ -42,7 +42,7 @@ foreach my $backup (@taglist) {
     if ($backup eq 'borrowerattributes') {
         $backupfile = $MIGGITDIR . 'borrower_attributes' . '.' . $timestamp . '.xml';
         print "Backing up $backupfile ... \n";
-	backup_borrower_attributes($dbh,$backupfile);
+	    backup_borrower_attributes($dbh,$backupfile);
     }
     if ($backup eq 'calendar') {
         $backupfile = $MIGGITDIR . 'calendar' . '.' . $timestamp . '.xml';
