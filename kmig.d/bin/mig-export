@@ -40,7 +40,7 @@ foreach my $backup (@taglist) {
         backup_authorisedvalues($dbh,$backupfile);
     }
     if ($backup eq 'borrowerattributes') {
-        $backupfile = $MIGGITDIR . 'borrower_attributes' . '.' . $timestamp . '.xml';
+        $backupfile = $MIGGITDIR . 'borrowerattributes' . '.' . $timestamp . '.xml';
         print "Backing up $backupfile ... \n";
 	    backup_borrower_attributes($dbh,$backupfile);
     }
