@@ -27,7 +27,7 @@ $dbh->{mysql_enable_utf8mb4} = 1;
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","borrowerattributes","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","budgets","borrowerattributes","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 my $timestamp = create_timestamp();
@@ -39,10 +39,20 @@ foreach my $backup (@taglist) {
         print "Backing up $backupfile ... \n";
         backup_authorisedvalues($dbh,$backupfile);
     }
+    if ($backup eq 'booksellers') {
+        $backupfile = $MIGGITDIR . 'booksellers' . '.' . $timestamp . '.xml';
+        print "Backing up $backupfile ... \n";
+        backup_booksellers($dbh,$backupfile);
+    }
     if ($backup eq 'borrowerattributes') {
         $backupfile = $MIGGITDIR . 'borrowerattributes' . '.' . $timestamp . '.xml';
         print "Backing up $backupfile ... \n";
 	    backup_borrower_attributes($dbh,$backupfile);
+    }
+    if ($backup eq 'budgets') {
+        $backupfile = $MIGGITDIR . 'budgets' . '.' . $timestamp . '.xml';
+        print "Backing up $backupfile ... \n";
+        backup_budgets($dbh,$backupfile);
     }
     if ($backup eq 'calendar') {
         $backupfile = $MIGGITDIR . 'calendar' . '.' . $timestamp . '.xml';
@@ -112,6 +122,52 @@ sub backup_authorisedvalues {
     return;
 }
 
+sub backup_booksellers {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('booksellers');
+    my $query = "SELECT name,address1,address2,address3,address4,phone,accountnumber,othersupplier,currency,booksellerfax,notes,bookselleremail,booksellerurl,postal,url,active,listprice,invoiceprice,gstreg,listincgst,invoiceincgst,tax_rate,discount,fax,deliverytime FROM aqbooksellers";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('value');
+        $xml->dataElement('name', $row[1]);
+        $xml->dataElement('address1', $row[2]);
+        $xml->dataElement('address2', $row[3]);
+        $xml->dataElement('address3', $row[4]);
+        $xml->dataElement('address4', $row[5]);
+        $xml->dataElement('phone', $row[6]);
+        $xml->dataElement('accountnumber', $row[7]);
+        $xml->dataElement('othersupplier', $row[8]);
+        $xml->dataElement('currency', $row[9]);
+        $xml->dataElement('booksellerfax', $row[10]);
+        $xml->dataElement('notes', $row[11]);
+        $xml->dataElement('bookselleremail', $row[12]);
+        $xml->dataElement('booksellerurl', $row[13]);
+        $xml->dataElement('postal', $row[14]);
+        $xml->dataElement('url', $row[15]);
+        $xml->dataElement('active', $row[16]);
+        $xml->dataElement('listprice', $row[17]);
+        $xml->dataElement('invoiceprice ', $row[18]);
+        $xml->dataElement('gstreg', $row[19]);
+        $xml->dataElement('listincgst', $row[20]);
+        $xml->dataElement('invoiceincgst', $row[21]);
+        $xml->dataElement('tax_rate', $row[22]);
+        $xml->dataElement('discount', $row[23]);
+        $xml->dataElement('fax ', $row[24]);
+        $xml->dataElement('deliverytime', $row[25]);
+        $xml->endTag('value');
+    }
+    $xml->endTag('booksellers');
+    $xml->end();
+    close $fh;
+    return;
+}
+
 sub backup_borrower_attributes {
     my $dbh = shift;
     my $backupfile = shift;
@@ -163,6 +219,75 @@ sub backup_borrower_attributes {
         $xml->endTag('value');
     }
     $xml->endTag('authorised_values');
+
+    $xml->endTag('document');
+    $xml->end();
+    close $fh;
+    return;
+}
+
+sub backup_budgets {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('document');
+
+    $xml->startTag('budgets');
+    my $query = 'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "aqbudgets"';
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    my @ai = $sth->fetchrow_array;
+    $xml->dataElement('autoincrement', $ai[0]);
+    $query = "SELECT budget_id,budget_parent_id,budget_code,budget_name,budget_branchcode,budget_amount,budget_encumb,budget_expend,budget_notes,timestamp,budget_period_id,sort1_authcat,sort2_authcat,budget_owner_id,budget_permission FROM aqbudgets";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('value');
+        $xml->dataElement('budget_id', $row[0]);
+        $xml->dataElement('budget_parent_id', $row[1]);
+        $xml->dataElement('budget_code', $row[2]);
+        $xml->dataElement('budget_name', $row[3]);
+        $xml->dataElement('budget_branchcode', $row[4]);
+        $xml->dataElement('budget_amount', $row[5]);
+        $xml->dataElement('budget_encumb', $row[6]);
+        $xml->dataElement('budget_expend', $row[7]);
+        $xml->dataElement('budget_notes', $row[8]);
+        $xml->dataElement('timestamp', $row[9]);
+        $xml->dataElement('budget_period_id', $row[10]);
+        $xml->dataElement('sort1_authcat', $row[11]);
+        $xml->dataElement('sort2_authcat', $row[12]);
+        $xml->dataElement('budget_owner_id', $row[13]);
+        $xml->dataElement('budget_permission', $row[14]);
+        $xml->endTag('value');
+    }
+    $xml->endTag('budgets');
+
+    $xml->startTag('budgetperiods');
+    $query = 'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "aqbudgetperiods"';
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    @ai = $sth->fetchrow_array;
+    $xml->dataElement('autoincrement', $ai[0]);
+    $query = "SELECT budget_period_id,budget_period_startdate,budget_period_enddate,budget_period_active,budget_period_description,budget_period_total,budget_period_locked,sort1_authcat,sort2_authcat FROM aqbudgetperiods";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('value');
+        $xml->dataElement('budget_period_id', $row[0]);
+        $xml->dataElement('budget_period_startdate', $row[1]);
+        $xml->dataElement('budget_period_enddate', $row[2]);
+        $xml->dataElement('budget_period_active', $row[3]);
+        $xml->dataElement('budget_period_description', $row[4]);
+        $xml->dataElement('budget_period_total', $row[5]);
+        $xml->dataElement('budget_period_locked', $row[6]);
+        $xml->dataElement('sort1_authcat', $row[7]);
+        $xml->dataElement('sort2_authcat', $row[8]);
+        $xml->endTag('value');
+    }
+    $xml->endTag('budgetperiods');
 
     $xml->endTag('document');
     $xml->end();

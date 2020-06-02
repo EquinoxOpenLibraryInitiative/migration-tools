@@ -29,7 +29,7 @@ $dbh->do('SET NAMES utf8mb4');
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","borrowerattributes","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","borrowerattributes","budgets","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 foreach my $restore (@taglist) {
@@ -40,11 +40,23 @@ foreach my $restore (@taglist) {
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_authorisedvalues($dbh,$restorefile); }
     }
+    if ($restore eq 'booksellers') {
+        my $timestamp = most_recent_single($MIGGITDIR,'booksellers');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'booksellers' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_booksellers($dbh,$restorefile); }
+    }
     if ($restore eq 'borrowerattributes') {
         my $timestamp = most_recent_single($MIGGITDIR,'borrowerattributes');
         if ($timestamp) { $restorefile = $MIGGITDIR . 'borrowerattributes' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_borrowerattributes($dbh,$restorefile); }
+    }
+    if ($restore eq 'budgets') {
+        my $timestamp = most_recent_single($MIGGITDIR,'budgets');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'budgets' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_budgets($dbh,$restorefile); }
     }
     if ($restore eq 'calendar') {
         my $timestamp = most_recent_single($MIGGITDIR,'calendar');
@@ -81,7 +93,7 @@ foreach my $restore (@taglist) {
         if ($timestamp) { $restorefile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_preferences($dbh,$restorefile); }
-        print "IMPORTANT : if you are changing system preferences you may need to run 'sudo systemctl restart apache2 memcached'\n\n";
+        print "IMPORTANT : if you are changing system preferences you may need to run 'sudo systemctl restart memcached'\n\n";
     }
     if ($restore eq 'reports') {
         my $timestamp = most_recent_single($MIGGITDIR,'reports');
@@ -141,6 +153,49 @@ sub restore_authorisedvalues {
     return;
 }
 
+sub restore_booksellers {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    my $query = "DELETE FROM aqbooksellers WHERE 1 = 1";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    foreach my $node ($dom->findnodes('/booksellers/value')) {
+        my $name = sql_str($node->findvalue('./name'));
+        my $address1 = sql_str($node->findvalue('./address1'));
+        my $address2 = sql_str($node->findvalue('./address2'));
+        my $address3 = sql_str($node->findvalue('./address3'));
+        my $address4 = sql_str($node->findvalue('./address4'));
+        my $phone = sql_str($node->findvalue('./phone'));
+        my $accountnumber = sql_str($node->findvalue('./accountnumber'));
+        my $othersupplier = sql_str($node->findvalue('./othersupplier'));
+        my $currency = sql_str_not_null($node->findvalue('./currency'));
+        my $booksellerfax = sql_str($node->findvalue('./booksellerfax'));
+        my $notes = sql_str($node->findvalue('./notes'));
+        my $bookselleremail = sql_str($node->findvalue('./bookselleremail'));
+        my $booksellerurl = sql_str($node->findvalue('./booksellerurl'));
+        my $postal = sql_str($node->findvalue('./postal'));
+        my $url = sql_str($node->findvalue('./url'));
+        my $active = sql_str($node->findvalue('./active'));
+        my $listprice = sql_str($node->findvalue('./listprice'));
+        my $invoiceprice  = sql_str($node->findvalue('./invoiceprice'));
+        my $gstreg = sql_num($node->findvalue('./gstreg'));
+        my $listincgst = sql_num($node->findvalue('./listincgst'));
+        my $invoiceincgst = sql_num($node->findvalue('./invoiceincgst'));
+        my $tax_rate = sql_num($node->findvalue('./tax_rate'));
+        my $discount = sql_num($node->findvalue('./discount'));
+        my $fax = sql_str($node->findvalue('./fax'));
+        my $deliverytime = sql_num($node->findvalue('./deliverytime'));
+        $query = "INSERT INTO aqbooksellers (name,address1,address2,address3,address4,phone,accountnumber,othersupplier,currency,booksellerfax,notes,bookselleremail,booksellerurl,postal,url,active,listprice,invoiceprice,gstreg,listincgst,invoiceincgst,tax_rate,discount,fax,deliverytime) VALUES ($name,$address1,$address2,$address3,$address4,$phone,$accountnumber,$othersupplier,$currency,$booksellerfax,$notes,$bookselleremail,$booksellerurl,$postal,$url,$active,$listprice,$invoiceprice,$gstreg,$listincgst,$invoiceincgst,$tax_rate,$discount,$fax,$deliverytime)";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+
+    return;
+}
 
 sub restore_borrowerattributes {
     my $dbh = shift;
@@ -196,6 +251,79 @@ sub restore_borrowerattributes {
     return;
 }
 
+sub restore_budgets {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    my $query = "DELETE FROM aqbudgets WHERE 1 = 1";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    
+    $query = "DELETE FROM aqbudgetperiods WHERE 1 = 1";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    my $budget_ai;
+    my $budgetperiod_ai;
+
+    foreach my $node ($dom->findnodes('/document/budgets')) {
+        $budget_ai = sql_num($node->findvalue('./autoincrement'));
+    }
+
+    foreach my $node ($dom->findnodes('/document/budgetperiods')) {
+        $budgetperiod_ai = sql_num($node->findvalue('./autoincrement'));
+    }
+
+    $query = "ALTER TABLE aqbudgets AUTO_INCREMENT = $budget_ai";
+    $sth = $dbh->prepare($query);
+    $sth->execute();    
+
+    $query = "ALTER TABLE aqbudgetperiods AUTO_INCREMENT = $budgetperiod_ai";
+    $sth = $dbh->prepare($query);
+    $sth->execute();    
+
+    foreach my $node ($dom->findnodes('/document/budgetperiods/value')) {
+        my $budget_period_id = sql_num($node->findvalue('./budget_period_id'));
+        my $budget_period_startdate = sql_str($node->findvalue('./budget_period_startdate'));
+        my $budget_period_enddate = sql_str($node->findvalue('./budget_period_enddate'));
+        my $budget_period_active = sql_str($node->findvalue('./budget_period_active'));
+        my $budget_period_description = sql_str($node->findvalue('./budget_period_description'));
+        my $budget_period_total = sql_num($node->findvalue('./budget_period_total'));
+        my $budget_period_locked = sql_num($node->findvalue('./budget_period_locked'));
+        my $sort1_authcat = sql_str($node->findvalue('./sort1_authcat'));
+        my $sort2_authcat = sql_str($node->findvalue('./sort2_authcat'));
+        $query = "INSERT INTO aqbudgetperiods (budget_period_id,budget_period_startdate,budget_period_enddate,budget_period_active,budget_period_description,budget_period_total,budget_period_locked,sort1_authcat,sort2_authcat) VALUES ($budget_period_id,$budget_period_startdate,$budget_period_enddate,$budget_period_active,$budget_period_description,$budget_period_total,$budget_period_locked,$sort1_authcat,$sort2_authcat)";
+        print "$query\n";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+
+    #note that at this point we are not loading the budget owner, it's nullable and not 100% clear that it's the borrower
+    #and nothing to test with in initial sample
+    foreach my $node ($dom->findnodes('/document/budgets/value')) {
+        my $budget_id = sql_num($node->findvalue('./budget_id'));
+        my $budget_parent_id = sql_num($node->findvalue('./budget_parent_id'));
+        my $budget_code = sql_str($node->findvalue('./budget_code'));
+        my $budget_name = sql_str($node->findvalue('./budget_name'));
+        my $budget_branchcode = sql_str_not_null($node->findvalue('./budget_branchcode'));
+        my $budget_amount = sql_num($node->findvalue('./budget_amount'));
+        my $budget_encumb = sql_num($node->findvalue('./budget_encumb'));
+        my $budget_expend = sql_num($node->findvalue('./budget_expend'));
+        my $budget_notes = sql_str_not_null($node->findvalue('./budget_notes'));
+        my $timestamp = sql_str($node->findvalue('./timestamp'));
+        my $budget_period_id = sql_num($node->findvalue('./budget_period_id'));
+        my $sort1_authcat = sql_str_not_null($node->findvalue('./sort1_authcat'));
+        my $sort2_authcat = sql_str_not_null($node->findvalue('./sort2_authcat'));
+        my $budget_permission = sql_num($node->findvalue('./budget_permission'));
+        $query = "INSERT INTO aqbudgets (budget_id,budget_parent_id,budget_code,budget_name,budget_branchcode,budget_amount,budget_encumb,budget_expend,budget_notes,timestamp,budget_period_id,sort1_authcat,sort2_authcat,budget_permission) VALUES ($budget_id,$budget_parent_id,$budget_code,$budget_name,$budget_branchcode,$budget_amount,$budget_encumb,$budget_expend,$budget_notes,$timestamp,$budget_period_id,$sort1_authcat,$sort2_authcat,$budget_permission)";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+
+    return;
+}
 
 sub restore_calendar {
     my $dbh = shift;
@@ -318,6 +446,7 @@ sub restore_itemtypes {
     my $sth = $dbh->prepare($query);
     $sth->execute();
 
+
     $query = "DELETE FROM authorised_values WHERE category = 'ITEMTYPECAT'";
     $sth = $dbh->prepare($query);
     $sth->execute();
@@ -378,7 +507,6 @@ sub restore_itemtypes {
         my $translation = sql_str($node->findvalue('./translation'));
         my $query = "INSERT INTO localization (entity,code,lang,translation) VALUES ($entity,$code,$lang,$translation)";
         $sth = $dbh->prepare($query);
-        print "$query\n";
         $sth->execute();
     }
 
@@ -584,6 +712,13 @@ sub sql_str {
     if (!defined $str or $str eq '') { return 'NULL'; }
     $str =~ s/'/''/g;
     $str = '\'' . $str . '\'';
+    return $str;
+}
+
+sub sql_str_not_null {
+    my $str = shift;
+    $str = sql_str($str);
+    if (!defined $str or $str eq 'NULL') { return "''"; }
     return $str;
 }
 
