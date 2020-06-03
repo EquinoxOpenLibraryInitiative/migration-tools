@@ -455,7 +455,7 @@ sub restore_itemtypes {
     $sth = $dbh->prepare($query);
     $sth->execute();
 
-    foreach my $node ($dom->findnodes('/authorised_values/value')) {
+    foreach my $node ($dom->findnodes('/document/authorised_values/value')) {
         my $category = sql_str($node->findvalue('./category'));
         my $authvalue = sql_str($node->findvalue('./authvalue'));
         my $lib = sql_str($node->findvalue('./lib'));
@@ -466,7 +466,7 @@ sub restore_itemtypes {
         $sth->execute();
     }
 
-    foreach my $node ($dom->findnodes('/itemtypes/value')) {
+    foreach my $node ($dom->findnodes('/document/itemtypes/value')) {
         my $itemtype = sql_str($node->findvalue('./itemtype'));
         my $description = sql_str($node->findvalue('./description'));
         my $rentalcharge = sql_str($node->findvalue('./rentalcharge'));
