@@ -446,12 +446,15 @@ sub restore_itemtypes {
     my $sth = $dbh->prepare($query);
     $sth->execute();
 
-
     $query = "DELETE FROM authorised_values WHERE category = 'ITEMTYPECAT'";
     $sth = $dbh->prepare($query);
     $sth->execute();
 
     $query = "DELETE FROM localization WHERE entity = 'itemtypes'";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    $query = "DELETE FROM itemtypes WHERE 1 = 1";
     $sth = $dbh->prepare($query);
     $sth->execute();
 
