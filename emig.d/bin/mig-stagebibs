@@ -22,11 +22,11 @@ Takes a numeric value and set the x_source of the bib record to that.  Defaults 
 Sets an x_source value on the staging table to the one supplied instead of the 
 default of none.
 
---auth foo.mrc.xml
+--auth 
 
 This will load bibs into the authority_record_entry_legacy.
 
---serial foo.mrc.xml
+--serial
 
 This will load bibs into the serial_record_entry_legacy.
 
