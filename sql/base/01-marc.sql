@@ -1,3 +1,47 @@
+DROP FUNCTION IF EXISTS migration_tools.strip_subfield(TEXT,CHAR(3),CHAR(1));
+CREATE OR REPLACE FUNCTION migration_tools.strip_subfield(marc TEXT, tag CHAR(3), subfield CHAR(1))
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $tag = shift;
+my $subfield = shift;
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @fields = $marc_xml->field($tag);
+return $marc_xml->as_xml_record() unless @fields;
+
+$marc_xml->delete_fields(@fields);
+
+foreach my $f (@fields) {
+    $f->delete_subfield(code => '0');
+}
+$marc_xml->insert_fields_ordered(@fields);
+
+return $marc_xml->as_xml_record();
+
+$function$;
+
+
 CREATE OR REPLACE FUNCTION migration_tools.set_leader (TEXT, INT, TEXT) RETURNS TEXT AS $$
   my ($marcxml, $pos, $value) = @_;
 
