@@ -103,6 +103,8 @@ sub backup_authorisedvalues {
     open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
     my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
     $xml->xmlDecl('UTF-8');
+    $xml->startTag('document');
+
     $xml->startTag('authorisedvalues');
     my $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values WHERE category != 'ITEMTYPECAT'";
     my $sth = $dbh->prepare($query);
@@ -117,6 +119,19 @@ sub backup_authorisedvalues {
         $xml->endTag('value');        
     }
     $xml->endTag('authorisedvalues');
+
+    $xml->startTag('categories');
+    $query = "SELECT category_name FROM authorised_value_categories WHERE category_name != 'ITEMTYPECAT'";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('value');
+        $xml->dataElement('name', $row[0]);
+        $xml->endTag('value');
+    }
+    $xml->endTag('categories');
+
+    $xml->endTag('document');
     $xml->end();
     close $fh;
     return;

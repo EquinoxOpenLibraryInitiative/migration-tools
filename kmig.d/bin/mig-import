@@ -140,7 +140,18 @@ sub restore_authorisedvalues {
     my $sth = $dbh->prepare($query);
     $sth->execute();
 
-    foreach my $node ($dom->findnodes('//value')) {
+    $query = "DELETE FROM authorised_value_categories WHERE category_name != 'ITEMTYPECAT'";
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    foreach my $node ($dom->findnodes('/document/categories/value')) {
+        my $name = sql_str_not_null($node->findvalue('./name'));
+        $query = "INSERT INTO authorised_value_categories (category_name) VALUES ($name)";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+
+    foreach my $node ($dom->findnodes('/document/authorisedvalues/value')) {
         my $category = sql_str($node->findvalue('./category'));
         my $authorised_value = sql_str($node->findvalue('./authorised_value'));
         my $lib = sql_str($node->findvalue('./lib'));
