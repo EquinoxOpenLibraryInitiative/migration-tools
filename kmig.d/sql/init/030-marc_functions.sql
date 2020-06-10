@@ -24,4 +24,54 @@ CREATE FUNCTION
 $
 DELIMITER ;
 
+-- pass it the biblionumber and the 003 value (MARC org code) and it'll set the 003
+-- to the passed value for the referenced bib
+DROP FUNCTION IF EXISTS m_update_003;
+DELIMITER $
+CREATE FUNCTION
+   m_update_003(bnumber INTEGER, marc_org_code TEXT COLLATE utf8mb4_unicode_ci)
+   RETURNS BOOLEAN
+   DETERMINISTIC
+    BEGIN
+        DECLARE ldr TEXT COLLATE utf8mb4_unicode_ci DEFAULT NULL;
+        DECLARE tag003_count INT DEFAULT NULL;
+        DECLARE marcxml TEXT COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 
+        SELECT metadata INTO marcxml FROM biblio_metadata WHERE biblionumber = bnumber;
+        SELECT ExtractValue(metadata,'//leader') INTO ldr FROM biblio_metadata WHERE biblionumber = bnumber;
+        SELECT ExtractValue(metadata,'count(//controlfield[@tag="003"])') INTO tag003_count FROM biblio_metadata WHERE biblionumber = bnumber;
+
+        IF NULLIF(ldr,'') IS NULL THEN -- we need a leader
+            RETURN FALSE;
+        END IF;
+
+        IF tag003_count > 1 THEN -- we need one or zero of these; it shouldn't be repeatable
+            RETURN FALSE;
+        END IF;
+
+        -- handle 003 (insert or edit)
+        IF tag003_count = 0 THEN
+            SET marcxml = UpdateXML(
+                marcxml,
+                '//leader',
+                CONCAT(
+                    '<leader>',ldr,'</leader>\n',
+                    '  <controlfield tag="003">',marc_org_code,'</controlfield>'
+                )
+            );
+        ELSE
+            SET marcxml = UpdateXML(
+                marcxml,
+                '//controlfield[@tag="003"]',
+                CONCAT(
+                    '<controlfield tag="003">',marc_org_code,'</controlfield>'
+                )
+            );
+        END IF;
+
+        UPDATE biblio_metadata SET metadata = marcxml where biblionumber = bnumber;
+        RETURN TRUE;
+
+    END
+$
+DELIMITER ;
