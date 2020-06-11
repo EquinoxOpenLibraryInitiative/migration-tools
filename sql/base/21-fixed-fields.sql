@@ -473,3 +473,38 @@ my $zzs_str;
 return $marc->as_xml_record;
 $function$;
 
+DROP FUNCTION IF EXISTS migration_tools.modify_biblio_fixed_fields (BIGINT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.modify_biblio_fixed_fields (bib_id BIGINT, xcode TEXT)
+ RETURNS BOOLEAN
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    r           TEXT;
+    xitype      CHAR(1);
+    xiform      CHAR(1);
+    xphy        CHAR(1);
+    xphyv       CHAR(1);
+    xphyp       SMALLINT;
+    xbiblevel   CHAR(1);
+    xiform_exclude      CHAR(1)[];
+    xsrform_exclude     CHAR(1)[];
+    yiform_exclude      TEXT;
+    ysrform_exclude     TEXT;
+BEGIN
+    SELECT itype, iform, phy, phyv, phyp, biblevel, iform_exclude, srform_exclude FROM migration_tools.search_format_map WHERE code = xcode
+        INTO xitype, xiform, xphy, xphyv, xphyp, xbiblevel, xiform_exclude, xsrform_exclude;
+    IF xiform_exclude IS NOT NULL THEN
+        yiform_exclude := ARRAY_TO_STRING(xiform_exclude,',');
+    ELSE
+        yiform_exclude := '';
+    END IF;
+    IF xsrform_exclude IS NOT NULL THEN
+        ysrform_exclude := ARRAY_TO_STRING(ysrform_exclude,',');
+    ELSE
+        ysrform_exclude := '';
+    END IF;
+    SELECT migration_tools.modify_fixed_fields(marc,xcode,xitype,xiform,xphy,xphyv,xphyp,xbiblevel,yiform_exclude,ysrform_exclude) FROM biblio.record_entry WHERE id = bib_id INTO r;
+    UPDATE biblio.record_entry SET marc = r WHERE id = bib_id;
+    RETURN TRUE;
+END;
+$function$;
