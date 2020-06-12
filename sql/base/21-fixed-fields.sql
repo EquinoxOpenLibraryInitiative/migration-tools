@@ -343,7 +343,7 @@ BEGIN
 		yiform_exclude := '';
 	END IF;
 	IF xsrform_exclude IS NOT NULL THEN 
-		ysrform_exclude := ARRAY_TO_STRING(ysrform_exclude,',');
+		ysrform_exclude := ARRAY_TO_STRING(xsrform_exclude,',');
 	ELSE
 		ysrform_exclude := '';
 	END IF;
@@ -499,7 +499,7 @@ BEGIN
         yiform_exclude := '';
     END IF;
     IF xsrform_exclude IS NOT NULL THEN
-        ysrform_exclude := ARRAY_TO_STRING(ysrform_exclude,',');
+        ysrform_exclude := ARRAY_TO_STRING(xsrform_exclude,',');
     ELSE
         ysrform_exclude := '';
     END IF;
