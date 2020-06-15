@@ -75,3 +75,41 @@ CREATE FUNCTION
     END
 $
 DELIMITER ;
+
+-- Pass it the biblionumber, tag number, subfield, value and it'll add a MARC field to the end of the record accordingly
+-- Be sure to escape the value if needed
+-- Example: SELECT m_insert_tag(1,'909','a','foo');
+DROP FUNCTION IF EXISTS m_insert_tag;
+DELIMITER $
+CREATE FUNCTION
+   m_insert_tag(bnumber INTEGER, tag TEXT COLLATE utf8mb4_unicode_ci, subfield TEXT COLLATE utf8mb4_unicode_ci, value TEXT COLLATE utf8mb4_unicode_ci)
+   RETURNS BOOLEAN
+   DETERMINISTIC
+    BEGIN
+        DECLARE marcxml TEXT COLLATE utf8mb4_unicode_ci DEFAULT NULL;
+
+        SELECT metadata INTO marcxml FROM biblio_metadata WHERE biblionumber = bnumber;
+
+        IF NULLIF(marcxml,'') IS NULL THEN -- whaaa?
+            RETURN FALSE;
+        END IF;
+
+        SET marcxml = replace(marcxml,'</record>',
+            CONCAT(
+                 '  <datafield tag="'
+                ,tag
+                ,'">\n    <subfield code="'
+                ,subfield
+                ,'">'
+                ,value
+                ,'</subfield>\n  </datafield>\n'
+                ,'</record>'
+            )
+        );
+
+        UPDATE biblio_metadata SET metadata = marcxml where biblionumber = bnumber;
+        RETURN TRUE;
+
+    END
+$
+DELIMITER ;
