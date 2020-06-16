@@ -682,8 +682,8 @@ sub restore_preferences {
     my $dom = $parser->parse_file($restore_file);
 
     foreach my $node ($dom->findnodes('//pref')) {
-	my $variable = domain_shift(sql_str($node->findvalue('./variable')));
-        my $value = domain_shift(sql_str($node->findvalue('./value')));
+		my $variable = domain_shift(sql_str_not_null($node->findvalue('./variable')));
+        my $value = domain_shift(sql_str_not_null($node->findvalue('./value')));
         my $query = "UPDATE systempreferences SET value = $value WHERE variable = $variable";
         my $sth = $dbh->prepare($query);
         $sth->execute();
