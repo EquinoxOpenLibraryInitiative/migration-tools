@@ -29,7 +29,7 @@ $dbh->do('SET NAMES utf8mb4');
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","borrowerattributes","budgets","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","borrowerattributes","budgets","calendar","circrules","itemtypes","letters","libraries","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 foreach my $restore (@taglist) {
@@ -75,6 +75,12 @@ foreach my $restore (@taglist) {
         if ($timestamp) { $restorefile = $MIGGITDIR . 'itemtypes' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_itemtypes($dbh,$restorefile); }
+    }
+    if ($restore eq 'letters') {
+        my $timestamp = most_recent_single($MIGGITDIR,'letters');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'letters' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_letters($dbh,$restorefile); }
     }
     if ($restore eq 'libraries') {
         my $timestamp = most_recent_single($MIGGITDIR,'libraries');
@@ -520,6 +526,34 @@ sub restore_itemtypes {
         my $lang = sql_str($node->findvalue('./lang'));
         my $translation = sql_str($node->findvalue('./translation'));
         my $query = "INSERT INTO localization (entity,code,lang,translation) VALUES ($entity,$code,$lang,$translation)";
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+    }
+
+    return;
+}
+
+sub restore_letters {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    my $query = "DELETE FROM letter WHERE 1 = 1";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+
+    foreach my $node ($dom->findnodes('/letters/letter')) {
+        my $module = sql_str($node->findvalue('./module'));
+        my $code = sql_str($node->findvalue('./code'));
+        my $branchcode = sql_str_not_null($node->findvalue('./branchcode'));
+        my $name = sql_str($node->findvalue('./name'));
+        my $is_html = sql_num($node->findvalue('./is_html'));
+        my $title = sql_str($node->findvalue('./title'));
+        my $content = sql_str($node->findvalue('./content'));
+        my $message_transport_type = sql_str($node->findvalue('./message_transport_type'));
+        my $lang = sql_str($node->findvalue('./lang'));
+        $query = "INSERT INTO letter (module,code,branchcode,name,is_html,title,content,message_transport_type,lang) VALUES ($module,$code,$branchcode,$name,$is_html,$title,$content,$message_transport_type,$lang)";
         $sth = $dbh->prepare($query);
         $sth->execute();
     }

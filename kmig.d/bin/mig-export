@@ -27,7 +27,7 @@ $dbh->{mysql_enable_utf8mb4} = 1;
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","budgets","borrowerattributes","calendar","circrules","itemtypes","libraries","patrontypes","preferences","reports","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","budgets","borrowerattributes","calendar","circrules","itemtypes","letters","libraries","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 my $timestamp = create_timestamp();
@@ -68,6 +68,11 @@ foreach my $backup (@taglist) {
         $backupfile = $MIGGITDIR . 'itemtypes' . '.' . $timestamp . '.xml'; 
         print "Backing up $backupfile ... \n";
         backup_itemtypes($dbh,$backupfile);
+    }
+    if ($backup eq 'letters') {
+        $backupfile = $MIGGITDIR . 'letters' . '.' . $timestamp . '.xml';
+        print "Backing up $backupfile ... \n";
+        backup_letters($dbh,$backupfile);
     }
     if ($backup eq 'libraries') {
         $backupfile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.xml';
@@ -492,6 +497,38 @@ sub backup_itemtypes {
     $xml->endTag('localizations');
 
     $xml->endTag('document');
+    $xml->end();
+    close $fh;
+    return;
+}
+
+sub backup_letters {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('letters');
+
+    my $query = "SELECT module,code,branchcode,name,is_html,title,content,message_transport_type,lang FROM letter";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('letter');
+        $xml->dataElement('module',$row[0]);
+        $xml->dataElement('code',$row[1]);
+        $xml->dataElement('branchcode',$row[2]);
+        $xml->dataElement('name',$row[3]);
+        $xml->dataElement('is_html',$row[4]);
+        $xml->dataElement('title',$row[5]);
+        $xml->dataElement('content',$row[6]);
+        $xml->dataElement('message_transport_type',$row[7]);
+        $xml->dataElement('lang',$row[8]);
+        $xml->endTag('letter');
+    }
+
+    $xml->endTag('letters');
     $xml->end();
     close $fh;
     return;
