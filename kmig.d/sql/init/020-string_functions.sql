@@ -41,3 +41,24 @@ CREATE FUNCTION
 $
 DELIMITER ;
 
+DROP FUNCTION IF EXISTS m_remove_nonalpha;
+delimiter $
+CREATE FUNCTION m_remove_nonalpha( s CHAR(255) ) RETURNS CHAR(255) DETERMINISTIC
+    BEGIN
+      DECLARE var1, length SMALLINT DEFAULT 1;
+      DECLARE result CHAR(255) DEFAULT '';
+      DECLARE ch CHAR(1);
+      SET length  = CHAR_LENGTH( s );
+      REPEAT
+        BEGIN
+          SET ch = MID( s, var1, 1 );
+          IF ch REGEXP '[[:alnum:]]' THEN
+            SET result =CONCAT(result ,ch);
+          END IF;
+          SET var1 = var1 + 1;
+        END;
+      UNTIL var1 >length  END REPEAT;
+      RETURN result ;
+    END 
+  $
+  DELIMITER ;
