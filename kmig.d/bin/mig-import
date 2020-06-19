@@ -25,12 +25,15 @@ my $dbh = KMig::db_connect();
 #$dbh->{mysql_enable_utf8mb4} = 1;
 $dbh->do('SET NAMES utf8mb4');
 
-#to do check for array passed and if not present then use tags 
+my $mig_path = abs_path($0);
+$mig_path =~ s|[^/]+$||;
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
 if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","borrowerattributes","budgets","calendar","circrules","itemtypes","letters","libraries","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
+
+my @errors;
 
 foreach my $restore (@taglist) {
     my $restorefile;
@@ -68,7 +71,7 @@ foreach my $restore (@taglist) {
         my $timestamp = most_recent_single($MIGGITDIR,'circrules');
         if ($timestamp) { $restorefile = $MIGGITDIR . 'circrules' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
-        if ($restorefile) { restore_circrules($dbh,$restorefile); }
+        if ($restorefile) { @errors = restore_circrules($dbh,$restorefile,@errors); }
     }
     if ($restore eq 'itemtypes') {
         my $timestamp = most_recent_single($MIGGITDIR,'itemtypes');
@@ -111,12 +114,49 @@ foreach my $restore (@taglist) {
         my $timestamp = most_recent_single($MIGGITDIR,'smsproviders');
         if ($timestamp) { $restorefile = $MIGGITDIR . 'smsproviders' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
-        if ($restorefile) { restore_smsproviders($dbh,$restorefile); }
+        if ($restorefile) { restore_smsproviders($dbh,$restorefile,$mig_path); }
     }
 }
 
 print "Done.\n";
 
+foreach my $e (@errors) { print "$e\n"; }
+
+# ---------------------------
+
+sub check_category {
+    my $dbh = shift;
+    my $value = shift;
+	my $query;
+
+    if ($value and $value ne 'NULL') {
+    	$query = "SELECT EXISTS(SELECT 1 FROM categories WHERE categorycode = $value)";
+	} else {
+		return 1;
+	}
+	print "$query\n";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    my @sqlresult = $sth->fetchrow_array;
+    my $result = pop @sqlresult;
+    return $result;
+}
+
+sub check_itemtype {
+    my $dbh = shift;
+    my $value = shift;
+	my $query;
+    if ($value and $value ne 'NULL') {
+        $query = "SELECT EXISTS(SELECT 1 FROM itemtypes WHERE itemtype = $value)";
+    } else {
+		return 1;
+    }
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    my @sqlresult = $sth->fetchrow_array;
+    my $result = pop @sqlresult;
+    return $result;
+}
 
 sub most_recent_single {
     my $MGIGITDIR = shift;
@@ -144,17 +184,20 @@ sub restore_authorisedvalues {
 
     my $query = "DELETE FROM authorised_values WHERE category != 'ITEMTYPECAT'";
     my $sth = $dbh->prepare($query);
-    $sth->execute();
+    print "$query\n"; 
+   #$sth->execute();
 
     $query = "DELETE FROM authorised_value_categories WHERE category_name != 'ITEMTYPECAT'";
     $sth = $dbh->prepare($query);
-    $sth->execute();
+    print "$query\n";
+    #$sth->execute();
 
     foreach my $node ($dom->findnodes('/document/categories/value')) {
         my $name = sql_str_not_null($node->findvalue('./name'));
         $query = "INSERT INTO authorised_value_categories (category_name) VALUES ($name)";
         $sth = $dbh->prepare($query);
-        $sth->execute();
+        print "$query\n";
+        #$sth->execute();
     }
 
     foreach my $node ($dom->findnodes('/document/authorisedvalues/value')) {
@@ -165,7 +208,8 @@ sub restore_authorisedvalues {
         my $imageurl = sql_str($node->findvalue('./imageurl'));
         $query = "INSERT INTO authorised_values (category,authorised_value,lib,lib_opac,imageurl) VALUES ($category,$authorised_value,$lib,$lib_opac,$imageurl)";
         $sth = $dbh->prepare($query);
-        $sth->execute();
+         print "$query\n";
+        #$sth->execute();
     }
     return;
 }
@@ -387,9 +431,11 @@ sub restore_calendar {
 sub restore_circrules {
     my $dbh = shift;
     my $restore_file = shift;
+    my @errors = shift;
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
- 
+    my $error;
+	my $check; 
     #order of operations - clean out circ_rules, then issuingrules; restore issuingrules then circ_rules 
 
     my $query = "DELETE FROM circulation_rules WHERE 1 = 1";
@@ -434,6 +480,18 @@ sub restore_circrules {
         my $opacitemholds = sql_str($node->findvalue('./opacitemholds'));
         my $article_requests = sql_str($node->findvalue('./article_requests'));
         my $note = sql_str($node->findvalue('./note'));
+		$check = check_itemtype($dbh,$itemtype);
+        if ($check == 0 ) {
+            $error = "restore_circrules: issing rules rules itemtype $itemtype was not valid";
+            push @errors, $error;
+            next;
+        }
+		$check = check_category($dbh,$categorycode);
+        if ($check == 0 ) {
+            $error = "restore_circrules: issuing rules rules category $categorycode was not valid";
+            push @errors, $error;
+            next;
+        }
         $query = "INSERT INTO issuingrules (categorycode,itemtype,restrictedtype,rentaldiscount,reservecharge,fine,finedays,maxsuspensiondays,suspension_chargeperiod,firstremind,chargeperiod,chargeperiod_charge_at,accountsent,issuelength,lengthunit,hardduedate,hardduedatecompare,renewalsallowed,renewalperiod,norenewalbefore,auto_renew,no_auto_renewal_after,no_auto_renewal_after_hard_limit,reservesallowed,holds_per_record,holds_per_day,branchcode,overduefinescap,cap_fine_to_replacement_price,onshelfholds,opacitemholds,article_requests,note) VALUES ($categorycode,$itemtype,$restrictedtype,$rentaldiscount,$reservecharge,$fine,$finedays,$maxsuspensiondays,$suspension_chargeperiod,$firstremind,$chargeperiod,$chargeperiod_charge_at,$accountsent,$issuelength,$lengthunit,$hardduedate,$hardduedatecompare,$renewalsallowed,$renewalperiod,$norenewalbefore,$auto_renew,$no_auto_renewal_after,$no_auto_renewal_after_hard_limit,$reservesallowed,$holds_per_record,$holds_per_day,$branchcode,$overduefinescap,$cap_fine_to_replacement_price,$onshelfholds,$opacitemholds,$article_requests,$note)";
         $sth = $dbh->prepare($query);
         $sth->execute();
@@ -445,12 +503,26 @@ sub restore_circrules {
         my $itemtype = sql_str($node->findvalue('./itemtype'));
         my $rule_name = sql_str($node->findvalue('./rule_name'));
         my $rule_value = sql_str($node->findvalue('./rule_value'));
+
+		$check = check_itemtype($dbh,$itemtype);
+        if ($check == 0 ) { 
+            $error = "restore_circrules: circulation rules rules itemtype $itemtype was not valid"; 
+            push @errors, $error;
+            next; 
+        }
+		$check = check_category($dbh,$categorycode);
+        if ($check == 0 ) { 
+            $error = "restore_circrules: circulation rules rules category $categorycode was not valid";
+            push @errors, $error;
+            next; 
+        }
+
         $query = "INSERT INTO circulation_rules (branchcode,categorycode,itemtype,rule_name,rule_value) VALUES ($branchcode,$categorycode,$itemtype,$rule_name,$rule_value)";
         $sth = $dbh->prepare($query);
         $sth->execute();
     }
-
-    return;
+     
+    return @errors;
 }
 
 sub restore_itemtypes {
@@ -731,12 +803,21 @@ sub restore_reports {
 sub restore_smsproviders {
     my $dbh = shift;
     my $restore_file = shift;
+    my $migpath = shift;
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
     my $query = "DELETE FROM sms_providers WHERE 1 = 1";
     my $sth = $dbh->prepare($query);
     $sth->execute();
+
+    my $p = 0;
+    foreach my $node ($dom->findnodes('//provider')) { $p++; }
+
+    if ($p == 0) {
+        my $failover_file = find_xml('smsproviders.xml',$migpath);        
+        $dom = $parser->parse_file($failover_file);        
+    }
 
     foreach my $node ($dom->findnodes('//provider')) {
         my $name = sql_str($node->findvalue('./name'));
@@ -780,6 +861,22 @@ sub abort {
     print STDERR "$0: $msg", "\n";
     print_usage();
     exit 1;
+}
+
+sub find_xml {
+    my $reports_xml = shift;
+    my $mig_path = shift;
+
+    if ($reports_xml =~ m/\//) { return $reports_xml; }
+
+    my $mig_test_file =  $mig_path . '/../xml/' . $reports_xml;
+    my $working_test_dir = getcwd();
+    my $working_test_file = $working_test_dir . '/' . $reports_xml;
+
+    if (-e $mig_test_file) { return $mig_test_file; }
+    if (-e $working_test_file) { return $working_test_file; }
+
+    return undef;
 }
 
 sub print_usage {
