@@ -309,31 +309,18 @@ sub restore_budgets {
     my $dom = $parser->parse_file($restore_file);
 
     sql_noresult($dbh,"DELETE FROM aqbudgets WHERE 1 = 1");
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
-    
     sql_noresult($dbh,"DELETE FROM aqbudgetperiods WHERE 1 = 1");
-    $sth = $dbh->prepare($query);
-    $sth->execute();
 
     my $budget_ai;
     my $budgetperiod_ai;
-
     foreach my $node ($dom->findnodes('/document/budgets')) {
         $budget_ai = sql_num($node->findvalue('./autoincrement'));
     }
-
     foreach my $node ($dom->findnodes('/document/budgetperiods')) {
         $budgetperiod_ai = sql_num($node->findvalue('./autoincrement'));
     }
-
-    $query = "ALTER TABLE aqbudgets AUTO_INCREMENT = $budget_ai";
-    $sth = $dbh->prepare($query);
-    $sth->execute();    
-
-    $query = "ALTER TABLE aqbudgetperiods AUTO_INCREMENT = $budgetperiod_ai";
-    $sth = $dbh->prepare($query);
-    $sth->execute();    
+    sql_noresult($dbh,"ALTER TABLE aqbudgets AUTO_INCREMENT = $budget_ai");
+    sql_noresult($dbh,"ALTER TABLE aqbudgetperiods AUTO_INCREMENT = $budgetperiod_ai");
 
     foreach my $node ($dom->findnodes('/document/budgetperiods/value')) {
         my $budget_period_id = sql_num($node->findvalue('./budget_period_id'));
