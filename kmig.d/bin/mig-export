@@ -27,7 +27,7 @@ $dbh->{mysql_enable_utf8mb4} = 1;
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","budgets","borrowerattributes","calendar","circrules","itemtypes","letters","libraries","patrontypes","preferences","reports","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("authorisedvalues","booksellers","budgets","borrowerattributes","calendar","circrules","itemtypes","letters","libraries","messages","patrontypes","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 my $timestamp = create_timestamp();
@@ -78,6 +78,11 @@ foreach my $backup (@taglist) {
         $backupfile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.xml';
         print "Backing up $backupfile ... \n";
         backup_libraries($dbh,$backupfile);
+    }
+    if ($backup eq 'messages') {
+        $backupfile = $MIGGITDIR . 'messages' . '.' . $timestamp . '.xml';
+        print "Backing up $backupfile ... \n";
+        backup_messages($dbh,$backupfile);
     }
     if ($backup eq 'patrontypes') {
         $backupfile = $MIGGITDIR . 'patrontypes' . '.' . $timestamp . '.xml';
@@ -244,7 +249,7 @@ sub backup_budgets {
     $xml->startTag('document');
 
     $xml->startTag('budgets');
-    my $sth = sql_giveback($dbh,'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "aqbudgets")';
+    my $sth = sql_giveback($dbh,'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "aqbudgets"');
     my @ai = $sth->fetchrow_array;
     $xml->dataElement('autoincrement', $ai[0]);
     $sth = sql_giveback($dbh,"SELECT budget_id,budget_parent_id,budget_code,budget_name,budget_branchcode,budget_amount,budget_encumb,budget_expend,budget_notes,timestamp,budget_period_id,sort1_authcat,sort2_authcat,budget_owner_id,budget_permission FROM aqbudgets");
@@ -551,6 +556,58 @@ sub backup_libraries {
     }
 
     $xml->endTag('libraries');
+    $xml->end();
+    close $fh;
+    return;
+}
+
+sub backup_messages {
+    my $dbh = shift;
+    my $backupfile = shift;
+
+    open(my $fh, '>', $backupfile) or die "Could not open $backupfile!";
+    my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
+    $xml->xmlDecl('UTF-8');
+    $xml->startTag('document');
+
+    $xml->startTag('message_attributes');
+    my $sth = sql_giveback($dbh,'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "message_attributes"');
+    my @ai = $sth->fetchrow_array;
+    $xml->dataElement('autoincrement', $ai[0]);
+    $sth = sql_giveback($dbh,"SELECT message_attribute_id, message_name, takes_days FROM message_attributes");
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('value');
+        $xml->dataElement('message_attribute_id', $row[0]);
+        $xml->dataElement('message_name', $row[1]);
+        $xml->dataElement('takes_days', $row[2]);
+        $xml->endTag('value');
+    }
+    $xml->endTag('message_attributes');
+
+    $xml->startTag('message_transport_types');
+    $sth = sql_giveback($dbh,"SELECT message_transport_type FROM message_transport_types");
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('value');
+        $xml->dataElement('message_transport_type', $row[0]);
+        $xml->endTag('value');
+    }
+    $xml->endTag('message_transport_types');
+
+    $xml->startTag('message_transports');
+    $sth = sql_giveback($dbh,"SELECT message_attribute_id, message_transport_type, is_digest, letter_module, letter_code, branchcode FROM message_transports");
+    while (my @row = $sth->fetchrow_array) {
+        $xml->startTag('value');
+        $xml->dataElement('message_attribute_id', $row[0]);
+        $xml->dataElement('message_transport_type', $row[1]);
+        $xml->dataElement('is_digest', $row[2]);
+        $xml->dataElement('letter_module', $row[3]);
+        $xml->dataElement('letter_code', $row[4]);
+        $xml->dataElement('branchcode', $row[5]);
+        $xml->endTag('value');
+    }
+    $xml->endTag('message_transports');
+
+    $xml->endTag('document');
     $xml->end();
     close $fh;
     return;
