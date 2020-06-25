@@ -111,9 +111,7 @@ sub backup_authorisedvalues {
     $xml->startTag('document');
 
     $xml->startTag('authorisedvalues');
-    my $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values WHERE category != 'ITEMTYPECAT'";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values WHERE category != 'ITEMTYPECAT'");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('category', $row[0]); 
@@ -126,9 +124,7 @@ sub backup_authorisedvalues {
     $xml->endTag('authorisedvalues');
 
     $xml->startTag('categories');
-    $query = "SELECT category_name FROM authorised_value_categories WHERE category_name != 'ITEMTYPECAT'";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT category_name FROM authorised_value_categories WHERE category_name != 'ITEMTYPECAT'");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('name', $row[0]);
@@ -150,9 +146,7 @@ sub backup_booksellers {
     my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
     $xml->xmlDecl('UTF-8');
     $xml->startTag('booksellers');
-    my $query = "SELECT name,address1,address2,address3,address4,phone,accountnumber,othersupplier,currency,booksellerfax,notes,bookselleremail,booksellerurl,postal,url,active,listprice,invoiceprice,gstreg,listincgst,invoiceincgst,tax_rate,discount,fax,deliverytime FROM aqbooksellers";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT name,address1,address2,address3,address4,phone,accountnumber,othersupplier,currency,booksellerfax,notes,bookselleremail,booksellerurl,postal,url,active,listprice,invoiceprice,gstreg,listincgst,invoiceincgst,tax_rate,discount,fax,deliverytime FROM aqbooksellers");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('name', $row[1]);
@@ -198,9 +192,7 @@ sub backup_borrower_attributes {
     $xml->startTag('document');
 
     $xml->startTag('borrower_attribute_types');
-    my $query = "SELECT code,description,repeatable,opac_display,opac_editable,staff_searchable,authorised_value_category,display_checkout,category_code,class FROM borrower_attribute_types";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT code,description,repeatable,opac_display,opac_editable,staff_searchable,authorised_value_category,display_checkout,category_code,class FROM borrower_attribute_types");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('code', $row[0]);
@@ -217,18 +209,14 @@ sub backup_borrower_attributes {
     $xml->endTag('borrower_attribute_types');
 
     $xml->startTag('authorised_value_categories');
-    $query = "SELECT category_name FROM authorised_value_categories WHERE category_name IN (select category_name from borrower_attribute_types)";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT category_name FROM authorised_value_categories WHERE category_name IN (select category_name from borrower_attribute_types)");
     while (my @row = $sth->fetchrow_array) {
         $xml->dataElement('value', $row[0]);
     }
     $xml->endTag('authorised_value_categories');
 
     $xml->startTag('authorised_values');
-    $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values where category in (select category_code from borrower_attribute_types);";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values where category in (select category_code from borrower_attribute_types);");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('category', $row[0]);
@@ -256,14 +244,10 @@ sub backup_budgets {
     $xml->startTag('document');
 
     $xml->startTag('budgets');
-    my $query = 'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "aqbudgets"';
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "aqbudgets")';
     my @ai = $sth->fetchrow_array;
     $xml->dataElement('autoincrement', $ai[0]);
-    $query = "SELECT budget_id,budget_parent_id,budget_code,budget_name,budget_branchcode,budget_amount,budget_encumb,budget_expend,budget_notes,timestamp,budget_period_id,sort1_authcat,sort2_authcat,budget_owner_id,budget_permission FROM aqbudgets";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT budget_id,budget_parent_id,budget_code,budget_name,budget_branchcode,budget_amount,budget_encumb,budget_expend,budget_notes,timestamp,budget_period_id,sort1_authcat,sort2_authcat,budget_owner_id,budget_permission FROM aqbudgets");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('budget_id', $row[0]);
@@ -286,14 +270,10 @@ sub backup_budgets {
     $xml->endTag('budgets');
 
     $xml->startTag('budgetperiods');
-    $query = 'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "aqbudgetperiods"';
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,'SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_NAME = "aqbudgetperiods"');
     @ai = $sth->fetchrow_array;
     $xml->dataElement('autoincrement', $ai[0]);
-    $query = "SELECT budget_period_id,budget_period_startdate,budget_period_enddate,budget_period_active,budget_period_description,budget_period_total,budget_period_locked,sort1_authcat,sort2_authcat FROM aqbudgetperiods";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT budget_period_id,budget_period_startdate,budget_period_enddate,budget_period_active,budget_period_description,budget_period_total,budget_period_locked,sort1_authcat,sort2_authcat FROM aqbudgetperiods");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('budget_period_id', $row[0]);
@@ -324,9 +304,7 @@ sub backup_calendar {
     $xml->xmlDecl('UTF-8');
     $xml->startTag('holidays');
 
-    my $query = "SELECT branchcode,weekday,day,month,title,description FROM repeatable_holidays";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT branchcode,weekday,day,month,title,description FROM repeatable_holidays");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('repeatable');
         $xml->dataElement('branchcode',$row[0]);
@@ -338,9 +316,7 @@ sub backup_calendar {
         $xml->endTag('repeatable');
     }
 
-    $query = "SELECT branchcode,day,month,year,isexception,title,description FROM special_holidays";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT branchcode,day,month,year,isexception,title,description FROM special_holidays");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('special');
         $xml->dataElement('branchcode',$row[0]);
@@ -369,9 +345,7 @@ sub backup_circrules {
     $xml->startTag('document');
 
     $xml->startTag('circ');
-    my $query = "SELECT branchcode, categorycode, itemtype, rule_name, rule_value FROM circulation_rules";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT branchcode, categorycode, itemtype, rule_name, rule_value FROM circulation_rules");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('rule');
         $xml->dataElement('branchcode', $row[0]);
@@ -384,9 +358,7 @@ sub backup_circrules {
     $xml->endTag('circ');
 
     $xml->startTag('issuing');
-    $query = "SELECT categorycode,itemtype,restrictedtype,rentaldiscount,reservecharge,fine,finedays,maxsuspensiondays,suspension_chargeperiod,firstremind,chargeperiod,chargeperiod_charge_at,accountsent,issuelength,lengthunit,hardduedate,hardduedatecompare,renewalsallowed,renewalperiod,norenewalbefore,auto_renew,no_auto_renewal_after,no_auto_renewal_after_hard_limit,reservesallowed,holds_per_record,holds_per_day,branchcode,overduefinescap,cap_fine_to_replacement_price,onshelfholds,opacitemholds,article_requests,note FROM issuingrules";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT categorycode,itemtype,restrictedtype,rentaldiscount,reservecharge,fine,finedays,maxsuspensiondays,suspension_chargeperiod,firstremind,chargeperiod,chargeperiod_charge_at,accountsent,issuelength,lengthunit,hardduedate,hardduedatecompare,renewalsallowed,renewalperiod,norenewalbefore,auto_renew,no_auto_renewal_after,no_auto_renewal_after_hard_limit,reservesallowed,holds_per_record,holds_per_day,branchcode,overduefinescap,cap_fine_to_replacement_price,onshelfholds,opacitemholds,article_requests,note FROM issuingrules");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('rule');
         $xml->dataElement('categorycode', $row[0]);
@@ -443,9 +415,7 @@ sub backup_itemtypes {
     $xml->startTag('document');
 
     $xml->startTag('itemtypes');
-    my $query = "SELECT itemtype, description, rentalcharge, rentalcharge_daily, rentalcharge_hourly, defaultreplacecost, processfee, notforloan, imageurl, summary, checkinmsg, checkinmsgtype, sip_media_type, hideinopac, searchcategory FROM itemtypes";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT itemtype, description, rentalcharge, rentalcharge_daily, rentalcharge_hourly, defaultreplacecost, processfee, notforloan, imageurl, summary, checkinmsg, checkinmsgtype, sip_media_type, hideinopac, searchcategory FROM itemtypes");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('itemtype', $row[0]);
@@ -468,9 +438,7 @@ sub backup_itemtypes {
     $xml->endTag('itemtypes');
 
     $xml->startTag('authorised_values');
-    $query = "SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values where category = 'ITEMTYPECAT';";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT category,authorised_value,lib,lib_opac,imageurl FROM authorised_values where category = 'ITEMTYPECAT';");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('category', $row[0]);
@@ -483,9 +451,7 @@ sub backup_itemtypes {
     $xml->endTag('authorised_values');
 
     $xml->startTag('localizations');
-    $query = "SELECT entity, code, lang, translation FROM localization WHERE entity = 'itemtypes';";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT entity, code, lang, translation FROM localization WHERE entity = 'itemtypes';");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('value');
         $xml->dataElement('entity', $row[0]);
@@ -511,9 +477,7 @@ sub backup_letters {
     $xml->xmlDecl('UTF-8');
     $xml->startTag('letters');
 
-    my $query = "SELECT module,code,branchcode,name,is_html,title,content,message_transport_type,lang FROM letter";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT module,code,branchcode,name,is_html,title,content,message_transport_type,lang FROM letter");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('letter');
         $xml->dataElement('module',$row[0]);
@@ -543,9 +507,7 @@ sub backup_libraries {
     $xml->xmlDecl('UTF-8');
     $xml->startTag('libraries');
 
-    my $query = "SELECT id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff FROM library_groups";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff FROM library_groups");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('library_group');
         $xml->dataElement('id',$row[0]);
@@ -559,9 +521,7 @@ sub backup_libraries {
         $xml->endTag('library_group');
     }
 
-    $query = "SELECT branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchprinter,branchnotes,opac_info,geolocation,marcorgcode,pickup_location FROM branches";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    $sth = sql_giveback($dbh,"SELECT branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchprinter,branchnotes,opac_info,geolocation,marcorgcode,pickup_location FROM branches");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('library');
         $xml->dataElement('branchcode',$row[0]);
@@ -604,9 +564,7 @@ sub backup_patrontypes {
     my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
     $xml->xmlDecl('UTF-8');
     $xml->startTag('patron');
-    my $query = "SELECT categorycode,description,enrolmentperiod,enrolmentperioddate,upperagelimit,dateofbirthrequired,finetype,bulk,enrolmentfee,overduenoticerequired,issuelimit,reservefee,hidelostitems,category_type,BlockExpiredPatronOpacActions,default_privacy,checkprevcheckout,reset_password,change_password FROM categories";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT categorycode,description,enrolmentperiod,enrolmentperioddate,upperagelimit,dateofbirthrequired,finetype,bulk,enrolmentfee,overduenoticerequired,issuelimit,reservefee,hidelostitems,category_type,BlockExpiredPatronOpacActions,default_privacy,checkprevcheckout,reset_password,change_password FROM categories");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('category');
         $xml->dataElement('categorycode',$row[0]);
@@ -644,9 +602,7 @@ sub backup_preferences {
     my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
     $xml->xmlDecl('UTF-8');
     $xml->startTag('preferences');
-    my $query = "SELECT variable,value FROM systempreferences WHERE value != '' AND value IS NOT NULL";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT variable,value FROM systempreferences WHERE value != '' AND value IS NOT NULL");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('pref');
         $xml->dataElement('variable',$row[0]);
@@ -668,9 +624,7 @@ sub backup_reports {
     $xml->xmlDecl('UTF-8');
     $xml->startTag('reports');
 
-    my $query = "SELECT s.date_created, s.last_modified, s.savedsql, s.report_name, s.type, s.notes, s.cache_expiry, s.public, s.report_area, s.report_group, s.report_subgroup, b.userid FROM saved_sql s LEFT JOIN borrowers b ON b.borrowernumber = s.borrowernumber";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT s.date_created, s.last_modified, s.savedsql, s.report_name, s.type, s.notes, s.cache_expiry, s.public, s.report_area, s.report_group, s.report_subgroup, b.userid FROM saved_sql s LEFT JOIN borrowers b ON b.borrowernumber = s.borrowernumber");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('sqlreport');
         $xml->dataElement('date_created',$row[0]);
@@ -702,9 +656,7 @@ sub backup_smsproviders {
     my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
     $xml->xmlDecl('UTF-8');
     $xml->startTag('sms');
-    my $query = "SELECT name,domain FROM sms_providers";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    my $sth = sql_giveback($dbh,"SELECT name,domain FROM sms_providers");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('provider');
         $xml->dataElement('name',$row[0]);
@@ -728,6 +680,22 @@ sub create_timestamp {
     $sec = sprintf("%02s",$sec);
     my $str = "$year$mon$mday$hour$min$sec";
     return $str;
+}
+
+sub sql_noresult {
+    my $dbh = shift;
+    my $statement = shift;
+    my $sth = $dbh->prepare($statement);
+    $sth->execute();
+    return;
+}
+   
+sub sql_giveback {
+    my $dbh = shift;
+    my $query = shift;
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+	return $sth;
 }
 
 sub abort {
