@@ -30,7 +30,7 @@ $mig_path =~ s|[^/]+$||;
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("libraries","patrontypes","itemtypes","authorisedvalues","booksellers","borrowerattributes","budgets","calendar","circrules","letters","preferences","reports","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("libraries","patrontypes","itemtypes","authorisedvalues","booksellers","borrowerattributes","budgets","calendar","circrules","letters","messages","preferences","reports","smsproviders"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 my @errors;
@@ -90,6 +90,12 @@ foreach my $restore (@taglist) {
         if ($timestamp) { $restorefile = $MIGGITDIR . 'libraries' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_libraries($dbh,$restorefile); }
+    }
+    if ($restore eq 'messages') {
+        my $timestamp = most_recent_single($MIGGITDIR,'messages');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'messages' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_messages($dbh,$restorefile); }
     }
     if ($restore eq 'patrontypes') {
         my $timestamp = most_recent_single($MIGGITDIR,'patrontypes');
@@ -620,6 +626,49 @@ sub restore_libraries {
     }
     return;
 }
+
+sub restore_messages {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    sql_noresult($dbh,"DELETE FROM message_transports WHERE 1 = 1");
+    sql_noresult($dbh,"DELETE FROM message_transport_types WHERE 1 = 1");
+    sql_noresult($dbh,"DELETE FROM message_attributes WHERE 1 = 1");
+    
+    my $attr_ai;
+    foreach my $node ($dom->findnodes('/document/message_attributes')) {
+        $attr_ai = sql_num($node->findvalue('./autoincrement'));
+    }
+    sql_noresult($dbh,"ALTER TABLE message_attributes AUTO_INCREMENT = $attr_ai");
+
+    foreach my $node ($dom->findnodes('/document/message_attributes/value')) {
+        my $message_attribute_id = sql_num($node->findvalue('./message_attribute_id'));
+        my $message_name = sql_num($node->findvalue('./message_name'));
+        my $takes_days = sql_num($node->findvalue('./takes_days'));
+        sql_noresult($dbh,"INSERT INTO message_attributes (message_attribute_id,message_name,takes_days) VALUES ($message_attribute_id,$message_name,$takes_days)");
+    }
+
+    foreach my $node ($dom->findnodes('/document/message_transport_types/value')) {
+        my $message_transport_type = sql_num($node->findvalue('./message_attribute_id'));
+        sql_noresult($dbh,"INSERT INTO message_attributes (message_attribute_id,message_name,takes_days) VALUES ($message_attribute_id,$message_name,$takes_days)");
+    }
+
+    foreach my $node ($dom->findnodes('/document/message_transports/value')) {
+        my $message_attribute_id = sql_num($node->findvalue('./message_attribute_id'));
+        my $message_transport_type = sql_num($node->findvalue('./message_transport_type'));
+        my $is_digest = sql_num($node->findvalue('./is_digest'));
+        my $letter_module = sql_num($node->findvalue('./letter_module'));
+        my $letter_code = sql_num($node->findvalue('./letter_code'));
+        my $branchcode = sql_num($node->findvalue('./branchcode'));
+        sql_noresult($dbh,"INSERT INTO message_attributes (message_attribute_id,message_transport_type,is_digest,letter_module,letter_code,branchcode) VALUES ($message_attribute_id,$message_transport_type,$is_digest,$letter_module,$letter_code,$branchcode)");
+    }
+
+    return;
+}
+
+
 
 sub restore_patrontypes {
     my $dbh = shift;
