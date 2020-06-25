@@ -77,7 +77,7 @@ foreach my $restore (@taglist) {
         my $timestamp = most_recent_single($MIGGITDIR,'itemtypes');
         if ($timestamp) { $restorefile = $MIGGITDIR . 'itemtypes' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
-        if ($restorefile) { restore_itemtypes($dbh,$restorefile); }
+        if ($restorefile) { @errors = restore_itemtypes($dbh,$restorefile,@errors); }
     }
     if ($restore eq 'letters') {
         my $timestamp = most_recent_single($MIGGITDIR,'letters');
@@ -528,8 +528,10 @@ sub restore_circrules {
 sub restore_itemtypes {
     my $dbh = shift;
     my $restorefile = shift;
+	my @errors = shift;
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restorefile);
+	my $check;
 
     my $query = "UPDATE itemtypes SET searchcategory = NULL";
     my $sth = $dbh->prepare($query);
@@ -574,12 +576,9 @@ sub restore_itemtypes {
         my $sip_media_type = sql_str($node->findvalue('./sip_media_type'));
         my $hideinopac = sql_str($node->findvalue('./hideinopac'));
         my $searchcategory = sql_str($node->findvalue('./searchcategory'));
-        $query = "SELECT itemtype FROM itemtypes WHERE itemtype = $itemtype";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
-        my $answer;
-        while (my @row = $sth->fetchrow_array) { $answer = sql_str($row[0]); }
-        if (!defined $answer or $answer ne $itemtype) {
+
+		$check = check_itemtype($dbh,$itemtype);
+        if ($check == 0) {
             $query = "INSERT INTO itemtypes (itemtype,description,rentalcharge,rentalcharge_daily,rentalcharge_hourly,defaultreplacecost,processfee,notforloan,imageurl,summary,checkinmsg,sip_media_type,hideinopac,searchcategory) 
             VALUES ($itemtype,$description,$rentalcharge,$rentalcharge_daily,$rentalcharge_hourly,$defaultreplacecost,$processfee,$notforloan,$imageurl,$summary,$checkinmsg,$sip_media_type,$hideinopac,$searchcategory)";
             $sth = $dbh->prepare($query);
