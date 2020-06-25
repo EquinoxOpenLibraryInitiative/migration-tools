@@ -76,36 +76,51 @@ CREATE FUNCTION
 $
 DELIMITER ;
 
--- Pass it the biblionumber, tag number, subfield, value and it'll add a MARC field to the end of the record accordingly
+-- Pass it the biblionumber, datafield tag number, subfield, value and it'll add a MARC field to the end of the record or modify a matching tag accordingly
 -- Be sure to escape the value if needed
--- Example: SELECT m_insert_tag(1,'909','a','foo');
-DROP FUNCTION IF EXISTS m_insert_tag;
+-- Example: SELECT m_upsert_datafield(1,'909','ind1','ind2','a','foo');
+DROP FUNCTION IF EXISTS m_insert_tag; -- this version of the function was broken
+DROP FUNCTION IF EXISTS m_upsert_datafield;
 DELIMITER $
 CREATE FUNCTION
-   m_insert_tag(bnumber INTEGER, tag TEXT COLLATE utf8mb4_unicode_ci, subfield TEXT COLLATE utf8mb4_unicode_ci, value TEXT COLLATE utf8mb4_unicode_ci)
+   m_upsert_datafield(bnumber INTEGER, tag TEXT COLLATE utf8mb4_unicode_ci, ind1 TEXT COLLATE utf8mb4_unicode_ci, ind2 TEXT COLLATE utf8mb4_unicode_ci, subfield TEXT COLLATE utf8mb4_unicode_ci, value TEXT COLLATE utf8mb4_unicode_ci)
    RETURNS BOOLEAN
    DETERMINISTIC
     BEGIN
         DECLARE marcxml TEXT COLLATE utf8mb4_unicode_ci DEFAULT NULL;
+        DECLARE tag_count INT DEFAULT NULL;
+        DECLARE new_tag TEXT COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 
         SELECT metadata INTO marcxml FROM biblio_metadata WHERE biblionumber = bnumber;
+        SELECT ExtractValue(metadata,CONCAT('count(//datafield[@tag="',tag,'"])')) INTO tag_count FROM biblio_metadata WHERE biblionumber = bnumber;
 
         IF NULLIF(marcxml,'') IS NULL THEN -- whaaa?
             RETURN FALSE;
         END IF;
 
-        SET marcxml = replace(marcxml,'</record>',
-            CONCAT(
-                 '  <datafield tag="'
-                ,tag
-                ,'">\n    <subfield code="'
-                ,subfield
-                ,'">'
-                ,value
-                ,'</subfield>\n  </datafield>\n'
-                ,'</record>'
-            )
+        SET new_tag = CONCAT(
+             '  <datafield tag="'
+            ,tag
+            ,'" ind1="'
+            ,ind1
+            ,'" ind2="'
+            ,ind2
+            ,'">\n    <subfield code="'
+            ,subfield
+            ,'">'
+            ,value
+            ,'</subfield>\n  </datafield>\n'
         );
+
+        IF tag_count = 0 THEN
+            SET marcxml = replace(marcxml,'</record>', CONCAT(new_tag,'</record>'));
+        ELSE
+            SET marcxml = UpdateXML(
+                marcxml,
+                CONCAT('//datafield[@tag="',tag,'"]'),
+                new_tag
+            );
+        END IF;
 
         UPDATE biblio_metadata SET metadata = marcxml where biblionumber = bnumber;
         RETURN TRUE;
