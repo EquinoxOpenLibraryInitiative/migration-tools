@@ -124,6 +124,24 @@ foreach my $e (@errors) { print "$e\n"; }
 
 # ---------------------------
 
+sub check_branchcode {
+    my $dbh = shift;
+    my $value = shift;
+    my $query;
+    
+    if ($value and $value ne 'NULL') {
+        $query = "SELECT EXISTS(SELECT 1 FROM branches WHERE branchcode = $value)";
+    } else {
+        return 1;
+    }
+    print "$query\n";
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    my @sqlresult = $sth->fetchrow_array;
+    my $result = pop @sqlresult;
+    return $result;
+}
+
 sub check_category {
     my $dbh = shift;
     my $value = shift;
@@ -182,22 +200,13 @@ sub restore_authorisedvalues {
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
-    my $query = "DELETE FROM authorised_values WHERE category != 'ITEMTYPECAT'";
-    my $sth = $dbh->prepare($query);
-    print "$query\n"; 
-   #$sth->execute();
+    sql_noresult($dbh,"DELETE FROM authorised_values WHERE category != 'ITEMTYPECAT'");
 
-    $query = "DELETE FROM authorised_value_categories WHERE category_name != 'ITEMTYPECAT'";
-    $sth = $dbh->prepare($query);
-    print "$query\n";
-    #$sth->execute();
+    sql_noresult($dbh,"DELETE FROM authorised_value_categories WHERE category_name != 'ITEMTYPECAT'");
 
     foreach my $node ($dom->findnodes('/document/categories/value')) {
         my $name = sql_str_not_null($node->findvalue('./name'));
-        $query = "INSERT INTO authorised_value_categories (category_name) VALUES ($name)";
-        $sth = $dbh->prepare($query);
-        print "$query\n";
-        #$sth->execute();
+        sql_noresult($dbh,"INSERT INTO authorised_value_categories (category_name) VALUES ($name)");
     }
 
     foreach my $node ($dom->findnodes('/document/authorisedvalues/value')) {
@@ -206,10 +215,7 @@ sub restore_authorisedvalues {
         my $lib = sql_str($node->findvalue('./lib'));
         my $lib_opac = sql_str($node->findvalue('./lib_opac'));
         my $imageurl = sql_str($node->findvalue('./imageurl'));
-        $query = "INSERT INTO authorised_values (category,authorised_value,lib,lib_opac,imageurl) VALUES ($category,$authorised_value,$lib,$lib_opac,$imageurl)";
-        $sth = $dbh->prepare($query);
-         print "$query\n";
-        #$sth->execute();
+        sql_noresult($dbh,"INSERT INTO authorised_values (category,authorised_value,lib,lib_opac,imageurl) VALUES ($category,$authorised_value,$lib,$lib_opac,$imageurl)");
     }
     return;
 }
@@ -220,9 +226,7 @@ sub restore_booksellers {
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
-    my $query = "DELETE FROM aqbooksellers WHERE 1 = 1";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM aqbooksellers WHERE 1 = 1");
 
     foreach my $node ($dom->findnodes('/booksellers/value')) {
         my $name = sql_str($node->findvalue('./name'));
@@ -250,9 +254,7 @@ sub restore_booksellers {
         my $discount = sql_num($node->findvalue('./discount'));
         my $fax = sql_str($node->findvalue('./fax'));
         my $deliverytime = sql_num($node->findvalue('./deliverytime'));
-        $query = "INSERT INTO aqbooksellers (name,address1,address2,address3,address4,phone,accountnumber,othersupplier,currency,booksellerfax,notes,bookselleremail,booksellerurl,postal,url,active,listprice,invoiceprice,gstreg,listincgst,invoiceincgst,tax_rate,discount,fax,deliverytime) VALUES ($name,$address1,$address2,$address3,$address4,$phone,$accountnumber,$othersupplier,$currency,$booksellerfax,$notes,$bookselleremail,$booksellerurl,$postal,$url,$active,$listprice,$invoiceprice,$gstreg,$listincgst,$invoiceincgst,$tax_rate,$discount,$fax,$deliverytime)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO aqbooksellers (name,address1,address2,address3,address4,phone,accountnumber,othersupplier,currency,booksellerfax,notes,bookselleremail,booksellerurl,postal,url,active,listprice,invoiceprice,gstreg,listincgst,invoiceincgst,tax_rate,discount,fax,deliverytime) VALUES ($name,$address1,$address2,$address3,$address4,$phone,$accountnumber,$othersupplier,$currency,$booksellerfax,$notes,$bookselleremail,$booksellerurl,$postal,$url,$active,$listprice,$invoiceprice,$gstreg,$listincgst,$invoiceincgst,$tax_rate,$discount,$fax,$deliverytime)");
     }
 
     return;
@@ -264,17 +266,11 @@ sub restore_borrowerattributes {
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
-    my $query = "DELETE FROM authorised_values WHERE category IN (select category_code from borrower_attribute_types)";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM authorised_values WHERE category IN (select category_code from borrower_attribute_types)");
 
-    $query = "DELETE FROM authorised_value_categories WHERE category_name IN (select category_name from borrower_attribute_types)";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM authorised_value_categories WHERE category_name IN (select category_name from borrower_attribute_types)");
 
-    $query = "DELETE FROM borrower_attribute_types WHERE 1 = 1";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM borrower_attribute_types WHERE 1 = 1");
 
     foreach my $node ($dom->findnodes('/borrower_attribute_types/value')) {
         my $code = sql_str($node->findvalue('./code'));
@@ -286,16 +282,12 @@ sub restore_borrowerattributes {
         my $display_checkout = sql_num($node->findvalue('./display_checkout'));
         my $category_code = sql_str($node->findvalue('./category_code'));
         my $class = sql_str($node->findvalue('./class'));
-        $query = "INSERT INTO borrower_attribute_types (code,description,repeatable,opac_display,staff_searchable,authorised_value_category,display_checkout,category_code,class) VALUES ($code,$description,$repeatable,$opac_display,$staff_searchable,$authorised_value_category,$display_checkout,$category_code,$class)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO borrower_attribute_types (code,description,repeatable,opac_display,staff_searchable,authorised_value_category,display_checkout,category_code,class) VALUES ($code,$description,$repeatable,$opac_display,$staff_searchable,$authorised_value_category,$display_checkout,$category_code,$class)");
     }
 
     foreach my $node ($dom->findnodes('/authorised_value_categories/value')) {
         my $category_name = sql_str($node->nodeValue);
-        $query = "INSERT INTO authorised_value_categories (category_name) VALUES ($category_name)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO authorised_value_categories (category_name) VALUES ($category_name)");
     }
 
     foreach my $node ($dom->findnodes('/authorised_values/value')) {
@@ -304,9 +296,7 @@ sub restore_borrowerattributes {
         my $lib = sql_str($node->findvalue('./lib'));
         my $lib_opac = sql_str($node->findvalue('./lib_opac'));
         my $image_url = sql_str($node->findvalue('./image_url'));
-        $query = "INSERT INTO authorised_values (category,authvalue,lib,lib_opac,image_url) VALUES ($category,$authvalue,$lib,$lib_opac,$image_url)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO authorised_values (category,authvalue,lib,lib_opac,image_url) VALUES ($category,$authvalue,$lib,$lib_opac,$image_url)");
     }
 
     return;
@@ -318,11 +308,11 @@ sub restore_budgets {
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
-    my $query = "DELETE FROM aqbudgets WHERE 1 = 1";
+    sql_noresult($dbh,"DELETE FROM aqbudgets WHERE 1 = 1");
     my $sth = $dbh->prepare($query);
     $sth->execute();
     
-    $query = "DELETE FROM aqbudgetperiods WHERE 1 = 1";
+    sql_noresult($dbh,"DELETE FROM aqbudgetperiods WHERE 1 = 1");
     $sth = $dbh->prepare($query);
     $sth->execute();
 
@@ -355,10 +345,7 @@ sub restore_budgets {
         my $budget_period_locked = sql_num($node->findvalue('./budget_period_locked'));
         my $sort1_authcat = sql_str($node->findvalue('./sort1_authcat'));
         my $sort2_authcat = sql_str($node->findvalue('./sort2_authcat'));
-        $query = "INSERT INTO aqbudgetperiods (budget_period_id,budget_period_startdate,budget_period_enddate,budget_period_active,budget_period_description,budget_period_total,budget_period_locked,sort1_authcat,sort2_authcat) VALUES ($budget_period_id,$budget_period_startdate,$budget_period_enddate,$budget_period_active,$budget_period_description,$budget_period_total,$budget_period_locked,$sort1_authcat,$sort2_authcat)";
-        print "$query\n";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO aqbudgetperiods (budget_period_id,budget_period_startdate,budget_period_enddate,budget_period_active,budget_period_description,budget_period_total,budget_period_locked,sort1_authcat,sort2_authcat) VALUES ($budget_period_id,$budget_period_startdate,$budget_period_enddate,$budget_period_active,$budget_period_description,$budget_period_total,$budget_period_locked,$sort1_authcat,$sort2_authcat)");
     }
 
     #note that at this point we are not loading the budget owner, it's nullable and not 100% clear that it's the borrower
@@ -378,9 +365,7 @@ sub restore_budgets {
         my $sort1_authcat = sql_str_not_null($node->findvalue('./sort1_authcat'));
         my $sort2_authcat = sql_str_not_null($node->findvalue('./sort2_authcat'));
         my $budget_permission = sql_num($node->findvalue('./budget_permission'));
-        $query = "INSERT INTO aqbudgets (budget_id,budget_parent_id,budget_code,budget_name,budget_branchcode,budget_amount,budget_encumb,budget_expend,budget_notes,timestamp,budget_period_id,sort1_authcat,sort2_authcat,budget_permission) VALUES ($budget_id,$budget_parent_id,$budget_code,$budget_name,$budget_branchcode,$budget_amount,$budget_encumb,$budget_expend,$budget_notes,$timestamp,$budget_period_id,$sort1_authcat,$sort2_authcat,$budget_permission)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO aqbudgets (budget_id,budget_parent_id,budget_code,budget_name,budget_branchcode,budget_amount,budget_encumb,budget_expend,budget_notes,timestamp,budget_period_id,sort1_authcat,sort2_authcat,budget_permission) VALUES ($budget_id,$budget_parent_id,$budget_code,$budget_name,$budget_branchcode,$budget_amount,$budget_encumb,$budget_expend,$budget_notes,$timestamp,$budget_period_id,$sort1_authcat,$sort2_authcat,$budget_permission)");
     }
 
     return;
@@ -392,13 +377,9 @@ sub restore_calendar {
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
-    my $query = "DELETE FROM repeatable_holidays WHERE 1 = 1";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM repeatable_holidays WHERE 1 = 1");
 
-    $query = "DELETE FROM special_holidays WHERE 1 = 1";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM special_holidays WHERE 1 = 1");
 
     foreach my $node ($dom->findnodes('/holidays/repeatable')) {
         my $branchcode = sql_str($node->findvalue('./branchcode'));
@@ -407,9 +388,7 @@ sub restore_calendar {
         my $month = sql_num($node->findvalue('./month'));
         my $title = sql_str($node->findvalue('./title'));
         my $description = sql_str($node->findvalue('./description'));
-        $query = "INSERT INTO repeatable_holidays (branchcode,weekday,day,month,title,description) VALUES ($branchcode,$weekday,$day,$month,$title,$description)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO repeatable_holidays (branchcode,weekday,day,month,title,description) VALUES ($branchcode,$weekday,$day,$month,$title,$description)");
     }
 
     foreach my $node ($dom->findnodes('/holidays/special')) {
@@ -420,9 +399,7 @@ sub restore_calendar {
         my $isexception = sql_num($node->findvalue('./isexception'));
         my $title = sql_str($node->findvalue('./title'));
         my $description = sql_str($node->findvalue('./description'));
-        $query = "INSERT INTO special_holidays (branchcode,day,month,year,isexception,title,description) VALUES ($branchcode,$day,$month,$year,$isexception,$title,$description)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO special_holidays (branchcode,day,month,year,isexception,title,description) VALUES ($branchcode,$day,$month,$year,$isexception,$title,$description)");
     }
 
     return;
@@ -438,13 +415,9 @@ sub restore_circrules {
 	my $check; 
     #order of operations - clean out circ_rules, then issuingrules; restore issuingrules then circ_rules 
 
-    my $query = "DELETE FROM circulation_rules WHERE 1 = 1";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM circulation_rules WHERE 1 = 1");
 
-    $query = "DELETE FROM issuingrules WHERE 1 = 1";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM issuingrules WHERE 1 = 1");
 
     foreach my $node ($dom->findnodes('//issuing/rule')) {
         my $categorycode = sql_str($node->findvalue('./categorycode'));
@@ -492,9 +465,7 @@ sub restore_circrules {
             push @errors, $error;
             next;
         }
-        $query = "INSERT INTO issuingrules (categorycode,itemtype,restrictedtype,rentaldiscount,reservecharge,fine,finedays,maxsuspensiondays,suspension_chargeperiod,firstremind,chargeperiod,chargeperiod_charge_at,accountsent,issuelength,lengthunit,hardduedate,hardduedatecompare,renewalsallowed,renewalperiod,norenewalbefore,auto_renew,no_auto_renewal_after,no_auto_renewal_after_hard_limit,reservesallowed,holds_per_record,holds_per_day,branchcode,overduefinescap,cap_fine_to_replacement_price,onshelfholds,opacitemholds,article_requests,note) VALUES ($categorycode,$itemtype,$restrictedtype,$rentaldiscount,$reservecharge,$fine,$finedays,$maxsuspensiondays,$suspension_chargeperiod,$firstremind,$chargeperiod,$chargeperiod_charge_at,$accountsent,$issuelength,$lengthunit,$hardduedate,$hardduedatecompare,$renewalsallowed,$renewalperiod,$norenewalbefore,$auto_renew,$no_auto_renewal_after,$no_auto_renewal_after_hard_limit,$reservesallowed,$holds_per_record,$holds_per_day,$branchcode,$overduefinescap,$cap_fine_to_replacement_price,$onshelfholds,$opacitemholds,$article_requests,$note)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO issuingrules (categorycode,itemtype,restrictedtype,rentaldiscount,reservecharge,fine,finedays,maxsuspensiondays,suspension_chargeperiod,firstremind,chargeperiod,chargeperiod_charge_at,accountsent,issuelength,lengthunit,hardduedate,hardduedatecompare,renewalsallowed,renewalperiod,norenewalbefore,auto_renew,no_auto_renewal_after,no_auto_renewal_after_hard_limit,reservesallowed,holds_per_record,holds_per_day,branchcode,overduefinescap,cap_fine_to_replacement_price,onshelfholds,opacitemholds,article_requests,note) VALUES ($categorycode,$itemtype,$restrictedtype,$rentaldiscount,$reservecharge,$fine,$finedays,$maxsuspensiondays,$suspension_chargeperiod,$firstremind,$chargeperiod,$chargeperiod_charge_at,$accountsent,$issuelength,$lengthunit,$hardduedate,$hardduedatecompare,$renewalsallowed,$renewalperiod,$norenewalbefore,$auto_renew,$no_auto_renewal_after,$no_auto_renewal_after_hard_limit,$reservesallowed,$holds_per_record,$holds_per_day,$branchcode,$overduefinescap,$cap_fine_to_replacement_price,$onshelfholds,$opacitemholds,$article_requests,$note)");
     }
 
     foreach my $node ($dom->findnodes('//circ/rule')) {
@@ -517,9 +488,7 @@ sub restore_circrules {
             next; 
         }
 
-        $query = "INSERT INTO circulation_rules (branchcode,categorycode,itemtype,rule_name,rule_value) VALUES ($branchcode,$categorycode,$itemtype,$rule_name,$rule_value)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO circulation_rules (branchcode,categorycode,itemtype,rule_name,rule_value) VALUES ($branchcode,$categorycode,$itemtype,$rule_name,$rule_value)");
     }
      
     return @errors;
@@ -533,21 +502,10 @@ sub restore_itemtypes {
     my $dom = $parser->parse_file($restorefile);
 	my $check;
 
-    my $query = "UPDATE itemtypes SET searchcategory = NULL";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
-
-    $query = "DELETE FROM authorised_values WHERE category = 'ITEMTYPECAT'";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
-
-    $query = "DELETE FROM localization WHERE entity = 'itemtypes'";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
-
-    $query = "DELETE FROM itemtypes WHERE 1 = 1";
-    $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"UPDATE itemtypes SET searchcategory = NULL");
+    sql_noresult($dbh,"DELETE FROM authorised_values WHERE category = 'ITEMTYPECAT'");
+    sql_noresult($dbh,"DELETE FROM localization WHERE entity = 'itemtypes'");
+    sql_noresult($dbh,"DELETE FROM itemtypes WHERE 1 = 1");
 
     foreach my $node ($dom->findnodes('/document/authorised_values/value')) {
         my $category = sql_str($node->findvalue('./category'));
@@ -555,9 +513,7 @@ sub restore_itemtypes {
         my $lib = sql_str($node->findvalue('./lib'));
         my $lib_opac = sql_str($node->findvalue('./lib_opac'));
         my $image_url = sql_str($node->findvalue('./image_url'));
-        my $query = "INSERT INTO authorised_values (category,authvalue,lib,lib_opac,image_url) VALUES ($category,$authvalue,$lib,$lib_opac,$image_url)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO authorised_values (category,authvalue,lib,lib_opac,image_url) VALUES ($category,$authvalue,$lib,$lib_opac,$image_url)");
     }
 
     foreach my $node ($dom->findnodes('/document/itemtypes/value')) {
@@ -579,15 +535,9 @@ sub restore_itemtypes {
 
 		$check = check_itemtype($dbh,$itemtype);
         if ($check == 0) {
-            $query = "INSERT INTO itemtypes (itemtype,description,rentalcharge,rentalcharge_daily,rentalcharge_hourly,defaultreplacecost,processfee,notforloan,imageurl,summary,checkinmsg,sip_media_type,hideinopac,searchcategory) 
-            VALUES ($itemtype,$description,$rentalcharge,$rentalcharge_daily,$rentalcharge_hourly,$defaultreplacecost,$processfee,$notforloan,$imageurl,$summary,$checkinmsg,$sip_media_type,$hideinopac,$searchcategory)";
-            $sth = $dbh->prepare($query);
-            $sth->execute();
+            sql_noresult($dbh,"INSERT INTO itemtypes (itemtype,description,rentalcharge,rentalcharge_daily,rentalcharge_hourly,defaultreplacecost,processfee,notforloan,imageurl,summary,checkinmsg,sip_media_type,hideinopac,searchcategory) VALUES ($itemtype,$description,$rentalcharge,$rentalcharge_daily,$rentalcharge_hourly,$defaultreplacecost,$processfee,$notforloan,$imageurl,$summary,$checkinmsg,$sip_media_type,$hideinopac,$searchcategory)");
         } else {
-            $query = "UPDATE itemtypes SET description = $description,rentalcharge = $rentalcharge,rentalcharge_daily = $rentalcharge_daily,rentalcharge_hourly = $rentalcharge_hourly,defaultreplacecost = $defaultreplacecost,processfee = $processfee,notforloan = $notforloan,imageurl = $imageurl,summary = $summary,checkinmsg = $checkinmsg,sip_media_type = $sip_media_type,hideinopac = $hideinopac,searchcategory = $searchcategory 
-            WHERE itemtype = $itemtype";
-            $sth = $dbh->prepare($query);
-            $sth->execute();
+            sql_noresult($dbh,"UPDATE itemtypes SET description = $description,rentalcharge = $rentalcharge,rentalcharge_daily = $rentalcharge_daily,rentalcharge_hourly = $rentalcharge_hourly,defaultreplacecost = $defaultreplacecost,processfee = $processfee,notforloan = $notforloan,imageurl = $imageurl,summary = $summary,checkinmsg = $checkinmsg,sip_media_type = $sip_media_type,hideinopac = $hideinopac,searchcategory = $searchcategory WHERE itemtype = $itemtype");
         }
     }
 
@@ -596,9 +546,7 @@ sub restore_itemtypes {
         my $code = sql_str($node->findvalue('./code'));
         my $lang = sql_str($node->findvalue('./lang'));
         my $translation = sql_str($node->findvalue('./translation'));
-        my $query = "INSERT INTO localization (entity,code,lang,translation) VALUES ($entity,$code,$lang,$translation)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO localization (entity,code,lang,translation) VALUES ($entity,$code,$lang,$translation)");
     }
 
     return;
@@ -610,9 +558,7 @@ sub restore_letters {
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
-    my $query = "DELETE FROM letter WHERE 1 = 1";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM letter WHERE 1 = 1");
 
     foreach my $node ($dom->findnodes('/letters/letter')) {
         my $module = sql_str($node->findvalue('./module'));
@@ -624,9 +570,7 @@ sub restore_letters {
         my $content = sql_str($node->findvalue('./content'));
         my $message_transport_type = sql_str($node->findvalue('./message_transport_type'));
         my $lang = sql_str($node->findvalue('./lang'));
-        $query = "INSERT INTO letter (module,code,branchcode,name,is_html,title,content,message_transport_type,lang) VALUES ($module,$code,$branchcode,$name,$is_html,$title,$content,$message_transport_type,$lang)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO letter (module,code,branchcode,name,is_html,title,content,message_transport_type,lang) VALUES ($module,$code,$branchcode,$name,$is_html,$title,$content,$message_transport_type,$lang)");
     }
 
     return;
@@ -637,6 +581,7 @@ sub restore_libraries {
     my $restorefile = shift;
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restorefile);
+	my $check;
 
     my $query = "TRUNCATE library_groups";
     my $sth = $dbh->prepare($query);
@@ -666,19 +611,11 @@ sub restore_libraries {
         my $geolocation = sql_str($node->findvalue('./geolocation'));
         my $marcorgcode = sql_str($node->findvalue('./marcorgcode'));
         my $pickup_location = $node->findvalue('./pickup_location');
-        $query = "SELECT branchcode FROM branches WHERE branchcode = $branchcode";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
-        my $answer;
-        while (my @row = $sth->fetchrow_array) { $answer = sql_str($row[0]); }
-        if (!defined $answer or $answer ne $branchcode) { 
-            $query = "INSERT INTO branches (branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchprinter,branchnotes,opac_info,geolocation,marcorgcode,pickup_location) VALUES ($branchcode,$branchname,$branchaddress1,$branchaddress2,$branchaddress3,$branchzip,$branchcity,$branchstate,$branchcountry,$branchphone,$branchfax,$branchemail,$branchreplyto,$branchreturnpath,$branchurl,$issuing,$branchip,$branchprinter,$branchnotes,$opac_info,$geolocation,$marcorgcode,$pickup_location)";
-            $sth = $dbh->prepare($query);
-            $sth->execute();
+		$check = check_branchcode($dbh,$branchcode);
+        if ($check == 0) { 
+            sql_noresult($dbh,"INSERT INTO branches (branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchprinter,branchnotes,opac_info,geolocation,marcorgcode,pickup_location) VALUES ($branchcode,$branchname,$branchaddress1,$branchaddress2,$branchaddress3,$branchzip,$branchcity,$branchstate,$branchcountry,$branchphone,$branchfax,$branchemail,$branchreplyto,$branchreturnpath,$branchurl,$issuing,$branchip,$branchprinter,$branchnotes,$opac_info,$geolocation,$marcorgcode,$pickup_location)");
         } else {
-            $query = "UPDATE branches SET branchname = $branchname,branchaddress1 = $branchaddress1,branchaddress2 = $branchaddress2,branchaddress3 = $branchaddress3,branchzip = $branchzip,branchcity = $branchcity,branchstate = $branchstate,branchcountry = $branchcountry,branchphone = $branchphone,branchfax = $branchfax,branchemail = $branchemail,branchreplyto = $branchreplyto,branchreturnpath = $branchreturnpath,branchurl = $branchurl,issuing = $issuing,branchip = $branchip,branchprinter = $branchprinter,branchnotes = $branchnotes,opac_info = $opac_info,geolocation = $geolocation,marcorgcode = $marcorgcode,pickup_location = $pickup_location WHERE branchcode = $branchcode";
-            $sth = $dbh->prepare($query);
-            $sth->execute();  
+            sql_noresult($dbh,"UPDATE branches SET branchname = $branchname,branchaddress1 = $branchaddress1,branchaddress2 = $branchaddress2,branchaddress3 = $branchaddress3,branchzip = $branchzip,branchcity = $branchcity,branchstate = $branchstate,branchcountry = $branchcountry,branchphone = $branchphone,branchfax = $branchfax,branchemail = $branchemail,branchreplyto = $branchreplyto,branchreturnpath = $branchreturnpath,branchurl = $branchurl,issuing = $issuing,branchip = $branchip,branchprinter = $branchprinter,branchnotes = $branchnotes,opac_info = $opac_info,geolocation = $geolocation,marcorgcode = $marcorgcode,pickup_location = $pickup_location WHERE branchcode = $branchcode");
         }
     }
 
@@ -692,9 +629,7 @@ sub restore_libraries {
         my $ft1 = sql_num($node->findvalue('./ft_hide_patron_info'));
         my $ft2 = sql_num($node->findvalue('./ft_search_groups_opac'));
         my $ft3 = sql_num($node->findvalue('./ft_search_groups_staff'));
-        $query = "INSERT INTO library_groups (id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff) VALUES ($id,$parent_id,$branchcode,$title,$descr,$ft1,$ft2,$ft3)";
-        $sth = $dbh->prepare($query);
-	$sth->execute();
+        sql_noresult($dbh,"INSERT INTO library_groups (id,parent_id,branchcode,title,description,ft_hide_patron_info,ft_search_groups_opac,ft_search_groups_staff) VALUES ($id,$parent_id,$branchcode,$title,$descr,$ft1,$ft2,$ft3)");
     }
     return;
 }
@@ -704,7 +639,7 @@ sub restore_patrontypes {
     my $restorefile = shift;
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restorefile);
-
+	my $check;
     my $query;
     my $sth;
 
@@ -728,19 +663,13 @@ sub restore_patrontypes {
         my $checkprevcheckout = sql_str($node->findvalue('./checkprevcheckout'));
         my $reset_password = sql_num($node->findvalue('./reset_password'));
         my $change_password = sql_num($node->findvalue('./change_password'));
-        $query = "SELECT categorycode FROM categories WHERE categorycode = $categorycode";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
-        my $answer;
-        while (my @row = $sth->fetchrow_array) { $answer = sql_str($row[0]); }
-        if (!defined $answer or $answer ne $categorycode) {
-            $query = "INSERT INTO categories (categorycode,description,enrolmentperiod,enrolmentperioddate,upperagelimit,dateofbirthrequired,finetype,bulk,enrolmentfee,overduenoticerequired,issuelimit,reservefee,hidelostitems,category_type,BlockExpiredPatronOpacActions,default_privacy,checkprevcheckout,reset_password,change_password) VALUES ($categorycode,$description,$enrolmentperiod,$enrolmentperioddate,$upperagelimit,$dateofbirthrequired,$finetype,$bulk,$enrolmentfee,$overduenoticerequired,$issuelimit,$reservefee,$hidelostitems,$category_type,$BlockExpiredPatronOpacActions,$default_privacy,$checkprevcheckout,$reset_password,$change_password)";
+		$check = check_category($dbh,$categorycode);    
+        if ($check == 0) {
+            sql_noresult($dbh,"INSERT INTO categories (categorycode,description,enrolmentperiod,enrolmentperioddate,upperagelimit,dateofbirthrequired,finetype,bulk,enrolmentfee,overduenoticerequired,issuelimit,reservefee,hidelostitems,category_type,BlockExpiredPatronOpacActions,default_privacy,checkprevcheckout,reset_password,change_password) VALUES ($categorycode,$description,$enrolmentperiod,$enrolmentperioddate,$upperagelimit,$dateofbirthrequired,$finetype,$bulk,$enrolmentfee,$overduenoticerequired,$issuelimit,$reservefee,$hidelostitems,$category_type,$BlockExpiredPatronOpacActions,$default_privacy,$checkprevcheckout,$reset_password,$change_password)");
             $sth = $dbh->prepare($query);
             $sth->execute();
         } else {
-            $query = "UPDATE categories SET description = $description,enrolmentperiod = $enrolmentperiod,enrolmentperioddate = $enrolmentperioddate,upperagelimit = $upperagelimit,dateofbirthrequired = $dateofbirthrequired,finetype = $finetype,bulk = $bulk,enrolmentfee = $enrolmentfee,overduenoticerequired = $overduenoticerequired,issuelimit = $issuelimit,reservefee = $reservefee,hidelostitems = $hidelostitems,category_type = $category_type,BlockExpiredPatronOpacActions = $BlockExpiredPatronOpacActions,default_privacy = $default_privacy,checkprevcheckout = $checkprevcheckout,reset_password = $reset_password,change_password = $change_password WHERE categorycode = $categorycode";
-            $sth = $dbh->prepare($query);
-            $sth->execute();
+            sql_noresult($dbh,"UPDATE categories SET description = $description,enrolmentperiod = $enrolmentperiod,enrolmentperioddate = $enrolmentperioddate,upperagelimit = $upperagelimit,dateofbirthrequired = $dateofbirthrequired,finetype = $finetype,bulk = $bulk,enrolmentfee = $enrolmentfee,overduenoticerequired = $overduenoticerequired,issuelimit = $issuelimit,reservefee = $reservefee,hidelostitems = $hidelostitems,category_type = $category_type,BlockExpiredPatronOpacActions = $BlockExpiredPatronOpacActions,default_privacy = $default_privacy,checkprevcheckout = $checkprevcheckout,reset_password = $reset_password,change_password = $change_password WHERE categorycode = $categorycode");
         }
     }
    return;
@@ -755,9 +684,7 @@ sub restore_preferences {
     foreach my $node ($dom->findnodes('//pref')) {
 		my $variable = domain_shift(sql_str_not_null($node->findvalue('./variable')));
         my $value = domain_shift(sql_str_not_null($node->findvalue('./value')));
-        my $query = "UPDATE systempreferences SET value = $value WHERE variable = $variable";
-        my $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"UPDATE systempreferences SET value = $value WHERE variable = $variable");
     }
     return;
 }
@@ -768,9 +695,7 @@ sub restore_reports {
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
-    my $query = "DELETE FROM saved_sql WHERE 1 = 1";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM saved_sql WHERE 1 = 1");
 
     foreach my $node ($dom->findnodes('//sqlreport')) {
         my $date_created = sql_str($node->findvalue('./date_created'));
@@ -792,9 +717,7 @@ sub restore_reports {
         my @row = $sth->fetchrow_array;
         my $borrowernumber = sql_num($row[0]);
 
-        $query = "INSERT INTO saved_sql (date_created,last_modified,savedsql,report_name,type,notes,cache_expiry,public,report_area,report_group,report_subgroup,borrowernumber) VALUES ($date_created,$last_modified,$savedsql,$report_name,$type,$notes,$cache_expiry,$public,$report_area,$report_group,$report_subgroup,$borrowernumber)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO saved_sql (date_created,last_modified,savedsql,report_name,type,notes,cache_expiry,public,report_area,report_group,report_subgroup,borrowernumber) VALUES ($date_created,$last_modified,$savedsql,$report_name,$type,$notes,$cache_expiry,$public,$report_area,$report_group,$report_subgroup,$borrowernumber)");
     }
     return;
 }
@@ -806,9 +729,7 @@ sub restore_smsproviders {
     my $parser = XML::LibXML->new();
     my $dom = $parser->parse_file($restore_file);
 
-    my $query = "DELETE FROM sms_providers WHERE 1 = 1";
-    my $sth = $dbh->prepare($query);
-    $sth->execute();
+    sql_noresult($dbh,"DELETE FROM sms_providers WHERE 1 = 1");
 
     my $p = 0;
     foreach my $node ($dom->findnodes('//provider')) { $p++; }
@@ -821,9 +742,7 @@ sub restore_smsproviders {
     foreach my $node ($dom->findnodes('//provider')) {
         my $name = sql_str($node->findvalue('./name'));
         my $domain = sql_str($node->findvalue('./domain'));
-        $query = "INSERT INTO sms_providers (name,domain) VALUES ($name,$domain)";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        sql_noresult($dbh,"INSERT INTO sms_providers (name,domain) VALUES ($name,$domain)");
     }
     return;
 }
@@ -833,6 +752,23 @@ sub domain_shift {
 	$str =~ s/-test.kohacatalog.com/.kohacatalog.com/g;
 	$str =~ s/-test-staff.kohacatalog.com/-staff.kohacatalog.com/g;
 	return $str;
+}
+
+sub sql_giveback {
+    my $dbh = shift;
+    my $query = shift;
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+	my @result = $sth->fetchrow_array;
+    return @result;
+}
+
+sub sql_noresult {
+    my $dbh = shift;
+    my $statement = shift;
+    my $sth = $dbh->prepare($statement);
+    $sth->execute();
+    return;
 }
 
 sub sql_str {
