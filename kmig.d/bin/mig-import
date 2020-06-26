@@ -204,7 +204,14 @@ sub most_recent_single {
 sub reset_memcache {
 	my $instance = shift;
 
-	print "instance is $instance\n";
+	my $aptcheck = `sudo dpkg -l | grep 'libmemcached-tools'`;
+	if (!defined $aptcheck or length($aptcheck) < 1) { 
+		print "!!! !!! !!! WARNING WARNING WARNING: libmemcached-tools is not installed, removing keys will not be attempted\n"; 
+		return;
+	}
+	
+	system("sudo memcdump --servers localhost | grep '$instance:' | grep 'syspref\|MarcStructure\|AuthorisedValues\|MarcSubfieldStructure' | xargs memcrm --servers localhost");	
+	system("sudo koha-plack --restart $instance");
 
 	return;
 }
