@@ -108,7 +108,6 @@ foreach my $restore (@taglist) {
         if ($timestamp) { $restorefile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_preferences($dbh,$restorefile); }
-        print "IMPORTANT : if you are changing system preferences you may need to run 'sudo systemctl restart memcached'\n\n";
     }
     if ($restore eq 'reports') {
         my $timestamp = most_recent_single($MIGGITDIR,'reports');
@@ -123,6 +122,8 @@ foreach my $restore (@taglist) {
         if ($restorefile) { restore_smsproviders($dbh,$restorefile,$mig_path); }
     }
 }
+
+reset_memcache($MIGSCHEMA);
 
 print "Done.\n";
 
@@ -198,6 +199,14 @@ sub most_recent_single {
     closedir(DIR);
     my $max = max @times; 
     return $max;
+}
+
+sub reset_memcache {
+	my $instance = shift;
+
+	print "instance is $instance\n";
+
+	return;
 }
 
 sub restore_authorisedvalues {
@@ -652,7 +661,7 @@ sub restore_messages {
 
     foreach my $node ($dom->findnodes('/document/message_transport_types/value')) {
         my $message_transport_type = sql_num($node->findvalue('./message_attribute_id'));
-        sql_noresult($dbh,"INSERT INTO message_attributes (message_attribute_id,message_name,takes_days) VALUES ($message_attribute_id,$message_name,$takes_days)");
+        sql_noresult($dbh,"INSERT INTO message_transport_types (message_transport_type) VALUES ($message_transport_type)");
     }
 
     foreach my $node ($dom->findnodes('/document/message_transports/value')) {
@@ -662,7 +671,7 @@ sub restore_messages {
         my $letter_module = sql_num($node->findvalue('./letter_module'));
         my $letter_code = sql_num($node->findvalue('./letter_code'));
         my $branchcode = sql_num($node->findvalue('./branchcode'));
-        sql_noresult($dbh,"INSERT INTO message_attributes (message_attribute_id,message_transport_type,is_digest,letter_module,letter_code,branchcode) VALUES ($message_attribute_id,$message_transport_type,$is_digest,$letter_module,$letter_code,$branchcode)");
+        sql_noresult($dbh,"INSERT INTO message_transports (message_attribute_id,message_transport_type,is_digest,letter_module,letter_code,branchcode) VALUES ($message_attribute_id,$message_transport_type,$is_digest,$letter_module,$letter_code,$branchcode)");
     }
 
     return;
@@ -747,9 +756,7 @@ sub restore_reports {
         my $report_subgroup = sql_str($node->findvalue('./report_subgroup'));
         my $userid = sql_str($node->findvalue('./userid'));
 
-        $query = "SELECT borrowernumber FROM borrowers WHERE userid = $userid";
-        $sth = $dbh->prepare($query);
-        $sth->execute();
+        my $sth = sql_giveback($dbh,"SELECT borrowernumber FROM borrowers WHERE userid = $userid");
         my @row = $sth->fetchrow_array;
         my $borrowernumber = sql_num($row[0]);
 
@@ -795,8 +802,7 @@ sub sql_giveback {
     my $query = shift;
     my $sth = $dbh->prepare($query);
     $sth->execute();
-	my @result = $sth->fetchrow_array;
-    return @result;
+    return $sth;
 }
 
 sub sql_noresult {
