@@ -410,7 +410,7 @@ sub handle_columns {
                     ,$cdata->{max_length}
                 ) . ');') || die "Error inserting into subtable $MIGSCHEMA.\"$first_table\": $!";
             }
-            if ($cdata->{distinct_value_count} > 1 && $cdata->{distinct_value_count} <= 65530) {
+            if ($cdata->{distinct_value_count} > 1 && $cdata->{distinct_value_count} <= 500) {
                 group_by($column);
             }
         }
