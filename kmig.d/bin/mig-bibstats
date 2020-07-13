@@ -96,7 +96,7 @@ my @ilses = (
 	['Polaris','852','p'],
 	['TLC','949','g'],
 	['Koha','952','p'],
-	['Sympony','999','i'],
+	['Symphony','999','i'],
     ['Destiny','852','p']
 );
 
@@ -241,7 +241,10 @@ print "  $author_sub0 245 fields have a subfield 0\n";
 print "\n===== Holdings Analysis\n";
 foreach my $key (keys %holding_counts) {
 	my $c = $holding_counts{$key};
-	if (((100/$i)*$c) >= $holding_threshold) { print "  $key $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n"; }
+	if (((100/$i)*$c) >= $holding_threshold) { 
+		if ($key ne 'Symphony') { print "  $key - $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n"; }
+		else { print "  $key - $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes - 999 FIELDS MUST BE MOVED WITH kmig move999s\n"; } 
+	}
 }
 
 print "\n===== URI values are domains and filtered to only show those with more than $uri_threshold\n";
