@@ -1,0 +1,79 @@
+#!/usr/bin/perl
+# -*- coding: iso-8859-15 -*-
+###############################################################################
+=pod
+
+=item B<prepbibs> --file foo.mrc 
+
+Converts a MARC binary file internally to XML and changes 999 subfields to 
+998s with a special subfield z with a value of 'converted 999 field' added for 
+identification.
+
+=back
+=cut
+
+###############################################################################
+
+use strict;
+use warnings;
+
+use Data::Dumper;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use Switch;
+use Getopt::Long;
+use MARC::Batch;
+use MARC::Record;
+use MARC::Field;
+use MARC::Batch;
+use MARC::File::XML;
+use Cwd 'abs_path';
+use Cwd qw(getcwd);
+use List::MoreUtils qw(uniq);
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use KMig;
+use open ':encoding(utf8)';
+
+binmode STDOUT, ":utf8";
+
+pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
+pod2usage(-verbose => 1) if ! $ARGV[1];
+
+my $infile;
+
+my $ret = GetOptions(
+    'file:s'           		 => \$infile
+);
+
+my $outfile = $infile . '.prepped_xml';
+
+open my $outfh, '>:utf8', $outfile or die "Can't open output file $!\n";
+
+my $batch = MARC::Batch->new( 'USMARC', $infile );
+$batch->strict_off();
+
+while ( my $record = $batch->next() ) {
+	my @nnn = $record->field('999');
+	foreach my $n (@nnn) {
+		$n->set_tag('998');
+		$n->add_subfields( 'z' => 'converted 999 field' );
+	}
+    print $outfh $record->as_xml(),"\n";
+}
+
+close ($infile);
+close ($outfile);
+
+
+########### functions
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    exit 1;
+}
