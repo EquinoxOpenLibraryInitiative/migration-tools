@@ -243,7 +243,7 @@ foreach my $key (keys %holding_counts) {
 	my $c = $holding_counts{$key};
 	if (((100/$i)*$c) >= $holding_threshold) { 
 		if ($key ne 'Symphony') { print "  $key - $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n"; }
-		else { print "  $key - $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes - 999 FIELDS MUST BE MOVED WITH kmig move999s\n"; } 
+		else { print "  $key - $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes - 999 FIELDS MUST BE MOVED WITH kmig prepbibs\n"; } 
 	}
 }
 
