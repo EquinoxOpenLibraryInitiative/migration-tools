@@ -45,19 +45,31 @@ pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $infile;
+my $i = 0;
 
 my $ret = GetOptions(
     'file:s'           		 => \$infile
 );
 
 my $outfile = $infile . '.prepped_xml';
+my $errorfile = $infile . '.errors_xml';
 
 open my $outfh, '>:utf8', $outfile or die "Can't open output file $!\n";
+open my $errorfh, '>:utf8', $errorfile or die "Can't open error file $!\n";
 
-my $batch = MARC::Batch->new( 'USMARC', $infile );
+my $filetype = `file $infile`;
+my $batch;
+if ($filetype =~ m/MARC21/) {
+	$batch = MARC::Batch->new( 'USMARC', $infile );
+} else {
+	$batch = MARC::Batch->new( 'XML', $infile );
+}
 $batch->strict_off();
 
-while ( my $record = $batch->next() ) {
+my $record;
+while ( eval {$record = $batch->next()} or do { if ($@) { print $errorfh $record->as_xml(); next; } } ) {
+	$i++;
+	print "Processed: $i\n" if ($i % 100) == 0;
 	my @nnn = $record->field('852');
 	foreach my $n (@nnn) {
 		$n->set_tag('851');
@@ -68,7 +80,7 @@ while ( my $record = $batch->next() ) {
 
 close ($infile);
 close ($outfile);
-
+close ($errorfile);
 
 ########### functions
 
