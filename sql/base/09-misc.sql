@@ -61,6 +61,8 @@ BEGIN
             AND column_name like 'l_%'
     LOOP
        EXECUTE FORMAT('UPDATE ' || s_name || '.' || t_name || ' SET ' || c_name || ' = NULL WHERE ' || c_name || ' = '''' '); 
+	   EXECUTE FORMAT('UPDATE ' || s_name || '.' || t_name || ' SET ' || c_name || ' = NULL WHERE ' || c_name || ' = '' '' '); 
+       EXECUTE FORMAT('UPDATE ' || s_name || '.' || t_name || ' SET ' || c_name || ' = NULL WHERE ' || c_name || ' = ''NULL'' '); 
     END LOOP;  
 
     RETURN TRUE;
@@ -81,6 +83,8 @@ BEGIN
             AND (data_type='text' OR data_type='character varying')
     LOOP
        EXECUTE FORMAT('UPDATE ' || s_name || '.' || t_name || ' SET ' || c_name || ' = NULL WHERE ' || c_name || ' = '''' ');
+       EXECUTE FORMAT('UPDATE ' || s_name || '.' || t_name || ' SET ' || c_name || ' = NULL WHERE ' || c_name || ' = '' '' ');
+       EXECUTE FORMAT('UPDATE ' || s_name || '.' || t_name || ' SET ' || c_name || ' = NULL WHERE ' || c_name || ' = ''NULL'' ');
     END LOOP;
 
     RETURN TRUE;
