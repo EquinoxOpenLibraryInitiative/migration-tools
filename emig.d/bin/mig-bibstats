@@ -110,11 +110,14 @@ if ($p_holding_code) {
 
 #to do - add a check for exportbarcodes being in @ilses
 
-my $batch = MARC::Batch->new('USMARC', $file);
-$batch->strict_off();
 my $filetype = `file $file`;
-if ($filetype =~ m/MARC21/ or $p_ignore_filetype eq 'true') { print "$filetype.\n" }
-    else { abort("File is not MARC21."); }
+my $batch;
+if ($filetype =~ m/MARC21/) {
+    $batch = MARC::Batch->new( 'USMARC', $file );
+} else {
+    $batch = MARC::Batch->new( 'XML', $file );
+}
+$batch->strict_off();
 
 my $i = 0;
 my $uri_count = 0;
