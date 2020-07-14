@@ -36,7 +36,7 @@ use List::MoreUtils qw(uniq);
 use FindBin;
 my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
-use KMig;
+use EMig;
 use open ':encoding(utf8)';
 
 binmode STDOUT, ":utf8";
