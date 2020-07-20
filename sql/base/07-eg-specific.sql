@@ -2162,3 +2162,30 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $func$ LANGUAGE plpgsql;
 
+DROP FUNCTION IF EXISTS migration_tools.create_exceeds_fines(INTEGER);
+CREATE OR REPLACE FUNCTION migration_tools.create_exceeds_fines(au_id INTEGER) RETURNS BOOLEAN AS $$
+DECLARE
+    au_profile          INTEGER;
+    au_org_unit         INTEGER;
+    au_balance_owed     NUMERIC;
+    gpt_id              INTEGER;
+    gpt_row             permission.grp_penalty_threshold%ROWTYPE;
+    ausp_id             INTEGER;
+BEGIN
+    SELECT profile, home_ou FROM actor.usr WHERE id = au_id INTO au_profile, au_org_unit;
+    SELECT balance_owed FROM money.usr_summary WHERE usr = au_id INTO au_balance_owed;
+    IF au_balance_owed IS NULL THEN RETURN FALSE; END IF;
+
+    FOR gpt_id IN SELECT id FROM permission.grp_penalty_threshold WHERE grp IN (SELECT id FROM permission.grp_ancestors(au_profile)) AND penalty = 1 AND org_unit IN (SELECT id FROM actor.org_unit_ancestors(au_org_unit)) LOOP
+        SELECT * FROM permission.grp_penalty_threshold WHERE id = gpt_id INTO gpt_row;
+        ausp_id := NULL;
+        SELECT id FROM actor.usr_standing_penalty WHERE usr = au_id AND org_unit = gpt_row.org_unit AND standing_penalty = 1 AND stop_date IS NULL INTO ausp_id;
+        IF au_balance_owed >= gpt_row.threshold AND ausp_id IS NULL THEN
+            INSERT INTO actor.usr_standing_penalty (org_unit,usr,standing_penalty,staff,note) VALUES (gpt_row.org_unit,au_id,1,1,'set during migration');
+        END IF;
+    END LOOP;
+    RETURN TRUE;
+END
+$$ LANGUAGE plpgsql;
+
+
