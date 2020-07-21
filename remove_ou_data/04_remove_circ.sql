@@ -51,7 +51,7 @@ AND org_unit IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit 
 
 DELETE FROM action.usr_circ_history WHERE id IN (SELECT a.id FROM action.usr_circ_history a LEFT JOIN action.circulation b ON b.id = a.source_circ WHERE b.id IS NULL);
 
-DELETE FROM action.circulation_limit_group_map WHERE circ IN (SELECT a.id FROM action.circulation_limit_group_map a LEFT JOIN action.circulation b ON b.id = a.circ WHERE b.id IS NULL);
+DELETE FROM action.circulation_limit_group_map WHERE circ IN (SELECT a.circ FROM action.circulation_limit_group_map a LEFT JOIN action.circulation b ON b.id = a.circ WHERE b.id IS NULL);
 
 COMMIT;
 

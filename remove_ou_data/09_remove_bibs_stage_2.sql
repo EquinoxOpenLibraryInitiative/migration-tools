@@ -20,6 +20,8 @@
 \set ECHO all
 \timing
 
+ALTER TABLE biblio.monograph_part DISABLE RULE protect_mono_part_delete;
+
 BEGIN;
 
 DELETE FROM authority.bib_linking WHERE bib IN 
@@ -92,4 +94,19 @@ DELETE FROM booking.resource_type WHERE record IN
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
+DELETE FROM metabib.display_entry WHERE record IN
+(
+    SELECT record FROM esi.:vol_del_table x
+    WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
+);
+
+DELETE FROM metabib.real_full_rec WHERE record IN
+(
+    SELECT record FROM esi.:vol_del_table x
+    WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
+);
+
 COMMIT;
+
+
+ALTER TABLE biblio.monograph_part ENABLE RULE protect_mono_part_delete;
