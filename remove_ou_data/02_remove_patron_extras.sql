@@ -55,10 +55,10 @@ DELETE FROM actor.card WHERE usr IN
 UPDATE actor.usr SET card = NULL
 WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
-DELETE FROM actor.usr_address WHERE usr IN
-(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 UPDATE actor.usr SET mailing_address = NULL, billing_address = NULL
 WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+DELETE FROM actor.usr_address WHERE usr IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
 DELETE FROM actor.usr_message WHERE usr IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
