@@ -20,11 +20,12 @@
 \timing
 
 -- these scripts assume that the admin user's home_ou is 1, if not there can be problems 
+-- replace 'equinox' with the appropriate admin name 
 
 DO $$
 DECLARE 
     x   INTEGER;
 BEGIN
-    SELECT home_ou FROM actor.usr INTO x;
+    SELECT home_ou FROM actor.usr WHERE usrname = 'equinox' INTO x;
     IF x != 1 THEN RAISE EXCEPTION 'Admin user is not home org of 1'; END IF;
 END $$;
