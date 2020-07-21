@@ -43,6 +43,9 @@ DELETE FROM actor.stat_cat_entry WHERE owner IN (SELECT (actor.org_unit_descenda
 DELETE FROM actor.toolbar WHERE org IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM actor.usr_org_unit_opt_in WHERE org_unit IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM actor.usr_standing_penalty WHERE org_unit IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+DELETE FROM serial.distribution WHERE holding_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+DELETE FROM serial.record_entry WHERE owning_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+DELETE FROM serial.subscription WHERE owning_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM asset.copy_template WHERE circ_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM asset.copy_template WHERE owning_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM booking.reservation WHERE pickup_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
@@ -72,9 +75,6 @@ DELETE FROM config.z3950_source_credentials WHERE owner IN (SELECT (actor.org_un
 DELETE FROM money.collections_tracker WHERE location IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM permission.grp_penalty_threshold WHERE org_unit IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM permission.usr_work_ou_map WHERE work_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
-DELETE FROM serial.distribution WHERE holding_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
-DELETE FROM serial.record_entry WHERE owning_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
-DELETE FROM serial.subscription WHERE owning_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM url_verify.session WHERE owning_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM vandelay.import_bib_trash_group WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 DELETE FROM vandelay.import_item_attr_definition WHERE owner IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
