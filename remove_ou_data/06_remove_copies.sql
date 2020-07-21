@@ -55,6 +55,10 @@ DELETE FROM vandelay.import_item WHERE imported_as IN (
 DELETE FROM asset.copy WHERE circ_lib IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
+DELETE FROM asset.latest_inventory WHERE copy IN 
+    (SELECT li.copy FROM asset.latest_inventory li LEFT JOIN asset.copy acp ON acp.id = li.copy WHERE acp.id IS NULL)
+;
+
 COMMIT;
 
 DROP INDEX vandelay.tmp_import_as;
