@@ -52,6 +52,30 @@ WHERE btype IN (
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
 );
 
+DELETE FROM action_trigger.event_output WHERE id IN (
+SELECT template_output FROM action_trigger.event 
+WHERE  event_def IN (
+    SELECT id FROM action_trigger.event_definition
+    WHERE owner IN
+    (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
+));
+
+DELETE FROM action_trigger.event_output WHERE id IN (
+SELECT async_output FROM action_trigger.event 
+WHERE  event_def IN (
+    SELECT id FROM action_trigger.event_definition
+    WHERE owner IN
+    (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
+));
+
+DELETE FROM action_trigger.event_output WHERE id IN (
+SELECT error_output FROM action_trigger.event 
+WHERE  event_def IN (
+    SELECT id FROM action_trigger.event_definition
+    WHERE owner IN
+    (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
+));
+
 DELETE FROM action_trigger.event
 WHERE event_def IN (
     SELECT id FROM action_trigger.event_definition
@@ -70,6 +94,7 @@ WHERE event_def IN (
     WHERE owner IN
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
 );
+
 DELETE FROM action_trigger.event_definition
     WHERE owner IN
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
