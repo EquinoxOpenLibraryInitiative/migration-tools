@@ -38,6 +38,13 @@ WHERE copy_location IN (SELECT id FROM asset.copy_location WHERE owning_lib IN
 DELETE FROM asset.copy_location WHERE owning_lib IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
 
+DELETE FROM money.account_adjustment WHERE billing IN 
+    (SELECT id FROM money.billing WHERE btype IN (
+        SELECT id FROM config.billing_type
+        WHERE owner IN
+        (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
+));
+
 DELETE FROM money.billing
 WHERE btype IN (
     SELECT id FROM config.billing_type
