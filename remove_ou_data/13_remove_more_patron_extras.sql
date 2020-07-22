@@ -28,4 +28,40 @@ DELETE FROM action.non_cataloged_circulation WHERE staff IN
 DELETE FROM action.usr_circ_history WHERE usr IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
+DELETE FROM acq.user_request WHERE usr IN 
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.lineitem WHERE creator IN 
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.lineitem WHERE selector IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.lineitem WHERE editor IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.lineitem WHERE purchase_order IN 
+(SELECT id FROM acq.purchase_order WHERE creator IN 
+	(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)));
+DELETE FROM acq.po_note WHERE purchase_order IN 
+(SELECT id FROM acq.purchase_order WHERE creator IN
+    (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)));
+DELETE FROM acq.purchase_order WHERE creator IN 
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.purchase_order WHERE owner IN
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.fund_allocation WHERE fund IN 
+(SELECT id FROM acq.fund WHERE org IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.invoice_item WHERE fund_debit IN 
+(SELECT id FROM acq.fund_debit WHERE fund IN (SELECT id FROM acq.fund WHERE org IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)));
+DELETE FROM acq.invoice WHERE receiver IN 
+(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+
+DELETE FROM acq.lineitem_detail WHERE fund IN 
+(SELECT id FROM acq.fund WHERE org IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)); 
+DELETE FROM acq.fund_debit WHERE fund IN 
+(SELECT id FROM acq.fund WHERE org IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.fund_transfer WHERE src_fund IN 
+(SELECT id FROM acq.fund WHERE org IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.fund_transfer WHERE dest_fund IN 
+(SELECT id FROM acq.fund WHERE org IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+DELETE FROM acq.fund WHERE org IN  (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+
+
 COMMIT;
