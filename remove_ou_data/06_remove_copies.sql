@@ -25,6 +25,12 @@ CREATE INDEX tmp_import_as ON vandelay.import_item(imported_as);
 
 BEGIN;
 
+DELETE FROM asset.copy_alert WHERE copy IN (
+  SELECT id FROM asset.copy WHERE circ_lib IN
+    (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
+);
+
+
 -- NOTE: no FK
 DELETE FROM asset.opac_visible_copies WHERE copy_id IN (
   SELECT id FROM asset.copy WHERE circ_lib IN
