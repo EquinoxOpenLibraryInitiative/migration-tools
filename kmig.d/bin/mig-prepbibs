@@ -9,6 +9,8 @@ Converts a MARC binary file internally to XML and changes 999 subfields to
 998s with a special subfield z with a value of 'converted 999 field' added for 
 identification.
 
+Upserts 003 and 040c with optional code if supplied. 
+
 =back
 =cut
 
@@ -38,6 +40,7 @@ my $mig_bin = "$FindBin::Bin/";
 use lib "$FindBin::Bin/";
 use KMig;
 use open ':encoding(utf8)';
+use Data::Dumper;
 
 binmode STDOUT, ":utf8";
 
@@ -46,9 +49,11 @@ pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $infile;
 my $i = 0;
+my $branchcode;
 
 my $ret = GetOptions(
-    'file:s'           		 => \$infile
+    'file:s'           		 => \$infile,
+	'branchcode:s' 			 => \$branchcode
 );
 
 my $outfile = $infile . '.prepped_xml';
@@ -65,16 +70,29 @@ if ($filetype =~ m/MARC21/) {
 	$batch = MARC::Batch->new( 'XML', $infile );
 }
 $batch->strict_off();
+my $new_zzt = MARC::Field->new('003',$branchcode);
+my $new_zfz = MARC::Field->new('040','','','c' => $branchcode); 
+my @new_fields;
+push @new_fields, $new_zzt;
+push @new_fields, $new_zfz;
 
+my $record;
 while ( eval {$record = $batch->next()} or do { if ($@) { print $errorfh $record->as_xml(); next; } } ) {
  	$i++;
- 	print "Processed: $i\n" if ($i % 100) == 0;
+    print "Processed: $i\n" if ($i % 100) == 0;
 	my @nnn = $record->field('999');
 	foreach my $n (@nnn) {
 		$n->set_tag('998');
-		$n->add_subfields( 'z' => 'converted 999 field' );
+		$n->add_subfields('z' => 'converted 999 field');
 	}
-    print $outfh $record->as_xml(),"\n";
+	if ($branchcode) {
+		my $zzt = $record->field('003');
+		my $zfz = $record->field('040');
+		if ($zzt) { $record->delete_field($zzt); }
+		if ($zfz) { $record->delete_field($zfz); }
+		$record->insert_fields_ordered( @new_fields ); 
+	}
+	print $outfh $record->as_xml(),"\n";
 }
 
 close ($infile);
