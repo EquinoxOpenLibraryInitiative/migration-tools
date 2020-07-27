@@ -94,7 +94,7 @@ DELETE FROM booking.resource_type WHERE record IN
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
-DELETE FROM metabib.display_entry WHERE record IN
+DELETE FROM metabib.display_entry WHERE source IN
 (
     SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
