@@ -187,7 +187,7 @@ while ( my $record = $batch->next() ) {
         my @holding_fields = $record->field($p_holding_code);
         foreach my $hf (@holding_fields) {
             my $item_type = $hf->subfield($p_item_type_subfield) || '<missing item type subfield>';
-            my $branch = $p_branch_subfield || 'default';
+            my $branch = $p_branch_subfield ? $f->subfield($p_branch_subfield) || 'default';
             if (! defined $bib_types_by_item_type{ $branch }) {
                 $bib_types_by_item_type{ $branch } = {};
             }
