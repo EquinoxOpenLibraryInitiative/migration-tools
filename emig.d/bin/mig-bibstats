@@ -24,6 +24,10 @@ with one of the ILSes so provide the name
 --exportbarcodesfile will use this file name for a barcode export instead 
 of the generic 'barcodes_export.txt'
 
+--item_type_subfield will make use of --holding_code and provide a breakdown of
+bib types by item types.  If --branch_subfield is also provided, then the
+breakdown will be further subdivided by branch.
+
 =back
 =cut
 
@@ -60,6 +64,8 @@ my $file;
 my $uri_threshold = 1;
 my $p_holding_code;
 my $p_barcode_subfield;
+my $p_item_type_subfield;
+my $p_branch_subfield;
 my $p_ils_name = '';
 my $holding_threshold = 50;
 my $p_ignore_filetype = 'false';
@@ -73,6 +79,8 @@ my $ret = GetOptions(
     'uri_threshold:i'           => \$uri_threshold,
     'holding_code:s'            => \$p_holding_code,
     'barcode_subfield:s'     => \$p_barcode_subfield,
+    'item_type_subfield:s'     => \$p_item_type_subfield,
+    'branch_subfield:s'     => \$p_branch_subfield,
     'ignore_filetype:s'         => \$p_ignore_filetype,
     'ils:s'                     => \$p_ils_name,
     'exportbarcodes:s'         => \$exportbarcodes,
@@ -89,6 +97,16 @@ if ($p_barcode_subfield) {
     if (length $p_barcode_subfield != 1) { abort('Barcode subfields must be a single character code.'); }
 }
 
+if ($p_item_type_subfield) {
+	if (!defined $p_holding_code) { abort('An item type field can not be used without a holding code.'); }
+	if (length $p_item_type_subfield != 1) { abort('Item type subfields must be a single character code.'); }
+}
+
+if ($p_branch_subfield) {
+	if (!defined $p_holding_code) { abort('A branch field can not be used without a holding code.'); }
+	if (length $p_branch_subfield != 1) { abort('Branch subfields must be a single character code.'); }
+}
+
 # ils name, holding tag, barcode subfield 
 my @ilses = (
     ['Mandarin','852','p'],
@@ -101,7 +119,7 @@ my @ilses = (
 );
 
 my @temp;
-if ($p_holding_code) {
+if (defined $p_holding_code && defined $p_ils_name && defined $p_barcode_subfield) {
     push @temp, $p_ils_name;
     push @temp, $p_holding_code;
     if ($p_barcode_subfield) { push @temp, lc $p_barcode_subfield; }
@@ -129,6 +147,7 @@ my @uris;
 my @fields;
 my @encodings;
 my @types;
+my %bib_types_by_item_type;
 my @holding_code_strings;
 my %holding_counts;
 my %barcode_counts;
@@ -163,6 +182,24 @@ while ( my $record = $batch->next() ) {
     push @encodings, $enc;
     my $type = substr $record->leader(), 6, 1;
     push @types, $type;
+    # bib type by branch and by item type if item subfield (and optionally branch subfield) provided
+    if (defined $p_holding_code && defined $p_item_type_subfield) {
+        my @holding_fields = $record->field($p_holding_code);
+        foreach my $hf (@holding_fields) {
+            my $item_type = $hf->subfield($p_item_type_subfield) || '<missing item type subfield>';
+            my $branch = $p_branch_subfield || 'default';
+            if (! defined $bib_types_by_item_type{ $branch }) {
+                $bib_types_by_item_type{ $branch } = {};
+            }
+            if (! defined $bib_types_by_item_type{ $branch }{ $type }) {
+                $bib_types_by_item_type{ $branch }{ $type } = {};
+            }
+            if (! defined $bib_types_by_item_type{ $branch }{ $type }{ $item_type }) {
+                $bib_types_by_item_type{ $branch }{ $type }{ $item_type } = 0;
+            }
+            $bib_types_by_item_type{ $branch }{ $type }{ $item_type }++;
+        }
+    }
     foreach my $f (@fields) {
         my $u = $f->subfield('u');
         my $n = $f->subfield('9');
@@ -233,6 +270,19 @@ foreach my $key (keys %type_counts) {
     print "  $key   $value $type\n";
 }
 print "\n";
+
+if ($p_item_type_subfield) {
+    print "===== Branch / Leader 06 / Item Type\n";
+    foreach my $branch (keys %bib_types_by_item_type) {
+        foreach my $btype (keys %{ $bib_types_by_item_type{$branch} }) {
+            foreach my $itype (keys %{ $bib_types_by_item_type{$branch}{$btype} }) {
+                my $count = $bib_types_by_item_type{$branch}{$btype}{$itype};
+                print "$branch\t$btype (" . give_type($btype) . ")\t$itype\t$count\n";
+            }
+        }
+    }
+    print "\n";
+}
 
 print "===== Summary of Select Field Counts\n";
 print "  $uri_count 856 fields with a subfield u\n";
