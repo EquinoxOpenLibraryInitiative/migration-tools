@@ -158,7 +158,7 @@ while (my $line = <$fh>) {
                 or !defined $column_values{'family_name'} or !defined $column_values{'first_given_name'} or !defined $column_values{'home_library'}
             ) {
                 $skipped++;
-		$msg = "required value in row with usrname $column_values{'usrname'} and cardnumber or $column_values{'cardnumber'} is null";
+                $msg = "required value in row with usrname $column_values{'usrname'} and cardnumber or $column_values{'cardnumber'} is null";
                 log_event($dbh,$session,$msg);
                 if ($debug != 0) { print "$msg\n" }
                 next;
@@ -170,7 +170,7 @@ while (my $line = <$fh>) {
             my $prepped_home_ou_id = get_original_id(\%original_libs,\%mapped_libs,$column_values{'home_library'});
             if (!defined $prepped_home_ou_id or !defined $prepped_profile_id) { 
                 $skipped++;
-		$msg = "could not find valid home library or profile id (or both) for $column_values{'cardnumber'}";
+                $msg = "could not find valid home library or profile id (or both) for $column_values{'cardnumber'}";
                 log_event($dbh,$session,$msg);
                 if ($debug != 0) { print "$msg\n" }
                 next;
@@ -195,7 +195,7 @@ while (my $line = <$fh>) {
             $column_values{'profile'} = $prepped_profile_id;
             if ($valid_barcode == 0 or $valid_usrname == 0) {
                 $skipped++;
-		$msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account";
+                $msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account";
                 log_event($dbh,$session,$msg);
 		if ($debug != 0) { print "$msg\n" }
                 next;
