@@ -42,6 +42,7 @@ my $alert_message;
 my $alert_title = 'Needs Staff Attention';
 my $profile;
 my $home_ou;
+my $print_au_id = 0;
 my $session = time();
 
 my $ret = GetOptions(
@@ -51,6 +52,7 @@ my $ret = GetOptions(
     'dbpw:s'            => \$dbpw,
     'dbport:s'          => \$dbport,
     'debug:i'           => \$debug,
+    'print_au_id:i'     => \$print_au_id,
     'file:s'            => \$file,
     'delimiter:s'       => \$delimiter,
     'matchpoint:s'      => \$matchpoint,
@@ -282,6 +284,7 @@ while (my $line = <$fh>) {
                 $query = insert_addr_sql($au_id,2,%column_values);
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
             }
+        if ($print_au_id != 0) { print "$au_id\n"; }
         }
     }
 }
