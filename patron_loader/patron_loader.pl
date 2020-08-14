@@ -109,6 +109,7 @@ foreach my $column (@columns) { $column_positions{$column} = -1; }
 my $rawlines = 0;
 my $i = 0;
 my $skipped = 0;
+my $msg;
 my $csv = Text::CSV->new({ sep_char => $delimiter });
 
 if ($alert_message) { 
@@ -157,7 +158,9 @@ while (my $line = <$fh>) {
                 or !defined $column_values{'family_name'} or !defined $column_values{'first_given_name'} or !defined $column_values{'home_library'}
             ) {
                 $skipped++;
-                log_event($dbh,$session,"required value in row with usrname $column_values{'usrname'} and cardnumber or $column_values{'cardnumber'} is null");
+		$msg = "required value in row with usrname $column_values{'usrname'} and cardnumber or $column_values{'cardnumber'} is null";
+                log_event($dbh,$session,$msg);
+                if ($debug != 0) { print "$msg\n" }
                 next;
             }
             if ($column_values{'dob'}) { $column_values{'dob'} = sql_date($dbh,$column_values{'dob'},$date_format); }
@@ -167,7 +170,9 @@ while (my $line = <$fh>) {
             my $prepped_home_ou_id = get_original_id(\%original_libs,\%mapped_libs,$column_values{'home_library'});
             if (!defined $prepped_home_ou_id or !defined $prepped_profile_id) { 
                 $skipped++;
-                log_event($dbh,$session,"could not find valid home library or profile id (or both) for $column_values{'cardnumber'}");
+		$msg = "could not find valid home library or profile id (or both) for $column_values{'cardnumber'}";
+                log_event($dbh,$session,$msg);
+                if ($debug != 0) { print "$msg\n" }
                 next;
             } 
             if ($matchpoint eq 'usrname') {
@@ -190,7 +195,9 @@ while (my $line = <$fh>) {
             $column_values{'profile'} = $prepped_profile_id;
             if ($valid_barcode == 0 or $valid_usrname == 0) {
                 $skipped++;
-                log_event($dbh,$session,"usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account");
+		$msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account";
+                log_event($dbh,$session,$msg);
+		if ($debug != 0) { print "$msg\n" }
                 next;
             }
             my $update_usr_str;
