@@ -56,7 +56,7 @@ my $ret = GetOptions(
     'matchpoint:s'      => \$matchpoint,
     'date_format:s'     => \$date_format,
     'ident_type:s'      => \$ident_type,
-	'profile:s'			=> \$profile,
+    'profile:s'         => \$profile,
     'default_password:s' => \$default_password,
     'alert_message:s'   => \$alert_message, 
     'alert_title:s'     => \$alert_title,
@@ -168,7 +168,6 @@ while (my $line = <$fh>) {
             while (my ($col,$pos) = each %column_positions) { $column_values{$col} = ''; }
         }  else { #actual data
             while (my ($col,$val) = each %column_values) { $column_values{$col} = $fields[$column_positions{$col}]; }
-            print Dumper(%column_values);
             if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'} #make sure basic values are present, homelib and profile checked later
                 or !defined $column_values{'family_name'} or !defined $column_values{'first_given_name'}
             ) {
@@ -212,7 +211,7 @@ while (my $line = <$fh>) {
                 $skipped++;
                 $msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account";
                 log_event($dbh,$session,$msg);
-		        if ($debug != 0) { print "$msg\n" }
+                if ($debug != 0) { print "$msg\n" }
                 next;
             }
             my $update_usr_str;
