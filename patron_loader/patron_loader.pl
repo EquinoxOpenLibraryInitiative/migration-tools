@@ -312,7 +312,7 @@ sub db_schema_check {
     my $dbh = shift;
     my $query = 'SELECT 1 FROM information_schema.schemata WHERE schema_name = \'patron_loader\';';
     my @results = sql_return($dbh,$query);
-    if ($results[0] == 1) { return; }
+    if ($results[0]) { return; }
     $query = 'CREATE SCHEMA patron_loader;';
     sql_null($dbh,$query);
     return;
@@ -322,7 +322,7 @@ sub db_table_check_header {
     my $dbh = shift;
     my $query = 'SELECT 1 FROM information_schema.tables WHERE table_schema = \'patron_loader\' AND table_name = \'header\';';
     my @results = sql_return($dbh,$query);
-    if ($results[0] == 1) { return; }
+    if ($results[0]) { return; }
     $query = 'CREATE TABLE patron_loader.header (id SERIAL, org_unit TEXT, import_header TEXT, default_header TEXT);';
     sql_null($dbh,$query);
     return;
@@ -332,7 +332,7 @@ sub db_table_check_log {
     my $dbh = shift;
     my $query = 'SELECT 1 FROM information_schema.tables WHERE table_schema = \'patron_loader\' AND table_name = \'log\';';
     my @results = sql_return($dbh,$query);
-    if ($results[0] == 1) { return; }
+    if ($results[0]) { return; }
     $query = 'CREATE TABLE patron_loader.log (id SERIAL, session BIGINT, event TEXT, record_count INTEGER, logtime TIMESTAMP DEFAULT NOW());';
     sql_null($dbh,$query);
     return;
@@ -342,7 +342,7 @@ sub db_table_check_mapping {
     my $dbh = shift;
     my $query = 'SELECT 1 FROM information_schema.tables WHERE table_schema = \'patron_loader\' AND table_name = \'mapping\';';
     my @results = sql_return($dbh,$query);
-    if ($results[0] == 1) { return; }
+    if ($results[0]) { return; }
     $query = 'CREATE TABLE patron_loader.mapping (id SERIAL, org_unit TEXT, mapping_type TEXT, import_value TEXT, native_value TEXT);';
     sql_null($dbh,$query);
     return;
