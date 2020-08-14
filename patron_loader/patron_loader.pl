@@ -106,6 +106,7 @@ my @columns = ("cardnumber","profile","usrname","passwd","net_access_level",
 my %column_positions;
 my %column_values;
 foreach my $column (@columns) { $column_positions{$column} = -1; }
+my $rawlines = 0;
 my $i = 0;
 my $skipped = 0;
 my $csv = Text::CSV->new({ sep_char => $delimiter });
@@ -119,6 +120,8 @@ if ($debug == 1) { print "Debug flag is on ... no patrons will be added or updat
 if ($debug == 1) { print "---------------------------------------------------------\n" }
 
 while (my $line = <$fh>) {
+    $rawlines++;
+    $line =~ s/\r//g; 
     if ($csv->parse($line)) {
         $i++;
 		if ($debug != 0 and $i != 1) { print "========================= processing line $i\n"; }
@@ -237,11 +240,13 @@ while (my $line = <$fh>) {
     }
 }
 close($fh);
+log_event($dbh,$session,"raw lines in file",$rawlines);
 log_event($dbh,$session,"rows processed",$i-1);
 log_event($dbh,$session,"rows skipped",$skipped);
 log_event($dbh,$session,"session closing normally");
 my $j = $i -1;
 print "========================= we are done!\n";
+print "$rawlines raw lines in file\n";
 print "$j rows processed not including header\n";
 print "$skipped rows skipped\n";
 
