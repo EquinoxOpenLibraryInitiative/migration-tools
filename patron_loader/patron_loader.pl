@@ -40,6 +40,8 @@ my $default_password;
 my $ident_type = 3;
 my $alert_message;
 my $alert_title = 'Needs Staff Attention';
+my $profile;
+my $home_ou;
 my $session = time();
 
 my $ret = GetOptions(
@@ -54,9 +56,11 @@ my $ret = GetOptions(
     'matchpoint:s'      => \$matchpoint,
     'date_format:s'     => \$date_format,
     'ident_type:s'      => \$ident_type,
+	'profile:s'			=> \$profile,
     'default_password:s' => \$default_password,
     'alert_message:s'   => \$alert_message, 
     'alert_title:s'     => \$alert_title,
+    'home_ou:s'         => \$home_ou,
     'org_unit:s'        => \$org_unit
 );
 
@@ -93,6 +97,20 @@ my %original_pgt = hash_from_sql($dbh,"SELECT name, id FROM permission.grp_tree;
 my %mapped_pgt = hash_from_sql($dbh,"SELECT import_value, native_value FROM patron_loader.mapping WHERE mapping_type = 'profile' AND org_unit = $prepped_org_unit;");
 my %original_libs = hash_from_sql($dbh,"SELECT shortname, id FROM actor.org_unit;");
 my %mapped_libs = hash_from_sql($dbh,"SELECT import_value, native_value FROM patron_loader.mapping WHERE mapping_type = 'home_library' AND org_unit = $prepped_org_unit;");
+
+#if profile is from command line go ahead and get id a single time or fail if it's not valid 
+my $profile_id;
+if ($profile) { 
+    $profile_id = $original_pgt{$profile}; 
+    if (!defined $profile_id) { abort("provided parameter profile is invalid"); }
+}
+
+#if home_ou is from command line ...
+my $home_ou_id;
+if ($home_ou) {
+    $home_ou_id = $original_libs{$home_ou};
+    if (!defined $home_ou_id) { abort("provided home ou parameter is invalid"); }
+}
 
 #some values, notably home_library and profile can be mapped to substitute values if the exporting 
 #system can not supply evergreen native values
@@ -141,21 +159,18 @@ while (my $line = <$fh>) {
             }
             #no need to keep fields not in here so ... byebye
             while (my ($col,$pos) = each %column_positions) { if ($pos == -1) { delete $column_positions{$col}; } }
-            if (!defined $column_positions{'cardnumber'}    #make sure required columns are present and fail if not
-                or !defined $column_positions{'profile'}
-                or !defined $column_positions{'usrname'}
-                or !defined $column_positions{'family_name'}
-                or !defined $column_positions{'first_given_name'}
-                or !defined $column_positions{'home_library'}
-                ) {
-                    fail($dbh,$session,"a required column is missing: either cardnumber, profile, usrname, family_name, first_given_name or home_library");
-                }
+            #make sure required columns or parameters are present, fail if not 
+            my $missing_columns = '';
+            if (!defined $column_positions{'cardnumber'}) { $missing_columns = join('',$missing_columns,'cardnumber'); }
+            if (!defined $column_positions{'usrname'}) { $missing_columns = join('',$missing_columns,'usrname'); }
+			if ($missing_columns ne '') { fail($dbh,$session,"required column(s) are missing: $missing_columns"); }
             #now copy the hash structure for reading the data 
             while (my ($col,$pos) = each %column_positions) { $column_values{$col} = ''; }
         }  else { #actual data
-            while (my ($col,$val) = each %column_values) { $column_values{$col} = $fields[$column_positions{$col}] ; }
+            while (my ($col,$val) = each %column_values) { $column_values{$col} = $fields[$column_positions{$col}]; }
+            print Dumper(%column_values);
             if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'} #make sure basic values are present, homelib and profile checked later
-                or !defined $column_values{'family_name'} or !defined $column_values{'first_given_name'} or !defined $column_values{'home_library'}
+                or !defined $column_values{'family_name'} or !defined $column_values{'first_given_name'}
             ) {
                 $skipped++;
                 $msg = "required value in row with usrname $column_values{'usrname'} and cardnumber or $column_values{'cardnumber'} is null";
@@ -166,8 +181,8 @@ while (my $line = <$fh>) {
             if ($column_values{'dob'}) { $column_values{'dob'} = sql_date($dbh,$column_values{'dob'},$date_format); }
             my $prepped_cardnumber = sql_wrap_text($column_values{'cardnumber'});
             my $prepped_usrname = sql_wrap_text($column_values{'usrname'});
-            my $prepped_profile_id = get_original_id(\%original_pgt,\%mapped_pgt,$column_values{'profile'});
-            my $prepped_home_ou_id = get_original_id(\%original_libs,\%mapped_libs,$column_values{'home_library'});
+            my $prepped_profile_id = get_original_id(\%original_pgt,\%mapped_pgt,$column_values{'profile'},$profile_id);
+            my $prepped_home_ou_id = get_original_id(\%original_libs,\%mapped_libs,$column_values{'home_library'},$home_ou_id);
             if (!defined $prepped_home_ou_id or !defined $prepped_profile_id) { 
                 $skipped++;
                 $msg = "could not find valid home library or profile id (or both) for $column_values{'cardnumber'}";
@@ -197,7 +212,7 @@ while (my $line = <$fh>) {
                 $skipped++;
                 $msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account";
                 log_event($dbh,$session,$msg);
-		if ($debug != 0) { print "$msg\n" }
+		        if ($debug != 0) { print "$msg\n" }
                 next;
             }
             my $update_usr_str;
@@ -210,6 +225,16 @@ while (my $line = <$fh>) {
                 } else { 
                     $query = "INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);";
                     if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; } 
+                }
+                if (!defined $column_positions{'family_name'} 
+                    or !defined $column_positions{'first_given_name'}
+                    or !defined $column_values{'home_library'}
+                    or !defined $column_values{'profile'}
+                ) { 
+                    $skipped++;
+                    $msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} insert failed";
+                    log_event($dbh,$session,$msg);
+                    if ($debug != 0) { print "$msg\n" }
                 }    
                 $update_usr_str = update_au_sql($au_id,%column_values);
                 if ($debug == 0) { sql_null($dbh,$update_usr_str); } else { print "$update_usr_str\n"; }
@@ -242,6 +267,17 @@ while (my $line = <$fh>) {
             if ($alert_message) {
                 $query = "INSERT INTO actor.usr_message (usr,title,message,sending_lib) VALUES ($au_id,$alert_title,$alert_message,$org_id);";
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; } 
+            }
+            if ($column_values{add1_street1} or $column_values{add2_street1}) {
+                print "here\n";
+                $query = "UPDATE actor.usr SET mailing_address = NULL WHERE id = $au_id;";
+                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+                $query = "DELETE FROM actor.usr_address WHERE usr = $au_id;";
+                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+                $query = insert_addr_sql($au_id,1,%column_values); 
+                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+                $query = insert_addr_sql($au_id,2,%column_values); 
+                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }  
             }
         }
     }
@@ -367,14 +403,15 @@ sub fail {
 }
 
 sub get_original_id {
-    my ($original,$mapped,$str) = @_;
+    my ($original,$mapped,$str,$default_id) = @_;
     my $mapped_value;
     if (%$original{$str}) { return %$original{$str}; }
     else {
         $mapped_value = %$mapped{$str};
         if ($mapped_value) { return %$original{$mapped_value}; }
     }
-    return $mapped_value; #which should be undefined
+    if ($default_id) { return $default_id; } 
+        else { return; }
 }
 
 sub hash_from_sql { 
@@ -386,6 +423,14 @@ sub hash_from_sql {
         $return_hash{$row[0]} = $row[1];
     }
     return %return_hash;
+}
+
+sub insert_addr_sql {
+    my ($au_id,$x,%column_values) = @_;
+    #my ($street1,$street2,$city,$county,$state,$country,$post_code);
+	my $street1 = $column_values{join('','addr',$x,'_street1')};
+	print $street1;
+    return $query;
 }
 
 sub insert_au_sql {

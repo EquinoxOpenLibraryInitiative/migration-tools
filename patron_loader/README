@@ -24,21 +24,29 @@ Optional parameters:
 --ident_type availalbe as a field but rarely used in export sources so it can
     be specified from the command line
 --default_password allows you to define a default password for accounts where one 
-	is not defined in the file, be very careful, this option is dangerous as it 
-	_will_ overwrite existing passwords 
-	if some rows have a paasswd value and the default is used the default will only 
-	be used where the column is null
+    is not defined in the file, be very careful, this option is dangerous as it 
+    _will_ overwrite existing passwords 
+    if some rows have a paasswd value and the default is used the default will only 
+    be used where the column is null
 --alert_mesage this is meanst for scenarios where the script is being used for bulk 
-	loading students and an alert message is needed such as "verify address" 
-	it only adds an alert and does not check for duplications 
-	sending library will be set to the org unit used in the parameters 
+    loading students and an alert message is needed such as "verify address" 
+    it only adds an alert and does not check for duplications 
+    sending library will be set to the org unit used in the parameters 
 --alert_title defaults to 'Needs Staff Attention', only appears when --alert_message 
-	is defined
+    is defined
+--profile if no profile is given in the file one can be specified by parameter,
+    if a combination of parameter and in file is used the parameter will be used as 
+    a fall back from the file 
+--home_org if no library is provided in the file it can be overriden by this, like 
+    similar settings if a column with library is present but null in a given row 
+    this will be used instead; expects short org name 
 
 Required Data:
 
 Five columns are considered required for loading the file, the cardnumber, the usrname, 
-the profile, the family_name and first_given_name.  
+the profile, home_library, family_name and first_given_name.  With the home_org and  
+profile parameters you can leave the columsn for profile and home_library empty but 
+you still need the columns or you will get annoying uninitialized errors.
 
 Optional columns are: todo 
 
@@ -66,6 +74,13 @@ either is found on an account that differs from the one using the match point th
 will skip adding or updating that user.  The match point specified is considered
 authoratative and it will update the matching account unless debug is on.
 
+Currently only two set of address columsn are supported add1_foo and add2_foo. The script 
+assumes the addresses being added are authoratative mailing addresses, removes any existing 
+mailing addresses, adds these and sets the user's mailing_address field to the one from the 
+addr1_street1 field or addr2_street1 if there is no addr1_street1.  If only a partial address 
+is given the entire address will be written so long as there is a street1.  Empty strings will 
+be used for the other values.  If there is no address given then addresses will not be touched.
+
 Database and Logging: 
 
 The database holds a patron_loader.log table that logs (assuming it can create the db
@@ -76,10 +91,14 @@ TODOs:
 
 * test date formats for validity
 
-* add support for addresses 
+* various places could use testing for case sensitivity for quality of life 
 
 * add statistical category support, there is some placeholder code for them currently
 in the script
 
 * add a --strict_mode that will only allow updates for home_ous in @valid_orgs 
 
+* Use of uninitialized value within %column_positions when using --home_ou and --profile 
+without accompanying profiles 
+
+ 
