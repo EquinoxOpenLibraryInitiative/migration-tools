@@ -43,21 +43,21 @@ my $alert_title = 'Needs Staff Attention';
 my $session = time();
 
 my $ret = GetOptions(
-    'db:s'          	=> \$db,
-    'dbuser:s'      	=> \$dbuser,
-    'dbhost:s'      	=> \$dbhost,
-    'dbpw:s'        	=> \$dbpw,
-    'dbport:s'      	=> \$dbport,
-    'debug:i'       	=> \$debug,
-    'file:s'        	=> \$file,
-    'delimiter:s'   	=> \$delimiter,
-    'matchpoint:s'  	=> \$matchpoint,
-	'date_format:s' 	=> \$date_format,
-	'ident_type:s'  	=> \$ident_type,
-	'default_password:s' => \$default_password,
-	'alert_message:s'   => \$alert_message, 
-	'alert_title:s'		=> \$alert_title,
-    'org_unit:s'    	=> \$org_unit
+    'db:s'              => \$db,
+    'dbuser:s'          => \$dbuser,
+    'dbhost:s'          => \$dbhost,
+    'dbpw:s'            => \$dbpw,
+    'dbport:s'          => \$dbport,
+    'debug:i'           => \$debug,
+    'file:s'            => \$file,
+    'delimiter:s'       => \$delimiter,
+    'matchpoint:s'      => \$matchpoint,
+    'date_format:s'     => \$date_format,
+    'ident_type:s'      => \$ident_type,
+    'default_password:s' => \$default_password,
+    'alert_message:s'   => \$alert_message, 
+    'alert_title:s'     => \$alert_title,
+    'org_unit:s'        => \$org_unit
 );
 
 my $dbh = connect_db($db, $dbuser, $dbpw, $dbhost, $dbport);
@@ -76,15 +76,15 @@ if ($matchpoint ne 'usrname' and $matchpoint ne 'cardnumber') { abort('invalid m
 if (!defined $org_unit) { abort('no org_unit defined'); }
 my $prepped_org_unit = sql_wrap_text($org_unit);
 if ($debug == 0) { log_event($dbh,$session,"beginning load for $org_unit"); } 
-	else { log_event($dbh,$session,"beginning load for $org_unit in debug mode"); }
+    else { log_event($dbh,$session,"beginning load for $org_unit in debug mode"); }
 @results = sql_return($dbh,"SELECT id FROM actor.org_unit WHERE shortname = $prepped_org_unit;");
 if ($results[0]) { $org_id = $results[0]; } else { abort('invalid org unit'); } 
 
 #technically the org_unit is just a mapping identifier but I want to make sure it's real just in case of future use
 if (defined $org_unit and defined $org_id) {
-	log_event($dbh,$session,"org id $org_id found");
+    log_event($dbh,$session,"org id $org_id found");
 } else {
-	fail($dbh,$session,"session fail - org unit not defined or invalid");
+    fail($dbh,$session,"session fail - org unit not defined or invalid");
 }
 
 # initialize a bunch of stuff rather than go back to the db over and over 
@@ -112,8 +112,8 @@ my $skipped = 0;
 my $csv = Text::CSV->new({ sep_char => $delimiter });
 
 if ($alert_message) { 
-	$alert_message = sql_wrap_text($alert_message); 
-	$alert_title = sql_wrap_text($alert_title);
+    $alert_message = sql_wrap_text($alert_message); 
+    $alert_title = sql_wrap_text($alert_title);
 }
 
 if ($debug == 1) { print "Debug flag is on ... no patrons will be added or updated.\n" }
@@ -124,22 +124,22 @@ while (my $line = <$fh>) {
     $line =~ s/\r//g; 
     if ($csv->parse($line)) {
         $i++;
-		if ($debug != 0 and $i != 1) { print "========================= processing line $i\n"; }
+        if ($debug != 0 and $i != 1) { print "========================= processing line $i\n"; }
         if ($i % 100 == 0) { print "Processing row $i\n"; }
         my @fields = $csv->fields();
         if ($i == 1) {  #get positions from default names first, then mapped ones
             while (my ($col,$pos) = each %column_positions) {
                 $column_positions{$col} = first_index { lc($_) eq lc($col) } @fields;
             }
-			#for consistency we should probably have these in a hash instead of looked up but we only do it once at the start so meh...
+            #for consistency we should probably have these in a hash instead of looked up but we only do it once at the start so meh...
             while (my ($col,$pos) = each %column_positions) {
                 if ($column_positions{$col} != -1) { next; }
-				my $sql_col = sql_wrap_text($col);
+                my $sql_col = sql_wrap_text($col);
                 @results = sql_return($dbh,"SELECT import_header FROM patron_loader.header WHERE default_header = $sql_col;");
                 if ($results[0]) { $column_positions{$col} = first_index { lc($_) eq lc($results[0]) } @fields; }
             }
-			#no need to keep fields not in here so ... byebye
-			while (my ($col,$pos) = each %column_positions) { if ($pos == -1) { delete $column_positions{$col}; } }
+            #no need to keep fields not in here so ... byebye
+            while (my ($col,$pos) = each %column_positions) { if ($pos == -1) { delete $column_positions{$col}; } }
             if (!defined $column_positions{'cardnumber'}    #make sure required columns are present and fail if not
                 or !defined $column_positions{'profile'}
                 or !defined $column_positions{'usrname'}
@@ -149,8 +149,8 @@ while (my $line = <$fh>) {
                 ) {
                     fail($dbh,$session,"a required column is missing: either cardnumber, profile, usrname, family_name, first_given_name or home_library");
                 }
-			#now copy the hash structure for reading the data 
-			while (my ($col,$pos) = each %column_positions) { $column_values{$col} = ''; }
+            #now copy the hash structure for reading the data 
+            while (my ($col,$pos) = each %column_positions) { $column_values{$col} = ''; }
         }  else { #actual data
             while (my ($col,$val) = each %column_values) { $column_values{$col} = $fields[$column_positions{$col}] ; }
             if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'} #make sure basic values are present, homelib and profile checked later
@@ -163,7 +163,7 @@ while (my $line = <$fh>) {
             if ($column_values{'dob'}) { $column_values{'dob'} = sql_date($dbh,$column_values{'dob'},$date_format); }
             my $prepped_cardnumber = sql_wrap_text($column_values{'cardnumber'});
             my $prepped_usrname = sql_wrap_text($column_values{'usrname'});
-			my $prepped_profile_id = get_original_id(\%original_pgt,\%mapped_pgt,$column_values{'profile'});
+            my $prepped_profile_id = get_original_id(\%original_pgt,\%mapped_pgt,$column_values{'profile'});
             my $prepped_home_ou_id = get_original_id(\%original_libs,\%mapped_libs,$column_values{'home_library'});
             if (!defined $prepped_home_ou_id or !defined $prepped_profile_id) { 
                 $skipped++;
@@ -177,12 +177,12 @@ while (my $line = <$fh>) {
             }
             @results = sql_return($dbh,$query);
             my $au_id = $results[0];
-			#standardize boolean t/f true/false to TRUE/FALSE 
+            #standardize boolean t/f true/false to TRUE/FALSE 
             if ($column_values{'active'}) { $column_values{'active'} = sql_boolean($column_values{'active'}); }
             if ($column_values{'barred'}) { $column_values{'barred'} = sql_boolean($column_values{'barred'}); }
             if ($column_values{'juvenile'}) { $column_values{'juvenile'} = sql_boolean($column_values{'juvenile'}); }
             #since usrname and barcode both need to be unique having a valid au_id alone isn't enough, we need to test 
-			#0 == match found for another au_id, 1 == found for this au_id, 2 == not found 
+            #0 == match found for another au_id, 1 == found for this au_id, 2 == not found 
             my $valid_barcode = check_barcode($dbh,$au_id,$prepped_cardnumber);
             my $valid_usrname = check_usrname($dbh,$au_id,$prepped_usrname);
             #we don't need the sql friendly strings separate from the hash anymore so put the calculated ones into hash
@@ -196,14 +196,14 @@ while (my $line = <$fh>) {
             my $update_usr_str;
             my $insert_usr_str;
             if ($au_id) { #update record
-				#$valid_barcode has to be 1 or 2 now so ..... 
+                #$valid_barcode has to be 1 or 2 now so ..... 
                 if ($valid_barcode == 1) { 
-					$query = "UPDATE actor.card SET active = TRUE WHERE barcode = $prepped_cardnumber;";
-					if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
-				} else { 
-					$query = "INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);";
-					if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; } 
-				}	
+                    $query = "UPDATE actor.card SET active = TRUE WHERE barcode = $prepped_cardnumber;";
+                    if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+                } else { 
+                    $query = "INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);";
+                    if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; } 
+                }    
                 $update_usr_str = update_au_sql($au_id,%column_values);
                 if ($debug == 0) { sql_null($dbh,$update_usr_str); } else { print "$update_usr_str\n"; }
             } else {  #create record
@@ -211,31 +211,31 @@ while (my $line = <$fh>) {
                 if ($debug == 0) { sql_null($dbh,$insert_usr_str); } else { print "$insert_usr_str\n"; }
                 @results = sql_return($dbh,"SELECT id FROM actor.usr WHERE usrname = $prepped_usrname;");
                 if ($debug == 0) { $au_id = $results[0]; } else { $au_id = 'debug'; }
-				#if here the card number shouldn't be in use so we have to make it 
+                #if here the card number shouldn't be in use so we have to make it 
                 $query = "INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);";
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
             }
-			$query = "SELECT id FROM actor.card WHERE barcode = $prepped_cardnumber;";
-			if ($debug == 0) { 
-				@results = sql_return($dbh,"SELECT id FROM actor.card WHERE barcode = $prepped_cardnumber;");
-			} else {
-				print "$query\n";
-			}
-			my $acard_id;
-			if ($debug == 0) { $acard_id = $results[0]; } else { $acard_id = 'debug'; }
-			$query = "UPDATE actor.usr SET card = $acard_id WHERE id = $au_id;";
-			if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
-			my $prepped_password;
-			if ($column_values{'passwd'} or $default_password) {
-				if ($column_values{'passwd'}) { $prepped_password = sql_wrap_text($column_values{'passwd'}); }
-					else { $prepped_password = sql_wrap_text($default_password); }
-				$query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
-				if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
-			}
-			if ($alert_message) {
-				$query = "INSERT INTO actor.usr_message (usr,title,message,sending_lib) VALUES ($au_id,$alert_title,$alert_message,$org_id);";
-				if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; } 
-			}
+            $query = "SELECT id FROM actor.card WHERE barcode = $prepped_cardnumber;";
+            if ($debug == 0) { 
+                @results = sql_return($dbh,"SELECT id FROM actor.card WHERE barcode = $prepped_cardnumber;");
+            } else {
+                print "$query\n";
+            }
+            my $acard_id;
+            if ($debug == 0) { $acard_id = $results[0]; } else { $acard_id = 'debug'; }
+            $query = "UPDATE actor.usr SET card = $acard_id WHERE id = $au_id;";
+            if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+            my $prepped_password;
+            if ($column_values{'passwd'} or $default_password) {
+                if ($column_values{'passwd'}) { $prepped_password = sql_wrap_text($column_values{'passwd'}); }
+                    else { $prepped_password = sql_wrap_text($default_password); }
+                $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
+                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+            }
+            if ($alert_message) {
+                $query = "INSERT INTO actor.usr_message (usr,title,message,sending_lib) VALUES ($au_id,$alert_title,$alert_message,$org_id);";
+                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; } 
+            }
         }
     }
 }
@@ -271,9 +271,9 @@ sub check_barcode {
 sub check_usrname {
     my ($dbh,$au_id,$usrname) = @_;
     my @results = sql_return($dbh,"SELECT id FROM actor.usr WHERE usrname = $usrname;");
-	if (!defined $results[0]) { return 2; }
-	if ($results[0] == $au_id) { return 1; }
-	return 0;
+    if (!defined $results[0]) { return 2; }
+    if ($results[0] == $au_id) { return 1; }
+    return 0;
 }
 
 sub connect_db {
@@ -293,24 +293,24 @@ sub connect_db {
 }
 
 sub db_add_password_function {
-	my $dbh = shift;
-	#this is functionally the same as the function in lp1858833 but it's not merged yet at this point so ...
-	my $query = '
-		CREATE OR REPLACE FUNCTION patron_loader.set_salted_passwd(INTEGER,TEXT) RETURNS BOOLEAN AS $$
-    		DECLARE
-        		usr_id              ALIAS FOR $1;
-        		plain_passwd        ALIAS FOR $2;
-        		plain_salt          TEXT;
-        		md5_passwd          TEXT;
-		    BEGIN
-		        SELECT actor.create_salt(\'main\') INTO plain_salt;
-		        SELECT MD5(plain_passwd) INTO md5_passwd;
-		        PERFORM actor.set_passwd(usr_id, \'main\', MD5(plain_salt || md5_passwd), plain_salt);
-		        RETURN TRUE;
-    		END;
-		$$ LANGUAGE PLPGSQL STRICT VOLATILE;';
-	sql_null($dbh,$query);
-	return;
+    my $dbh = shift;
+    #this is functionally the same as the function in lp1858833 but it's not merged yet at this point so ...
+    my $query = '
+        CREATE OR REPLACE FUNCTION patron_loader.set_salted_passwd(INTEGER,TEXT) RETURNS BOOLEAN AS $$
+            DECLARE
+                usr_id              ALIAS FOR $1;
+                plain_passwd        ALIAS FOR $2;
+                plain_salt          TEXT;
+                md5_passwd          TEXT;
+            BEGIN
+                SELECT actor.create_salt(\'main\') INTO plain_salt;
+                SELECT MD5(plain_passwd) INTO md5_passwd;
+                PERFORM actor.set_passwd(usr_id, \'main\', MD5(plain_salt || md5_passwd), plain_salt);
+                RETURN TRUE;
+            END;
+        $$ LANGUAGE PLPGSQL STRICT VOLATILE;';
+    sql_null($dbh,$query);
+    return;
 }
 
 sub db_schema_check {
@@ -371,25 +371,25 @@ sub get_original_id {
 }
 
 sub hash_from_sql { 
-	my ($dbh,$query) = @_;
-	my %return_hash;
-	my $sth = $dbh->prepare($query);
+    my ($dbh,$query) = @_;
+    my %return_hash;
+    my $sth = $dbh->prepare($query);
     $sth->execute();
     while (my @row = $sth->fetchrow_array) {
-		$return_hash{$row[0]} = $row[1];
-	}
-	return %return_hash;
+        $return_hash{$row[0]} = $row[1];
+    }
+    return %return_hash;
 }
 
 sub insert_au_sql {
     my ($au_id,%column_values) = @_;
     my $start = 'INSERT INTO actor.usr (';
     my $col_str;
-	my $middle = ') VALUES (';
-	my $val_str;
+    my $middle = ') VALUES (';
+    my $val_str;
     my $end = ");";
-	my @insert_columns;
-	my @insert_values;
+    my @insert_columns;
+    my @insert_values;
     #wrap strings but skip calculated ones and booleans 
     while (my ($col,$val) = each %column_values) {
         if (!defined $val) { next; }
@@ -399,17 +399,17 @@ sub insert_au_sql {
         if ($col eq 'home_library' or $col eq 'profile' or $col eq 'ident_type') { $dontwrap = 1; }
         if ($dontwrap == 0) { $val = sql_wrap_text($val); }
         if ($col eq 'home_library') { $col = 'home_ou'; }
-		push @insert_columns, $col;
-		push @insert_values, $val;
+        push @insert_columns, $col;
+        push @insert_values, $val;
     }
     #ident_type is required for actor.usr but not in file b/c it'll be rare to have so ... special handling here 
     if (!defined $column_values{'ident_type'}) {
-		push @insert_columns, 'ident_type';
-		push @insert_values, 3;
-	}
-	foreach my $ic (@insert_columns) { 
-		if ($col_str) { $col_str = join(',',$col_str,$ic); } else { $col_str = $ic; }
-	}
+        push @insert_columns, 'ident_type';
+        push @insert_values, 3;
+    }
+    foreach my $ic (@insert_columns) { 
+        if ($col_str) { $col_str = join(',',$col_str,$ic); } else { $col_str = $ic; }
+    }
     foreach my $iv (@insert_values) {
         if ($val_str) { $val_str = join(',',$val_str,$iv); } else { $val_str = $iv; }
     }
@@ -423,27 +423,27 @@ sub log_event {
     $event = sql_wrap_text($event);
     if (!defined $record_count) { $record_count = 0; }
     my $sql = "INSERT INTO patron_loader.log (session,event,record_count) VALUES ($session,$event,$record_count);";
-	sql_null($dbh,$sql);
+    sql_null($dbh,$sql);
 }
 
 sub sql_boolean {
     my $str = shift;
     $str = lc($str);
     $str =~ s/^\s+|\s+$//g;
-	my $value;
+    my $value;
     if ($str eq 't' or $str eq 'true') { $value = 'TRUE'; }
-	if ($str eq 'f' or $str eq 'false') { $value = 'FALSE'; }
+    if ($str eq 'f' or $str eq 'false') { $value = 'FALSE'; }
     return $value;
 }
 
 sub sql_date {
-	my ($dbh,$date,$date_format) = @_;
-	if (!defined $date_format) { $date_format = 'YYYY/MM/DD'; }
-	$date = sql_wrap_text($date);
-	$date_format = sql_wrap_text($date_format);
-	my $query = "SELECT TO_DATE($date,$date_format);";
-	my @results = sql_return($dbh,$query);
-	return $results[0];
+    my ($dbh,$date,$date_format) = @_;
+    if (!defined $date_format) { $date_format = 'YYYY/MM/DD'; }
+    $date = sql_wrap_text($date);
+    $date_format = sql_wrap_text($date_format);
+    my $query = "SELECT TO_DATE($date,$date_format);";
+    my @results = sql_return($dbh,$query);
+    return $results[0];
 }
 
 sub sql_null {
@@ -457,18 +457,18 @@ sub sql_null {
 sub sql_return {
     my $dbh = shift;
     my $query = shift;
-	my @results;
+    my @results;
     my $sth = $dbh->prepare($query);
     $sth->execute();
-	while (my @row = $sth->fetchrow_array) {
-		push @results, @row;
-	}
+    while (my @row = $sth->fetchrow_array) {
+        push @results, @row;
+    }
     return @results;
 }
 
 sub sql_wrap_text {
     my $str = shift;
-	$str =~ s/^\s+|\s+$//g;
+    $str =~ s/^\s+|\s+$//g;
     if ($str) { $str = '\'' . $str . '\''; } else { $str = 'NULL'; }
     return $str;
 }
@@ -476,20 +476,20 @@ sub sql_wrap_text {
 sub update_au_sql {
     my ($au_id,%column_values) = @_;
     my $start = 'UPDATE actor.usr SET ';
-	my $middle;
-	my $end = " WHERE id = $au_id;";
-	#wrap strings but skip calculated ones and booleans 
+    my $middle;
+    my $end = " WHERE id = $au_id;";
+    #wrap strings but skip calculated ones and booleans 
     while (my ($col,$val) = each %column_values) {
-		if (!defined $val) { next; }
+        if (!defined $val) { next; }
         if ($col =~ m/add1/ or $col =~ m/add2/ or $col =~ m/stat/ or $col eq 'cardnumber' or $col eq 'passwd') { next; } #skip columns not in actor.usr itself
-		my $dontwrap = 0;
-		if ($val eq 'TRUE' or $val eq 'FALSE') { $dontwrap = 1; }
-		if ($col eq 'home_library' or $col eq 'profile' or $col eq 'ident_type') { $dontwrap = 1; }
+        my $dontwrap = 0;
+        if ($val eq 'TRUE' or $val eq 'FALSE') { $dontwrap = 1; }
+        if ($col eq 'home_library' or $col eq 'profile' or $col eq 'ident_type') { $dontwrap = 1; }
         if ($dontwrap == 0) { $val = sql_wrap_text($val); }
-		if ($col eq 'home_library') { $col = 'home_ou'; }  
-		if (!defined $middle) { $middle = "$col = $val"; } else { $middle = join(', ', $middle, "$col = $val"); }
+        if ($col eq 'home_library') { $col = 'home_ou'; }  
+        if (!defined $middle) { $middle = "$col = $val"; } else { $middle = join(', ', $middle, "$col = $val"); }
     }
-	my $query = join('',$start,$middle,$end);
+    my $query = join('',$start,$middle,$end);
     return $query;
 }
 
