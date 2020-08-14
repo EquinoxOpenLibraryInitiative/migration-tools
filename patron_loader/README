@@ -1,0 +1,81 @@
+Patron Loader is a perl program to bulk load and update patrons in Evergreen.
+
+sample invocation: 
+
+./patron_loader.pl --db evergreen --dbhost myserver -dbuser admin --dbpw demo123 --file sample.csv --org_unit INNS --date_format "MM/DD/YYYY" --default_password 4444 --alert_message "patron has left swim cap at desk"  --debug 1
+
+Required parameters:
+
+--db the Evergreen database
+--dbuser the user of the Evergreen database
+--dbhost the ip or domain name of the Evergreen database
+--file path to the CSV file used as the data source
+--org_unit the org unit name of the org unit patrons are being loaded for
+    used to match mapped variables
+`
+Optional parameters:
+
+--dbport Evergreen database port, defaults to 5432
+--delimter defaults to a comma can be anyother delimiter usable by TEXT::CSV
+--debug if set to anything other than 1 will assume you do not want to commit
+    any database transactions and will print the SQL that would do so to STDOUT
+--matchpoint defaults to 'usrname', can also be 'cardnumber'
+--date_format used if dates are not in a 'YYYY-MM-DD' format
+--ident_type availalbe as a field but rarely used in export sources so it can
+    be specified from the command line
+--default_password allows you to define a default password for accounts where one 
+	is not defined in the file, be very careful, this option is dangerous as it 
+	_will_ overwrite existing passwords 
+	if some rows have a paasswd value and the default is used the default will only 
+	be used where the column is null
+--alert_mesage this is meanst for scenarios where the script is being used for bulk 
+	loading students and an alert message is needed such as "verify address" 
+	it only adds an alert and does not check for duplications 
+	sending library will be set to the org unit used in the parameters 
+--alert_title defaults to 'Needs Staff Attention', only appears when --alert_message 
+	is defined
+
+Required Data:
+
+Five columns are considered required for loading the file, the cardnumber, the usrname, 
+the profile, the family_name and first_given_name.  
+
+Optional columns are: todo 
+
+Not all data sources can customize the data in the CSV so some mapping is allowed. 
+The patron_loader.header table allows for mapping incoming header names to ones that 
+are natively expected.  For example if an incoming header says 'student_type' and is 
+mapped to 'profile' it will be used as the profile column.  Additionally the profile 
+and library columns are mappable on a datafield level.  For example if an Evergreen 
+org unit's shortname is 'NEMS' but a student management system can only export 
+'North Eastern Middle School' you can map those values in patron_loader.mapping using 
+a mapping type of 'library'.  A mapping type of 'profile' is also available.  
+
+As a convention the Evergreen database column names are mostly used for the actor.usr 
+columns but it was found in testing that home_ou was very confusing so the label of 
+'library' is used instead and internally adjusted to use 'home_ou'.  
+
+The column ident_type is treated specially.  It is required by actor.usr and does not 
+have a default but usually doesn't correspond to a exported value from others systems 
+so it defaults to '3' or 'Other' but you can definite through an optional parameter.
+
+Overview:
+
+The script is very conservative checking for an existing cardnumber and usrname.  If
+either is found on an account that differs from the one using the match point then it
+will skip adding or updating that user.  The match point specified is considered
+authoratative and it will update the matching account unless debug is on.
+
+Database and Logging: 
+
+TODOs:
+
+* test date formats for validity
+
+* add support for addresses 
+
+* add statistical category support, there is some placeholder code for them currently
+in the script
+
+* add a --strict_mode that will only allow updates for home_ous in @valid_orgs 
+
