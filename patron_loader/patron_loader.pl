@@ -267,16 +267,20 @@ while (my $line = <$fh>) {
                 $query = "INSERT INTO actor.usr_message (usr,title,message,sending_lib) VALUES ($au_id,$alert_title,$alert_message,$org_id);";
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; } 
             }
-            if ($column_values{add1_street1} or $column_values{add2_street1}) {
-                print "here\n";
+            #address fun, first if either address exists and then don't assume just b/c there is an add2 there is an add1
+            if ($column_values{add1_street1} or $column_values{add2_street1}) { 
                 $query = "UPDATE actor.usr SET mailing_address = NULL WHERE id = $au_id;";
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
-                $query = "DELETE FROM actor.usr_address WHERE usr = $au_id;";
+                $query = "DELETE FROM actor.usr_address WHERE usr = $au_id AND address_type = 'MAILING';";
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+            }
+            if ($column_values{add1_street1}) {
                 $query = insert_addr_sql($au_id,1,%column_values); 
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
-                $query = insert_addr_sql($au_id,2,%column_values); 
-                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }  
+            }
+            if ($column_values{add2_street1}) {
+                $query = insert_addr_sql($au_id,2,%column_values);
+                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
             }
         }
     }
@@ -426,9 +430,15 @@ sub hash_from_sql {
 
 sub insert_addr_sql {
     my ($au_id,$x,%column_values) = @_;
-    #my ($street1,$street2,$city,$county,$state,$country,$post_code);
-	my $street1 = $column_values{join('','addr',$x,'_street1')};
-	print $street1;
+    my $street1 = sql_wrap_text($column_values{join('','add',$x,'_street1')});
+    my $street2 = sql_wrap_empty_text($column_values{join('','add',$x,'_street2')} // '');
+    my $city = sql_wrap_empty_text($column_values{join('','add',$x,'_city')} // '');
+    my $county = sql_wrap_empty_text($column_values{join('','add',$x,'_county')} // '');
+    my $state = sql_wrap_empty_text($column_values{join('','add',$x,'_state')} // '');
+    my $country = sql_wrap_empty_text($column_values{join('','add',$x,'_country')} // '');
+    my $post_code = sql_wrap_empty_text($column_values{join('','add',$x,'_post_code')} // '');
+	my $query;
+    if ($street1) { $query = "INSERT INTO actor.usr_address (usr,street1,street2,city,county,state,country,post_code) VALUES ($au_id,$street1,$street2,$city,$county,$state,$country,$post_code);"; }
     return $query;
 }
 
@@ -515,6 +525,13 @@ sub sql_return {
         push @results, @row;
     }
     return @results;
+}
+
+sub sql_wrap_empty_text {
+    my $str = shift;
+	$str = sql_wrap_text($str);
+    if ($str eq 'NULL') { $str = "''"; }
+    return $str;
 }
 
 sub sql_wrap_text {

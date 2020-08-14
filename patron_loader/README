@@ -74,12 +74,17 @@ either is found on an account that differs from the one using the match point th
 will skip adding or updating that user.  The match point specified is considered
 authoratative and it will update the matching account unless debug is on.
 
-Currently only two set of address columsn are supported add1_foo and add2_foo. The script 
+Currently only two set of address columns are supported add1_foo and add2_foo. The script 
 assumes the addresses being added are authoratative mailing addresses, removes any existing 
 mailing addresses, adds these and sets the user's mailing_address field to the one from the 
 addr1_street1 field or addr2_street1 if there is no addr1_street1.  If only a partial address 
 is given the entire address will be written so long as there is a street1.  Empty strings will 
-be used for the other values.  If there is no address given then addresses will not be touched.
+be used for the other values.  If there is no address given then addresses will not be 
+touched.  Part of the aggressiveness of removing non-specified addresses is to esnure 
+identifying information for patrons is removed when updating, especially for the use case
+of schools bulk updating juveniles.  
+
+
 
 Database and Logging: 
 
