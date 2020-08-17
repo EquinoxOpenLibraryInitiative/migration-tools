@@ -515,19 +515,19 @@ sub sql_date {
 sub sql_no_return {
     my $dbh = shift;
     my $statement = shift;
-	my $debug = shift;
+    my $debug = shift;
     my $sth;
     if ($debug == 0) {
         eval {
             $sth = $dbh->prepare($statement);
             $sth->execute();
         }
-        if ($@) {
-            $query =~ s/'//g;
-            log_event($dbh,$session,"failed statement $query",0);
-        }
     } else {
         print "$query\n";
+    }
+    if ($@) {
+        $query =~ s/'//g;
+        log_event($dbh,$session,"failed statement $query",0);
     }
     return;
 }
@@ -535,7 +535,7 @@ sub sql_no_return {
 sub sql_return {
     my $dbh = shift;
     my $query = shift;
-	my $debug = shift;
+    my $debug = shift;
     my @results;
     my $sth = $dbh->prepare($query);
     $sth->execute();
@@ -545,7 +545,7 @@ sub sql_return {
 
 sub sql_wrap_empty_text {
     my $str = shift;
-	$str = sql_wrap_text($str);
+    $str = sql_wrap_text($str);
     if ($str eq 'NULL') { $str = "''"; }
     return $str;
 }
