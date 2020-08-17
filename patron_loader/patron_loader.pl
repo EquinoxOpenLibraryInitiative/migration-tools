@@ -459,7 +459,7 @@ sub insert_au_sql {
     #wrap strings but skip calculated ones and booleans 
     while (my ($col,$val) = each %column_values) {
         if (!defined $val) { next; }
-        if ($col =~ m/add1/ or $col =~ m/add2/ or $col =~ m/stat/ or $col eq 'cardnumber' or $col eq 'passwd') { next; } #skip columns not in actor.usr itself
+        if ($col =~ m/add1/ or $col =~ m/add2/ or $col =~ m/stat/ or $col eq 'cardnumber') { next; } #skip columns not in actor.usr itself
         my $dontwrap = 0;
         if ($val eq 'TRUE' or $val eq 'FALSE') { $dontwrap = 1; }
         if ($col eq 'home_library' or $col eq 'profile' or $col eq 'ident_type') { $dontwrap = 1; }
@@ -565,7 +565,7 @@ sub update_au_sql {
     #wrap strings but skip calculated ones and booleans 
     while (my ($col,$val) = each %column_values) {
         if (!defined $val) { next; }
-        if ($col =~ m/add1/ or $col =~ m/add2/ or $col =~ m/stat/ or $col eq 'cardnumber' or $col eq 'passwd') { next; } #skip columns not in actor.usr itself
+        if ($col =~ m/add1/ or $col =~ m/add2/ or $col =~ m/stat/ or $col eq 'cardnumber') { next; } #skip columns not in actor.usr itself
         my $dontwrap = 0;
         if ($val eq 'TRUE' or $val eq 'FALSE') { $dontwrap = 1; }
         if ($col eq 'home_library' or $col eq 'profile' or $col eq 'ident_type') { $dontwrap = 1; }
