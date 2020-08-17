@@ -59,12 +59,14 @@ use EMig;
 my $outtable = '';
 my $outfile = '';
 my $force;
+my $list;
 my $drop;
 my $help;
 
 GetOptions(
 	'outtable=s' => \$outtable,
 	'outfile=s' => \$outfile,
+    'list' => \$list,
 	'force' => \$force,
 	'drop' => \$drop,
 	'help|?' => \$help
@@ -286,7 +288,7 @@ sub write_worksheets {
         };
     }
 
-    handle_list();
+    handle_list() if $list;
     handle_columns();
 
     if ($outfile) {
