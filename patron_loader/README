@@ -105,7 +105,10 @@ in the script
 
 * add a --strict_mode that will only allow updates for home_ous in @valid_orgs 
 
-* Use of uninitialized value within %column_positions when using --home_ou and --profile 
-without accompanying profiles 
+* uninitialized values within %column_positions when using --home_ou and --profile 
+without accompanying profiles so tweaking the column position requirements could be done
+
+* create a function to insert a usr account without password where it would create the 
+password on some configured value, say usrname + last four of cardnumber  
 
  
