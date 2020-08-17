@@ -111,4 +111,8 @@ without accompanying profiles so tweaking the column position requirements could
 * create a function to insert a usr account without password where it would create the 
 password on some configured value, say usrname + last four of cardnumber  
 
+* shared addresses are a problem, causing a db failure and things quit, which related, 
+means we should probably wrap db executions in an eval; also the same address used 
+as mailing and billing address is an issue 
+
  
