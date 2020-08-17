@@ -46,7 +46,9 @@ Required Data:
 Five columns are considered required for loading the file, the cardnumber, the usrname, 
 the profile, home_library, family_name and first_given_name.  With the home_org and  
 profile parameters you can leave the columsn for profile and home_library empty but 
-you still need the columns or you will get annoying uninitialized errors.
+you still need the columns or you will get annoying uninitialized errors.  A password 
+is also required but if not available in the file it will default to the usrname plus 
+last four characters of the cardnumber.
 
 Optional columns are: todo 
 

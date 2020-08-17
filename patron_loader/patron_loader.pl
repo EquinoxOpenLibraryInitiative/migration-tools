@@ -258,13 +258,13 @@ while (my $line = <$fh>) {
             if ($debug == 0) { $acard_id = $results[0]; } else { $acard_id = 'debug'; }
             $query = "UPDATE actor.usr SET card = $acard_id WHERE id = $au_id;";
             if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+            #password is required so we will set one based on cardnumber and usrname if not present and then make sure it's salted and all that
             my $prepped_password;
-            if ($column_values{'passwd'} or $default_password) {
-                if ($column_values{'passwd'}) { $prepped_password = sql_wrap_text($column_values{'passwd'}); }
-                    else { $prepped_password = sql_wrap_text($default_password); }
-                $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
-                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
-            }
+			if (!defined $column_values{'passwd'}) { $column_values{'passwd'} = join('',$column_values{'usrname'},substr($column_values{'passwd'},-4,4)); }
+            if ($column_values{'passwd'}) { $prepped_password = sql_wrap_text($column_values{'passwd'}); }
+                else { $prepped_password = sql_wrap_text($default_password); }
+            $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
+            if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
             if ($alert_message) {
                 $query = "INSERT INTO actor.usr_message (usr,title,message,sending_lib) VALUES ($au_id,$alert_title,$alert_message,$org_id);";
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; } 
