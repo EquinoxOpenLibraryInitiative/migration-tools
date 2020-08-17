@@ -522,12 +522,12 @@ sub sql_no_return {
             $sth = $dbh->prepare($statement);
             $sth->execute();
         }
+        if ($@) {
+            $query =~ s/'//g;
+            log_event($dbh,$session,"failed statement $query",0);
+        }
     } else {
         print "$query\n";
-    }
-    if ($@) { 
-        $query =~ s/'//g;
-        log_event($dbh,$session,"failed statement $query",0); 
     }
     return;
 }
