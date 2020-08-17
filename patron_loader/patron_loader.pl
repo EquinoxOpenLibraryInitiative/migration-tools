@@ -218,6 +218,8 @@ while (my $line = <$fh>) {
             }
             my $update_usr_str;
             my $insert_usr_str;
+            #password is required so make sure there is a value if not in file and no parameter
+            if (!defined $column_values{'passwd'}) { $column_values{'passwd'} = join('',$column_values{'usrname'},substr($column_values{'passwd'},-4,4)); }
             if ($au_id) { #update record
                 #$valid_barcode has to be 1 or 2 now so ..... 
                 if ($valid_barcode == 1) { 
@@ -258,9 +260,8 @@ while (my $line = <$fh>) {
             if ($debug == 0) { $acard_id = $results[0]; } else { $acard_id = 'debug'; }
             $query = "UPDATE actor.usr SET card = $acard_id WHERE id = $au_id;";
             if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
-            #password is required so we will set one based on cardnumber and usrname if not present and then make sure it's salted and all that
+            #make sure password is salted and all that
             my $prepped_password;
-			if (!defined $column_values{'passwd'}) { $column_values{'passwd'} = join('',$column_values{'usrname'},substr($column_values{'passwd'},-4,4)); }
             if ($column_values{'passwd'}) { $prepped_password = sql_wrap_text($column_values{'passwd'}); }
                 else { $prepped_password = sql_wrap_text($default_password); }
             $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
