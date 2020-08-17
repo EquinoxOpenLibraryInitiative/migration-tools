@@ -525,7 +525,10 @@ sub sql_no_return {
     } else {
         print "$query\n";
     }
-    if ($@) { log_event($dbh,$session,"failed statement $query",0); }
+    if ($@) { 
+        $query =~ s/'//g;
+        log_event($dbh,$session,"failed statement $query",0); 
+    }
     return;
 }
 
