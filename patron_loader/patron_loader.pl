@@ -512,13 +512,18 @@ sub sql_date {
     return $results[0];
 }
 
+#sql_null handles the updates and inserts generally so it has special rules 
+#probably should rename it for clarity
 sub sql_null {
     my $dbh = shift;
     my $statement = shift;
 	my $debug = shift;
-    my $sth = $dbh->prepare($statement);
-    $sth->execute();
-    if ($debug == 0) { $sth->execute(); } else { print "$query\n"; }
+    eval {
+        my $sth = $dbh->prepare($statement);
+        $sth->execute();
+        if ($debug == 0) { $sth->execute(); } else { print "$query\n"; }
+    }
+    if ($@) { log_event($dbh,$session,"failed statement $query",0); }
     return;
 }
 
