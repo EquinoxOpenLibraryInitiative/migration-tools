@@ -518,11 +518,11 @@ sub sql_no_return {
             $sth->execute();
         }
     } else {
-        print "$query\n";
+        print "$statement\n";
     }
     if ($@) {
-        $query =~ s/'//g;
-        log_event($dbh,$session,"failed statement $query",0);
+        $statement =~ s/'//g;
+        log_event($dbh,$session,"failed statement $statement",0);
     }
     return;
 }
