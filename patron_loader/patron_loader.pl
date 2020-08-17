@@ -222,10 +222,10 @@ while (my $line = <$fh>) {
                 #$valid_barcode has to be 1 or 2 now so ..... 
                 if ($valid_barcode == 1) { 
                     $query = "UPDATE actor.card SET active = TRUE WHERE barcode = $prepped_cardnumber;";
-                    sql_null($dbh,$query,$debug);
+                    sql_no_return($dbh,$query,$debug);
                 } else { 
                     $query = "INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);";
-                    sql_null($dbh,$query,$debug); 
+                    sql_no_return($dbh,$query,$debug); 
                 }
                 if (!defined $column_positions{'family_name'} 
                     or !defined $column_positions{'first_given_name'}
@@ -239,15 +239,15 @@ while (my $line = <$fh>) {
                     if ($debug != 0) { print "$msg\n" }
                 }    
                 $update_usr_str = update_au_sql($au_id,%column_values);
-                sql_null($dbh,$update_usr_str,$debug); 
+                sql_no_return($dbh,$update_usr_str,$debug); 
             } else {  #create record
                 $insert_usr_str = insert_au_sql($dbh,%column_values);
-                sql_null($dbh,$insert_usr_str,$debug); 
+                sql_no_return($dbh,$insert_usr_str,$debug); 
                 @results = sql_return($dbh,"SELECT id FROM actor.usr WHERE usrname = $prepped_usrname;");
                 if ($debug == 0) { $au_id = $results[0]; } else { $au_id = 'debug'; }
                 #if here the card number shouldn't be in use so we have to make it 
                 $query = "INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);";
-                sql_null($dbh,$query,$debug); 
+                sql_no_return($dbh,$query,$debug); 
             }
             $query = "SELECT id FROM actor.card WHERE barcode = $prepped_cardnumber;";
             if ($debug == 0) { 
@@ -258,33 +258,33 @@ while (my $line = <$fh>) {
             my $acard_id;
             if ($debug == 0) { $acard_id = $results[0]; } else { $acard_id = 'debug'; }
             $query = "UPDATE actor.usr SET card = $acard_id WHERE id = $au_id;";
-            sql_null($dbh,$query,$debug); 
+            sql_no_return($dbh,$query,$debug); 
             #make sure password is salted and all that
             my $prepped_password = sql_wrap_text($column_values{'passwd'}); 
             $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
-            sql_null($dbh,$query,$debug); 
+            sql_no_return($dbh,$query,$debug); 
             if ($alert_message) {
                 $query = "INSERT INTO actor.usr_message (usr,title,message,sending_lib) VALUES ($au_id,$alert_title,$alert_message,$org_id);";
-                sql_null($dbh,$query,$debug); 
+                sql_no_return($dbh,$query,$debug); 
             }
             #address fun, first if either address exists and then don't assume just b/c there is an add2 there is an add1
             if ($column_values{add1_street1} or $column_values{add2_street1}) { 
                 $query = "UPDATE actor.usr SET mailing_address = NULL WHERE id = $au_id;";
-                sql_null($dbh,$query,$debug); 
+                sql_no_return($dbh,$query,$debug); 
                 $query = "DELETE FROM actor.usr_address WHERE usr = $au_id AND address_type = 'MAILING';";
-                sql_null($dbh,$query,$debug); 
+                sql_no_return($dbh,$query,$debug); 
             }
             if ($column_values{add2_street1}) {
                 $query = insert_addr_sql($au_id,2,%column_values);
-                sql_null($dbh,$query,$debug);
+                sql_no_return($dbh,$query,$debug);
             }
             if ($column_values{add1_street1}) {
                 $query = insert_addr_sql($au_id,1,%column_values); 
-                sql_null($dbh,$query,$debug);
+                sql_no_return($dbh,$query,$debug);
             }
             if ($column_values{add1_street1} or $column_values{add2_street1}) {
                 $query = "WITH x AS (SELECT MAX(id) AS id, usr FROM actor.usr_address WHERE usr = $au_id GROUP BY 2) UPDATE actor.usr au SET mailing_address = x.id FROM x WHERE x.usr = au.id;";
-                sql_null($dbh,$query,$debug);
+                sql_no_return($dbh,$query,$debug);
             }
         if ($print_au_id != 0) { print "$au_id\n"; }
         }
@@ -360,7 +360,7 @@ sub db_add_password_function {
                 RETURN TRUE;
             END;
         $$ LANGUAGE PLPGSQL STRICT VOLATILE;';
-    sql_null($dbh,$query,0);
+    sql_no_return($dbh,$query,0);
     return;
 }
 
@@ -370,7 +370,7 @@ sub db_schema_check {
     my @results = sql_return($dbh,$query);
     if ($results[0]) { return; }
     $query = 'CREATE SCHEMA patron_loader;';
-    sql_null($dbh,$query,0);
+    sql_no_return($dbh,$query,0);
     return;
 }
 
@@ -380,7 +380,7 @@ sub db_table_check_header {
     my @results = sql_return($dbh,$query);
     if ($results[0]) { return; }
     $query = 'CREATE TABLE patron_loader.header (id SERIAL, org_unit TEXT, import_header TEXT, default_header TEXT);';
-    sql_null($dbh,$query,0);
+    sql_no_return($dbh,$query,0);
     return;
 }
 
@@ -390,7 +390,7 @@ sub db_table_check_log {
     my @results = sql_return($dbh,$query);
     if ($results[0]) { return; }
     $query = 'CREATE TABLE patron_loader.log (id SERIAL, session BIGINT, event TEXT, record_count INTEGER, logtime TIMESTAMP DEFAULT NOW());';
-    sql_null($dbh,$query,0);
+    sql_no_return($dbh,$query,0);
     return;
 }
 
@@ -400,7 +400,7 @@ sub db_table_check_mapping {
     my @results = sql_return($dbh,$query);
     if ($results[0]) { return; }
     $query = 'CREATE TABLE patron_loader.mapping (id SERIAL, org_unit TEXT, mapping_type TEXT, import_value TEXT, native_value TEXT);';
-    sql_null($dbh,$query,0);
+    sql_no_return($dbh,$query,0);
     return;
 }
 
@@ -489,7 +489,7 @@ sub log_event {
     $event = sql_wrap_text($event);
     if (!defined $record_count) { $record_count = 0; }
     my $sql = "INSERT INTO patron_loader.log (session,event,record_count) VALUES ($session,$event,$record_count);";
-    sql_null($dbh,$sql,0);
+    sql_no_return($dbh,$sql,0);
 }
 
 sub sql_boolean {
@@ -512,16 +512,18 @@ sub sql_date {
     return $results[0];
 }
 
-#sql_null handles the updates and inserts generally so it has special rules 
-#probably should rename it for clarity
-sub sql_null {
+sub sql_no_return {
     my $dbh = shift;
     my $statement = shift;
 	my $debug = shift;
-    eval {
-        my $sth = $dbh->prepare($statement);
-        $sth->execute();
-        if ($debug == 0) { $sth->execute(); } else { print "$query\n"; }
+    my $sth;
+    if ($debug == 0) {
+        eval {
+            $sth = $dbh->prepare($statement);
+            $sth->execute();
+        }
+    } else {
+        print "$query\n";
     }
     if ($@) { log_event($dbh,$session,"failed statement $query",0); }
     return;
