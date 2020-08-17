@@ -221,11 +221,9 @@ while (my $line = <$fh>) {
             if ($au_id) { #update record
                 #$valid_barcode has to be 1 or 2 now so ..... 
                 if ($valid_barcode == 1) { 
-                    $query = "UPDATE actor.card SET active = TRUE WHERE barcode = $prepped_cardnumber;";
-                    sql_no_return($dbh,$query,$debug);
+                    sql_no_return($dbh,"UPDATE actor.card SET active = TRUE WHERE barcode = $prepped_cardnumber;",$debug);
                 } else { 
-                    $query = "INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);";
-                    sql_no_return($dbh,$query,$debug); 
+                    sql_no_return($dbh,"INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);",$debug); 
                 }
                 if (!defined $column_positions{'family_name'} 
                     or !defined $column_positions{'first_given_name'}
@@ -237,7 +235,7 @@ while (my $line = <$fh>) {
                     $msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} insert failed";
                     log_event($dbh,$session,$msg);
                     if ($debug != 0) { print "$msg\n" }
-                }    
+                }
                 $update_usr_str = update_au_sql($au_id,%column_values);
                 sql_no_return($dbh,$update_usr_str,$debug); 
             } else {  #create record
@@ -246,8 +244,7 @@ while (my $line = <$fh>) {
                 @results = sql_return($dbh,"SELECT id FROM actor.usr WHERE usrname = $prepped_usrname;");
                 if ($debug == 0) { $au_id = $results[0]; } else { $au_id = 'debug'; }
                 #if here the card number shouldn't be in use so we have to make it 
-                $query = "INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);";
-                sql_no_return($dbh,$query,$debug); 
+                sql_no_return($dbh,"INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);",$debug); 
             }
             $query = "SELECT id FROM actor.card WHERE barcode = $prepped_cardnumber;";
             if ($debug == 0) { 
@@ -269,10 +266,8 @@ while (my $line = <$fh>) {
             }
             #address fun, first if either address exists and then don't assume just b/c there is an add2 there is an add1
             if ($column_values{add1_street1} or $column_values{add2_street1}) { 
-                $query = "UPDATE actor.usr SET mailing_address = NULL WHERE id = $au_id;";
-                sql_no_return($dbh,$query,$debug); 
-                $query = "DELETE FROM actor.usr_address WHERE usr = $au_id AND address_type = 'MAILING';";
-                sql_no_return($dbh,$query,$debug); 
+                sql_no_return($dbh,"UPDATE actor.usr SET mailing_address = NULL WHERE id = $au_id;",$debug); 
+                sql_no_return($dbh,"DELETE FROM actor.usr_address WHERE usr = $au_id AND address_type = 'MAILING';",$debug); 
             }
             if ($column_values{add2_street1}) {
                 $query = insert_addr_sql($au_id,2,%column_values);
