@@ -276,12 +276,16 @@ while (my $line = <$fh>) {
                 $query = "DELETE FROM actor.usr_address WHERE usr = $au_id AND address_type = 'MAILING';";
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
             }
+            if ($column_values{add2_street1}) {
+                $query = insert_addr_sql($au_id,2,%column_values);
+                if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
+            }
             if ($column_values{add1_street1}) {
                 $query = insert_addr_sql($au_id,1,%column_values); 
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
             }
-            if ($column_values{add2_street1}) {
-                $query = insert_addr_sql($au_id,2,%column_values);
+            if ($column_values{add1_street1} or $column_values{add2_street1}) {
+                $query = "WITH x AS (SELECT MAX(id) AS id, usr FROM actor.usr_address WHERE usr = $au_id GROUP BY 2) UPDATE actor.usr au SET mailing_address = x.id FROM x WHERE x.usr = au.id;";
                 if ($debug == 0) { sql_null($dbh,$query); } else { print "$query\n"; }
             }
         if ($print_au_id != 0) { print "$au_id\n"; }
