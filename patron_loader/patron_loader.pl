@@ -340,7 +340,7 @@ sub connect_db {
 
 sub db_add_password_function {
     my $dbh = shift;
-    #this is functionally the same as the function in lp1858833 but it's not merged yet at this point so ...
+    #this is functionally the same as the function in lp1858833 so for pre 3.6 systems ...
     my $query = '
         CREATE OR REPLACE FUNCTION patron_loader.set_salted_passwd(INTEGER,TEXT) RETURNS BOOLEAN AS $$
             DECLARE
