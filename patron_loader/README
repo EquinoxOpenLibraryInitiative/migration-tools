@@ -40,15 +40,19 @@ Optional parameters:
 --home_org if no library is provided in the file it can be overriden by this, like 
     similar settings if a column with library is present but null in a given row 
     this will be used instead; expects short org name 
+--fill_in_with_matchpoint default to 0
+    if set to 1 will allow you to only have cardnumber or usrname but it must also 
+    be your matchpoint 
 
 Required Data:
 
 Seven columns are considered required for loading the file, the cardnumber, usrname, 
 passwd, profile, home_library, family_name and first_given_name.  With the home_org and  
-profile parameters you can leave the columsn for profile and home_library empty but 
-you still need the columns or you will get annoying uninitialized errors.  A password 
-is also required but if not available in the file it will default to the usrname plus 
-last four characters of the cardnumber.
+profile parameters you can leave the columns for profile and home_library empty but 
+you still need the columns in the file.  If you use the --fill_in_with_matchpoint 
+option you can skip one so long as you have the other but still need the column in your 
+file.  Having the columns present even if empty for some columns allows a mix of present 
+and absent row data and avoids unitialized variable warnings. 
 
 Optional columns are: todo 
 
@@ -104,9 +108,6 @@ TODOs:
 in the script
 
 * add a --strict_mode that will only allow updates for home_ous in @valid_orgs 
-
-* uninitialized values within %column_positions when using --home_ou and --profile 
-without accompanying profiles so tweaking the column position requirements could be done
 
 * create a function to insert a usr account without password where it would create the 
 password on some configured value, say usrname + last four of cardnumber  

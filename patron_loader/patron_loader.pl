@@ -42,6 +42,7 @@ my $alert_message;
 my $alert_title = 'Needs Staff Attention';
 my $profile;
 my $home_ou;
+my $fill_in_with_matchpoint = 0;
 my $print_au_id = 0;
 my $session = time();
 
@@ -60,6 +61,7 @@ my $ret = GetOptions(
     'ident_type:s'      => \$ident_type,
     'profile:s'         => \$profile,
     'default_password:s' => \$default_password,
+    'fill_in_with_matchpoint:i' => \$fill_in_with_matchpoint,
     'alert_message:s'   => \$alert_message, 
     'alert_title:s'     => \$alert_title,
     'home_ou:s'         => \$home_ou,
@@ -174,14 +176,52 @@ while (my $line = <$fh>) {
                 $colstr =~ s/^\s+|\s+$//g;
                 $column_values{$col} = $colstr; 
             }
-            if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'} #make sure basic values are present, homelib and profile checked later
-                or !defined $column_values{'family_name'} or !defined $column_values{'first_given_name'}
-            ) {
+            #an empty field of usrname or cardnumber get loaded as an empty string not undefined so ....
+            if ($column_values{'usrname'} eq '') { undef $column_values{'usrname'}; }
+            if ($column_values{'cardnumber'} eq '') { undef $column_values{'cardnumber'}; }
+            if (!defined $column_values{'usrname'} and !defined $column_values{'cardnumber'}) 
+            {  #just next, nothing else to do 
                 $skipped++;
-                $msg = "required value in row with usrname $column_values{'usrname'} and cardnumber or $column_values{'cardnumber'} is null";
+                $msg = "required value for family_name and/or first_given_name is null";
+                log_event($dbh,$session,$msg);
+                if ($debug != 0) { print "$msg\n" }
+                next;                 
+            }
+            if (!defined $column_values{'family_name'} or !defined $column_values{'first_given_name'}) 
+            {
+                $skipped++;
+                $msg = "required value for family_name and/or first_given_name is null";
                 log_event($dbh,$session,$msg);
                 if ($debug != 0) { print "$msg\n" }
                 next;
+            }
+            #this is where it gets messier
+            if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'})
+            { #from here on probably could be refactored but doing this fast and easy to read, and debugging info detailed
+                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'usrname' and !defined $column_values{'usrname'}) 
+                    {
+                        $skipped++;
+                        $msg = "--fill_in_with_matchpoint is set with matchpoint of usrname but usrname and cardnumber is null";
+                        log_event($dbh,$session,$msg);
+                        if ($debug != 0) { print "$msg\n" }
+                        next;
+                    }
+                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'cardnumber' and !defined $column_values{'cardnumber'})
+                    {       
+                        $skipped++;
+                        $msg = "--fill_in_with_matchpoint is set with matchpoint of cardnumber but usrname and cardnumber is null";
+                        log_event($dbh,$session,$msg);
+                        if ($debug != 0) { print "$msg\n" }
+                        next;
+                    }
+                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'cardnumber' and $column_values{'cardnumber'})
+                    {
+                        $column_values{'usrname'} = $column_values{'cardnumber'};
+                    }
+                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'usrname' and $column_values{'usrname'})
+                    {   
+                        $column_values{'cardnumber'} = $column_values{'usrname'};
+                    }
             }
             if ($column_values{'dob'}) { $column_values{'dob'} = sql_date($dbh,$column_values{'dob'},$date_format); }
             my $prepped_cardnumber = sql_wrap_text($column_values{'cardnumber'});
