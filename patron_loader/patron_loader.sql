@@ -23,4 +23,21 @@ CREATE OR REPLACE FUNCTION patron_loader.set_salted_passwd(INTEGER,TEXT) RETURNS
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
 
+/* examples of mapping
 
+
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','01','Elementary');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','02','Elementary');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','03','Elementary');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','04','Elementary');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','05','Middle 5th & 6th');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','06','Middle 5th & 6th');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','07','Middle 7th & 8th');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value/ VALUES ('SYS1','profile','08','Middle 7th & 8th');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','09','High School');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','10','High School');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','11','High School');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','12','High School');
+
+INSERT INTO patron_loader.header (org_unit,import_header,default_header) VALUES ('SYS1','patron barcode','cardnumber');
+*/
