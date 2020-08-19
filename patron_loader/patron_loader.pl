@@ -169,7 +169,11 @@ while (my $line = <$fh>) {
             #now copy the hash structure for reading the data 
             while (my ($col,$pos) = each %column_positions) { $column_values{$col} = ''; }
         }  else { #actual data
-            while (my ($col,$val) = each %column_values) { $column_values{$col} = $fields[$column_positions{$col}]; }
+            while (my ($col,$val) = each %column_values) { 
+                my $colstr = $fields[$column_positions{$col}];
+                $colstr =~ s/^\s+|\s+$//g;
+                $column_values{$col} = $colstr; 
+            }
             if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'} #make sure basic values are present, homelib and profile checked later
                 or !defined $column_values{'family_name'} or !defined $column_values{'first_given_name'}
             ) {
@@ -186,7 +190,12 @@ while (my $line = <$fh>) {
             my $prepped_home_ou_id = get_original_id(\%original_libs,\%mapped_libs,$column_values{'home_library'},$home_ou_id);
             if (!defined $prepped_home_ou_id or !defined $prepped_profile_id) { 
                 $skipped++;
-                $msg = "could not find valid home library or profile id (or both) for $column_values{'cardnumber'}";
+                if (!defined $prepped_profile_id) { $prepped_profile_id = 'none'; }
+                if (!defined $home_ou_id) { $home_ou_id = 'none'; }
+                $msg = "could not find valid home library, id: $home_ou_id, column: $column_values{'home_library'} for $column_values{'cardnumber'}";
+                log_event($dbh,$session,$msg);
+                if ($debug != 0) { print "$msg\n" }
+                $msg = "could not find valid profile, id: $prepped_profile_id, column: $column_values{'profile'} for $column_values{'cardnumber'}";
                 log_event($dbh,$session,$msg);
                 if ($debug != 0) { print "$msg\n" }
                 next;
