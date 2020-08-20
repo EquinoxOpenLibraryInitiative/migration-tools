@@ -596,7 +596,9 @@ sub sql_wrap_empty_text {
 
 sub sql_wrap_text {
     my $str = shift;
+    if (!defined $str) { return; }
     $str =~ s/^\s+|\s+$//g;
+    $str =~ s/'/''/g;
     if ($str) { $str = '\'' . $str . '\''; } else { $str = 'NULL'; }
     return $str;
 }
