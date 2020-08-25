@@ -172,8 +172,10 @@ function export_patrons {
     mkdir -p $outdir/patrons
     export_entire_table config.net_access_level $outdir/patrons
     export_entire_table config.standing_penalty $outdir/patrons
+    export_entire_table config.identification_type $outdir/patrons
     export_entire_table actor.stat_cat $outdir/patrons
     export_entire_table actor.stat_cat_entry $outdir/patrons
+    export_entire_table permission.grp_tree $outdir/patrons
     export_table_ou_subset actor.usr home_ou $outdir/patrons "AND NOT deleted"
     export_table_patron_subset actor.card usr $outdir/patrons
     export_table_patron_subset actor.usr_setting usr $outdir/patrons
