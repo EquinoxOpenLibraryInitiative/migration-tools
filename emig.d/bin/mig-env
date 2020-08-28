@@ -252,6 +252,7 @@ sub mig_env_create {
     print FILE "alias wcd='cd `mig wdir`'\n";
     print FILE "alias gcd='cd `mig gdir`'\n";
     print FILE "alias scd='cd `mig sdir`'\n";
+    print FILE "wcd\n";
     print FILE "source ~/.profile\n";
     print FILE "env | sort | egrep 'PG|MIG'\n";
     print FILE 'echo shell PID = $$' . "\n";
