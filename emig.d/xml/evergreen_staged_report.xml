@@ -666,7 +666,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
 
     <report>
         <name>bibswovolumesanduri</name>
-        <report_title>Bibliographic Records Without Volumes And Recognized URI</report_title>
+        <report_title>Bibliographic Records With Recognized URIs</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Service.Domain.Count</heading>
