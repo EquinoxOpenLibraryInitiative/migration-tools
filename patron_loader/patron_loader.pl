@@ -310,7 +310,7 @@ while (my $line = <$fh>) {
             $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
             sql_no_return($dbh,$query,$debug); 
             if ($alert_message) {
-                $query = "INSERT INTO actor.usr_message (usr,title,message,sending_lib) VALUES ($au_id,$alert_title,$alert_message,$org_id);";
+                $query = "UPDATE actor.usr SET alert_message = CONCAT_WS(';',alert_message,$alert_title,$alert_message) WHERE id = $au_id;";
                 sql_no_return($dbh,$query,$debug); 
             }
             #address fun, first if either address exists and then don't assume just b/c there is an add2 there is an add1
