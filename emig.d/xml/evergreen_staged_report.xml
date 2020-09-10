@@ -29,7 +29,14 @@
     <table>
         <name>create_subfield_u</name>
         <drop>DROP TABLE IF EXISTS subfield_u</drop>
-        <create>CREATE UNLOGGED TABLE subfield_u AS SELECT UNNEST(oils_xpath( '//*[@tag="856"]/*[@code="u"]/text()', marc)) AS value FROM m_biblio_record_entry_legacy WHERE x_migrate</create>
+        <create>CREATE UNLOGGED TABLE subfield_u AS SELECT id, UNNEST(oils_xpath( '//*[@tag="856"]/*[@code="u"]/text()', marc)) AS value FROM m_biblio_record_entry_legacy WHERE x_migrate</create>
+    </table>
+
+    <table>
+        <name>create_subfield_u_wo_acn</name>
+        <drop>DROP TABLE IF EXISTS subfield_u_wo_acn</drop>
+        <create>CREATE UNLOGGED TABLE subfield_u_wo_acn AS SELECT bre.id, UNNEST(oils_xpath( '//*[@tag="856"]/*[@code="u"]/text()', bre.marc)) AS value FROM m_biblio_record_entry_legacy bre 
+                LEFT JOIN m_asset_call_number acn ON acn.record = bre.id WHERE acn.id IS NULL AND bre.x_migrate</create>
     </table>
 
 <!-- sample reports entry
@@ -511,7 +518,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Alert Count.Alert Type</heading>
-		<query>SELECT COUNT(*), cat.name FROM m_asset_copy_alert aca JOIN config.copy_alert_type cat ON cat.id = aca.alert_type GROUP BY 2</query>
+        <query>SELECT COUNT(*), cat.name FROM m_asset_copy_alert aca JOIN config.copy_alert_type cat ON cat.id = aca.alert_type GROUP BY 2</query>
     </report>
 
     <!-- MONEY REPORTS -->
@@ -661,33 +668,60 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <iteration>0</iteration>
         <heading>Count</heading>
         <query>SELECT COUNT(id) FROM m_biblio_record_entry where id NOT IN (SELECT DISTINCT record FROM m_asset_call_number)</query>
-		<note>These records would not have been loaded but many may be deduplicated against incumbent records.</note>
+        <note>These records would not have been loaded but many may be deduplicated against incumbent records.</note>
     </report>
 
     <report>
-        <name>bibswovolumesanduri</name>
+        <name>bibswselecturi</name>
         <report_title>Bibliographic Records With Recognized URIs</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Service.Domain.Count</heading>
         <query>SELECT '3M','ebook.3m.com', COUNT(*) FROM subfield_u WHERE value ~* 'ebook.3m.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Axis 360','axis360.baker-taylor.com', COUNT(*) FROM subfield_u WHERE value ~* 'axis360.baker-taylor.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Book Flix','bookflix.digital.scholastic.com', COUNT(*) FROM subfield_u WHERE value ~* 'bookflix.digital.scholastic.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Book Flix','bkflix.grolier.com', COUNT(*) FROM subfield_u WHERE value ~* 'bkflix.grolier.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Comics Plus','library.comicsplusapp.com', COUNT(*) FROM subfield_u WHERE value ~* 'library.comicsplusapp.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Ebrary','site.ebrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'site.ebrary.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Freading','freading.com', COUNT(*) FROM subfield_u WHERE value ~* 'freading.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Hoopla','hoopladigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'hoopladigital.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Infobase','avod.infobase.com', COUNT(*) FROM subfield_u WHERE value ~* 'avod.infobase.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Learning Express','learningexpresslibrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'learningexpresslibrary.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Missouri Overdrive','molib2go.org', COUNT(*) FROM subfield_u WHERE value ~* 'molib2go.org' GROUP BY 1, 2 UNION ALL
-		SELECT 'netLibrary','netLibrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'netLibrary.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'OneClickDigital','oneclickdigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'oneclickdigital.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'Overdrive','overdrive.com', COUNT(*) FROM subfield_u WHERE value ~* 'overdrive.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'ProQuest','ebookcentral.proquest.com', COUNT(*) FROM subfield_u WHERE value ~* 'ebookcentral.proquest.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'RB Digital','rbdigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'rbdigital.com' GROUP BY 1, 2 UNION ALL
-		SELECT 'U.S. Government Sites','.gov', COUNT(*) FROM subfield_u WHERE value ~* '\.gov' GROUP BY 1,2;;
-		</query>
+        SELECT 'Axis 360','axis360.baker-taylor.com', COUNT(*) FROM subfield_u WHERE value ~* 'axis360.baker-taylor.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Book Flix','bookflix.digital.scholastic.com', COUNT(*) FROM subfield_u WHERE value ~* 'bookflix.digital.scholastic.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Book Flix','bkflix.grolier.com', COUNT(*) FROM subfield_u WHERE value ~* 'bkflix.grolier.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Comics Plus','library.comicsplusapp.com', COUNT(*) FROM subfield_u WHERE value ~* 'library.comicsplusapp.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Ebrary','site.ebrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'site.ebrary.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Freading','freading.com', COUNT(*) FROM subfield_u WHERE value ~* 'freading.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Hoopla','hoopladigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'hoopladigital.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Infobase','avod.infobase.com', COUNT(*) FROM subfield_u WHERE value ~* 'avod.infobase.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Learning Express','learningexpresslibrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'learningexpresslibrary.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Missouri Overdrive','molib2go.org', COUNT(*) FROM subfield_u WHERE value ~* 'molib2go.org' GROUP BY 1, 2 UNION ALL
+        SELECT 'netLibrary','netLibrary.com', COUNT(*) FROM subfield_u WHERE value ~* 'netLibrary.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'OneClickDigital','oneclickdigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'oneclickdigital.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Overdrive','overdrive.com', COUNT(*) FROM subfield_u WHERE value ~* 'overdrive.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'ProQuest','ebookcentral.proquest.com', COUNT(*) FROM subfield_u WHERE value ~* 'ebookcentral.proquest.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'RB Digital','rbdigital.com', COUNT(*) FROM subfield_u WHERE value ~* 'rbdigital.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'U.S. Government Sites','.gov', COUNT(*) FROM subfield_u WHERE value ~* '\.gov' GROUP BY 1,2;;
+        </query>
+        <note>This list is built from known services and domains. If you have records for electronic resources that are not here please let us know.</note>
+    </report>
+
+    <report>
+        <name>bibswselecturiandwoacn</name>
+        <report_title>Bibliographic Records Without Volumes Having Recognized URIs</report_title>
+        <tag>bibs</tag>
+        <iteration>0</iteration>
+        <heading>Service.Domain.Count</heading>
+        <query>SELECT '3M','ebook.3m.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'ebook.3m.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Axis 360','axis360.baker-taylor.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'axis360.baker-taylor.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Book Flix','bookflix.digital.scholastic.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'bookflix.digital.scholastic.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Book Flix','bkflix.grolier.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'bkflix.grolier.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Comics Plus','library.comicsplusapp.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'library.comicsplusapp.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Ebrary','site.ebrary.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'site.ebrary.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Freading','freading.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'freading.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Hoopla','hoopladigital.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'hoopladigital.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Infobase','avod.infobase.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'avod.infobase.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Learning Express','learningexpresslibrary.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'learningexpresslibrary.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Missouri Overdrive','molib2go.org', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'molib2go.org' GROUP BY 1, 2 UNION ALL
+        SELECT 'netLibrary','netLibrary.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'netLibrary.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'OneClickDigital','oneclickdigital.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'oneclickdigital.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'Overdrive','overdrive.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'overdrive.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'ProQuest','ebookcentral.proquest.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'ebookcentral.proquest.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'RB Digital','rbdigital.com', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* 'rbdigital.com' GROUP BY 1, 2 UNION ALL
+        SELECT 'U.S. Government Sites','.gov', COUNT(*) FROM subfield_u_wo_acn WHERE value ~* '\.gov' GROUP BY 1,2;;
+        </query>
         <note>This list is built from known services and domains. If you have records for electronic resources that are not here please let us know.</note>
     </report>
 
@@ -700,14 +734,14 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT COUNT(id) FROM m_biblio_record_entry where id IN (SELECT record FROM asset.call_number WHERE label ~* '##URI##')</query>
     </report>
 
-	<report>
-		<name>bibsff</name>
-		<report_title>Bibliographic Records with Adjusted Fixed Fields</report_title>
-		<tag>bibs</tag>
-		<iteration>0</iteration>
-		<heading>Count.Original Search Format.New Search Format</heading>
-		<query>SELECT COUNT(*), ARRAY_TO_STRING(x_search_format,','), ARRAY_TO_STRING(x_after_search_format,',') FROM m_biblio_record_entry_legacy WHERE x_migrate AND x_after_search_format IS NOT NULL GROUP BY 2, 3 ORDER BY 3,2</query>
-	</report>
+    <report>
+        <name>bibsff</name>
+        <report_title>Bibliographic Records with Adjusted Fixed Fields</report_title>
+        <tag>bibs</tag>
+        <iteration>0</iteration>
+        <heading>Count.Original Search Format.New Search Format</heading>
+        <query>SELECT COUNT(*), ARRAY_TO_STRING(x_search_format,','), ARRAY_TO_STRING(x_after_search_format,',') FROM m_biblio_record_entry_legacy WHERE x_migrate AND x_after_search_format IS NOT NULL GROUP BY 2, 3 ORDER BY 3,2</query>
+    </report>
 
     <report>
         <name>bibs_notes</name>
@@ -1037,9 +1071,9 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <iteration>0</iteration>
         <heading>Count.Setting.Value</heading>
         <query>SELECT COUNT(*), name, 'User''s Phone' FROM m_actor_usr_setting WHERE name IN ('opac.default_phone') GROUP BY 2, 3 
-			UNION ALL SELECT COUNT(*), name, value FROM m_actor_usr_setting WHERE name IN ('opac.hold_notify') GROUP BY 2, 3 
-			UNION ALL SELECT COUNT(*), a.name, aou.shortname FROM m_actor_usr_setting a JOIN actor.org_unit aou ON aou.id = REPLACE(a.value,'"','')::INTEGER 
-				WHERE a.name IN ('opac.default_pickup_location','opac.default_search_location') GROUP BY 2, 3 ORDER BY 2, 3;</query>
+            UNION ALL SELECT COUNT(*), name, value FROM m_actor_usr_setting WHERE name IN ('opac.hold_notify') GROUP BY 2, 3 
+            UNION ALL SELECT COUNT(*), a.name, aou.shortname FROM m_actor_usr_setting a JOIN actor.org_unit aou ON aou.id = REPLACE(a.value,'"','')::INTEGER 
+                WHERE a.name IN ('opac.default_pickup_location','opac.default_search_location') GROUP BY 2, 3 ORDER BY 2, 3;</query>
     </report>
 
     <!-- ACQUISITIONS REPORTS -->
