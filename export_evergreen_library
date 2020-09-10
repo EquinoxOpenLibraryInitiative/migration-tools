@@ -146,6 +146,20 @@ function export_table_xact_subset {
     psql $dbconn -A -t -c "\\COPY (SELECT * FROM $table WHERE $limitcol IN (SELECT id FROM money.billable_xact WHERE usr IN (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou') AND NOT deleted)) $clause) TO $subdir/$table.tsv"
 }
 
+function export_table_bib_subset {
+    local table=$1
+    local limitcol=$2
+    local subdir=$3
+    local clause=$4
+    echo "Exporting table $table (limited by patrons)"
+    export_table_description $table $subdir
+    psql $dbconn -A -t -c "\\COPY (SELECT * FROM $table WHERE $limitcol IN (SELECT DISTINCT bre.id
+    FROM biblio.record_entry bre
+    JOIN asset.call_number acn ON (bre.id = acn.record)
+    WHERE NOT acn.deleted
+    AND acn.owning_lib IN (SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = '$baseou')) $clause) TO $subdir/$table.tsv"
+}
+
 function export_items {
     mkdir -p $outdir/items
     export_entire_table config.copy_status $outdir/items
@@ -166,6 +180,8 @@ function export_items {
     export_table_ou_subset asset.call_number owning_lib $outdir/items
     export_table_item_subset asset.copy_note owning_copy $outdir/items
     export_table_item_subset asset.stat_cat_entry_copy_map owning_copy $outdir/items
+    export_table_item_subset asset.copy_part_map target_copy $outdir/items
+    export_table_bib_subset biblio.monograph_part record $outdir/items
 }
 
 function export_patrons {
