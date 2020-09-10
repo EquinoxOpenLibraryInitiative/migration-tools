@@ -176,70 +176,50 @@ while (my $line = <$fh>) {
                 $colstr =~ s/^\s+|\s+$//g;
                 $column_values{$col} = $colstr; 
             }
-            #an empty field of usrname or cardnumber get loaded as an empty string not undefined so ....
-            if ($column_values{'usrname'} eq '') { undef $column_values{'usrname'}; }
-            if ($column_values{'cardnumber'} eq '') { undef $column_values{'cardnumber'}; }
-            if (!defined $column_values{'usrname'} and !defined $column_values{'cardnumber'}) 
-            {  #just next, nothing else to do 
-                $skipped++;
-                $msg = "required value for family_name and/or first_given_name is null";
-                log_event($dbh,$session,$msg);
-                if ($debug != 0) { print "$msg\n" }
-                next;                 
-            }
-            if (!defined $column_values{'family_name'} or !defined $column_values{'first_given_name'}) 
-            {
-                $skipped++;
-                $msg = "required value for family_name and/or first_given_name is null";
-                log_event($dbh,$session,$msg);
-                if ($debug != 0) { print "$msg\n" }
-                next;
-            }
-            #this is where it gets messier
-            if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'})
-            { #from here on probably could be refactored but doing this fast and easy to read, and debugging info detailed
-                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'usrname' and !defined $column_values{'usrname'}) 
-                    {
-                        $skipped++;
-                        $msg = "--fill_in_with_matchpoint is set with matchpoint of usrname but usrname and cardnumber is null";
-                        log_event($dbh,$session,$msg);
-                        if ($debug != 0) { print "$msg\n" }
-                        next;
-                    }
-                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'cardnumber' and !defined $column_values{'cardnumber'})
-                    {       
-                        $skipped++;
-                        $msg = "--fill_in_with_matchpoint is set with matchpoint of cardnumber but usrname and cardnumber is null";
-                        log_event($dbh,$session,$msg);
-                        if ($debug != 0) { print "$msg\n" }
-                        next;
-                    }
-                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'cardnumber' and $column_values{'cardnumber'})
-                    {
-                        $column_values{'usrname'} = $column_values{'cardnumber'};
-                    }
-                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'usrname' and $column_values{'usrname'})
-                    {   
-                        $column_values{'cardnumber'} = $column_values{'usrname'};
-                    }
-            }
+            ##############################################################################################################
+            ### prep values for use in appropriate formats 
             if ($column_values{'dob'}) { $column_values{'dob'} = sql_date($dbh,$column_values{'dob'},$date_format); }
-            my $prepped_cardnumber = sql_wrap_text($column_values{'cardnumber'});
-            my $prepped_usrname = sql_wrap_text($column_values{'usrname'});
             my $prepped_profile_id = get_original_id(\%original_pgt,\%mapped_pgt,$column_values{'profile'},$profile_id);
             my $prepped_home_ou_id = get_original_id(\%original_libs,\%mapped_libs,$column_values{'home_library'},$home_ou_id);
+            if ($column_values{'active'}) { $column_values{'active'} = sql_boolean($column_values{'active'}); }
+            if ($column_values{'barred'}) { $column_values{'barred'} = sql_boolean($column_values{'barred'}); }
+            if ($column_values{'juvenile'}) { $column_values{'juvenile'} = sql_boolean($column_values{'juvenile'}); }
+            ##############################################################################################################
+            ### checking to make sure the row has cardnumber and/or usrname and appropriate flags if one is missing
+            ### also skip if the usrname and profile can't be found
+            if ($column_values{'usrname'} eq '') { undef $column_values{'usrname'}; } 
+            if ($column_values{'cardnumber'} eq '') { undef $column_values{'cardnumber'}; }
+            if (!defined $column_values{'usrname'} and !defined $column_values{'cardnumber'}) 
+                { $skipped++; log_go_next("required value for family_name and/or first_given_name is null",$dbh,$debug,$session); next; }
+            if (!defined $column_values{'family_name'} or !defined $column_values{'first_given_name'}) 
+                { $skipped++; log_go_next("required value for family_name and/or first_given_name is null",$dbh,$debug,$session); next; }
+            if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'})
+            {
+                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'usrname' and !defined $column_values{'usrname'}) 
+                    { $skipped++; log_go_next("--fill_in_with_matchpoint is set with matchpoint of usrname but usrname and cardnumber is null",$dbh,$debug,$session); next; }
+                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'cardnumber' and !defined $column_values{'cardnumber'})
+                    { $skipped++; log_go_next("--fill_in_with_matchpoint is set with matchpoint of cardnumber but usrname and cardnumber is null",$dbh,$debug,$session); next; }
+                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'cardnumber' and $column_values{'cardnumber'})
+                    { $column_values{'usrname'} = $column_values{'cardnumber'}; }
+                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'usrname' and $column_values{'usrname'})
+                    { $column_values{'cardnumber'} = $column_values{'usrname'}; }
+            }
+            my $prepped_cardnumber = sql_wrap_text($column_values{'cardnumber'});
+            my $prepped_usrname = sql_wrap_text($column_values{'usrname'});
             if (!defined $prepped_home_ou_id or !defined $prepped_profile_id) { 
                 $skipped++;
-                if (!defined $prepped_profile_id) { $prepped_profile_id = 'none'; }
+                if (!defined $prepped_profile_id) { $prepped_profile_id = 'none'; } 
                 if (!defined $home_ou_id) { $home_ou_id = 'none'; }
-                $msg = "could not find valid home library, id: $home_ou_id, column: $column_values{'home_library'} for $column_values{'cardnumber'}";
-                log_event($dbh,$session,$msg);
-                if ($debug != 0) { print "$msg\n" }
-                $msg = "could not find valid profile, id: $prepped_profile_id, column: $column_values{'profile'} for $column_values{'cardnumber'}";
-                log_event($dbh,$session,$msg);
-                if ($debug != 0) { print "$msg\n" }
+                log_go_next("could not find valid profile, id: $prepped_profile_id, column: $column_values{'profile'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
+                log_go_next("could not find valid home library, id: $home_ou_id, column: $column_values{'home_library'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
                 next;
-            } 
+            }
+            ##############################################################################################################
+            ### now take the matchpoint and find if the account already exists so we can insert or update 
+            ### since usrname and barcode both need to be unique having a valid au_id alone isn't enough, we need to test
+            ### check_barcode|usrname returns 0 == match found for another au_id, 1 == found for this au_id, 2 == not found 
+            ### after checking we don't need the sql strings separate from hash anymore so they become the hash values  for convenience 
+            ### then we skip if value is 0 since barcode and username can't exist on separate users 
             if ($matchpoint eq 'usrname') {
                 $query = "SELECT id FROM actor.usr WHERE usrname = $prepped_usrname;";
             } else {
@@ -247,28 +227,19 @@ while (my $line = <$fh>) {
             }
             @results = sql_return($dbh,$query);
             my $au_id = $results[0];
-            #standardize boolean t/f true/false to TRUE/FALSE 
-            if ($column_values{'active'}) { $column_values{'active'} = sql_boolean($column_values{'active'}); }
-            if ($column_values{'barred'}) { $column_values{'barred'} = sql_boolean($column_values{'barred'}); }
-            if ($column_values{'juvenile'}) { $column_values{'juvenile'} = sql_boolean($column_values{'juvenile'}); }
-            #since usrname and barcode both need to be unique having a valid au_id alone isn't enough, we need to test 
-            #0 == match found for another au_id, 1 == found for this au_id, 2 == not found 
             my $valid_barcode = check_barcode($dbh,$au_id,$prepped_cardnumber);
             my $valid_usrname = check_usrname($dbh,$au_id,$prepped_usrname);
-            #we don't need the sql friendly strings separate from the hash anymore so put the calculated ones into hash
             $column_values{'home_library'} = $prepped_home_ou_id;
             $column_values{'profile'} = $prepped_profile_id;
-            if ($valid_barcode == 0 or $valid_usrname == 0) {
-                $skipped++;
-                $msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account";
-                log_event($dbh,$session,$msg);
-                if ($debug != 0) { print "$msg\n" }
-                next;
-            }
+            if ($valid_barcode == 0 or $valid_usrname == 0) 
+                { $skipped++; log_go_next("usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account",$dbh,$debug,$session); next; }
+            ##############################################################################################################
+            ### finally, we do stuff, if au_id then there is a matching user, update it, if not insert
+            ### functions will create the update and insert strings to handle actor.usr and actor.card here
+            ### we always set the alert message with an update since it's fed as a parameter and not in hash, makes a bit more db churn 
             my $update_usr_str;
             my $insert_usr_str;
-            if ($au_id) { #update record
-                #$valid_barcode has to be 1 or 2 now so ..... 
+            if ($au_id) { 
                 if ($valid_barcode == 1) { 
                     sql_no_return($dbh,"UPDATE actor.card SET active = TRUE WHERE barcode = $prepped_cardnumber;",$debug);
                 } else { 
@@ -287,7 +258,7 @@ while (my $line = <$fh>) {
                 }
                 $update_usr_str = update_au_sql($au_id,%column_values);
                 sql_no_return($dbh,$update_usr_str,$debug); 
-            } else {  #create record
+            } else { 
                 $insert_usr_str = insert_au_sql($dbh,%column_values);
                 sql_no_return($dbh,$insert_usr_str,$debug); 
                 @results = sql_return($dbh,"SELECT id FROM actor.usr WHERE usrname = $prepped_usrname;");
@@ -305,15 +276,17 @@ while (my $line = <$fh>) {
             if ($debug == 0) { $acard_id = $results[0]; } else { $acard_id = 'debug'; }
             $query = "UPDATE actor.usr SET card = $acard_id WHERE id = $au_id;";
             sql_no_return($dbh,$query,$debug); 
-            #make sure password is salted and all that
+            if ($alert_message) {
+                $query = "UPDATE actor.usr SET alert_message = CONCAT_WS(';',alert_message,$alert_title,$alert_message) WHERE id = $au_id;";
+                sql_no_return($dbh,$query,$debug);
+            }
+            ##############################################################################################################
+            ### make sure password is salted and all that
             my $prepped_password = sql_wrap_text($column_values{'passwd'}); 
             $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
             sql_no_return($dbh,$query,$debug); 
-            if ($alert_message) {
-                $query = "UPDATE actor.usr SET alert_message = CONCAT_WS(';',alert_message,$alert_title,$alert_message) WHERE id = $au_id;";
-                sql_no_return($dbh,$query,$debug); 
-            }
-            #address fun, first if either address exists and then don't assume just b/c there is an add2 there is an add1
+            ##############################################################################################################
+            ### address fun, first if either address exists and then don't assume just b/c there is an add2 there is an add1
             if ($column_values{add1_street1} or $column_values{add2_street1}) { 
                 sql_no_return($dbh,"UPDATE actor.usr SET mailing_address = NULL WHERE id = $au_id;",$debug); 
                 sql_no_return($dbh,"DELETE FROM actor.usr_address WHERE usr = $au_id AND address_type = 'MAILING';",$debug); 
@@ -534,6 +507,13 @@ sub log_event {
     if (!defined $record_count) { $record_count = 0; }
     my $sql = "INSERT INTO patron_loader.log (session,event,record_count) VALUES ($session,$event,$record_count);";
     sql_no_return($dbh,$sql,0);
+}
+
+sub log_go_next {
+    my ($msg,$dbh,$debug,$session) = @_;
+    log_event($dbh,$session,$msg);
+    if ($debug != 0) { print "$msg\n" }
+    return;
 }
 
 sub sql_boolean {
