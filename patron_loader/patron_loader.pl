@@ -216,10 +216,16 @@ while (my $line = <$fh>) {
             my $prepped_usrname = sql_wrap_text($column_values{'usrname'});
             if (!defined $prepped_home_ou_id or !defined $prepped_profile_id) { 
                 $skipped++;
-                if (!defined $prepped_profile_id) { $prepped_profile_id = 'none'; } 
-                if (!defined $home_ou_id) { $home_ou_id = 'none'; }
-                log_go_next("line $i could not find valid profile, id: $prepped_profile_id, column: $column_values{'profile'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
-                log_go_next("line $i could not find valid home library, id: $home_ou_id, column: $column_values{'home_library'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
+                if (!defined $prepped_profile_id) 
+                { 
+                    $prepped_profile_id = 'none'; 
+                    log_go_next("line $i could not find valid profile, id: $prepped_profile_id, column: $column_values{'profile'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
+                } 
+                if (!defined $home_ou_id) 
+                { 
+                    $home_ou_id = 'none'; 
+                    log_go_next("line $i could not find valid home library, id: $home_ou_id, column: $column_values{'home_library'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
+                }
                 next;
             }
             ##############################################################################################################
