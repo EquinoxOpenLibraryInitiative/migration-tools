@@ -197,29 +197,29 @@ while (my $line = <$fh>) {
             if ($column_values{'usrname'} eq '') { undef $column_values{'usrname'}; }
             if ($column_values{'cardnumber'} eq '') { undef $column_values{'cardnumber'}; }
             if (!defined $column_values{'usrname'} and !defined $column_values{'cardnumber'}) 
-                { $skipped++; log_go_next("no value defined for usrname or cardnumber, must have both or one with the fill in option",$dbh,$debug,$session); next; }
+                { $skipped++; log_go_next("line $i no value defined for usrname or cardnumber, must have both or one with the fill in option",$dbh,$debug,$session); next; }
             if (!defined $column_values{'family_name'} or !defined $column_values{'first_given_name'}) 
-                { $skipped++; log_go_next("required value for family_name and/or first_given_name is null",$dbh,$debug,$session); next; } 
+                { $skipped++; log_go_next("line $i required value for family_name and/or first_given_name is null",$dbh,$debug,$session); next; } 
             if ($fill_with_matchpoint) {
                 if ($matchpoint eq 'usrname' and !defined $column_values{'cardnumber'}) {
                     if ($column_values{'usrname'}) { $column_values{'cardnumber'} = $column_values{'usrname'}; } 
-                    else { $skipped++; log_go_next("--fill_with_matchpoint is set with matchpoint of usrname but usrname and cardnumber are null",$dbh,$debug,$session); next; } 
+                    else { $skipped++; log_go_next("line $i --fill_with_matchpoint is set with matchpoint of usrname but usrname and cardnumber are null",$dbh,$debug,$session); next; } 
                 }
                 if ($matchpoint eq 'cardnumber' and !defined $column_values{'usrname'}) {
                     if ($column_values{'cardnumber'}) { $column_values{'usrname'} = $column_values{'cardnumber'}; }
-                    else { $skipped++; log_go_next("--fill_with_matchpoint is set with matchpoint of cardnumber but usrname and cardnumber are null",$dbh,$debug,$session); next; }
+                    else { $skipped++; log_go_next("line $i --fill_with_matchpoint is set with matchpoint of cardnumber but usrname and cardnumber are null",$dbh,$debug,$session); next; }
                 }
             }
             if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'})
-                { $skipped++; log_go_next("cardnumber and/or usrname is null",$dbh,$debug,$session); next; }
+                { $skipped++; log_go_next("line $i cardnumber and/or usrname is null",$dbh,$debug,$session); next; }
             my $prepped_cardnumber = sql_wrap_text($column_values{'cardnumber'});
             my $prepped_usrname = sql_wrap_text($column_values{'usrname'});
             if (!defined $prepped_home_ou_id or !defined $prepped_profile_id) { 
                 $skipped++;
                 if (!defined $prepped_profile_id) { $prepped_profile_id = 'none'; } 
                 if (!defined $home_ou_id) { $home_ou_id = 'none'; }
-                log_go_next("could not find valid profile, id: $prepped_profile_id, column: $column_values{'profile'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
-                log_go_next("could not find valid home library, id: $home_ou_id, column: $column_values{'home_library'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
+                log_go_next("line $i could not find valid profile, id: $prepped_profile_id, column: $column_values{'profile'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
+                log_go_next("line $i could not find valid home library, id: $home_ou_id, column: $column_values{'home_library'} for $column_values{'cardnumber'}",$dbh,$debug,$session);
                 next;
             }
             ##############################################################################################################
@@ -240,7 +240,7 @@ while (my $line = <$fh>) {
             $column_values{'home_library'} = $prepped_home_ou_id;
             $column_values{'profile'} = $prepped_profile_id;
             if ($valid_barcode == 0 or $valid_usrname == 0) 
-                { $skipped++; log_go_next("usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account",$dbh,$debug,$session); next; }
+                { $skipped++; log_go_next("line $i usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} found with other user account",$dbh,$debug,$session); next; }
             ##############################################################################################################
             ### finally, we do stuff, if au_id then there is a matching user, update it, if not insert
             ### functions will create the update and insert strings to handle actor.usr and actor.card here
