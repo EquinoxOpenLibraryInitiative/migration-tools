@@ -42,7 +42,7 @@ my $alert_message;
 my $alert_title = 'Needs Staff Attention';
 my $profile;
 my $home_ou;
-my $fill_in_with_matchpoint = 0;
+my $fill_in_with_matchpoint;
 my $print_au_id = 0;
 my $session = time();
 my $h;
@@ -63,7 +63,7 @@ my $ret = GetOptions(
     'ident_type:s'      => \$ident_type,
     'profile:s'         => \$profile,
     'default_password:s' => \$default_password,
-    'fill_in_with_matchpoint:i' => \$fill_in_with_matchpoint,
+    'fill_in_with_matchpoint' => \$fill_in_with_matchpoint,
     'alert_message:s'   => \$alert_message, 
     'alert_title:s'     => \$alert_title,
     'home_ou:s'         => \$home_ou,
@@ -202,13 +202,13 @@ while (my $line = <$fh>) {
                 { $skipped++; log_go_next("required value for family_name and/or first_given_name is null",$dbh,$debug,$session); next; }
             if (!defined $column_values{'usrname'} or !defined $column_values{'cardnumber'})
             {
-                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'usrname' and !defined $column_values{'usrname'}) 
+                if ($fill_in_with_matchpoint and $matchpoint eq 'usrname' and !defined $column_values{'usrname'}) 
                     { $skipped++; log_go_next("--fill_in_with_matchpoint is set with matchpoint of usrname but usrname and cardnumber is null",$dbh,$debug,$session); next; }
-                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'cardnumber' and !defined $column_values{'cardnumber'})
+                if ($fill_in_with_matchpoint and $matchpoint eq 'cardnumber' and !defined $column_values{'cardnumber'})
                     { $skipped++; log_go_next("--fill_in_with_matchpoint is set with matchpoint of cardnumber but usrname and cardnumber is null",$dbh,$debug,$session); next; }
-                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'cardnumber' and $column_values{'cardnumber'})
+                if ($fill_in_with_matchpoint and $matchpoint eq 'cardnumber' and $column_values{'cardnumber'})
                     { $column_values{'usrname'} = $column_values{'cardnumber'}; }
-                if ($fill_in_with_matchpoint == 1 and $matchpoint eq 'usrname' and $column_values{'usrname'})
+                if ($fill_in_with_matchpoint and $matchpoint eq 'usrname' and $column_values{'usrname'})
                     { $column_values{'cardnumber'} = $column_values{'usrname'}; }
             }
             my $prepped_cardnumber = sql_wrap_text($column_values{'cardnumber'});
