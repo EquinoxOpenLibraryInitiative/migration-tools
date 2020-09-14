@@ -45,6 +45,8 @@ my $home_ou;
 my $fill_in_with_matchpoint = 0;
 my $print_au_id = 0;
 my $session = time();
+my $h;
+my $help;
 
 my $ret = GetOptions(
     'db:s'              => \$db,
@@ -65,8 +67,13 @@ my $ret = GetOptions(
     'alert_message:s'   => \$alert_message, 
     'alert_title:s'     => \$alert_title,
     'home_ou:s'         => \$home_ou,
-    'org_unit:s'        => \$org_unit
+    'org_unit:s'        => \$org_unit,
+    'h'                 => \$h,
+    'help'              => \$help    
 );
+
+if ($h or $help) { print_help(); }  
+
 
 my $dbh = connect_db($db, $dbuser, $dbpw, $dbhost, $dbport);
 my @results;
@@ -514,6 +521,39 @@ sub log_go_next {
     log_event($dbh,$session,$msg);
     if ($debug != 0) { print "$msg\n" }
     return;
+}
+
+sub print_help {
+
+print qq(
+Required parameters:
+    --db the Evergreen database
+    --dbuser the user of the Evergreen database
+    --dbhost the ip or domain name of the Evergreen database
+    --file path to the CSV file used as the data source
+    --org_unit the org unit name of the org unit patrons are being loaded for
+        used to match mapped variables
+
+Optional parameters:
+
+    --h or --help 
+    --dbport
+    --delimter
+    --debug
+    --matchpoint 
+    --date_format
+    --ident_type
+    --default_password
+    --alert_mesage
+    --alert_title 
+    --profile
+    --home_org
+    --fill_in_with_matchpoint
+
+See the README doc for more information.
+
+);
+	exit;
 }
 
 sub sql_boolean {
