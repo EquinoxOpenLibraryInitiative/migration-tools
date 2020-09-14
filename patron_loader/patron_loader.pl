@@ -338,6 +338,7 @@ sub abort {
 
 sub check_barcode {
     my ($dbh,$au_id,$barcode) = @_;
+    if (!defined $au_id) { $au_id = -1; }
     my @results = sql_return($dbh,"SELECT usr FROM actor.card WHERE barcode = $barcode;");
     if (!defined $results[0]) { return 2; }
     if ($results[0] == $au_id) { return 1; }
@@ -346,6 +347,7 @@ sub check_barcode {
 
 sub check_usrname {
     my ($dbh,$au_id,$usrname) = @_;
+    if (!defined $au_id) { $au_id = -1; } 
     my @results = sql_return($dbh,"SELECT id FROM actor.usr WHERE usrname = $usrname;");
     if (!defined $results[0]) { return 2; }
     if ($results[0] == $au_id) { return 1; }
