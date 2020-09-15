@@ -37,6 +37,10 @@ Allows you to override the default evergreen_staged_report.xml in the mig-xml fo
 Adds the captions tag to asciidoc header to turn off captions in generated output.
 Defaults to off.
 
+--stylesheet 
+
+Allows you to point to a CSS stylesheet to apply to the HTML output.
+
 =back
 
 =cut
@@ -79,6 +83,7 @@ my $parser = XML::LibXML->new();
 my $lines_per_page = 42;
 my $debug = 'off';
 my $workbook;
+my $stylesheet;
 my $fh;
 
 my $ret = GetOptions(
@@ -90,6 +95,7 @@ my $ret = GetOptions(
     'added_page_title:s'  => \$added_page_title,
     'added_page_file:s'   => \$added_page_file,
     'captions:s'          => \$captions,
+    'stylesheet:s'        => \$stylesheet,
 	'debug:s'             => \$debug
 );
 
@@ -111,7 +117,7 @@ my $report_file = create_report_name($report_title);
 $report_file = $MIGGITDIR . $report_file;
 
 open($fh, '>', $report_file) or abort("Could not open output file $report_file!");
-write_title_page($report_title,$fh,$analyst,$captions);
+write_title_page($report_title,$fh,$analyst,$captions,$stylesheet);
 load_javascript($fh);
 
 if (defined $added_page_file and defined $added_page_title) { 
@@ -315,6 +321,7 @@ sub write_title_page {
     print $fh "= $rt\n"; 
     print $fh "$mday $abbr[$mon] $year\n";
     print $fh "$a\n";
+    if ($stylesheet) { print $fh ":stylesheet: $stylesheet\n"; }
     #print $fh ":title-logo-image: image::eolilogosmall.png[pdfwidth=3in]\n";
     print $fh ":toc:\n";
     if ($captions eq 'on') { print $fh ":caption:\n"; }
