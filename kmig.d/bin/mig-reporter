@@ -22,7 +22,7 @@ use KMig;
 my $analyst = 'Project Data Analyst';
 my $report_title;
 my $reports_xml = 'stock_reports.xml';
-my $tags = 'bibs.items.borrowers.circs.reserves.accounts.courses';
+my $tags;
 my $added_page_title;
 my $added_page_file;
 my $i = 0;
@@ -72,7 +72,20 @@ if (defined $added_page_file and defined $added_page_title) {
     close $an;
 }
 
-my @report_tags = split(/\./,$tags);
+my @report_tags;
+my @all_report_tags;
+if ($tags) {
+    $tags = lc($tags);
+    @report_tags = split(/\./,$tags);
+} else {
+    foreach my $xmltag ($dom->findnodes('//report')) {
+        push @all_report_tags, $xmltag->findvalue('./tag');
+    }
+    @report_tags = do { my %stuff; grep { !$stuff{$_}++ } @all_report_tags };
+}
+
+@report_tags = sort @report_tags;
+
 foreach my $t (@report_tags) {
     print "\n\n=========== Starting to process tag $t\n";
     print   "==========================================\n";

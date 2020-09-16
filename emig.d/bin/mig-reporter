@@ -74,7 +74,7 @@ pod2usage(-verbose => 1) if ! $ARGV[1];
 my $analyst = 'Project Data Analyst';
 my $report_title;
 my $reports_xml = 'evergreen_staged_report.xml';
-my $tags = 'circs.holds.actors.bibs.assets.money.notices';
+my $tags;
 my $added_page_title;
 my $added_page_file;
 my $captions = 'off';  
@@ -156,8 +156,20 @@ foreach my $table ($dom->findnodes('//table')) {
     $screate->execute();
 }
 
-$tags = lc($tags);
-my @report_tags = split(/\./,$tags);
+my @report_tags;
+my @all_report_tags;
+if ($tags) {
+    $tags = lc($tags);
+    @report_tags = split(/\./,$tags);
+} else {
+    foreach my $xmltag ($dom->findnodes('//report')) {
+        push @all_report_tags, $xmltag->findvalue('./tag');
+    }
+    @report_tags = do { my %stuff; grep { !$stuff{$_}++ } @all_report_tags };
+}
+
+@report_tags = sort @report_tags;
+
 foreach my $t (@report_tags) {
     print "\n\n=========== Starting to process tag $t\n";
     print   "==========================================\n\n";
