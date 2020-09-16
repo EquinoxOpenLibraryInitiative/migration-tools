@@ -1,0 +1,55 @@
+<reports_file>
+
+items circulating have status set correctly 
+
+
+    <!-- CIRC REPORTS -->
+    <report>
+        <name>circing_copies_set</name>
+        <tag>circs</tag>
+        <iteration>0</iteration>
+        <report_title>Circulating Copies Not Set to Checked Out</report_title>
+        <heading>Count.Status</heading>
+        <query>SELECT COUNT(*), ccs.name FROM m_asset_copy_legacy acp JOIN config.copy_status ccs ON ccs.id = acp.status WHERE acp.x_migrate AND ccs.id != 1;</query>
+    </report>
+
+    <!-- HOLDS REPORTS -->
+
+    <!-- ASSET REPORTS -->
+    
+   <!-- MONEY REPORTS -->
+
+    <!-- BIBS REPORTS -->
+
+    <!-- ACTORS REPORTS -->
+
+-- no conflicting user names or barcodes 
+
+    <report>
+        <name>incumbent_usrnames</name>
+        <report_title>Incumbent Usrnames</report_title>
+        <tag>actors</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(*) FROM actor.usr WHERE usrname IN (SELECT usrname FROM m_actor_usr_legacy WHERE x_migrate);</query>
+    </report>
+
+    <report>
+        <name>incumbent_barcodes</name>
+        <report_title>Incumbent Barcodes</report_title>
+        <tag>actors</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(*) FROM actor.card WHERE barcode IN (SELECT barcode FROM m_actor_card WHERE usr IN (SELECT id FROM m_actor_usr_legacy WHERE x_migrate));</query>
+    </report>
+
+
+
+    <!-- ACQUISITIONS REPORTS -->
+
+   <!-- SERIALS REPORTS -->
+
+    <!-- DEDUPE REPORTS -->
+
+</reports_file>
+
