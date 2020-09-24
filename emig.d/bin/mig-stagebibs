@@ -9,8 +9,7 @@ Takes a load of bibs from a UTF-8 MARC XML  file and loads them into mig staging
 table of bibio_record_entry_legacy.  This is done with no checking of file validity 
 so records should be checked before hand and cleaned.
 
-Takes three optional arguments:
-
+Optional arguments:
 
 --source 
 
@@ -29,6 +28,14 @@ This will load bibs into the authority_record_entry_legacy.
 --serial
 
 This will load bibs into the serial_record_entry_legacy.
+
+--base_table 
+
+Allows you to define a different staging table than biblio, auth or serial.
+
+--stage_table 
+
+Allows you to define a different staging table than the default _legacy.
 
 =back
 
@@ -63,8 +70,8 @@ my $append = 0;
 my $base_table;
 my $stage_table;
 my $marc_column = 'marc';
-my $auth = '';
-my $serial = '';
+my $auth;
+my $serial;
 my $source = 2;
 my $x_source = 'default';
 my $no_source_or_last_xact_id;
@@ -76,8 +83,8 @@ binmode STDIN, ':utf8';
 
 my $ret = GetOptions(
     'file:s'              => \$infile,
-    'serial:s'            => \$serial,
-    'auth:s'              => \$auth,
+    'serial'              => \$serial,
+    'auth'                => \$auth,
     'x_source:s'          => \$x_source,
     'source:i'            => \$source,
     'base_table:s'        => \$base_table,
@@ -89,15 +96,15 @@ my $ret = GetOptions(
 #if in file is empty then fail
 #if auth and serial = 1 fail 
 
-if ($serial == 1) { 
+if ($serial) { 
     $base_table = 'm_authority_record_entry';
 }
 
-if ($auth == 1) {
+if ($auth) {
     $base_table = 'm_serial_record_entry';
 }
 
-if ($auth == 1 and $serial == 1) { abort('are you sure you want to load these as authorities and serials?'); }
+if ($auth and $serial) { abort('are you sure you want to load these as authorities and serials?'); }
 
 if (!$base_table) {
     $base_table = 'm_biblio_record_entry';
