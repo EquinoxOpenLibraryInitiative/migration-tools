@@ -172,8 +172,11 @@ sub create_child_bre {
         BEGIN
         CREATE TABLE $MIGSCHEMA.$stage_table (x_migrate BOOLEAN DEFAULT TRUE, x_source TEXT) INHERITS ($MIGSCHEMA.$base_table);
         END \$\$;");
-
-    return ();
+    $dbh->do("DO \$\$ 
+        BEGIN
+        ALTER TABLE $MIGSCHEMA.$stage_table ADD COLUMN x_merge_to BIGINT;
+        END \$\$;");
+    return ;
 }
 
 sub abort {
