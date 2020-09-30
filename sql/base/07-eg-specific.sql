@@ -839,7 +839,9 @@ CREATE OR REPLACE FUNCTION migration_tools.set_salted_passwd(INTEGER,TEXT) RETUR
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
 -- internal function for handle_shelf
-
+-- select * from migration_tools._handle_shelf('m_foo','item_map','ORG',1,TRUE);
+-- the org_range isn't currently supported but there for future implementation
+-- assumes that the table sent has the columns desired_shelf with shelf name and x_shelf to get shelf id 
 CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER,BOOLEAN) RETURNS VOID AS $$
     DECLARE
         table_schema ALIAS FOR $1;
