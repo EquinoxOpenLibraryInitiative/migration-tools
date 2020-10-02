@@ -2190,4 +2190,54 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION migration_tools.incumbent_usrname_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
+DECLARE 
+       collisions INTEGER DEFAULT 0;
+BEGIN
+
+    CREATE TEMPORARY TABLE temp_incoming_collisions AS 
+    SELECT COUNT(*) AS c, usrname FROM m_actor_usr_legacy 
+    WHERE x_migrate
+    GROUP BY 2
+    HAVING COUNT(*) > 1
+    ;
+
+    SELECT SUM(c) FROM temp_incoming_collisions INTO collisions;
+
+    RAISE NOTICE 'internal collisions % being prefixed', collisions;
+
+    UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,id::TEXT,usrname) 
+    WHERE usrname IN (SELECT usrname FROM temp_incoming_collisions) AND x_migrate;
+
+    DROP TABLE temp_incoming_collisions;
+
+END
+$func$
+LANGUAGE PLPGSQL;
+
+
+CREATE OR REPLACE FUNCTION migration_tools.incumbent_usrname_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
+DECLARE 
+       collisions INTEGER DEFAULT 0;
+BEGIN
+
+    CREATE TEMPORARY TABLE temp_incoming_collisions AS 
+    SELECT COUNT(*) AS c, usrname FROM m_actor_usr_legacy 
+    WHERE x_migrate
+    GROUP BY 2
+    HAVING COUNT(*) > 1
+    ;
+
+    SELECT SUM(c) FROM temp_incoming_collisions INTO collisions;
+
+    RAISE NOTICE 'internal collisions % being prefixed', collisions;
+
+    UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,id::TEXT,usrname) 
+    WHERE usrname IN (SELECT usrname FROM temp_incoming_collisions) AND x_migrate;
+
+    DROP TABLE temp_incoming_collisions;
+
+END
+$func$
+LANGUAGE PLPGSQL;
 
