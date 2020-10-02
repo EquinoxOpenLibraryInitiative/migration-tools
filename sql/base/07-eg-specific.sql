@@ -2256,4 +2256,27 @@ END
 $func$
 LANGUAGE PLPGSQL;
 
+CREATE OR REPLACE FUNCTION migration_tools.fix_barcode_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
+DECLARE 
+       collisions INTEGER DEFAULT 0;
+BEGIN
+
+    CREATE TEMPORARY TABLE temp_incumbent_collisions AS 
+    SELECT usrname FROM m_actor_usr_legacy WHERE usrname IN (SELECT usrname FROM actor.usr) AND x_migrate;
+
+    INSERT INTO temp_incumbent_collisions (usrname) 
+    SELECT usrname FROM m_actor_usr_legacy WHERE usrname IN (SELECT barcode FROM actor.card) AND x_migrate;
+
+    SELECT COUNT(DISTINCT usrname) FROM temp_incumbent_collisions INTO collisions;
+
+    RAISE NOTICE 'usrname collisions against incumbents being fixed: %', collisions; 
+
+    UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS(barcode_prefix,'_',usrname) 
+    WHERE usrname IN (SELECT DISTINCT usrname FROM temp_incumbent_collisions) 
+    AND x_migrate;
+
+    DROP TABLE temp_incumbent_collisions;
+END
+$func$
+LANGUAGE PLPGSQL;
 
