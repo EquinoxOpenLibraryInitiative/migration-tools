@@ -2280,3 +2280,18 @@ END
 $func$
 LANGUAGE PLPGSQL;
 
+
+CREATE OR REPLACE FUNCTION migration_tools.create_migrating_cards () RETURNS INTEGER AS $func$
+DECLARE 
+    cardcount INTEGER;
+BEGIN
+    TRUNCATE m_actor_card;
+    INSERT INTO m_actor_card (usr,barcode) SELECT id, usrname FROM m_actor_usr_legacy WHERE x_migrate;
+    UPDATE m_actor_usr a SET card = b.id FROM m_actor_card b WHERE a.id = b.usr;
+    SELECT COUNT(*) FROM m_actor_card INTO cardcount;
+    RETURN cardcount;
+END
+$func$
+LANGUAGE PLPGSQL;
+
+
