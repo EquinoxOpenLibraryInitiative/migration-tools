@@ -337,3 +337,21 @@ CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_fuller_last_first_midd
     END;
 $$ LANGUAGE PLPGSQL STRICT IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.name_parse_out_last_comma_first_other (name TEXT) RETURNS TEXT[] AS $func$
+DECLARE
+    firstname    TEXT DEFAULT '';
+    lastname     TEXT DEFAULT '';
+    othername    TEXT DEFAULT '';
+    second_segment TEXT DEFAULT '';
+BEGIN
+    lastname := SPLIT_PART(name,',',1);
+    second_segment := BTRIM(SPLIT_PART(name,',',2));
+    firstname := SPLIT_PART(second_segment,' ',1);
+    othername := BTRIM(REPLACE(second_segment,firstname,''));
+
+    RETURN ARRAY[firstname,othername,lastname];
+END
+$func$
+LANGUAGE PLPGSQL;
+
+
