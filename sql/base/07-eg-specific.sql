@@ -2241,3 +2241,19 @@ END
 $func$
 LANGUAGE PLPGSQL;
 
+CREATE OR REPLACE FUNCTION migration_tools.set_blank_usrnames (barcode_prefix TEXT) RETURNS VOID AS $func$
+DECLARE 
+       collisions INTEGER DEFAULT 0;
+BEGIN
+    SELECT COUNT(*) FROM m_actor_usr_legacy WHERE x_migrate AND usrname IS NULL OR usrname = '' INTO collisions;
+
+    RAISE NOTICE 'blank usernames % being set', collisions;
+
+    UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,id::TEXT) 
+    WHERE usrname IS NULL OR usrname = '' AND x_migrate;
+
+END
+$func$
+LANGUAGE PLPGSQL;
+
+
