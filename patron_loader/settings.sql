@@ -33,7 +33,7 @@ INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_val
 INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','05','Middle 5th & 6th');
 INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','06','Middle 5th & 6th');
 INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','07','Middle 7th & 8th');
-INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value/ VALUES ('SYS1','profile','08','Middle 7th & 8th');
+INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','08','Middle 7th & 8th');
 INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','09','High School');
 INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','10','High School');
 INSERT INTO patron_loader.mapping (org_unit,mapping_type,import_value,native_value) VALUES ('SYS1','profile','11','High School');
