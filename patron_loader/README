@@ -55,7 +55,32 @@ option you can skip one so long as you have the other but still need the column 
 file.  Having the columns present even if empty for some columns allows a mix of present 
 and absent row data and avoids unitialized variable warnings. 
 
-Optional columns are: todo 
+Optional Columns:
+
+net_access_level
+second_given_name
+pref_first_given_name
+name_keywords
+email
+day_phone
+evening_phone
+other_phone
+add1_street1
+add1_street2
+add1_cit
+add1_county
+add1_state
+add1_country
+add1_post_code
+add2_street1
+add2_street2
+add2_cit
+add2_county
+add2_state
+add2_country
+add2_post_code
+
+Mapping: 
 
 Not all data sources can customize the data in the CSV so some mapping is allowed. 
 The patron_loader.header table allows for mapping incoming header names to ones that 
