@@ -1,22 +1,96 @@
 
-CREATE OR REPLACE FUNCTION migration_tools.create_staff_user(
+CREATE OR REPLACE FUNCTION migration_tools.create_user(
+	pbarcode TEXT,
     username TEXT,
     password TEXT,
     org TEXT,
     perm_group TEXT,
     first_name TEXT DEFAULT '',
     last_name TEXT DEFAULT ''
-) RETURNS VOID AS $func$
+) RETURNS INTEGER AS $func$
+DECLARE 
+	au_id INTEGER;
+	acard_id INTEGER;
 BEGIN
-    RAISE NOTICE '%', org ;
+    RAISE NOTICE 'org %', org ;
+    RAISE NOTICE 'username %', username;
     INSERT INTO actor.usr (usrname, passwd, ident_type, first_given_name, family_name, home_ou, profile)
     SELECT username, password, 1, first_name, last_name, aou.id, pgt.id
     FROM   actor.org_unit aou, permission.grp_tree pgt
     WHERE  aou.shortname = org
     AND    pgt.name = perm_group;
+
+    SELECT id FROM actor.usr WHERE usrname = username INTO au_id;
+	PERFORM migration_tools.set_salted_passwd(au_id,password);
+
+	SELECT * FROM migration_tools.create_card(au_id,pbarcode) INTO acard_id;
+	UPDATE actor.usr SET card = acard_id WHERE id = au_id; 
+
+	RETURN au_id; 
 END
 $func$
 LANGUAGE PLPGSQL;
+
+CREATE OR REPLACE FUNCTION migration_tools.create_card(
+	au_id INTEGER,
+	pbarcode TEXT
+) RETURNS INTEGER AS $func$  
+DECLARE 
+    acard_id INTEGER;
+BEGIN
+	INSERT INTO actor.card (usr,barcode) VALUES (au_id,pbarcode);
+	SELECT id FROM actor.card WHERE barcode = pbarcode INTO acard_id;
+	RETURN acard_id;
+END   
+$func$
+LANGUAGE PLPGSQL;
+
+-- make sure legacy function is gone 
+DROP FUNCTION migration_tools.create_staff_user (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
+
+CREATE OR REPLACE FUNCTION migration_tools.create_staff_user(
+    pbarcode TEXT,
+    username TEXT,
+    password TEXT,
+    org TEXT,
+    perm_group TEXT,
+    first_name TEXT DEFAULT '',
+    last_name TEXT DEFAULT '',
+    secondary_profiles TEXT[] DEFAULT NULL,
+    working_ous TEXT[] DEFAULT NULL
+) RETURNS INTEGER AS $func$
+DECLARE 
+	au_id INTEGER;
+    acard_id INTEGER;
+	profile_name TEXT;
+	org_name TEXT;
+BEGIN
+	
+	SELECT id FROM actor.usr WHERE usrname = username INTO au_id;
+    SELECT id FROM actor.card WHERE barcode = pbarcode INTO acard_id;
+
+	IF au_id IS NOT NULL THEN 
+		RETURN -1;
+	END IF;
+	IF acard_id IS NOT NULL THEN 
+		RETURN -2;
+	END IF;
+
+	SELECT * FROM migration_tools.create_user(pbarcode,username,password,org,perm_group,first_name,last_name) INTO au_id;
+
+	FOR org_name IN SELECT UNNEST(working_ous) LOOP
+        INSERT INTO permission.usr_work_ou_map (usr,work_ou) SELECT au_id, id FROM actor.org_unit WHERE shortname = org_name;	
+	END LOOP;
+
+	FOR profile_name IN SELECT UNNEST(secondary_profiles) LOOP
+		INSERT INTO permission.usr_grp_map (usr,grp) SELECT au_id, id FROM permission.grp_tree WHERE name = profile_name;
+	END LOOP;
+
+    RETURN au_id; 
+END   
+$func$
+LANGUAGE PLPGSQL;
+
 
 -- FIXME: testing for STAFF_LOGIN perm is probably better
 CREATE OR REPLACE FUNCTION migration_tools.is_staff_profile (INT) RETURNS BOOLEAN AS $$
