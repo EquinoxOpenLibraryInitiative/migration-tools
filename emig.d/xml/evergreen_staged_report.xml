@@ -649,7 +649,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry</query>
+        <query>SELECT COUNT(id) FROM m_biblio_record_entry</query>
     </report>
 
     <report>
@@ -658,7 +658,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
+        <query>SELECT COUNT(id) FROM m_biblio_record_entry WHERE id IN (SELECT id FROM biblio.record_entry)</query>
     </report>
 
     <report>
