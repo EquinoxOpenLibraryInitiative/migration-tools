@@ -814,7 +814,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(au.id) FROM m_actor_usr</query>
+        <query>SELECT COUNT(id) FROM m_actor_usr</query>
     </report>
 
     <report>
