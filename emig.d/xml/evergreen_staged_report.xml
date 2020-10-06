@@ -644,19 +644,19 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     <!-- BIBS REPORTS -->
 
     <report>
-        <name>bibs_loaded</name>
-        <report_title>Loaded Bibliographic Records</report_title>
+        <name>bibs_staged</name>
+        <report_title>Bibliographic Records Staged and Processed</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry_legacy bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
+        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry</query>
     </report>
 
     <report>
         <name>bibs_loaded</name>
         <report_title>Loaded Bibliographic Records</report_title>
         <tag>bibs</tag>
-        <iteration>1</iteration>
+        <iteration>0</iteration>
         <heading>Count</heading>
         <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry bre WHERE id IN (SELECT id FROM biblio.record_entry) ORDER BY 1</query>
     </report>
@@ -807,6 +807,15 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <!-- ACTORS REPORTS -->
+
+    <report>
+        <name>totalusersstaged</name>
+        <report_title>Total Users Staged and Processed</report_title>
+        <tag>actors</tag>
+        <iteration>0</iteration>
+        <heading>Count</heading>
+        <query>SELECT COUNT(au.id) FROM m_actor_usr</query>
+    </report>
 
     <report>
         <name>usrsbyorg</name>
