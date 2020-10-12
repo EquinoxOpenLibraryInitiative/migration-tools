@@ -21,7 +21,7 @@ Optional parameters:
     any database transactions and will print the SQL that would do so to STDOUT
 --matchpoint defaults to 'usrname', can also be 'cardnumber'
 --date_format used if dates are not in a 'YYYY-MM-DD' format
---ident_type availalbe as a field but rarely used in export sources so it can
+--ident_type available as a field but rarely used in export sources so it can
     be specified from the command line
 --default_password allows you to define a default password for accounts where one 
     is not defined in the file, be very careful, this option is dangerous as it 
