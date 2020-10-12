@@ -5,6 +5,8 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 00-infrastructure.sql:migration_tools.build
 # 00-infrastructure.sql:migration_tools.build_base_staging_tables
 # 00-infrastructure.sql:migration_tools.build_specific_base_staging_table
+# 00-infrastructure.sql:migration_tools.build_variant_staging_table
+# 00-infrastructure.sql:migration_tools.create_linked_legacy_table_as
 # 00-infrastructure.sql:migration_tools.create_linked_legacy_table_from
 # 00-infrastructure.sql:migration_tools.init
 # 00-infrastructure.sql:migration_tools.production_tables
@@ -25,6 +27,7 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 01-marc.sql:migration_tools.set_008
 # 01-marc.sql:migration_tools.set_indicator
 # 01-marc.sql:migration_tools.set_leader
+# 01-marc.sql:migration_tools.strip_subfield
 # 01-marc.sql:migration_tools.strip_tag
 # 02-barcodes.sql:migration_tools.add_codabar_checkdigit
 # 02-barcodes.sql:migration_tools.add_code39mod43_checkdigit
@@ -36,6 +39,7 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 04-names.sql:migration_tools.name_parse_out_first_middle_last_comma_suffix
 # 04-names.sql:migration_tools.name_parse_out_fuller_last_first_middle_and_random_affix
 # 04-names.sql:migration_tools.name_parse_out_fuller_last_first_middle_and_random_affix2
+# 04-names.sql:migration_tools.name_parse_out_last_comma_first_other
 # 04-names.sql:migration_tools.name_parse_out_last_comma_prefix_first_middle_suffix
 # 04-names.sql:migration_tools.name_parse_out_last_first_middle_and_random_affix
 # 05-addresses.sql:migration_tools.address_parse_out_citystatezip
@@ -53,8 +57,12 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 07-eg-specific.sql:migration_tools.apply_circ_matrix_to_specific_circ
 # 07-eg-specific.sql:migration_tools.assign_standing_penalties
 # 07-eg-specific.sql:migration_tools.check_ou_depth
+# 07-eg-specific.sql:migration_tools.create_card
 # 07-eg-specific.sql:migration_tools.create_cards
+# 07-eg-specific.sql:migration_tools.create_exceeds_fines
+# 07-eg-specific.sql:migration_tools.create_migrating_cards
 # 07-eg-specific.sql:migration_tools.create_staff_user
+# 07-eg-specific.sql:migration_tools.create_user
 # 07-eg-specific.sql:migration_tools.duplicate_template
 # 07-eg-specific.sql:migration_tools.duplicate_template_but_change_delay
 # 07-eg-specific.sql:migration_tools.duplicate_templates
@@ -63,6 +71,7 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 07-eg-specific.sql:migration_tools.find_hold_matrix_matchpoint2
 # 07-eg-specific.sql:migration_tools.find_mig_shelf
 # 07-eg-specific.sql:migration_tools.find_shelf
+# 07-eg-specific.sql:migration_tools.fix_barcode_collisions
 # 07-eg-specific.sql:migration_tools.get_copy_price
 # 07-eg-specific.sql:migration_tools.handle_actor_barcode_collisions
 # 07-eg-specific.sql:migration_tools.handle_actor_barcode_collisions2
@@ -80,11 +89,13 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 07-eg-specific.sql:migration_tools.handle_shelf
 # 07-eg-specific.sql:migration_tools.handle_status
 # 07-eg-specific.sql:migration_tools.handle_user_barcode
+# 07-eg-specific.sql:migration_tools.incumbent_usrname_collisions
 # 07-eg-specific.sql:migration_tools.insert_metarecords_for_incumbent_database
 # 07-eg-specific.sql:migration_tools.insert_metarecords_for_pristine_database
 # 07-eg-specific.sql:migration_tools.is_circ_rule_safe_to_delete
 # 07-eg-specific.sql:migration_tools.is_staff_profile
 # 07-eg-specific.sql:migration_tools.reset_event
+# 07-eg-specific.sql:migration_tools.set_blank_usrnames
 # 07-eg-specific.sql:migration_tools.set_salted_passwd
 # 07-eg-specific.sql:migration_tools.simple_export_library_config
 # 07-eg-specific.sql:migration_tools.simple_import_library_config
@@ -105,6 +116,7 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 10-staging.sql:migration_tools.simple_import_new_rows_by_value
 # 10-staging.sql:migration_tools.split_rows_on_column_with_delimiter
 # 10-staging.sql:migration_tools.stage_not_applicable_asset_stat_cats
+# 21-fixed-fields.sql:migration_tools.modify_biblio_fixed_fields
 # 21-fixed-fields.sql:migration_tools.modify_fixed_fields
 # 21-fixed-fields.sql:migration_tools.modify_staged_fixed_fields
 # 21-fixed-fields.sql:migration_tools.postfix_vlist
