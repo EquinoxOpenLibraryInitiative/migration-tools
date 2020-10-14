@@ -127,8 +127,8 @@ if ($home_ou) {
 #system can not supply evergreen native values
 my @columns = ("cardnumber","profile","usrname","passwd","net_access_level",
 "family_name","first_given_name","second_given_name","pref_first_given_name","name_keywords",
-"email","home_library","day_phone","evening_phone","other_phone","dob","ident_type","passwd",
-"active","barred","juvenile",
+"email","home_library","day_phone","evening_phone","other_phone","dob","ident_type","ident_value","passwd",
+"active","barred","juvenile","expire_date",
 "add1_street1","add1_street2","add1_city","add1_county","add1_state","add1_country","add1_post_code",
 "add2_street1","add2_street2","add2_city","add2_county","add2_state","add2_country","add2_post_code",
 "statcat_name1","statcat_value1","statcat_name2","statcat_value2","statcat_name3","statcat_value3");
@@ -186,6 +186,7 @@ while (my $line = <$fh>) {
             ##############################################################################################################
             ### prep values for use in appropriate formats 
             if ($column_values{'dob'}) { $column_values{'dob'} = sql_date($dbh,$column_values{'dob'},$date_format); }
+            if ($column_values{'expire_date'}) { $column_values{'expire_date'} = sql_date($dbh,$column_values{'expire_date'},$date_format); }
             my $prepped_profile_id = get_original_id(\%original_pgt,\%mapped_pgt,$column_values{'profile'},$profile_id);
             my $prepped_home_ou_id = get_original_id(\%original_libs,\%mapped_libs,$column_values{'home_library'},$home_ou_id);
             if ($column_values{'active'}) { $column_values{'active'} = sql_boolean($column_values{'active'}); }
@@ -276,7 +277,7 @@ while (my $line = <$fh>) {
                 $insert_usr_str = insert_au_sql($dbh,%column_values);
                 sql_no_return($dbh,$insert_usr_str,$debug); 
                 @results = sql_return($dbh,"SELECT id FROM actor.usr WHERE usrname = $prepped_usrname;");
-                if ($debug == 0) { $au_id = $results[0]; } else { $au_id = 'debug'; }
+                if ($debug == 0) { $au_id = $results[0]; } else { $au_id = 0; }
                 #if here the card number shouldn't be in use so we have to make it 
                 sql_no_return($dbh,"INSERT INTO actor.card (usr,barcode) VALUES ($au_id,$prepped_cardnumber);",$debug); 
             }
@@ -317,6 +318,43 @@ while (my $line = <$fh>) {
                 $query = "WITH x AS (SELECT MAX(id) AS id, usr FROM actor.usr_address WHERE usr = $au_id GROUP BY 2) UPDATE actor.usr au SET mailing_address = x.id FROM x WHERE x.usr = au.id;";
                 sql_no_return($dbh,$query,$debug);
             }
+            ##############################################################################################################
+            ### now for the stat cats 
+            ### the assumption is that if a statcat name is present then there must be a stat cat at that org unit in the mapping or higher, if not it will fail 
+            ### a value will always get written even if freetext is not allowed and it is not an existing value, no value means it is deleted 
+            foreach my $statcat (sort(keys %column_values)) {
+                if ($statcat !~ m/statcat_name/) { next; }
+                my $statcat_value = $statcat;
+                $statcat_value =~ s/[^0-9]//g;  #want to load statcat_name50000 why not? 
+                $statcat_value = 'statcat_value' . $statcat_value;
+                if ($column_values{$statcat_value}) {  #if the value exists then assign it and sql wrap it
+                	$statcat_value = $column_values{$statcat_value};
+                	$statcat_value = sql_wrap_text($statcat_value); 
+                } else {
+					undef $statcat_value;
+                }
+                my $statcat_name;
+				my $statcat_name_id;
+            	my $statcat_entry_usr_map_id;
+				if ($column_values{$statcat}) {
+                    $statcat_name = sql_wrap_text($column_values{$statcat}); 
+                    @results = sql_return($dbh,"SELECT id FROM actor.stat_cat WHERE name = $statcat_name AND owner IN (SELECT id FROM actor.org_unit_ancestors($prepped_home_ou_id));",$debug);
+					$statcat_name_id = $results[0];  #potential issue here, hopefully there is only one of a given name in an ancestor chain but potentially this could be an issue 
+                	if ($statcat_name_id) { 
+                        @results = sql_return($dbh,"SELECT id FROM actor.stat_cat_entry_usr_map WHERE stat_cat = $statcat_name_id AND target_usr = $au_id;",$debug);
+                    	$statcat_entry_usr_map_id = $results[0];
+                        if ($statcat_entry_usr_map_id and !defined $statcat_value) {
+							sql_no_return($dbh,"DELETE FROM actor.stat_cat_entry_usr_map WHERE id = $statcat_entry_usr_map_id;",$debug);
+							next;
+                        } 
+                    	if ($statcat_entry_usr_map_id and $statcat_value) {  
+                        	sql_no_return($dbh,"UPDATE actor.stat_cat_entry_usr_map SET stat_cat_entry = $statcat_value WHERE id = $statcat_entry_usr_map_id;",$debug);
+                    	} else {
+                            sql_no_return($dbh,"INSERT INTO actor.stat_cat_entry_usr_map (stat_cat,stat_cat_entry,target_usr) VALUES ($statcat_name_id,$statcat_value,$au_id);",$debug);
+                    	} 
+                	}
+				}
+			}
         if ($print_au_id != 0) { print "$au_id\n"; }
         }
     }
