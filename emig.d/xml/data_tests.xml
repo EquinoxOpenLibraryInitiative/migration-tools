@@ -15,6 +15,24 @@ items circulating have status set correctly
 
     <!-- HOLDS REPORTS -->
 
+    <report>
+        <name>captured_holds_have_items</name>
+        <tag>holds</tag>
+        <iteration>0</iteration>
+        <report_title>Captured Holds Should Have Items</report_title>
+        <heading>Id</heading>
+        <query>SELECT id FROM m_action_circulation_legacy WHERE capture_time IS NOT NULL AND current_copy IS NULL AND x_migrate;</query>
+    </report>
+
+    <report>
+        <name>captured_holds_have_items</name>
+        <tag>holds</tag>
+        <iteration>1</iteration>
+        <report_title>Captured Holds Should Have Items</report_title>
+        <heading>Id</heading>
+        <query>SELECT id FROM m_action_circulation WHERE capture_time IS NOT NULL AND current_copy IS NULL;</query>
+    </report>
+
     <!-- ASSET REPORTS -->
     
    <!-- MONEY REPORTS -->
