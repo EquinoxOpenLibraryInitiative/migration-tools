@@ -65,6 +65,9 @@ email
 day_phone
 evening_phone
 other_phone
+expire_date 
+ident_type   <-- needs id value 
+ident_value 
 add1_street1
 add1_street2
 add1_cit
@@ -79,6 +82,12 @@ add2_county
 add2_state
 add2_country
 add2_post_code
+statcat_name1 
+statcat_value1
+tatcat_name2  
+statcat_value2
+statcat_name3 
+statcat_value3
 
 Mapping: 
 
