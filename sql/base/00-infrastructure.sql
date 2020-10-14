@@ -142,6 +142,49 @@ CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_from (TEXT
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
+-- like create_linked_legacy_table_from but lets you specify the final table name
+CREATE OR REPLACE FUNCTION migration_tools.create_linked_legacy_table_as (TEXT,TEXT,TEXT,TEXT) RETURNS VOID AS $$
+    DECLARE
+        migration_schema ALIAS FOR $1;
+        parent_table ALIAS FOR $2;
+        source_table ALIAS FOR $3;
+        dest_table ALIAS FOR $4;
+        columns RECORD;
+        create_sql TEXT;
+        insert_sql TEXT;
+        column_list TEXT := '';
+        column_count INTEGER := 0;
+    BEGIN
+        create_sql := 'CREATE TABLE ' || migration_schema || '.' || dest_table || ' ( ';
+        FOR columns IN
+            SELECT table_schema, table_name, column_name, data_type, numeric_precision, numeric_scale
+            FROM information_schema.columns
+            WHERE table_schema = migration_schema AND table_name = source_table
+        LOOP
+            column_count := column_count + 1;
+            if column_count > 1 then
+                create_sql := create_sql || ', ';
+                column_list := column_list || ', ';
+            end if;
+            create_sql := create_sql || columns.column_name || ' ';
+            if columns.data_type = 'ARRAY' then
+                create_sql := create_sql || 'TEXT[]';
+            elsif columns.data_type = 'numeric' then
+                create_sql := create_sql || 'NUMERIC('||columns.numeric_precision||','||columns.numeric_scale||')';
+            else
+                create_sql := create_sql || columns.data_type;
+            end if;
+            column_list := column_list || columns.column_name;
+        END LOOP;
+        create_sql := create_sql || ' ) INHERITS ( ' || migration_schema || '.' || parent_table || ' );';
+        --RAISE INFO 'create_sql = %', create_sql;
+        EXECUTE create_sql;
+        insert_sql := 'INSERT INTO ' || migration_schema || '.' || dest_table || ' (' || column_list || ') SELECT ' || column_list || ' FROM ' || migration_schema || '.' || source_table || ';';
+        --RAISE INFO 'insert_sql = %', insert_sql;
+        EXECUTE insert_sql;
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
 -- creates other child table so you can have more than one child table in a schema from a base table 
 CREATE OR REPLACE FUNCTION migration_tools.build_variant_staging_table(text, text, text)
  RETURNS void
