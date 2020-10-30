@@ -24,9 +24,9 @@ adds an extra arbitrary page of notes to the report.  Mig assumes the page file 
 This will define a set of tags to use, if not set it will default to Circs, 
 Holds, Actors, Bibs, Assets & Money. 
 
---debug on
+--debug
 
-Gives more information about what is happening. Defaults to off.
+Gives more information about what is happening.
 
 --reports_xml 
 
@@ -81,7 +81,7 @@ my $captions = 'off';
 my $i = 0;
 my $parser = XML::LibXML->new();
 my $lines_per_page = 42;
-my $debug = 'off';
+my $debug;
 my $workbook;
 my $stylesheet;
 my $fh;
@@ -96,7 +96,7 @@ my $ret = GetOptions(
     'added_page_file:s'   => \$added_page_file,
     'captions:s'          => \$captions,
     'stylesheet:s'        => \$stylesheet,
-	'debug:s'             => \$debug
+	'debug'               => \$debug
 );
 
 if (!defined $report_title) { abort('--report_title or --title must be supplied'); }
@@ -218,10 +218,19 @@ foreach my $t (@report_tags) {
         my $check_tables0;
         my $check_tables1;
 
-        if ($debug eq 'on') {print "\nchecking for $rname ... ";}
+        if ($debug) {print "\nchecking for $rname ... ";}
+        my @report_iterations;
+        #goto 
+        
+
+
         %report0 = find_report($dom,$t,$rname,'0',$debug);
         $check_tables0 = check_table($report0{query},$MIGSCHEMA,$debug,$rname);
-        if ($check_tables0 == 1) { $r = print_query($fh,%report0); } else {
+        
+
+
+        if ($check_tables0 == 1) { $r = print_query($fh,%report0); } else 
+        {
         	%report1 = find_report($dom,$t,$rname,'1',$debug);
             if (defined $report1{query}) {
             	$check_tables1 = check_table($report1{query},$MIGSCHEMA,$debug,$rname);
@@ -270,10 +279,10 @@ sub find_report {
     my $debug = shift;
     my %report;
 
-    if ($debug eq 'on') {print "iteration $iteration ";}
+    if ($debug) {print "iteration $iteration ";}
     foreach my $node ($dom->findnodes('//report')) {
         if ($node->findvalue('./tag') =~ $tag and $node->findvalue('./iteration') eq $iteration and $node->findvalue('./name') eq $name) {
-            if ($debug eq 'on') {print "succeeded ... \n";}
+            if ($debug) {print "succeeded ... \n";}
             %report = (
                 name => $node->findvalue('./name'),
                 report_title => $node->findvalue('./report_title'),
@@ -290,7 +299,7 @@ sub find_report {
             return %report;
         }
     }
-    if ($debug eq 'on') {print "failed ... \n";}
+    if ($debug) {print "failed ... \n";}
     return %report = (
         name => "eaten by grue"
     );
@@ -354,7 +363,7 @@ sub check_table {
     my $debug = shift;
     my $report_name = shift;
 
-    if ($debug eq 'on') {print "$query\n";}
+    if ($debug) {print "$query\n";}
 
     my $i;
     my $return_flag = 1;   
@@ -371,7 +380,7 @@ sub check_table {
         }
         $i--;
     }
-    if ($debug eq 'on') {print "checking tables ... ";}
+    if ($debug) {print "checking tables ... ";}
 
     $i = 0;
     foreach my $table (@tables) {
@@ -395,12 +404,12 @@ sub check_table {
                     next;
                 } else {
                     $return_flag = 0;
-                    if ($debug eq 'on') {print "detecting $table failed...\n";}
+                    if ($debug) {print "detecting $table failed...\n";}
                 }
             if ($row[0] eq '0') {$return_flag = 0;}
         }
     }
-    if ($return_flag == 1 and $debug eq 'on') {print "succeeded ...\n";}
+    if ($return_flag == 1 and $debug) {print "succeeded ...\n";}
     if ($return_flag == 0) {print "! a table failed the find test for report $report_name\n\n";}
     return $return_flag;
 }
