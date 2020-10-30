@@ -208,34 +208,19 @@ foreach my $t (@report_tags) {
         }
     }
 
-    #only has one level of failover now but could change to array of hashes and loops
-    #but this keeps it simple and in practice I haven't needed more than two
-    
-
     foreach my $rname (@report_names) {
-        my %report0;
-        my %report1;
-        my $check_tables0;
-        my $check_tables1;
-
         if ($debug) {print "\nchecking for $rname ... ";}
         my @report_iterations;
-        #goto 
-        
+        foreach my $node ($dom->findnodes('//report')) {
+            if (lc $node->findvalue('./tag') eq lc $t and $node->findvalue('./name') eq $rname) { push @report_iterations, $node->findvalue('./iteration'); }
+        } 
+        @report_iterations = sort @report_iterations; 
+        if ($debug) { print "report iterations are: @report_iterations \n"; }
 
-
-        %report0 = find_report($dom,$t,$rname,'0',$debug);
-        $check_tables0 = check_table($report0{query},$MIGSCHEMA,$debug,$rname);
-        
-
-
-        if ($check_tables0 == 1) { $r = print_query($fh,%report0); } else 
-        {
-        	%report1 = find_report($dom,$t,$rname,'1',$debug);
-            if (defined $report1{query}) {
-            	$check_tables1 = check_table($report1{query},$MIGSCHEMA,$debug,$rname);
-               	if ($check_tables1 == 1) { $r = print_query($fh,%report1); }
-            }
+        foreach my $ri (@report_iterations) {
+            my %report = find_report($dom,$t,$rname,$ri,$debug);
+            my $check_tables = check_table($report{query},$MIGSCHEMA,$debug,$rname);
+            if ($check_tables == 1) { $r = print_query($fh,%report); last; }  
         }
     }
     
