@@ -1,0 +1,8 @@
+    <report>
+        <name>circ_count</name>
+        <iteration>0</iteration>
+        <tag>test</tag>
+        <report_title>Circ Count</report_title>
+        <heading>Count</heading>
+        <query>SELECT COUNT(*) FROM action.circulation;</query>
+    </report>    

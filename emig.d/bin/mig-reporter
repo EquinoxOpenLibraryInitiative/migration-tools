@@ -106,6 +106,7 @@ $mig_path =~ s|[^/]+$||;
 $reports_xml = find_xml($reports_xml,$mig_path);
 if (!defined $reports_xml) { abort("Can not find xml reports file."); }
 my $dom = $parser->parse_file($reports_xml);
+$parser->process_xincludes( $dom );
 
 if (defined $added_page_file or defined $added_page_title) {
     abort('must specify --added_page_file and --added_page_title') unless defined $added_page_file and defined $added_page_title;
@@ -236,6 +237,7 @@ foreach my $table ($dom->findnodes('//table')) {
     $sdrop->execute();
 }
 
+#print $dom->toString();
 close $fh;
 
 ############ end of main logic

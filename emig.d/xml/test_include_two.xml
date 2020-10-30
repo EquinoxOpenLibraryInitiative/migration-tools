@@ -1,0 +1,8 @@
+    <report>
+        <name>copy_count</name>
+        <iteration>0</iteration>
+        <tag>test</tag>
+        <report_title>Copy Count</report_title>
+        <heading>Count</heading>
+        <query>SELECT COUNT(*) FROM asset.copy;</query>
+    </report>    
