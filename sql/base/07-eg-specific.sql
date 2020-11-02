@@ -2368,4 +2368,51 @@ END
 $func$
 LANGUAGE PLPGSQL;
 
-
+-- example: SELECT * FROM migration_tools.duplicate_perm_group(3, 'New Staff', 1, 'New Staff Desc');
+CREATE OR REPLACE FUNCTION migration_tools.duplicate_perm_group (INTEGER, TEXT, INTEGER, TEXT) RETURNS INTEGER AS $$
+    DECLARE
+        target_grp ALIAS FOR $1;
+        new_name ALIAS FOR $2;
+        new_parent ALIAS FOR $3;
+        new_desc ALIAS FOR $4;
+    BEGIN
+        INSERT INTO permission.grp_tree (
+             name
+            ,parent
+            ,usergroup
+            ,perm_interval
+            ,description
+            ,application_perm
+            ,hold_priority
+        ) SELECT
+             new_name
+            ,new_parent
+            ,usergroup
+            ,perm_interval
+            ,new_desc
+            ,application_perm
+            ,hold_priority
+        FROM
+            permission.grp_tree
+        WHERE
+            id = target_grp
+        ;
+        RAISE INFO 'created grp with id = %', currval('permission.grp_tree_id_seq');
+        INSERT INTO permission.grp_perm_map (
+             grp
+            ,perm
+            ,depth
+            ,grantable
+        ) SELECT
+             currval('permission.grp_tree_id_seq')
+            ,perm
+            ,depth
+            ,grantable
+        FROM
+            permission.grp_perm_map
+        WHERE
+            grp = target_grp
+        ;
+        RETURN currval('permission.grp_tree_id_seq');
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
