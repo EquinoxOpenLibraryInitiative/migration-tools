@@ -27,4 +27,36 @@ DELETE FROM acq.lineitem WHERE picklist IN (SELECT id FROM acq.picklist WHERE or
 
 DELETE FROM acq.picklist WHERE org_unit IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del); 
 
+DELETE FROM acq.lineitem WHERE creator IN (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    ) 
+);
+
+DELETE FROM acq.lineitem WHERE editor IN (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    ) 
+);
+
+DELETE FROM acq.po_note WHERE creator IN (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    ) 
+);
+
+DELETE FROM acq.po_note WHERE editor IN (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+
+DELETE FROM acq.purchase_order WHERE owner IN ( 
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    ) 
+);
+
+
 COMMIT;
