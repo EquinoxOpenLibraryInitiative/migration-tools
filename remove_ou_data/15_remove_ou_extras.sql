@@ -74,23 +74,15 @@ WHERE  event_def IN (
     WHERE owner IN
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
 );
-  
-UPDATE action_trigger.event SET template_output = NULL, error_output = NULL, async_output = NULL
-WHERE  event_def IN (
-    SELECT id FROM action_trigger.event_definition
-    WHERE owner IN
-    (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
-);
-  
-DELETE FROM action_trigger.event_output WHERE id IN (
-    SELECT output_id FROM esi.temp_action_trigger_output_list
-);
- 
+
 DELETE FROM action_trigger.event
 WHERE event_def IN (
     SELECT id FROM action_trigger.event_definition
     WHERE owner IN
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
+);  
+DELETE FROM action_trigger.event_output WHERE id IN (
+    SELECT output_id FROM esi.temp_action_trigger_output_list
 );
 DELETE FROM action_trigger.environment
 WHERE event_def IN (
