@@ -51,6 +51,12 @@ UPDATE reporter.schedule SET folder = (SELECT id FROM reporter.output_folder WHE
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 DELETE FROM reporter.output_folder WHERE share_with IN
 (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+DELETE FROM reporter.output_folder WHERE owner IN (
+SELECT id
+FROM actor.usr WHERE home_ou IN (
+    SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit
+    WHERE shortname = :ou_to_del
+)) ;
 
 DELETE FROM reporter.schedule WHERE runner IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));

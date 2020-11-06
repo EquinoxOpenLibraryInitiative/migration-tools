@@ -58,5 +58,34 @@ DELETE FROM acq.purchase_order WHERE owner IN (
     ) 
 );
 
+DELETE FROM acq.user_request WHERE usr IN  (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+DELETE FROM acq.fund_allocation WHERE allocator IN (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+DELETE FROM acq.fund_transfer WHERE transfer_user IN (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+DELETE FROM acq.invoice WHERE closed_by IN (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+DELETE FROM acq.purchase_order WHERE editor IN (
+    SELECT id FROM actor.usr WHERE home_ou IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
 
 COMMIT;
