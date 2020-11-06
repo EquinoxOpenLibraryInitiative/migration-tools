@@ -110,6 +110,7 @@ DELETE FROM action_trigger.event_definition
 
 
 COMMIT;
+DROP TABLE esi.temp_action_trigger_output_list;
 DROP INDEX money.tmp_idx;
 ALTER TABLE asset.copy_location ENABLE RULE protect_copy_location_delete;
 ALTER TABLE action.circulation ENABLE TRIGGER action_circulation_target_copy_trig;
