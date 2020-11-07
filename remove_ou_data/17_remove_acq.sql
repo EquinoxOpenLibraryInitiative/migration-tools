@@ -21,6 +21,32 @@
 
 BEGIN;
 
+DELETE FROM acq.fund_tag WHERE owner IN (
+    SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+);
+
+DELETE FROM acq.provider_holding_subfield_map WHERE provider IN (
+    SELECT id FROM acq.provider WHERE owner IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+DELETE FROM acq.provider_contact WHERE provider IN (
+    SELECT id FROM acq.provider WHERE owner IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+DELETE FROM acq.provider_address WHERE provider IN (
+    SELECT id FROM acq.provider WHERE owner IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+DELETE FROM acq.provider WHERE owner IN (
+    SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+);
+
 DELETE FROM acq.cancel_reason WHERE org_unit IN (
     SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
 );
