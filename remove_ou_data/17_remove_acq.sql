@@ -21,6 +21,10 @@
 
 BEGIN;
 
+DELETE FROM acq.cancel_reason WHERE org_unit IN (
+    SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+);
+
 DELETE FROM acq.lineitem WHERE picklist IN (SELECT id FROM acq.picklist WHERE org_unit IN 
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
 );
