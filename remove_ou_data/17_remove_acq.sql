@@ -25,6 +25,16 @@ DELETE FROM acq.fund_tag WHERE owner IN (
     SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
 );
 
+DELETE FROM acq.fund_debit WHERE fund IN (
+    SELECT id FROM acq.fund WHERE org IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+    )
+);
+
+DELETE FROM acq.fund WHERE org IN (
+    SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+);
+
 DELETE FROM acq.provider_holding_subfield_map WHERE provider IN (
     SELECT id FROM acq.provider WHERE owner IN (
         SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
