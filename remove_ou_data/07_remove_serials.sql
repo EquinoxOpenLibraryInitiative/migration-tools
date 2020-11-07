@@ -23,6 +23,9 @@ ALTER TABLE serial.record_entry DISABLE RULE protect_mfhd_delete;
 
 BEGIN;
 
+DELETE FROM serial.pattern_template WHERE owning_lib IN 
+(SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del);
+
 DELETE FROM serial.basic_summary WHERE distribution IN 
 (SELECT id FROM serial.distribution WHERE holding_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
