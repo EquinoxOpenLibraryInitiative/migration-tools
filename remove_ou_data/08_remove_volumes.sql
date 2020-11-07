@@ -28,6 +28,8 @@ ALTER TABLE asset.call_number DISABLE TRIGGER z_opac_vis_mat_view_tgr;
 
 BEGIN;
 
+UPDATE asset.call_number SET owning_lib = 1 WHERE id = -1;
+
 DELETE FROM asset.uri_call_number_map WHERE call_number IN (
     SELECT id FROM asset.call_number WHERE owning_lib IN
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
