@@ -25,6 +25,15 @@ DELETE FROM acq.lineitem WHERE picklist IN (SELECT id FROM acq.picklist WHERE or
     (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del)
 );
 
+DELETE FROM acq.funding_source_credit WHERE funding_source IN (
+    SELECT id FROM acq.funding_source WHERE owner IN (
+        SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del)
+);
+
+DELETE FROM acq.funding_source WHERE owner IN (
+    SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
+);
+
 DELETE FROM acq.picklist WHERE org_unit IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del); 
 
 DELETE FROM acq.lineitem WHERE creator IN (
@@ -80,6 +89,10 @@ DELETE FROM acq.invoice WHERE closed_by IN (
     SELECT id FROM actor.usr WHERE home_ou IN (
         SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
     )
+);
+
+DELETE FROM acq.invoice WHERE receiver IN (
+    SELECT (actor.org_unit_descendants(id)).id FROM actor.org_unit WHERE shortname = :ou_to_del
 );
 
 DELETE FROM acq.purchase_order WHERE editor IN (
