@@ -157,6 +157,7 @@ while (my $line = <$fh>) {
         if ($debug != 0 and $i != 1) { print "========================= processing line $i\n"; }
         if ($i % 100 == 0) { print "Processing row $i\n"; }
         my @fields = $csv->fields();
+        @fields = = grep(s/\s*$//g, @fields);
         if ($i == 1) {  #get positions from default names first, then mapped ones
             while (my ($col,$pos) = each %column_positions) {
                 $column_positions{$col} = first_index { lc($_) eq lc($col) } @fields;
