@@ -297,10 +297,20 @@ while (my $line = <$fh>) {
                 sql_no_return($dbh,$query,$debug);
             }
             ##############################################################################################################
-            ### make sure password is salted and all that
-            my $prepped_password = sql_wrap_text($column_values{'passwd'}); 
-            $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
-            sql_no_return($dbh,$query,$debug); 
+            ### make sure password is salted; if inserting we check and create one if needed, then if we have one we salt it 
+            ### whether we created or updated userd
+            my @set = ('0' ..'9', 'a' .. 'z', 'A' .. 'Z');
+            my $prepped_password;i
+            if ($insert_usr_str) {
+                if (!defined $column_values{'passwd'} or $column_values{'passwd'} eq '') {
+                    $column_values{'passwd'} = join '' => map $set[rand @set], 1 .. 16;
+                }
+            } 
+            if ($column_values{'passwd'}) {
+                $prepped_password = sql_wrap_text($column_values{'passwd'}); 
+                $query = "SELECT * FROM patron_loader.set_salted_passwd($au_id,$prepped_password);";
+                sql_no_return($dbh,$query,$debug);
+            } 
             ##############################################################################################################
             ### address fun, first if either address exists and then don't assume just b/c there is an add2 there is an add1
             if ($column_values{add1_street1} or $column_values{add2_street1}) { 
@@ -529,16 +539,6 @@ sub insert_au_sql {
     my @insert_columns;
     my @insert_values;
     my $passwd = $column_values{passwd};
-    my @set = ('0' ..'9', 'a' .. 'z', 'A' .. 'Z');
-    if (!defined $passwd) { 
-        $passwd = join '' => map $set[rand @set], 1 .. 16; 
-        push @insert_columns, 'passwd'; 
-        push @insert_values, $passwd; 
-    }
-    if ($passwd eq '') { 
-        $passwd = join '' => map $set[rand @set], 1 .. 16;  
-        $column_values{passwd} = $passwd;
-    }
     #wrap strings but skip calculated ones and booleans 
     while (my ($col,$val) = each %column_values) {
         if (!defined $val) { next; }
