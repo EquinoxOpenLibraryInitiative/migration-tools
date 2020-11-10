@@ -528,6 +528,17 @@ sub insert_au_sql {
     my $end = ");";
     my @insert_columns;
     my @insert_values;
+    my $passwd = $column_values{passwd};
+    my @set = ('0' ..'9', 'a' .. 'z', 'A' .. 'Z');
+    if (!defined $passwd) { 
+        $passwd = join '' => map $set[rand @set], 1 .. 16; 
+        push @insert_columns, 'passwd'; 
+        push @insert_values, $passwd; 
+    }
+    if ($passwd eq '') { 
+        $passwd = join '' => map $set[rand @set], 1 .. 16;  
+        $column_values{passwd} = $passwd;
+    }
     #wrap strings but skip calculated ones and booleans 
     while (my ($col,$val) = each %column_values) {
         if (!defined $val) { next; }

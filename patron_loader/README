@@ -48,7 +48,7 @@ Optional parameters:
 Required Data:
 
 Seven columns are considered required for loading the file, the cardnumber, usrname, 
-passwd, profile, home_library, family_name and first_given_name.  With the home_org and  
+profile, home_library, family_name and first_given_name.  With the home_org and  
 profile parameters you can leave the columns for profile and home_library empty but 
 you still need the columns in the file.  If you use the --fill_with_matchpoint 
 option you can skip one so long as you have the other but still need the column in your 
@@ -68,6 +68,7 @@ other_phone
 expire_date 
 ident_type   <-- needs id value 
 ident_value 
+passwd       <-- if not supplied for a new user a random one will be created on NULL or empty string
 add1_street1
 add1_street2
 add1_cit
