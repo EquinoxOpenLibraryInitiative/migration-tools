@@ -1,3 +1,32 @@
+CREATE OR REPLACE FUNCTION migration_tools.synccircs()
+RETURNS VOID
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+
+    ALTER TABLE action.circulation DISABLE TRIGGER maintain_usr_circ_history_tgr;
+
+    UPDATE
+        action.circulation a
+    SET 
+        recurring_fine_rule = b.recurring_fine_rule
+        ,duration_rule      = b.duration_rule
+        ,max_fine_rule      = b.max_fine_rule
+        ,duration           = b.duration
+        ,fine_interval      = b.fine_interval
+        ,recurring_fine     = b.recurring_fine
+        ,max_fine           = b.max_fine
+    FROM
+        m_action_circulation b
+    WHERE
+        a.id = b.id
+    ;
+
+    ALTER TABLE action.circulation ENABLE TRIGGER maintain_usr_circ_history_tgr;
+
+   RETURN;
+END
+$function$;
 
 CREATE OR REPLACE FUNCTION migration_tools.create_user(
 	pbarcode TEXT,
