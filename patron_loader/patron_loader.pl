@@ -300,7 +300,7 @@ while (my $line = <$fh>) {
             ### make sure password is salted; if inserting we check and create one if needed, then if we have one we salt it 
             ### whether we created or updated userd
             my @set = ('0' ..'9', 'a' .. 'z', 'A' .. 'Z');
-            my $prepped_password;i
+            my $prepped_password;
             if ($insert_usr_str) {
                 if (!defined $column_values{'passwd'} or $column_values{'passwd'} eq '') {
                     $column_values{'passwd'} = join '' => map $set[rand @set], 1 .. 16;
