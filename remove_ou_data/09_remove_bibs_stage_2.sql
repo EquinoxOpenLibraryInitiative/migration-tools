@@ -24,7 +24,7 @@ ALTER TABLE biblio.monograph_part DISABLE RULE protect_mono_part_delete;
 
 BEGIN;
 
-UPDATE biblio.record_entry SET merge_date = NULL, merged_to = NULL WHERE id IN
+UPDATE biblio.record_entry SET merge_date = NULL, merged_to = NULL WHERE merged_to IN
 (
     SELECT record FROM esi.:vol_del_table x
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
