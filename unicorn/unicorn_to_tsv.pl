@@ -82,7 +82,12 @@ while (<>) {
 		$unique_fields{$field} = 1;
 
 		# Now we can actually store this line of data!
-		$records[$serial]{$field} = $3;		
+		# If it's a repeating field, concatenate the data with semicolons
+		if (defined $records[$serial]{$field}) {
+			$records[$serial]{$field} .= ";$3";
+		} else {
+			$records[$serial]{$field} = $3;
+		}
 
 		print STDERR "Data extracted: \$records[$serial]{'$field'} = '$3'\n";
 
