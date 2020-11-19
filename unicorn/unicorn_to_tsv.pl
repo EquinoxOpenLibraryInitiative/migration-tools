@@ -84,6 +84,7 @@ while (<>) {
 		# Now we can actually store this line of data!
 		# If it's a repeating field, concatenate the data with semicolons
 		if (defined $records[$serial]{$field}) {
+			print STDERR "Repeating field found: $field\n";
 			$records[$serial]{$field} .= ";$3";
 		} else {
 			$records[$serial]{$field} = $3;
