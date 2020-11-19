@@ -48,6 +48,9 @@ l_addr3_ums_addrid l_identific l_noempl l_profession l_program l_represent l_use
 l_inactive_barcode2);
 
 
+print "don't use this\n";
+exit;
+
 # Load each record
 while (<>) {
     s/\r\n/\n/g;
