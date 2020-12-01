@@ -507,8 +507,13 @@ BEGIN
     ELSE
         ysrform_exclude := '';
     END IF;
+
     SELECT migration_tools.modify_fixed_fields(marc,xcode,xitype,xiform,xphy,xphyv,xphyp,xbiblevel,yiform_exclude,ysrform_exclude) FROM biblio.record_entry WHERE id = bib_id INTO r;
-    UPDATE biblio.record_entry SET marc = r WHERE id = bib_id;
-    RETURN TRUE;
+    IF r = 'failed to parse marcxml' THEN
+        RETURN FALSE;
+    ELSE
+        UPDATE biblio.record_entry SET marc = r WHERE id = bib_id;
+        RETURN TRUE;
+    END IF;
 END;
 $function$;
