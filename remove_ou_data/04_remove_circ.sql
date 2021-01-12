@@ -30,14 +30,18 @@ UPDATE action.circulation
 SET parent_circ = NULL   
 WHERE parent_circ IN 
 (SELECT id FROM action.circulation WHERE circ_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
-UPDATE action.circulation 
-SET parent_circ = NULL 
-WHERE usr IN
-(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 UPDATE action.circulation
 SET parent_circ = NULL 
-WHERE circ_staff IN 
-(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
+WHERE parent_circ IN 
+(SELECT id FROM action.circulation WHERE usr IN
+    (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del))
+);  
+UPDATE action.circulation
+SET parent_circ = NULL    
+WHERE parent_circ IN 
+(SELECT id FROM action.circulation WHERE circ_staff IN 
+    (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del))
+);
 DELETE FROM action.circulation WHERE usr IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 DELETE FROM action.circulation WHERE circ_staff IN
