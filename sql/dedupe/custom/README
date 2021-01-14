@@ -1,0 +1,13 @@
+The dedupe can be used for an inclusive (whole contents of biblio.record_entry) dedupe 
+or a uni-directional dedupe where the contents of m_biblio_record_entry / _legacy 
+are considered incoming records and then deduped against the contents of biblio.record_entry.
+
+In a migration dedupe scenario only incumbent (biblio.record_entry) records can be lead 
+records in match groups.
+
+Because this is heavily used for migration dedupes with the mig toolset the script will look 
+for an m_biblio_record_entry table in the path.  If it finds this it will assume this is a 
+migration dedupe and set a dedupe_features flag appropriately which the remainder of the scripts will use.
+
+There is a third dedupe type - 'subset' for this the type will have to be set manually and is largely untested.
+
