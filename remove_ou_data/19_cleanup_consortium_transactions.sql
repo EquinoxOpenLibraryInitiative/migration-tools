@@ -39,7 +39,7 @@ UPDATE action.hold_request SET target = -1 WHERE id IN
     (SELECT ahr.id FROM action.hold_request ahr LEFT JOIN biblio.record_entry bre ON bre.id = ahr.target WHERE bre.id IS NULL AND ahr.hold_type = 'T');
 
 UPDATE action.hold_request SET current_copy = NULL 
-	WHERE id IN (SELECT ahr.id FROM action.hold_request ahr LEFT JOIN asset.copy acp ON acp.id = ahr.target WHERE acp.id IS NULL AND ahr.current_copy IS NOT NULL);
+	WHERE id IN (SELECT ahr.id FROM action.hold_request ahr LEFT JOIN asset.copy acp ON acp.id = ahr.current_copy WHERE acp.id IS NULL AND ahr.current_copy IS NOT NULL);
 
 -- delete instead of update here because it's not statistical and not useful if pointed to a pre-cat 
 DELETE FROM action.usr_circ_history WHERE id IN 
