@@ -30,13 +30,19 @@ $mig_path =~ s|[^/]+$||;
 
 my @taglist = @ARGV;
 my $arg_list_length = scalar @taglist;
-if($arg_list_length < 1) { @taglist = ("libraries","patrontypes","itemtypes","authorisedvalues","booksellers","borrowerattributes","budgets","calendar","circrules","letters","messages","preferences","reports","smsproviders"); } 
+if($arg_list_length < 1) { @taglist = ("accounttypes","authorisedvalues","booksellers","budgets","borrowerattributes","calendar","cashregisters","circrules","courses","itemtypes","letters","libraries","messages","patrontypes","preferences","reports","smsproviders","z3950servers"); } 
 $MIGGITDIR =~ s/\/\//\//;
 
 my @errors;
 
 foreach my $restore (@taglist) {
     my $restorefile;
+    if ($restore eq 'accounttypes') {
+        my $timestamp = most_recent_single($MIGGITDIR,'accounttypes');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'accounttypes' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_accounttypes($dbh,$restorefile); }
+    }
     if ($restore eq 'authorisedvalues') {
         my $timestamp = most_recent_single($MIGGITDIR,'authorisedvalues');
         if ($timestamp) { $restorefile = $MIGGITDIR . 'authorisedvalues' . '.' . $timestamp . '.xml'; }
@@ -67,11 +73,23 @@ foreach my $restore (@taglist) {
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_calendar($dbh,$restorefile); }
     }
+    if ($restore eq 'cashregisters') {
+        my $timestamp = most_recent_single($MIGGITDIR,'cashregisters');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'cashregisters' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_cashregisters($dbh,$restorefile); }
+    }
     if ($restore eq 'circrules') {
         my $timestamp = most_recent_single($MIGGITDIR,'circrules');
         if ($timestamp) { $restorefile = $MIGGITDIR . 'circrules' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { @errors = restore_circrules($dbh,$restorefile,@errors); }
+    }
+    if ($restore eq 'courses') {
+        my $timestamp = most_recent_single($MIGGITDIR,'courses');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'courses' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { @errors = restore_courses($dbh,$restorefile,@errors); }
     }
     if ($restore eq 'itemtypes') {
         my $timestamp = most_recent_single($MIGGITDIR,'itemtypes');
@@ -120,6 +138,12 @@ foreach my $restore (@taglist) {
         if ($timestamp) { $restorefile = $MIGGITDIR . 'smsproviders' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_smsproviders($dbh,$restorefile,$mig_path); }
+    }
+    if ($restore eq 'z3950servers') {
+        my $timestamp = most_recent_single($MIGGITDIR,'z3950servers');
+        if ($timestamp) { $restorefile = $MIGGITDIR . 'z3950servers' . '.' . $timestamp . '.xml'; }
+        print "Restoring from $restorefile ... \n";
+        if ($restorefile) { restore_z3950servers($dbh,$restorefile,$mig_path); }
     }
 }
 
@@ -216,6 +240,44 @@ sub reset_memcache {
 	return;
 }
 
+sub restore_accounttypes {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    sql_noresult($dbh,"DELETE FROM account_credit_types WHERE 1 = 1");
+    sql_noresult($dbh,"DELETE FROM account_debit_types WHERE 1 = 1");
+    sql_noresult($dbh,"DELETE FROM account_offset_types WHERE 1 = 1");
+
+    foreach my $node ($dom->findnodes('/document/offsettypes/value')) {
+        my $type = sql_str_not_null($node->findvalue('./type'));
+        sql_noresult($dbh,"INSERT INTO account_offset_types (type) VALUES ($type)");
+    }
+
+    foreach my $node ($dom->findnodes('/document/debittypes/value')) {
+        my $code = sql_str_not_null($node->findvalue('./code'));
+        my $description = sql_str($node->findvalue('./description'));
+        my $can_be_invoiced = sql_num($node->findvalue('./can_be_invoiced'));
+        my $can_be_sold = sql_num($node->findvalue('./can_be_sold'));
+        my $default_amount = sql_num($node->findvalue('./default_amount'));
+        my $is_system = sql_num($node->findvalue('./is_system'));
+        my $archived = sql_num($node->findvalue('./archived'));
+        sql_noresult($dbh,"INSERT INTO account_debit_types (code,description,can_be_invoiced,can_be_sold,default_amount,is_system,archived) VALUES ($code,$description,$can_be_invoiced,$can_be_sold,$default_amount,$is_system,$archived)");
+    }
+
+    foreach my $node ($dom->findnodes('/document/credittypes/value')) {
+        my $code = sql_str_not_null($node->findvalue('./code'));
+        my $description = sql_str($node->findvalue('./description'));
+        my $can_be_added_manually = sql_num($node->findvalue('./can_be_added_manually'));
+        my $is_system = sql_num($node->findvalue('./is_system'));
+        my $archived = sql_num($node->findvalue('./archived'));
+        sql_noresult($dbh,"INSERT INTO account_credit_types (code,description,can_be_added_manually,is_system,archived) VALUES ($code,$description,$can_be_added_manually,$is_system,$archived)");
+    }
+
+    return;
+}
+
 sub restore_authorisedvalues {
     my $dbh = shift;
     my $restore_file = shift;
@@ -251,19 +313,14 @@ sub restore_booksellers {
     sql_noresult($dbh,"DELETE FROM aqbooksellers WHERE 1 = 1");
 
     foreach my $node ($dom->findnodes('/booksellers/value')) {
-        my $name = sql_str($node->findvalue('./name'));
+        my $name = sql_str_not_null($node->findvalue('./name'));
         my $address1 = sql_str($node->findvalue('./address1'));
         my $address2 = sql_str($node->findvalue('./address2'));
         my $address3 = sql_str($node->findvalue('./address3'));
         my $address4 = sql_str($node->findvalue('./address4'));
         my $phone = sql_str($node->findvalue('./phone'));
         my $accountnumber = sql_str($node->findvalue('./accountnumber'));
-        my $othersupplier = sql_str($node->findvalue('./othersupplier'));
-        my $currency = sql_str_not_null($node->findvalue('./currency'));
-        my $booksellerfax = sql_str($node->findvalue('./booksellerfax'));
         my $notes = sql_str($node->findvalue('./notes'));
-        my $bookselleremail = sql_str($node->findvalue('./bookselleremail'));
-        my $booksellerurl = sql_str($node->findvalue('./booksellerurl'));
         my $postal = sql_str($node->findvalue('./postal'));
         my $url = sql_str($node->findvalue('./url'));
         my $active = sql_str($node->findvalue('./active'));
@@ -276,7 +333,7 @@ sub restore_booksellers {
         my $discount = sql_num($node->findvalue('./discount'));
         my $fax = sql_str($node->findvalue('./fax'));
         my $deliverytime = sql_num($node->findvalue('./deliverytime'));
-        sql_noresult($dbh,"INSERT INTO aqbooksellers (name,address1,address2,address3,address4,phone,accountnumber,othersupplier,currency,booksellerfax,notes,bookselleremail,booksellerurl,postal,url,active,listprice,invoiceprice,gstreg,listincgst,invoiceincgst,tax_rate,discount,fax,deliverytime) VALUES ($name,$address1,$address2,$address3,$address4,$phone,$accountnumber,$othersupplier,$currency,$booksellerfax,$notes,$bookselleremail,$booksellerurl,$postal,$url,$active,$listprice,$invoiceprice,$gstreg,$listincgst,$invoiceincgst,$tax_rate,$discount,$fax,$deliverytime)");
+        sql_noresult($dbh,"INSERT INTO aqbooksellers (name,address1,address2,address3,address4,phone,accountnumber,notes,postal,url,active,listprice,invoiceprice,gstreg,listincgst,invoiceincgst,tax_rate,discount,fax,deliverytime) VALUES ($name,$address1,$address2,$address3,$address4,$phone,$accountnumber,$notes,$postal,$url,$active,$listprice,$invoiceprice,$gstreg,$listincgst,$invoiceincgst,$tax_rate,$discount,$fax,$deliverytime)");
     }
 
     return;
@@ -414,6 +471,27 @@ sub restore_calendar {
     return;
 }
 
+sub restore_cashregisters {
+    my $dbh = shift; 
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+    
+    sql_noresult($dbh,"DELETE FROM cash_registers WHERE 1 = 1");
+    
+    foreach my $node ($dom->findnodes('/document/cashregisters/value')) {
+        my $name = sql_str_not_null($node->findvalue('./name'));
+        my $description = sql_str($node->findvalue('./description'));
+        my $branch = sql_str_not_null($node->findvalue('./branch'));
+        my $branch_default = sql_num($node->findvalue('./branch_default'));
+        my $starting_float = sql_num($node->findvalue('./starting_float'));
+        my $archived = sql_num($node->findvalue('./archived'));
+        sql_noresult($dbh,"INSERT INTO cash_registers (name,description,branch,branch_default,starting_float,archived) VALUES ($name,$description,$branch,$branch_default,$starting_float,$archived)");
+    }   
+
+    return;
+}
+
 sub restore_circrules {
     my $dbh = shift;
     my $restore_file = shift;
@@ -426,63 +504,64 @@ sub restore_circrules {
 
     sql_noresult($dbh,"DELETE FROM circulation_rules WHERE 1 = 1");
 
-    sql_noresult($dbh,"DELETE FROM issuingrules WHERE 1 = 1");
+# removed in 20.05
+#    sql_noresult($dbh,"DELETE FROM issuingrules WHERE 1 = 1");
 
-    foreach my $node ($dom->findnodes('//issuing/rule')) {
-        my $categorycode = sql_str($node->findvalue('./categorycode'));
-        my $itemtype = sql_str($node->findvalue('./itemtype'));
-        my $restrictedtype = sql_num($node->findvalue('./restrictedtype'));
-        my $rentaldiscount = sql_num($node->findvalue('./rentaldiscount'));
-        my $reservecharge = sql_num($node->findvalue('./reservecharge'));
-        my $fine = sql_num($node->findvalue('./fine'));
-        my $finedays = sql_num($node->findvalue('./finedays'));
-        my $maxsuspensiondays = sql_num($node->findvalue('./maxsuspensiondays'));
-        my $suspension_chargeperiod = sql_num($node->findvalue('./suspension_chargeperiod'));
-        my $firstremind = sql_num($node->findvalue('./firstremind'));
-        my $chargeperiod = sql_num($node->findvalue('./chargeperiod'));
-        my $chargeperiod_charge_at = sql_num($node->findvalue('./chargeperiod_charge_at'));
-        my $accountsent = sql_num($node->findvalue('./accountsent'));
-        my $issuelength = sql_num($node->findvalue('./issuelength'));
-        my $lengthunit = sql_str($node->findvalue('./lengthunit'));
-        my $hardduedate = sql_str($node->findvalue('./hardduedate'));
-        my $hardduedatecompare = sql_num($node->findvalue('./hardduedatecompare'));
-        my $renewalsallowed = sql_num($node->findvalue('./renewalsallowed'));
-        my $renewalperiod = sql_num($node->findvalue('./renewalperiod'));
-        my $norenewalbefore = sql_num($node->findvalue('./norenewalbefore'));
-        my $auto_renew = sql_num($node->findvalue('./auto_renew'));
-        my $no_auto_renewal_after = sql_num($node->findvalue('./no_auto_renewal_after'));
-        my $no_auto_renewal_after_hard_limit = sql_str($node->findvalue('./no_auto_renewal_after_hard_limit'));
-        my $reservesallowed = sql_num($node->findvalue('./reservesallowed'));
-        my $holds_per_record = sql_num($node->findvalue('./holds_per_record'));
-        my $holds_per_day = sql_num($node->findvalue('./holds_per_day'));
-        my $branchcode = sql_str($node->findvalue('./branchcode'));
-        my $overduefinescap = sql_num($node->findvalue('./overduefinescap'));
-        my $cap_fine_to_replacement_price = sql_num($node->findvalue('./cap_fine_to_replacement_price'));
-        my $onshelfholds = sql_num($node->findvalue('./onshelfholds'));
-        my $opacitemholds = sql_str($node->findvalue('./opacitemholds'));
-        my $article_requests = sql_str($node->findvalue('./article_requests'));
-        my $note = sql_str($node->findvalue('./note'));
-		$check = check_itemtype($dbh,$itemtype);
-        if ($check == 0 ) {
-            $error = "restore_circrules: issing rules rules itemtype $itemtype was not valid";
-            push @errors, $error;
-            next;
-        }
-		$check = check_category($dbh,$categorycode);
-        if ($check == 0 ) {
-            $error = "restore_circrules: issuing rules rules category $categorycode was not valid";
-            push @errors, $error;
-            next;
-        }
-        sql_noresult($dbh,"INSERT INTO issuingrules (categorycode,itemtype,restrictedtype,rentaldiscount,reservecharge,fine,finedays,maxsuspensiondays,suspension_chargeperiod,firstremind,chargeperiod,chargeperiod_charge_at,accountsent,issuelength,lengthunit,hardduedate,hardduedatecompare,renewalsallowed,renewalperiod,norenewalbefore,auto_renew,no_auto_renewal_after,no_auto_renewal_after_hard_limit,reservesallowed,holds_per_record,holds_per_day,branchcode,overduefinescap,cap_fine_to_replacement_price,onshelfholds,opacitemholds,article_requests,note) VALUES ($categorycode,$itemtype,$restrictedtype,$rentaldiscount,$reservecharge,$fine,$finedays,$maxsuspensiondays,$suspension_chargeperiod,$firstremind,$chargeperiod,$chargeperiod_charge_at,$accountsent,$issuelength,$lengthunit,$hardduedate,$hardduedatecompare,$renewalsallowed,$renewalperiod,$norenewalbefore,$auto_renew,$no_auto_renewal_after,$no_auto_renewal_after_hard_limit,$reservesallowed,$holds_per_record,$holds_per_day,$branchcode,$overduefinescap,$cap_fine_to_replacement_price,$onshelfholds,$opacitemholds,$article_requests,$note)");
-    }
+#    foreach my $node ($dom->findnodes('//issuing/rule')) {
+#        my $categorycode = sql_str($node->findvalue('./categorycode'));
+#        my $itemtype = sql_str($node->findvalue('./itemtype'));
+#        my $restrictedtype = sql_num($node->findvalue('./restrictedtype'));
+#        my $rentaldiscount = sql_num($node->findvalue('./rentaldiscount'));
+#        my $reservecharge = sql_num($node->findvalue('./reservecharge'));
+#        my $fine = sql_num($node->findvalue('./fine'));
+#        my $finedays = sql_num($node->findvalue('./finedays'));
+#        my $maxsuspensiondays = sql_num($node->findvalue('./maxsuspensiondays'));
+#        my $suspension_chargeperiod = sql_num($node->findvalue('./suspension_chargeperiod'));
+#        my $firstremind = sql_num($node->findvalue('./firstremind'));
+#        my $chargeperiod = sql_num($node->findvalue('./chargeperiod'));
+#        my $chargeperiod_charge_at = sql_num($node->findvalue('./chargeperiod_charge_at'));
+#        my $accountsent = sql_num($node->findvalue('./accountsent'));
+#        my $issuelength = sql_num($node->findvalue('./issuelength'));
+#        my $lengthunit = sql_str($node->findvalue('./lengthunit'));
+#        my $hardduedate = sql_str($node->findvalue('./hardduedate'));
+#        my $hardduedatecompare = sql_num($node->findvalue('./hardduedatecompare'));
+#        my $renewalsallowed = sql_num($node->findvalue('./renewalsallowed'));
+#        my $renewalperiod = sql_num($node->findvalue('./renewalperiod'));
+#        my $norenewalbefore = sql_num($node->findvalue('./norenewalbefore'));
+#        my $auto_renew = sql_num($node->findvalue('./auto_renew'));
+#        my $no_auto_renewal_after = sql_num($node->findvalue('./no_auto_renewal_after'));
+#        my $no_auto_renewal_after_hard_limit = sql_str($node->findvalue('./no_auto_renewal_after_hard_limit'));
+#        my $reservesallowed = sql_num($node->findvalue('./reservesallowed'));
+#        my $holds_per_record = sql_num($node->findvalue('./holds_per_record'));
+#        my $holds_per_day = sql_num($node->findvalue('./holds_per_day'));
+#        my $branchcode = sql_str($node->findvalue('./branchcode'));
+#        my $overduefinescap = sql_num($node->findvalue('./overduefinescap'));
+#        my $cap_fine_to_replacement_price = sql_num($node->findvalue('./cap_fine_to_replacement_price'));
+#        my $onshelfholds = sql_num($node->findvalue('./onshelfholds'));
+#        my $opacitemholds = sql_str($node->findvalue('./opacitemholds'));
+#        my $article_requests = sql_str($node->findvalue('./article_requests'));
+#        my $note = sql_str($node->findvalue('./note'));
+#		$check = check_itemtype($dbh,$itemtype);
+#        if ($check == 0 ) {
+#            $error = "restore_circrules: issing rules rules itemtype $itemtype was not valid";
+#            push @errors, $error;
+#            next;
+#        }
+#		$check = check_category($dbh,$categorycode);
+#        if ($check == 0 ) {
+#            $error = "restore_circrules: issuing rules rules category $categorycode was not valid";
+#            push @errors, $error;
+#            next;
+#        }
+#        sql_noresult($dbh,"INSERT INTO issuingrules (categorycode,itemtype,restrictedtype,rentaldiscount,reservecharge,fine,finedays,maxsuspensiondays,suspension_chargeperiod,firstremind,chargeperiod,chargeperiod_charge_at,accountsent,issuelength,lengthunit,hardduedate,hardduedatecompare,renewalsallowed,renewalperiod,norenewalbefore,auto_renew,no_auto_renewal_after,no_auto_renewal_after_hard_limit,reservesallowed,holds_per_record,holds_per_day,branchcode,overduefinescap,cap_fine_to_replacement_price,onshelfholds,opacitemholds,article_requests,note) VALUES ($categorycode,$itemtype,$restrictedtype,$rentaldiscount,$reservecharge,$fine,$finedays,$maxsuspensiondays,$suspension_chargeperiod,$firstremind,$chargeperiod,$chargeperiod_charge_at,$accountsent,$issuelength,$lengthunit,$hardduedate,$hardduedatecompare,$renewalsallowed,$renewalperiod,$norenewalbefore,$auto_renew,$no_auto_renewal_after,$no_auto_renewal_after_hard_limit,$reservesallowed,$holds_per_record,$holds_per_day,$branchcode,$overduefinescap,$cap_fine_to_replacement_price,$onshelfholds,$opacitemholds,$article_requests,$note)");
+#    }
 
     foreach my $node ($dom->findnodes('//circ/rule')) {
         my $branchcode = sql_str($node->findvalue('./branchcode'));
         my $categorycode = sql_str($node->findvalue('./categorycode'));
         my $itemtype = sql_str($node->findvalue('./itemtype'));
         my $rule_name = sql_str($node->findvalue('./rule_name'));
-        my $rule_value = sql_str($node->findvalue('./rule_value'));
+        my $rule_value = sql_str_not_null($node->findvalue('./rule_value'));
 
 		$check = check_itemtype($dbh,$itemtype);
         if ($check == 0 ) { 
@@ -503,6 +582,29 @@ sub restore_circrules {
     return @errors;
 }
 
+sub restore_courses {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    #there is an assumption here that other connecting stuff isn't loaded yet
+    sql_noresult($dbh,"DELETE FROM courses WHERE 1 = 1");
+
+    foreach my $node ($dom->findnodes('/document/courses/value')) {
+        my $department = sql_str($node->findvalue('./department'));
+        my $course_number = sql_str($node->findvalue('./course_number'));
+        my $section = sql_str($node->findvalue('./section'));
+        my $course_name = sql_str($node->findvalue('./course_name'));
+        my $term = sql_str($node->findvalue('./term'));
+        my $staff_note = sql_str($node->findvalue('./staff_note'));
+        my $public_note = sql_str($node->findvalue('./public_note'));
+        my $students_count = sql_str($node->findvalue('./students_count'));
+        my $enabled = sql_str($node->findvalue('./enabled'));
+        sql_noresult($dbh,"INSERT INTO courses (department,course_number,section,course_name,term,staff_note,public_note,students_count,enabled) VALUES ($department,$course_number,$section,$course_name,$term,$staff_note,$public_note,$students_count,$enabled)");
+    }
+}
+
 sub restore_itemtypes {
     my $dbh = shift;
     my $restorefile = shift;
@@ -518,31 +620,31 @@ sub restore_itemtypes {
 
     foreach my $node ($dom->findnodes('/document/authorised_values/value')) {
         my $category = sql_str($node->findvalue('./category'));
-        my $authvalue = sql_str($node->findvalue('./authvalue'));
+        my $authorised_value = sql_str($node->findvalue('./authorised_value'));
         my $lib = sql_str($node->findvalue('./lib'));
         my $lib_opac = sql_str($node->findvalue('./lib_opac'));
-        my $image_url = sql_str($node->findvalue('./image_url'));
-        sql_noresult($dbh,"INSERT INTO authorised_values (category,authvalue,lib,lib_opac,image_url) VALUES ($category,$authvalue,$lib,$lib_opac,$image_url)");
+        my $imageurl = sql_str($node->findvalue('./imageurl'));
+        sql_noresult($dbh,"INSERT INTO authorised_values (category,authorised_value,lib,lib_opac,imageurl) VALUES ($category,$authorised_value,$lib,$lib_opac,$imageurl)");
     }
 
     foreach my $node ($dom->findnodes('/document/itemtypes/value')) {
         my $itemtype = sql_str($node->findvalue('./itemtype'));
         my $description = sql_str($node->findvalue('./description'));
-        my $rentalcharge = sql_str($node->findvalue('./rentalcharge'));
-        my $rentalcharge_daily = sql_str($node->findvalue('./rentalcharge_daily'));
-        my $rentalcharge_hourly = sql_str($node->findvalue('./rentalcharge_hourly'));
-        my $defaultreplacecost = sql_str($node->findvalue('./defaultreplacecost'));
-        my $processfee = sql_str($node->findvalue('./processfee'));
-        my $notforloan = sql_str($node->findvalue('./notforloan'));
+        my $rentalcharge = sql_num($node->findvalue('./rentalcharge'));
+        my $rentalcharge_daily = sql_num($node->findvalue('./rentalcharge_daily'));
+        my $rentalcharge_hourly = sql_num($node->findvalue('./rentalcharge_hourly'));
+        my $defaultreplacecost = sql_num($node->findvalue('./defaultreplacecost'));
+        my $processfee = sql_num($node->findvalue('./processfee'));
+        my $notforloan = sql_num($node->findvalue('./notforloan'));
         my $imageurl = sql_str($node->findvalue('./imageurl'));
         my $summary = sql_str($node->findvalue('./summary'));
         my $checkinmsg = sql_str($node->findvalue('./checkinmsg'));
         my $checkinmsgtype = sql_str($node->findvalue('./checkinmsgtype'));
         my $sip_media_type = sql_str($node->findvalue('./sip_media_type'));
-        my $hideinopac = sql_str($node->findvalue('./hideinopac'));
+        my $hideinopac = sql_num($node->findvalue('./hideinopac'));
         my $searchcategory = sql_str($node->findvalue('./searchcategory'));
 
-		$check = check_itemtype($dbh,$itemtype);
+        $check = check_itemtype($dbh,$itemtype);
         if ($check == 0) {
             sql_noresult($dbh,"INSERT INTO itemtypes (itemtype,description,rentalcharge,rentalcharge_daily,rentalcharge_hourly,defaultreplacecost,processfee,notforloan,imageurl,summary,checkinmsg,sip_media_type,hideinopac,searchcategory) VALUES ($itemtype,$description,$rentalcharge,$rentalcharge_daily,$rentalcharge_hourly,$defaultreplacecost,$processfee,$notforloan,$imageurl,$summary,$checkinmsg,$sip_media_type,$hideinopac,$searchcategory)");
         } else {
@@ -684,8 +786,6 @@ sub restore_messages {
     return;
 }
 
-
-
 sub restore_patrontypes {
     my $dbh = shift;
     my $restorefile = shift;
@@ -794,6 +894,38 @@ sub restore_smsproviders {
         my $domain = sql_str($node->findvalue('./domain'));
         sql_noresult($dbh,"INSERT INTO sms_providers (name,domain) VALUES ($name,$domain)");
     }
+    return;
+}
+
+sub restore_z3950servers {
+    my $dbh = shift;
+    my $restore_file = shift;
+    my $parser = XML::LibXML->new();
+    my $dom = $parser->parse_file($restore_file);
+
+    sql_noresult($dbh,"DELETE FROM z3950servers WHERE 1 = 1");
+
+    foreach my $node ($dom->findnodes('/document/servers/value')) {
+        my $host = sql_str($node->findvalue('./host'));
+        my $port = sql_str($node->findvalue('./port'));
+        my $db = sql_str($node->findvalue('./db'));
+        my $userid = sql_str($node->findvalue('./userid'));
+        my $password = sql_str($node->findvalue('./password'));
+        my $servername = sql_str($node->findvalue('./servername'));
+        my $checked = sql_num($node->findvalue('./checked'));
+        my $rank = sql_num($node->findvalue('./rank'));
+        my $syntax = sql_str($node->findvalue('./syntax'));
+        my $timeout = sql_num($node->findvalue('./timeout'));
+        my $servertype = sql_str($node->findvalue('./servertype'));
+        my $encoding = sql_str($node->findvalue('./encoding'));
+        my $recordtype = sql_str($node->findvalue('./recordtype'));
+        my $sru_options = sql_str($node->findvalue('./sru_options'));
+        my $sru_fields = sql_str($node->findvalue('./sru_fields'));
+        my $add_xslt = sql_str($node->findvalue('./add_xslt'));
+        my $attributes = sql_str($node->findvalue('./attributes'));
+        sql_noresult($dbh,"INSERT INTO z3950servers (host,port,db,userid,password,servername,checked,rank,syntax,timeout,servertype,encoding,recordtype,sru_options,sru_fields,add_xslt,attributes) VALUES ($host,$port,$db,$userid,$password,$servername,$checked,$rank,$syntax,$timeout,$servertype,$encoding,$recordtype,$sru_options,$sru_fields,$add_xslt,$attributes)");
+    }
+
     return;
 }
 
