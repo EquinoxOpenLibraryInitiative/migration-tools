@@ -1,3 +1,20 @@
+CREATE OR REPLACE FUNCTION migration_tools.str_to_numeric(str TEXT)
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $function$
+DECLARE 
+    converted_str NUMERIC(6,2) DEFAULT NULL;
+BEGIN
+   BEGIN
+       converted_str := str::NUMERIC(6,2);
+       EXCEPTION WHEN OTHERS THEN
+       RAISE NOTICE 'Invalid value: "%".  Returning NULL.', str;
+   END;
+   IF converted_str > 9999.99 THEN converted_str = 9999.99; END IF;
+   RETURN converted_str;
+END
+$function$;
+
 CREATE OR REPLACE FUNCTION migration_tools.synccircs()
 RETURNS VOID
 LANGUAGE plpgsql
