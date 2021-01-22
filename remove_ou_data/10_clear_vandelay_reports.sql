@@ -27,6 +27,13 @@ BEGIN;
 DELETE FROM vandelay.queue WHERE owner IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
+DELETE FROM reporter.schedule WHERE complete_time IS NOT NULL AND report IN (
+    SELECT id FROM reporter.report WHERE template IN 
+        (SELECT id FROM reporter.template WHERE owner IN
+            (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del))
+        )
+);
+
 DELETE FROM reporter.report WHERE owner IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
