@@ -10,16 +10,8 @@ ALTER TABLE m_biblio_record_entry_legacy ADD COLUMN x_merge_to BIGINT;
 if this is being done for staged records there is no actual merging to do, just new targets for the bibs 
 */
 
-DO $$
-DECLARE
-BEGIN
-    IF EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('subset','migration')) THEN 
     
-        WITH tmp AS (SELECT lead_record, UNNEST(records) AS record FROM groups)
-        UPDATE m_biblio_record_entry_legacy a SET x_merge_to = t.lead_record
-        FROM tmp t WHERE t.record = a.id;
-
-    END IF;
-END $$;
-
+WITH tmp AS (SELECT lead_record, UNNEST(records) AS record FROM groups)
+UPDATE m_biblio_record_entry_legacy a SET x_merge_to = t.lead_record
+FROM tmp t WHERE t.record = a.id;
 
