@@ -1,3 +1,45 @@
+DROP FUNCTION IF EXISTS log_asset_merges(INTEGER,BIGINT,BIGINT);
+CREATE OR REPLACE FUNCTION log_asset_merges(grp_id INTEGER, r BIGINT, lead_record BIGINT)
+   RETURNS BOOLEAN
+   LANGUAGE plpgsql
+AS $function$
+DECLARE
+	bre_ahrs        BIGINT[];
+    acn_ahrs        BIGINT[];
+    m_id            INTEGER;
+    acn             BIGINT;
+    acp             BIGINT;
+BEGIN
+    -- log the bib merge itself 
+    SELECT ARRAY_AGG(ahr.id) 
+        FROM action.hold_request ahr
+        WHERE ahr.target = r AND ahr.cancel_time IS NULL 
+        AND ahr.fulfillment_time IS NULL AND ahr.hold_type = 't' INTO bre_ahrs;
+    INSERT INTO bre_rollback_log (group_id,record,merged_to,holds) VALUES (grp_id,r,lead_record,bre_ahrs) RETURNING id INTO m_id;
+
+    -- log the acns 
+    FOR acn IN SELECT id FROM asset.call_number WHERE NOT deleted AND record = r LOOP
+        acn_ahrs := NULL;
+        SELECT ARRAY_AGG(id) FROM action.hold_request WHERE hold_type = 'V' AND target = acn AND cancel_time IS NULL AND fulfillment_time IS NULL INTO acn_ahrs;
+        INSERT INTO acn_rollback_log (merge_id,original_record,acn,holds) VALUES (m_id,r,acn,acn_ahrs);
+    END LOOP;
+
+    -- log the copies 
+    FOR acp, acn IN SELECT id, call_number FROM asset.copy WHERE NOT deleted AND call_number IN (SELECT id FROM asset.call_number WHERE NOT deleted AND record = r) LOOP
+        INSERT INTO acp_rollback_log (merge_id, acn, acp) VALUES (m_id,acn,acp); 
+    END LOOP; 
+
+    -- log the monograph parts 
+    INSERT INTO monograph_part_rollback_log (merge_id,monograph_part,record) SELECT m_id, id, record FROM biblio.monograph_part WHERE NOT deleted AND record = r;
+
+    -- log the monograph part maps 
+    INSERT INTO copy_part_rollback_log (merge_id,target_copy,part) SELECT m_id, target_copy, part FROM asset.copy_part_map WHERE part IN 
+        (SELECT id FROM biblio.monograph_part WHERE NOT deleted AND record = r);
+
+    RETURN TRUE;
+END;
+$function$;
+
 DROP FUNCTION IF EXISTS dedupe_setting_exists(TEXT);
 CREATE OR REPLACE FUNCTION dedupe_setting_exists(setting_name TEXT)
    RETURNS INTEGER
@@ -1308,8 +1350,6 @@ DECLARE
     isbns       TEXT[];
     upcs        TEXT[];
     oclcs       TEXT[]; 
-    acn_array   BIGINT[];
-    ahr_array   BIGINT[];
     BEGIN
         SELECT lead_record FROM groups WHERE id = fg_id INTO lead_id;
         RAISE INFO 'group is %', fg_id;
@@ -1363,11 +1403,7 @@ DECLARE
         END IF;
 
         FOR r IN SELECT UNNEST(records) FROM groups WHERE id = fg_id LOOP
-            SELECT ARRAY_AGG(acn.id) FROM asset.call_number acn WHERE acn.record = r AND acn.deleted = FALSE INTO acn_array;
-            SELECT ARRAY_AGG(ahr.id) FROM action.hold_request ahr
-                WHERE ahr.target = r AND ahr.cancel_time IS NULL AND ahr.capture_time IS NULL
-                AND ahr.fulfillment_time IS NULL AND ahr.hold_type = 't' INTO ahr_array;
-            INSERT INTO acn_rollback_log (group_id, record, acns, holds) VALUES (fg_id, r, acn_array, ahr_array);
+            SELECT log_asset_merges(group_id,r,lead_record); 
             PERFORM asset.merge_record_assets(lead_record,r) FROM groups WHERE id = fg_id AND lead_record <> r;
         END LOOP;
         UPDATE groups SET done = TRUE WHERE id = fg_id;
