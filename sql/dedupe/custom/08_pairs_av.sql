@@ -17,6 +17,8 @@ WHERE
           (a.avdisc_flag AND b.avdisc_flag AND (a.description = b.description OR (a.description IS NULL AND b.description IS NULL)))
         )
     AND a.upc_values && b.upc_values
+    AND ((a.titlepart = b.titlepart) OR (a.titlepart IS NULL AND b.titlepart IS NULL))
+    AND ((a.titlepartname = b.titlepartname) OR (a.titlepartname IS NULL AND b.titlepartname IS NULL))
     AND ( 
           (a.record > b.record AND dedupe_setting('dedupe_type') = 'inclusive')
             OR
@@ -51,6 +53,8 @@ WHERE
         OR ('phonospoken' = ANY(a.search_format) AND 'phonospoken' = ANY(b.search_format))
         OR ('casuadiobook' = ANY(a.search_format) AND 'casaudiobook' = ANY(b.search_format))
     )
+    AND ((a.titlepart = b.titlepart) OR (a.titlepart IS NULL AND b.titlepart IS NULL))
+    AND ((a.titlepartname = b.titlepartname) OR (a.titlepartname IS NULL AND b.titlepartname IS NULL))
     AND ((a.all_pubdates && b.all_pubdates) OR (a.all_pubdates IS NULL AND b.all_pubdates IS NULL))
     AND ( 
           (a.record > b.record AND dedupe_setting('dedupe_type') = 'inclusive')
