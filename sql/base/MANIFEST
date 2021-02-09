@@ -63,6 +63,7 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 07-eg-specific.sql:migration_tools.create_migrating_cards
 # 07-eg-specific.sql:migration_tools.create_staff_user
 # 07-eg-specific.sql:migration_tools.create_user
+# 07-eg-specific.sql:migration_tools.duplicate_perm_group
 # 07-eg-specific.sql:migration_tools.duplicate_template
 # 07-eg-specific.sql:migration_tools.duplicate_template_but_change_delay
 # 07-eg-specific.sql:migration_tools.duplicate_templates
@@ -99,6 +100,8 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 07-eg-specific.sql:migration_tools.set_salted_passwd
 # 07-eg-specific.sql:migration_tools.simple_export_library_config
 # 07-eg-specific.sql:migration_tools.simple_import_library_config
+# 07-eg-specific.sql:migration_tools.str_to_numeric
+# 07-eg-specific.sql:migration_tools.synccircs
 # 07-eg-specific.sql:migration_tools.vivicate_actor_sc_and_sce
 # 07-eg-specific.sql:migration_tools.vivicate_asset_sc_and_sce
 # 08-casting-and-validation.sql:migration_tools.attempt_cast
