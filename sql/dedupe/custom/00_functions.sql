@@ -403,6 +403,7 @@ BEGIN
 END;
 $function$;
 
+DROP FUNCTION IF EXISTS vivisect_record(INTEGER,TEXT,TEXT); -- from older version
 DROP FUNCTION IF EXISTS vivisect_record(BIGINT,TEXT,TEXT);
 CREATE OR REPLACE FUNCTION vivisect_record(bib_id BIGINT, score_method TEXT, source TEXT)
  RETURNS BIGINT
