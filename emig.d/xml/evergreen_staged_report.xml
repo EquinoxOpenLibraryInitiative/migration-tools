@@ -443,7 +443,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode ~* '^x_' AND ac.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode ~* '^x_' AND ac.x_migrate = TRUE ORDER BY 1 LIMIT 50</query>
         <note>This is a shortlist of copy barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
@@ -453,7 +453,7 @@
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM m_asset_copy ac WHERE ac.barcode ~* '^x_' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT ac.barcode FROM m_asset_copy ac WHERE ac.barcode ~* '^x_' ORDER BY 1 LIMIT 50</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
     </report>
 
@@ -933,7 +933,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM m_actor_card_legacy acard WHERE acard.barcode ~* '_' AND acard.x_migrate ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM m_actor_card_legacy acard WHERE acard.barcode ~* '_' AND acard.x_migrate ORDER BY 1 LIMIT 50</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a supplemental report.</note>
     </report>
 
@@ -943,7 +943,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM m_actor_card acard WHERE acard.barcode ~* '_' ORDER BY 1 LIMIT 20</query>
+        <query>SELECT acard.barcode FROM m_actor_card acard WHERE acard.barcode ~* '_' ORDER BY 1 LIMIT 50</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a supplemental report.</note>
     </report>
 
