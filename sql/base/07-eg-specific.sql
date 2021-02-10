@@ -2376,6 +2376,21 @@ END
 $func$
 LANGUAGE PLPGSQL;
 
+CREATE OR REPLACE FUNCTION migration_tools.set_blank_item_barcodes (barcode_prefix TEXT) RETURNS VOID AS $func$
+DECLARE
+       collisions INTEGER DEFAULT 0;
+BEGIN
+    SELECT COUNT(*) FROM m_asset_copy_legacy WHERE x_migrate AND barcode IS NULL OR barcode = '' INTO collisions;
+
+    RAISE NOTICE 'blank barcodes % being set', collisions;
+
+    UPDATE m_asset_copy_legacy SET barcode = CONCAT_WS('_',barcode_prefix,id::TEXT)
+    WHERE barcode IS NULL OR barcode = '' AND x_migrate;
+
+END
+$func$
+LANGUAGE PLPGSQL;
+
 CREATE OR REPLACE FUNCTION migration_tools.fix_usrname_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
 DECLARE 
        collisions INTEGER DEFAULT 0;
