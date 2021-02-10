@@ -764,6 +764,15 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
+        <name>bibs_circ_mod_by_search_format</name>
+        <report_title>Bibliographic Search Formats by Circ Mods</report_title>
+        <tag>bibs</tag>
+        <iteration>0</iteration>
+        <heading>Search Formats.Circ Mods.Count</heading>
+        <query>SELECT ARRAY_TO_STRING(x_search_format,','), (SELECT ARRAY_TO_STRING(ARRAY_AGG(DISTINCT circ_modifier),',') FROM m_asset_copy_legacy WHERE x_final_bib = b.id) AS "circ mods", COUNT(*) FROM m_biblio_record_entry_legacy b GROUP BY 1,2 ORDER BY 1,2</query>
+    </report>
+
+    <report>
         <name>bibs_notes</name>
         <report_title>Bib Record Notes</report_title>
         <tag>bibs</tag>
