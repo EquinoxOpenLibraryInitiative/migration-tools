@@ -892,15 +892,6 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
 
     <report>
-        <name>active_usrs</name>
-        <report_title>Patron Cards</report_title>
-        <tag>actors</tag>
-        <iteration>1</iteration>
-        <heading>Count of Users</heading>
-        <query>SELECT COUNT(id) FROM m_actor_usr</query>
-    </report>
-
-    <report>
         <name>active_usr_barcodes</name>
         <report_title>Patron Barcodes by Active Status</report_title>
         <tag>actors</tag>
