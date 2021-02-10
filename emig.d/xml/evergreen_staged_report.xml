@@ -817,6 +817,15 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT SUM(array_length(records,1)), COUNT(*) FROM groups</query>
     </report>
 
+    <report>
+        <name>bibs_without_titles</name>
+        <report_title>Records Without Titles</report_title>
+        <tag>bibs</tag>
+        <iteration>0</iteration>
+        <heading>Record TCN</heading>
+        <query>SELECT id FROM reporter.super_simple_record WHERE (title IS NULL OR title = '') AND id IN (SELECT id FROM m_biblio_record_entry)</query>
+    </report>
+
     <!-- ACTORS REPORTS -->
 
     <report>
