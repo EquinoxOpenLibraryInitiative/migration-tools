@@ -180,7 +180,7 @@ while ( my $record = $batch->next() ) {
     #check for 245$as
     my $title = $record->field('245')->subfield("a");
     my $zzo = $record->field('001')->data();
-    if (!defined $title) { push @zzo_wo_titles, @zzo; }
+    if (!defined $title) { push @zzo_wo_titles, $zzo; }
     #process 856s
     @fields = $record->field('856');
     my $enc = substr $record->leader(), 9, 1;
