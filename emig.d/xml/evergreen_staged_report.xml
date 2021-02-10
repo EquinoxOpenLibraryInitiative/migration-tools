@@ -478,6 +478,15 @@
 -->
 
     <report>
+        <name>m_asset_floating</name>
+        <report_title>Floating Copies</report_title>
+        <tag>assets</tag>
+        <iteration>0</iteration>
+        <heading>Copy Count.Branch.Floating Collection</heading>
+        <query>SELECT COUNT(acp.id), aou.shortname, fl.name FROM m_asset_copy_legacy acp JOIN actor.org_unit aou ON aou.id = acp.circ_lib JOIN config.floating_group fl ON fl.id = acp.floating WHERE x_migrate GROUP BY 2, 3</query>
+    </report>
+
+    <report>
          <name>m_asset_stat_cats</name>
         <report_title>Copy Statistical Categories</report_title>
         <tag>assets</tag>
