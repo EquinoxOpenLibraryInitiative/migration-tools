@@ -913,7 +913,8 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM m_actor_card_legacy acard WHERE barcode ~* '^x_' AND x_migrate = TRUE</query>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card_legacy acard WHERE barcode ~* '_' AND x_migrate</query>
+        <note>This count may be off if any migrating barcodes have underscores in them.</note>
     </report>
 
     <report>
@@ -922,7 +923,8 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM m_actor_card acard WHERE barcode ~* '^x_'</query>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card acard WHERE barcode ~* '_'</query>
+        <note>This count may be off if any migrating barcodes have underscores in them.</note>
     </report>
 
     <report>
@@ -931,8 +933,8 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM m_actor_card_legacy acard WHERE acard.barcode ~* '^x_' AND acard.x_migrate = TRUE ORDER BY 1 LIMIT 20</query>
-        <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
+        <query>SELECT acard.barcode FROM m_actor_card_legacy acard WHERE acard.barcode ~* '_' AND acard.x_migrate ORDER BY 1 LIMIT 20</query>
+        <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a supplemental report.</note>
     </report>
 
     <report>
@@ -941,8 +943,8 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT acard.barcode FROM m_actor_card acard WHERE acard.barcode ~* '^x_%' ORDER BY 1 LIMIT 20</query>
-        <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.  In some cases we may flag individual accounts to not migrate.</note>
+        <query>SELECT acard.barcode FROM m_actor_card acard WHERE acard.barcode ~* '_' ORDER BY 1 LIMIT 20</query>
+        <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a supplemental report.</note>
     </report>
 
     <report>
