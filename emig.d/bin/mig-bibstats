@@ -322,10 +322,10 @@ if ($exportbarcodes) {
     close $out_fh;
 } else { print "done\n"; }
 
-if (!defined @zzo_wo_titles) { print "all records have a 245a \n"; }
-	else {
-		foreach my $z (@zzo_wo_titles) { print "001 of record with no 245a : $z\n"; }
-	}
+my $zzo_length;
+$zzo_length = scalar @zzo_wo_titles; 
+print "number of bibs without a 245a $zzo_length \n";
+foreach my $z (@zzo_wo_titles) { print "001 of record with no 245a : $z\n"; }
 
 
 close $file;
