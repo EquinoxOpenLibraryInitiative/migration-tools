@@ -151,6 +151,7 @@ my %bib_types_by_item_type;
 my @holding_code_strings;
 my %holding_counts;
 my %barcode_counts;
+my @zzo_wo_titles;
 
 foreach (@ilses) { 
     $holding_counts{@$_[0]} = 0; 
@@ -176,6 +177,10 @@ while ( my $record = $batch->next() ) {
         my $v = $holding_counts{$ils};
         if ($l) { $holding_counts{$ils} = $v + $l; }
     }
+    #check for 245$as
+    my $title = $record->field('245')->subfield("a");
+    my $zzo = $record->field('001')->data();
+    if (!defined $title) { push @zzo_wo_titles, @zzo; }
     #process 856s
     @fields = $record->field('856');
     my $enc = substr $record->leader(), 9, 1;
@@ -315,7 +320,9 @@ if ($exportbarcodes) {
         if ($temp_ils_name eq $exportbarcodes) { print $out_fh "@$h[1]\n" }
     }
     close $out_fh;
-} else { print "frack\n"; }
+} else { print "done\n"; }
+
+foreach my $z (@zzo_wo_titles) { print "001 of record with no 245a : $z\n"; }
 
 close $file;
 
