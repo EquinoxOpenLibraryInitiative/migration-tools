@@ -2376,7 +2376,7 @@ END
 $func$
 LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION migration_tools.fix_barcode_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
+CREATE OR REPLACE FUNCTION migration_tools.fix_usrname_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
 DECLARE 
        collisions INTEGER DEFAULT 0;
 BEGIN
@@ -2391,7 +2391,7 @@ BEGIN
 
     RAISE NOTICE 'usrname collisions against incumbents being fixed: %', collisions; 
 
-    UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS(barcode_prefix,'_',usrname) 
+    UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,usrname) 
     WHERE usrname IN (SELECT DISTINCT usrname FROM temp_incumbent_collisions) 
     AND x_migrate;
 
