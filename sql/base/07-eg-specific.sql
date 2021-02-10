@@ -2416,7 +2416,7 @@ END
 $func$
 LANGUAGE PLPGSQL;
 
-CREATE OR REPLACE FUNCTION migration_tools.fix_usrname_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
+CREATE OR REPLACE FUNCTION migration_tools.incumbent_usrname_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
 DECLARE 
        collisions INTEGER DEFAULT 0;
 BEGIN
