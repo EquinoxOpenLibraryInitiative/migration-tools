@@ -423,8 +423,8 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* '^x_'</query>
-        <note>Incumbent collisions are those where the migrated barcodes collide with existing barcodes in the database.</note>
+        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* '_'</query>
+        <note>Collisions where a barcode is duplicated or empty.  The count could be inaccurate if migrated barcodes have an underscore.</note>
     </report>
 
     <report>
@@ -433,30 +433,31 @@
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM m_asset_copy WHERE barcode ~* '^x_'</query>
-        <note>Incumbent collisions are those where the migrated barcodes collide with existing barcodes in the database.</note>
+        <query>SELECT COUNT(id) FROM m_asset_copy WHERE barcode ~* '_'</query>
+        <note>Collisions where a barcode is duplicated or empty.  The count could be inaccurate if migrated barcodes have an underscore.</note>
     </report>
 
     <report>
         <name>m_asset_barcode_collisions_shortlist</name>
-        <report_title>Copy Barcode Collisions (first 20)</report_title>
+        <report_title>Copy Barcode Collisions</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode ~* '^x_' AND ac.x_migrate = TRUE ORDER BY 1 LIMIT 50</query>
-        <note>This is a shortlist of copy barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
+        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode ~* '_' AND ac.x_migrate = TRUE ORDER BY 1 LIMIT 50</query>
+        <note>This is a shortlist of copy barcode collisions that maxes out at 50.  If there are more collisions we will need a supplemental report.</note>
     </report>
 
     <report>
         <name>m_asset_barcode_collisions_shortlist</name>
-        <report_title>Copy Barcode Collisions (first 20)</report_title>
+        <report_title>Copy Barcode Collisions</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM m_asset_copy ac WHERE ac.barcode ~* '^x_' ORDER BY 1 LIMIT 50</query>
-        <note>This is a shortlist of patron barcode collisions that maxes out at 20.  If there are more collisions we will need to run a custom report.</note>
+        <query>SELECT ac.barcode FROM m_asset_copy ac WHERE ac.barcode ~* '_' ORDER BY 1 LIMIT 50</query>
+        <note>This is a shortlist of patron barcode collisions that maxes out at 50.  If there are more collisions we will need a supplemental report.</note>
     </report>
 
+<!--
     <report>
         <name>m_asset_barcode_collision_patterns</name>
         <report_title>Common Copy Barcode Collision Patterns</report_title>
@@ -474,6 +475,7 @@
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
         <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy ac WHERE barcode ~* '^x_' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
+-->
 
     <report>
          <name>m_asset_stat_cats</name>
