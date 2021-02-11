@@ -1,4 +1,17 @@
 
+CREATE OR REPLACE FUNCTION migration_tools.dnm_grocery(grocery_id BIGINT, dnm TEXT)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+   UPDATE m_money_grocery_legacy SET x_migrate = FALSE,
+      x_migrate_reason = ARRAY_APPEND(x_migrate_reason,dnm)
+      WHERE id = grocery_id
+   ;
+   RETURN grocery_id;
+END
+$function$;
+
 CREATE OR REPLACE FUNCTION migration_tools.dnm_hold(hold_id BIGINT, dnm TEXT)
 RETURNS BIGINT
 LANGUAGE plpgsql
