@@ -1,3 +1,56 @@
+
+CREATE OR REPLACE FUNCTION migration_tools.dnm_hold(hold_id BIGINT, dnm TEXT)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+   UPDATE m_action_hold_request_legacy SET x_migrate = FALSE,
+      x_migrate_reason = ARRAY_APPEND(x_migrate_reason,dnm)
+      WHERE id = hold_id
+   ;
+   RETURN hold_id;
+END
+$function$;
+
+CREATE OR REPLACE FUNCTION migration_tools.dnm_circ(circ_id BIGINT, dnm TEXT)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+   UPDATE m_action_circulation_legacy SET x_migrate = FALSE,
+      x_migrate_reason = ARRAY_APPEND(x_migrate_reason,dnm)
+      WHERE id = circ_id
+   ;
+   RETURN circ_id;
+END
+$function$;
+
+CREATE OR REPLACE FUNCTION migration_tools.dnm_copy(acp_id BIGINT, dnm TEXT)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+   UPDATE m_asset_copy_legacy SET x_migrate = FALSE, 
+      x_migrate_reason = ARRAY_APPEND(x_migrate_reason,dnm)
+      WHERE id = acp_id
+   ;
+   RETURN acp_id;
+END
+$function$;
+
+CREATE OR REPLACE FUNCTION migration_tools.dnm_usr(au_id INTEGER, dnm TEXT)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+   UPDATE m_actor_usr_legacy SET x_migrate = FALSE, 
+	  x_migrate_reason = ARRAY_APPEND(x_migrate_reason,dnm)
+	  WHERE id = au_id
+   ;
+   RETURN au_id;
+END
+$function$;
+
 CREATE OR REPLACE FUNCTION migration_tools.str_to_numeric(str TEXT)
 RETURNS NUMERIC
 LANGUAGE plpgsql
