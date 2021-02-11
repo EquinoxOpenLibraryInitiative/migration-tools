@@ -317,6 +317,15 @@
         <query>SELECT COUNT(ahr.id), ahr.selection_depth FROM action.hold_request ahr WHERE ahr.id IN (SELECT id FROM m_action_hold_request) AND ahr.cancel_time IS NULL AND ahr.capture_time IS NULL AND ahr.fulfillment_time IS NULL GROUP BY 2 ORDER BY 2</query>
     </report>
 
+     <report>
+        <name>non_migrating_hold_reasons</name>
+        <tag>holds</tag>
+        <iteration>0</iteration>
+        <report_title>Causes of Non-Migrating Holds</report_title>
+        <heading>Count.Causes</heading>
+        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_action_hold_request_legacy GROUP BY 2</query>
+    </report>
+
     <!-- ASSET REPORTS -->
     
     <report>
