@@ -257,7 +257,7 @@
         <iteration>0</iteration>
         <report_title>Causes of Non-Migrating Circulations</report_title>
         <heading>Count.Causes</heading>
-        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_action_circulation_legacy GROUP BY 2</query>
+        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_action_circulation_legacy WHERE NOT x_migrate GROUP BY 2</query>
     </report>
 
 
@@ -323,7 +323,7 @@
         <iteration>0</iteration>
         <report_title>Causes of Non-Migrating Holds</report_title>
         <heading>Count.Causes</heading>
-        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_action_hold_request_legacy GROUP BY 2</query>
+        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_action_hold_request_legacy WHERE NOT x_migrate GROUP BY 2</query>
     </report>
 
     <!-- ASSET REPORTS -->
@@ -559,6 +559,16 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <heading>Alert Count.Alert Type</heading>
         <query>SELECT COUNT(*), cat.name FROM m_asset_copy_alert aca JOIN config.copy_alert_type cat ON cat.id = aca.alert_type GROUP BY 2</query>
     </report>
+
+     <report>
+        <name>non_migrating_copy_reasons</name>
+        <tag>assets</tag>
+        <iteration>0</iteration>
+        <report_title>Causes of Non-Migrating Copies</report_title>
+        <heading>Count.Causes</heading>
+        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_asset_copy_legacy WHERE NOT x_migrate GROUP BY 2</query>
+    </report>
+
 
     <!-- MONEY REPORTS -->
 
@@ -1133,6 +1143,15 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
             UNION ALL SELECT COUNT(*), name, value FROM m_actor_usr_setting WHERE name IN ('opac.hold_notify') GROUP BY 2, 3 
             UNION ALL SELECT COUNT(*), a.name, aou.shortname FROM m_actor_usr_setting a JOIN actor.org_unit aou ON aou.id = REPLACE(a.value,'"','')::INTEGER 
                 WHERE a.name IN ('opac.default_pickup_location','opac.default_search_location') GROUP BY 2, 3 ORDER BY 2, 3;</query>
+    </report>
+
+     <report>
+        <name>non_migrating_actor_reasons</name>
+        <tag>actors</tag>
+        <iteration>0</iteration>
+        <report_title>Causes of Non-Migrating Users</report_title>
+        <heading>Count.Causes</heading>
+        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_actor_usr_legacy WHERE NOT x_migrate GROUP BY 2</query>
     </report>
 
     <!-- ACQUISITIONS REPORTS -->
