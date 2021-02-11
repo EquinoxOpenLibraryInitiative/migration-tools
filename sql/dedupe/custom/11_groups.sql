@@ -22,7 +22,7 @@ BEGIN
        INSERT INTO exclude_from_batch (record,reason) SELECT UNNEST(records), 'group exceeds limit' FROM groups 
        WHERE ARRAY_LENGTH(records,1) > group_limit;
        DELETE FROM groups WHERE ARRAY_LENGTH(records,1) > group_limit RETURNING * INTO deleted_count;
-       RAISE INFO 'groups deleted is %', deleted_count;
+       RAISE INFO 'groups deleted due to size is %', deleted_count;
     END IF;
 END $$;
 

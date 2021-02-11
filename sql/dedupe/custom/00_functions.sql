@@ -76,6 +76,9 @@ BEGIN
     IF setting_name = 'cm variation' AND setting_value = '' THEN
         setting_value = '1234567';
     END IF;
+    IF setting_name = 'merge_group_limit' AND setting_value = '' THEN  
+        setting_value = '15';
+	END IF;
     RETURN setting_value;
 END;
 $function$;
