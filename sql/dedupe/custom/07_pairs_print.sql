@@ -10,6 +10,9 @@ BEGIN
     EXECUTE format('SET %I TO %L', 'var.description_cm_range', (dedupe_setting('cm variation')::INTEGER));
 END $$;
 
+SELECT 'page range is ', current_setting('var.description_page_range')::INTEGER;
+SELECT 'cm range is ', current_setting('var.description_cm_range')::INTEGER;
+
 -- if doing a migration dedupe 'a' is the incumbent records and 'b' are the incoming 
 
 
@@ -95,6 +98,7 @@ WHERE
     AND ((a.titlepart = b.titlepart) OR (a.titlepart IS NULL AND b.titlepart IS NULL))
     AND ((a.titlepartname = b.titlepartname) OR (a.titlepartname IS NULL AND b.titlepartname IS NULL))
     AND dedupe_setting('merge tacs forgiving print') = 'TRUE'
+	AND (current_setting('var.description_cm_range')::INTEGER != 1234567 AND current_setting('var.description_cm_range')::INTEGER != 1234567)
 ;
 
 -- stock manga match set based on publisher list 

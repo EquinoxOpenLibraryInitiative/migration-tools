@@ -69,12 +69,12 @@ BEGIN
         SELECT value FROM dedupe_features WHERE name = setting_name 
             AND org = (SELECT shortname FROM actor.org_unit WHERE id = 1)
             INTO setting_value;
-        IF setting_name = 'page variation' AND setting_value IS NULL THEN 
-            setting_value = '10000000';
-        END IF;
-        IF setting_name = 'cm variation' AND setting_value IS NULL THEN 
-            setting_value = '100000';
-        END IF;
+    END IF;
+    IF setting_name = 'page variation' AND setting_value = '' THEN
+        setting_value = '1234567';
+    END IF;
+    IF setting_name = 'cm variation' AND setting_value = '' THEN
+        setting_value = '1234567';
     END IF;
     RETURN setting_value;
 END;
