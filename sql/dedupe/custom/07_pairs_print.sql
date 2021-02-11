@@ -11,6 +11,9 @@ BEGIN
 END $$;
 
 -- if doing a migration dedupe 'a' is the incumbent records and 'b' are the incoming 
+
+
+-- stock isbn match set
 INSERT INTO pairs (merge_set,records,match_set)
 SELECT
     'tacs isbn'
@@ -42,6 +45,7 @@ WHERE
     AND dedupe_setting('merge tacs isbn') = 'TRUE'
 ;
 
+-- not recommended for most libraries 
 INSERT INTO pairs (merge_set,records,match_set)
 SELECT
     'tacs forgiving print'
@@ -93,6 +97,7 @@ WHERE
     AND dedupe_setting('merge tacs forgiving print') = 'TRUE'
 ;
 
+-- stock manga match set based on publisher list 
 INSERT INTO pairs (merge_set,records,match_set)
 SELECT
     'tcs manga'
@@ -120,6 +125,7 @@ WHERE
     AND dedupe_setting('merge tac manga') = 'TRUE'
 ;
 
+-- stock issn match set 
 INSERT INTO pairs (merge_set,records,match_set)
 SELECT
     'tacs issn'
@@ -147,6 +153,7 @@ WHERE
     AND dedupe_setting('merge tacs issn') = 'TRUE'
 ;
 
+-- not recommended for most libraries 
 INSERT INTO pairs (merge_set,records,match_set)
 SELECT
     'tacs pubdate'

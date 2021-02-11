@@ -1,3 +1,5 @@
+
+-- not recommended for most libraries, the stock print one will take care of electronic records since they have isbns for cover retrieval
 INSERT INTO pairs (merge_set,records,match_set)
 SELECT
     'tacs forgiving ebooks'
@@ -26,6 +28,7 @@ WHERE
     AND dedupe_setting('merge tacs forgiving ebooks') = 'TRUE'
 ;
 
+-- not recommended for most libraries 
 INSERT INTO pairs (merge_set,records,match_set)
 SELECT
     'tacs forgiving e-av'
