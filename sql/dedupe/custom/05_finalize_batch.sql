@@ -167,35 +167,22 @@ UPDATE dedupe_batch SET publisher = NULL WHERE publisher = '{}';
 UPDATE dedupe_batch SET rda_publisher = NULL WHERE rda_publisher = '{}';
 UPDATE dedupe_batch SET oclc_values = NULL WHERE oclc_values = '{}';
 
-UPDATE 
-    dedupe_batch
-SET
-    search_format = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(search_format,'')))
-    ,content_type = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(content_type,'')))
-    ,carrier_type = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(carrier_type,'')))
-    ,media_type = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(media_type,'')))
-;
+UPDATE dedupe_batch SET search_format = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(search_format,'')));
+UPDATE dedupe_batch SET content_type = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(content_type,'')));
+UPDATE dedupe_batch SET carrier_type = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(carrier_type,'')));
+UPDATE dedupe_batch SET media_type = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(media_type,'')));
+UPDATE dedupe_batch SET pubdate = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(pubdate,'')));
+UPDATE dedupe_batch SET publisher = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(publisher,'')));
+UPDATE dedupe_batch SET all_pubdates = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(all_pubdates,'')));
+UPDATE dedupe_batch SET all_publishers = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(all_publishers,'')));
+UPDATE dedupe_batch SET edition_terms = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(edition_terms,'')));
+UPDATE dedupe_batch SET languages = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(languages,'')));
+UPDATE dedupe_batch SET added_entries = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(added_entries,'')));
+UPDATE dedupe_batch SET oclc_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(oclc_values,'')));
+UPDATE dedupe_batch SET isbn_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(isbn_values,'')));
+UPDATE dedupe_batch SET upc_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(upc_values,'')));
+UPDATE dedupe_batch SET issn_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(issn_values,'')));
 
-UPDATE 
-	dedupe_batch
-SET 
-	pubdate = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(pubdate,'')))
-	,publisher = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(publisher,'')))
-	,all_pubdates = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(all_pubdates,'')))
-	,all_publishers = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(all_publishers,'')))
-;
-
-UPDATE 
-	dedupe_batch
-SET
-	edition_terms = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(edition_terms,'')))
-	,languages = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(languages,'')))
-    ,added_entries = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(added_entries,'')))
-    ,oclc_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(oclc_values,'')))
-    ,isbn_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(isbn_values,'')))
-    ,upc_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(upc_values,'')))
-    ,issn_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(issn_values,'')))
-;
 
 UPDATE
     dedupe_batch
