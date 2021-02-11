@@ -689,6 +689,15 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <query>SELECT COUNT(a.id), a.voided::TEXT, SUM(a.amount), a.x_migrate::TEXT FROM m_money_credit_payment_legacy a GROUP BY 2, 4 ORDER BY 2, 4</query>
     </report>
 
+     <report>
+        <name>non_migrating_grocery_reasons</name>
+        <tag>money</tag>
+        <iteration>0</iteration>
+        <report_title>Causes of Non-Migrating Grocery Bills</report_title>
+        <heading>Count.Causes</heading>
+        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_money_grocery_legacy WHERE NOT x_migrate GROUP BY 2</query>
+    </report>
+
 
     <!-- BIBS REPORTS -->
 
