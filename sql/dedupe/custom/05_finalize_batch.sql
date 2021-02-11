@@ -90,7 +90,7 @@ UPDATE dedupe_batch SET score_penalty = score_penalty + 10 WHERE search_format I
 UPDATE dedupe_batch SET score_penalty = score_penalty + 5 WHERE record IN 
 	(SELECT DISTINCT record FROM metabib.real_full_rec WHERE tag = '919' AND subfield = 'a' AND value ~* 'modified' AND value ~* 'fixed field');
 
--- remove various media on request 
+-- derived takes low quality records with no search format and assigns within the dedupe a search format based on shelving locations of copies  
 
 UPDATE 
 	dedupe_batch 

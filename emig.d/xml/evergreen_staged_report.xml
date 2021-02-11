@@ -251,6 +251,16 @@
         <query>SELECT COUNT(acirc.id), ccs.name FROM action.circulation acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN config.copy_status ccs ON ccs.id = ac.status WHERE acirc.xact_finish IS NULL AND acirc.checkin_time IS NULL AND acirc.id IN (SELECT id FROM m_action_circulation) GROUP BY 2 ORDER BY 2</query>
     </report>
 
+     <report>
+        <name>non_migrating_circ_reasons</name>
+        <tag>circs</tag>
+        <iteration>0</iteration>
+        <report_title>Causes of Non-Migrating Circulations</report_title>
+        <heading>Count.Causes</heading>
+        <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_action_circulation_legacy GROUP BY 2</query>
+    </report>
+
+
     <!-- HOLDS REPORTS -->
 
      <report>
