@@ -152,13 +152,17 @@ my @holding_code_strings;
 my %holding_counts;
 my %barcode_counts;
 my @zzo_wo_titles;
+my $bad_bibs = 0;
+my $no_zzo = 0;
+my $no_title = 0;
+my $record;
 
 foreach (@ilses) { 
     $holding_counts{@$_[0]} = 0; 
     $barcode_counts{@$_[0]} = 0;
 }
 
-while ( my $record = $batch->next() ) {
+while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; print "unreadable bib found at $i\n"; next; } } ) {
     $i++;
     #check holdings, bit time consuming but more future proof
     foreach (@ilses) {
@@ -178,9 +182,14 @@ while ( my $record = $batch->next() ) {
         if ($l) { $holding_counts{$ils} = $v + $l; }
     }
     #check for 245$as
-    my $title = $record->field('245')->subfield("a");
-    my $zzo = $record->field('001')->data();
-    if (!defined $title) { push @zzo_wo_titles, $zzo; }
+    my $title;
+    if ( $record->field('245') ) {
+		if ( $record->field('245')->subfield("a") ) { $title = $record->field('245')->subfield("a"); }
+	}
+    my $zzo;
+    if ( $record->field('001') ) { $zzo = $record->field('001')->data(); } else { $no_zzo++; }
+    if (!defined $title) { $no_title++; }
+    if (!defined $title and $zzo) { push @zzo_wo_titles, $zzo; }
     #process 856s
     @fields = $record->field('856');
     my $enc = substr $record->leader(), 9, 1;
@@ -295,6 +304,7 @@ print "  $uri_valid_count 856 fields with a subfield u and valid indicators\n";
 print "  $uri_sub9_count 856 fields have a subfield 9\n";
 print "  $title_sub0 100 fields have a subfield 0\n";
 print "  $author_sub0 245 fields have a subfield 0\n";
+print "  $bad_bibs failed to be processed\n";
 
 print "\n===== Holdings Analysis\n";
 foreach my $key (keys %holding_counts) {
@@ -322,10 +332,9 @@ if ($exportbarcodes) {
     close $out_fh;
 } else { print "done\n"; }
 
-my $zzo_length;
-$zzo_length = scalar @zzo_wo_titles; 
-print "number of bibs without a 245a $zzo_length \n";
-foreach my $z (@zzo_wo_titles) { print "001 of record with no 245a : $z\n"; }
+print "number of bibs without a 001 $no_zzo\n";
+print "number of bibs without a 245a $no_title \n";
+foreach my $z (@zzo_wo_titles) { print "001 of record with no 245a (if they have a 001) : $z\n"; }
 
 
 close $file;
