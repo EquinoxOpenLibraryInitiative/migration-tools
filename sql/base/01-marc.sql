@@ -429,7 +429,7 @@ CREATE OR REPLACE FUNCTION migration_tools.get_marc_tags_filtered (TEXT, TEXT, T
     return \@texts;
 $$ LANGUAGE PLPERLU STABLE;
 
-DROP FUNCTION IF EXISTS migration_tools.munge_sf9(BIGINT,TEXT,TEXT);
+DROP FUNCTION IF EXISTS migration_tools.merge_sf9(BIGINT,TEXT,TEXT);
 CREATE OR REPLACE FUNCTION migration_tools.merge_sf9(bib_id BIGINT,new_sf9 TEXT,force TEXT DEFAULT 'false')
     RETURNS BOOLEAN AS
 $BODY$
