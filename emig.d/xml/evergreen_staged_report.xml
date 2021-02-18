@@ -437,24 +437,45 @@
     </report>
 
     <report>
-        <name>m_asset_barcode_collisions</name>
-        <report_title>Copy Barcode Collisions</report_title>
+        <name>incumbent_m_asset_barcode_collisions</name>
+        <report_title>Incumbent Copy Barcode Collisions</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* '_'</query>
+        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 2</query>
         <note>Collisions where a barcode is duplicated or empty.  The count could be inaccurate if migrated barcodes have an underscore.</note>
     </report>
 
     <report>
-        <name>m_asset_barcode_collisions</name>
-        <report_title>Copy Barcode Collisions</report_title>
+        <name>incumbent_m_asset_barcode_collisions</name>
+        <report_title>Incumbent Copy Barcode Collisions</report_title>
         <tag>assets</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM m_asset_copy WHERE barcode ~* '_'</query>
+        <query>SELECT COUNT(id) FROM m_asset_copy WHERE barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 2</query>
         <note>Collisions where a barcode is duplicated or empty.  The count could be inaccurate if migrated barcodes have an underscore.</note>
     </report>
+
+    <report>
+        <name>incoming_m_asset_barcode_collisions</name>
+        <report_title>Incoming Copy Barcode Collisions</report_title>
+        <tag>assets</tag>
+        <iteration>0</iteration>
+        <heading>Collision Count</heading>
+        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 3</query>
+        <note>Collisions where a barcode is duplicated or empty.  The count could be inaccurate if migrated barcodes have an underscore.</note>
+    </report>
+
+    <report>
+        <name>incoming_m_asset_barcode_collisions</name>
+        <report_title>Incoming Copy Barcode Collisions</report_title>
+        <tag>assets</tag>
+        <iteration>1</iteration>
+        <heading>Collision Count</heading>
+        <query>SELECT COUNT(id) FROM m_asset_copy WHERE barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 3</query>
+        <note>Collisions where a barcode is duplicated or empty.  The count could be inaccurate if migrated barcodes have an underscore.</note>
+    </report>
+
 
     <report>
         <name>m_asset_barcode_collisions_shortlist</name>
@@ -966,22 +987,42 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
     </report>
  
    <report>
-        <name>usr_barcode_collisions</name>
-        <report_title>Patron Barcode Collisions</report_title>
+        <name>incumbent_usr_barcode_collisions</name>
+        <report_title>Incumbent Patron Barcode Collisions</report_title>
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM m_actor_card_legacy acard WHERE barcode ~* '_' AND x_migrate</query>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card_legacy acard WHERE barcode ~* '_' AND x_migrate AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 2</query>
         <note>This count may be off if any migrating barcodes have underscores in them.</note>
     </report>
 
     <report>
-        <name>usr_barcode_collisions</name>
-        <report_title>Patron Barcode Collisions</report_title>
+        <name>incumbent_usr_barcode_collisions</name>
+        <report_title>Incumbent Patron Barcode Collisions</report_title>
         <tag>actors</tag>
         <iteration>1</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(acard.id) FROM m_actor_card acard WHERE barcode ~* '_'</query>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card acard WHERE barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 2</query>
+        <note>This count may be off if any migrating barcodes have underscores in them.</note>
+    </report>
+
+   <report>
+        <name>incoming_usr_barcode_collisions</name>
+        <report_title>Incoming Patron Barcode Collisions</report_title>
+        <tag>actors</tag>
+        <iteration>0</iteration>
+        <heading>Collision Count</heading>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card_legacy acard WHERE barcode ~* '_' AND x_migrate ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 3</query>
+        <note>This count may be off if any migrating barcodes have underscores in them.</note>
+    </report>
+
+    <report>
+        <name>incoming_usr_barcode_collisions</name>
+        <report_title>Incoming Patron Barcode Collisions</report_title>
+        <tag>actors</tag>
+        <iteration>1</iteration>
+        <heading>Collision Count</heading>
+        <query>SELECT COUNT(acard.id) FROM m_actor_card acard WHERE barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 3</query>
         <note>This count may be off if any migrating barcodes have underscores in them.</note>
     </report>
 
