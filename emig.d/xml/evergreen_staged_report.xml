@@ -414,8 +414,8 @@
         <report_title>Copies with a Location of Stacks</report_title>
         <tag>assets</tag>
         <iteration>0</iteration>
-        <heading>Barcode</heading>
-        <query>SELECT barcode FROM m_asset_copy_legacy WHERE location = 1 AND x_migrate</query>
+        <heading>Number of Copies</heading>
+        <query>SELECT COUNT(*) FROM m_asset_copy_legacy WHERE location = 1 AND x_migrate</query>
     </report>
 
     <report>
