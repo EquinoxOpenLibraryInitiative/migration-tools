@@ -361,7 +361,7 @@ sub check_table {
     while ($i > -1) {
         if ($qe[$i] eq 'FROM' or $qe[$i] eq 'JOIN') {
             my $q = $i + 1;
-            if ($qe[$q] ne '(SELECT') {
+            if ($qe[$q] ne '(SELECT' and $qe[$q] ~ /^m_/) {
                 push @tables, $qe[$q];            
             }
         }
