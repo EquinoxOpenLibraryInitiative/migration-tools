@@ -828,7 +828,42 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Search Formats.Circ Mods.Count</heading>
-        <query>SELECT ARRAY_TO_STRING(x_search_format,','), (SELECT ARRAY_TO_STRING(ARRAY_AGG(DISTINCT circ_modifier),',') FROM m_asset_copy_legacy WHERE x_final_bib = b.id) AS "circ mods", COUNT(*) FROM m_biblio_record_entry_legacy b GROUP BY 1,2 ORDER BY 1,2</query>
+        <query>
+WITH search_formats AS (
+    SELECT 
+         bre.id 
+        ,(SELECT ARRAY_TO_STRING(ARRAY_AGG(DISTINCT raf.value),',')) AS value 
+    FROM 
+        biblio.record_entry bre 
+    JOIN
+        metabib.record_attr_flat raf ON raf.id = bre.id 
+    WHERE 
+        bre.id IN (SELECT x_final_bib FROM m_asset_copy_legacy WHERE x_migrate)
+        AND raf.attr = 'search_format'
+    GROUP BY 1
+),
+circ_mods AS (
+    SELECT 
+         x_final_bib
+        ,(SELECT ARRAY_TO_STRING(ARRAY_AGG(DISTINCT circ_modifier),',')) AS value
+    FROM 
+        m_asset_copy_legacy
+    WHERE 
+        x_migrate 
+    GROUP BY 1
+)
+SELECT 
+    COUNT(*)
+    ,cm.value AS "Circ Modifiiers"
+    ,sf.value AS "Search Formats"
+FROM 
+    circ_mods cm 
+JOIN 
+    search_formats sf ON sf.id = cm.x_final_bib 
+GROUP BY 2, 3
+ORDER BY 2, 3
+;
+</query>
     </report>
 
     <report>
