@@ -106,7 +106,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Org Unit</report_title>
         <heading>Circulations Count.Org Unit</heading>
-        <query>SELECT COUNT(acirc.id), aou.name FROM m_action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.xact_finish IS NULL AND x_migrate = TRUE GROUP BY 2</query>
+        <query>SELECT COUNT(acirc.id), aou.name FROM m_action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.xact_finish IS NULL AND x_migrate GROUP BY 2</query>
     </report>
 
      <report>
@@ -124,7 +124,7 @@
         <iteration>0</iteration>
         <report_title>Migrated Circulations by Duration, Fine and Max Fine</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine</heading>
-        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule FROM m_action_circulation_legacy WHERE x_migrate = TRUE GROUP BY 2, 3, 4</query>
+        <query>SELECT COUNT(id), duration_rule, recurring_fine_rule, max_fine_rule FROM m_action_circulation_legacy WHERE x_migrate GROUP BY 2, 3, 4</query>
     </report>
 
      <report>
@@ -142,7 +142,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Patron Group</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.User Group.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name, x.buildrows FROM m_action_circulation_legacy acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM m_action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, pgt.name, x.buildrows FROM m_action_circulation_legacy acirc JOIN actor.usr au ON au.id = acirc.usr JOIN permission.grp_tree pgt ON pgt.id = au.profile JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM m_action_circulation_legacy acirc WHERE acirc.x_migrate) x ON x.id = acirc.id WHERE acirc.x_migrate GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
      <report>
@@ -160,7 +160,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Circulation Modifier</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Circulation Modifier.Matchpoints</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier, x.buildrows FROM m_action_circulation_legacy acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM m_action_circulation_legacy acirc WHERE acirc.x_migrate = TRUE) x ON x.id = acirc.id WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, ac.circ_modifier, x.buildrows FROM m_action_circulation_legacy acirc JOIN asset.copy ac ON ac.id = acirc.target_copy JOIN (SELECT acirc.id, ARRAY_TO_STRING(find_cmm(acirc.id),',') AS buildrows FROM m_action_circulation_legacy acirc WHERE acirc.x_migrate) x ON x.id = acirc.id WHERE acirc.x_migrate GROUP BY 2, 3, 4, 5, 6 ORDER BY 2, 3, 4, 5, 6</query>
     </report>
 
      <report>
@@ -179,7 +179,7 @@
         <iteration>0</iteration>
         <report_title>Circulations by Rules and Org Unit</report_title>
         <heading>Count of Circs.Duration.Fine.Max Fine.Library Branch</heading>
-        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM m_action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.x_migrate = TRUE GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
+        <query>SELECT COUNT(acirc.id), acirc.duration_rule, acirc.recurring_fine_rule, acirc.max_fine_rule, aou.name FROM m_action_circulation_legacy acirc JOIN actor.org_unit aou ON aou.id = acirc.circ_lib WHERE acirc.x_migrate GROUP BY 2, 3, 4, 5 ORDER BY 2, 3, 4, 5</query>
     </report>
 
      <report>
@@ -278,7 +278,7 @@
         <iteration>0</iteration>
         <report_title>Migrated Holds By Type</report_title>
         <heading>Hold Type.Hold Count</heading>
-        <query>SELECT hold_type as "Hold Type", COUNT(id) FROM m_action_hold_request_legacy WHERE x_migrate = TRUE GROUP BY 1</query>
+        <query>SELECT hold_type as "Hold Type", COUNT(id) FROM m_action_hold_request_legacy WHERE x_migrate GROUP BY 1</query>
     </report>
 
      <report>
@@ -334,7 +334,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Library</heading>
-        <query>SELECT COUNT(ac.id), aou.name FROM m_asset_copy_legacy ac JOIN actor.org_unit aou ON aou.id = ac.circ_lib WHERE ac.x_migrate = TRUE GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), aou.name FROM m_asset_copy_legacy ac JOIN actor.org_unit aou ON aou.id = ac.circ_lib WHERE ac.x_migrate GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
@@ -352,7 +352,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Status</heading>
-        <query>SELECT COUNT(ac.id), cs.name FROM m_asset_copy_legacy ac JOIN config.copy_status cs ON cs.id = ac.status WHERE ac.x_migrate = TRUE GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), cs.name FROM m_asset_copy_legacy ac JOIN config.copy_status cs ON cs.id = ac.status WHERE ac.x_migrate GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
@@ -361,7 +361,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Circulation Modifier</heading>
-        <query>SELECT COUNT(ac.id), ac.circ_modifier FROM m_asset_copy_legacy ac WHERE ac.x_migrate = TRUE GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), ac.circ_modifier FROM m_asset_copy_legacy ac WHERE ac.x_migrate GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
@@ -370,7 +370,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Note Count.Public</heading>
-        <query>SELECT COUNT(acnote.id), acnote.pub::TEXT FROM m_asset_copy_note_legacy acnote WHERE acnote.x_migrate = TRUE GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(acnote.id), acnote.pub::TEXT FROM m_asset_copy_note_legacy acnote WHERE acnote.x_migrate GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
@@ -388,7 +388,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Volume Count.Library</heading>
-        <query>SELECT COUNT(acn.id), aou.name FROM m_asset_call_number_legacy acn JOIN m_actor_org_unit_legacy aou ON aou.id = acn.owning_lib WHERE acn.x_migrate = TRUE GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(acn.id), aou.name FROM m_asset_call_number_legacy acn JOIN m_actor_org_unit_legacy aou ON aou.id = acn.owning_lib WHERE acn.x_migrate GROUP BY 2 ORDER BY 2</query>
     </report>
 
    <report>
@@ -406,7 +406,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Copy Count.Location.Circ Library</heading>
-        <query>SELECT COUNT(ac.id), acl.name, aou.name FROM m_asset_copy_legacy ac JOIN asset.copy_location acl ON acl.id = ac.location JOIN actor.org_unit aou ON aou.id = ac.circ_lib WHERE ac.x_migrate = TRUE GROUP BY 2, 3 ORDER BY 2, 3</query>
+        <query>SELECT COUNT(ac.id), acl.name, aou.name FROM m_asset_copy_legacy ac JOIN asset.copy_location acl ON acl.id = ac.location JOIN actor.org_unit aou ON aou.id = ac.circ_lib WHERE ac.x_migrate GROUP BY 2, 3 ORDER BY 2, 3</query>
     </report>
 
    <report>
@@ -442,7 +442,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Count of Barcodes (greater than 10).Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE ac.x_migrate = TRUE GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE ac.x_migrate GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -451,7 +451,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 2</query>
+        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate AND barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 2</query>
         <note>Collisions where a barcode is duplicated or empty.  The count could be inaccurate if migrated barcodes have an underscore.</note>
     </report>
 
@@ -471,7 +471,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision Count</heading>
-        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate = TRUE AND barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 3</query>
+        <query>SELECT COUNT(id) FROM m_asset_copy_legacy WHERE x_migrate AND barcode ~* '_' AND ARRAY_LENGTH(STRING_TO_ARRAY(barcode,'_'),1) = 3</query>
         <note>Collisions where a barcode is duplicated or empty.  The count could be inaccurate if migrated barcodes have an underscore.</note>
     </report>
 
@@ -492,7 +492,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Collision List</heading>
-        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode ~* '_' AND ac.x_migrate = TRUE ORDER BY 1 LIMIT 50</query>
+        <query>SELECT ac.barcode FROM m_asset_copy_legacy ac WHERE ac.barcode ~* '_' AND ac.x_migrate ORDER BY 1 LIMIT 50</query>
         <note>This is a shortlist of copy barcode collisions that maxes out at 50.  If there are more collisions we will need a supplemental report.</note>
     </report>
 
@@ -513,7 +513,7 @@
         <tag>assets</tag>
         <iteration>0</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE barcode ~* '^x_' AND ac.x_migrate = TRUE GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE barcode ~* '^x_' AND ac.x_migrate GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -964,7 +964,7 @@ ORDER BY 2, 3
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Library</heading>
-        <query>SELECT COUNT(au.id), aou.name FROM m_actor_usr_legacy au JOIN actor.org_unit aou ON aou.id = au.home_ou WHERE au.x_migrate = TRUE GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(au.id), aou.name FROM m_actor_usr_legacy au JOIN actor.org_unit aou ON aou.id = au.home_ou WHERE au.x_migrate GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
@@ -982,7 +982,7 @@ ORDER BY 2, 3
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count.Permission Group</heading>
-        <query>SELECT COUNT(au.id), pgt.name FROM m_actor_usr_legacy au JOIN permission.grp_tree pgt ON pgt.id = au.profile WHERE au.x_migrate = TRUE GROUP BY 2 ORDER BY 2</query>
+        <query>SELECT COUNT(au.id), pgt.name FROM m_actor_usr_legacy au JOIN permission.grp_tree pgt ON pgt.id = au.profile WHERE au.x_migrate GROUP BY 2 ORDER BY 2</query>
     </report>
 
     <report>
@@ -991,7 +991,7 @@ ORDER BY 2, 3
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Users.Active</heading>
-        <query>SELECT COUNT(id), active::TEXT FROM m_actor_usr_legacy WHERE x_migrate = TRUE GROUP BY 2</query>
+        <query>SELECT COUNT(id), active::TEXT FROM m_actor_usr_legacy WHERE x_migrate GROUP BY 2</query>
     </report>
 
     <report>
@@ -1018,7 +1018,7 @@ ORDER BY 2, 3
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Barcodes (greater than 10).Left 60% of Characters</heading>
-        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM m_actor_card_legacy acard WHERE acard.x_migrate = TRUE GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM m_actor_card_legacy acard WHERE acard.x_migrate GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -1096,7 +1096,7 @@ ORDER BY 2, 3
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM m_actor_card_legacy acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') AND acard.x_migrate = TRUE GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
+        <query>SELECT COUNT(acard.id), LEFT(acard.barcode,(ROUND(LENGTH(acard.barcode)*.6))::INT) FROM m_actor_card_legacy acard WHERE (acard.barcode ~* 'collision' OR acard.barcode ~* '^x_') AND acard.x_migrate GROUP BY 2 HAVING COUNT(acard.id) > 10 ORDER BY 2</query>
     </report>
 
     <report>
@@ -1114,7 +1114,7 @@ ORDER BY 2, 3
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(aua.id) FROM m_actor_usr_address_legacy aua WHERE aua.x_migrate = TRUE</query>
+        <query>SELECT COUNT(aua.id) FROM m_actor_usr_address_legacy aua WHERE aua.x_migrate</query>
     </report>
 
     <report>
@@ -1132,7 +1132,7 @@ ORDER BY 2, 3
         <tag>actors</tag>
         <iteration>0</iteration>
         <heading>Count of Addresses.Pending</heading>
-        <query>SELECT COUNT(aua.id), pending::TEXT FROM m_actor_usr_address_legacy aua WHERE aua.x_migrate = TRUE GROUP BY 2</query>
+        <query>SELECT COUNT(aua.id), pending::TEXT FROM m_actor_usr_address_legacy aua WHERE aua.x_migrate GROUP BY 2</query>
     </report>
 
     <report>
