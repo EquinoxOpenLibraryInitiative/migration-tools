@@ -146,7 +146,6 @@ UPDATE dedupe_batch SET subtitle = NULL WHERE subtitle = '';
 UPDATE dedupe_batch SET titlepart = NULL WHERE titlepart = '';
 UPDATE dedupe_batch SET titlepartname = NULL WHERE titlepartname = '';
 UPDATE dedupe_batch SET author = NULL WHERE author = '';
-UPDATE dedupe_batch SET search_format_str = ARRAY_TO_STRING(search_format,',');
 UPDATE dedupe_batch SET avdisc_flag = TRUE WHERE search_format_str IN ('cd','dvd','blu-ray','cdmusic','cdaudiobook');
 UPDATE dedupe_batch SET isbn_score = 0 WHERE isbn_values IS NULL OR ARRAY_LENGTH(isbn_values,1) < 1;
 UPDATE dedupe_batch SET search_format = NULL WHERE search_format = '{}';
@@ -183,6 +182,7 @@ UPDATE dedupe_batch SET isbn_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(i
 UPDATE dedupe_batch SET upc_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(upc_values,'')));
 UPDATE dedupe_batch SET issn_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(issn_values,'')));
 
+UPDATE dedupe_batch SET search_format_str = ARRAY_TO_STRING(search_format,',');
 
 UPDATE
     dedupe_batch
