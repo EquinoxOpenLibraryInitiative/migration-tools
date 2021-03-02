@@ -552,6 +552,71 @@ return $marc_xml->as_xml_record();
 
 $function$;
 
+DROP FUNCTION IF EXISTS migration_tools.additional_sf9_qualifying_match(TEXT,TEXT,TEXT,TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.additional_sf9_qualifying_match(marc_xml TEXT, qualifying_match TEXT, new_9_to_set TEXT, qualifying_sf9 TEXT, force TEXT DEFAULT 'true')
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+use MARC::Record;
+use MARC::Field;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $qualifying_match = shift;
+my $new_9_to_set = shift;
+my $qualifying_sf9 = shift;
+my $force = shift;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @uris = $marc_xml->field('856');
+return $marc_xml->as_xml_record() unless @uris;
+$qualifying_match =~ s/^\s+|\s+$//g;
+$qualifying_sf9 =~ s/^\s+|\s+$//g;
+$qualifying_sf9 = lc($qualifying_sf9);
+
+foreach my $field (@uris) {
+    my @us = $field->subfield('u');
+    my @nines = $field->subfield('9');
+    my $has_u;
+    my $has_9;
+    foreach my $u (@us) {
+        if ($u =~ qr/$qualifying_match/) { $has_u = 1; }
+    }
+    foreach my $nine (@nines) {
+        $nine =~ s/^\s+|\s+$//g;
+        if (lc($nine) eq $qualifying_sf9) { $has_9 = 1; }
+    }
+    if ($has_u and $has_9) {
+        my $ind1 = $field->indicator('1');
+        if (!defined $ind1) { next; }
+        if ($ind1 ne '1' && $ind1 ne '4' && $force eq 'false') { next; }
+        if ($ind1 ne '1' && $ind1 ne '4' && $force eq 'true') { $field->set_indicator(1,'4'); }
+        my $ind2 = $field->indicator('2');
+        if (!defined $ind2) { next; }
+        if ($ind2 ne '0' && $ind2 ne '1' && $force eq 'false') { next; }
+        if ($ind2 ne '0' && $ind2 ne '1' && $force eq 'true') { $field->set_indicator(2,'0'); }
+        $field->add_subfields( '9' => $new_9_to_set );
+    }
+}
+return $marc_xml->as_xml_record();
+
+$function$;
+
 DROP FUNCTION IF EXISTS migration_tools.owner_change_sf9_substring_match(TEXT,TEXT,TEXT,TEXT);
 CREATE OR REPLACE FUNCTION migration_tools.owner_change_sf9_substring_match (marc_xml TEXT, substring_old_value TEXT, new_value TEXT, fix_indicators TEXT)
  RETURNS TEXT
