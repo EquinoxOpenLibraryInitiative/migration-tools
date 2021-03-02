@@ -15,13 +15,14 @@ SELECT 'SELECT * FROM group_pairs(' || id || ');' FROM pairs ORDER BY id;
 DO $$
 DECLARE 
    group_limit INTEGER;
-   deleted_count INTEGER;
+   deleted_count INTEGER DEFAULT 0;
 BEGIN
    SELECT dedupe_setting('merge_group_limit') INTO group_limit;
     IF group_limit IS NOT NULL THEN  
        INSERT INTO exclude_from_batch (record,reason) SELECT UNNEST(records), 'group exceeds limit' FROM groups 
        WHERE ARRAY_LENGTH(records,1) > group_limit;
        DELETE FROM groups WHERE ARRAY_LENGTH(records,1) > group_limit RETURNING * INTO deleted_count;
+       IF deleted_count IS NULL THEN deleted_count := 0; END IF;
        RAISE INFO 'groups deleted due to size is %', deleted_count;
     END IF;
 END $$;

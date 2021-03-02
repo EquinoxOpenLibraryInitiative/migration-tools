@@ -2,7 +2,7 @@
 
 -- vivisect 
 
-UPDATE dedupe_batch SET populated = FALSE WHERE populated = TRUE OR populated IS NULL;
+UPDATE dedupe_batch SET populated = FALSE WHERE populated OR populated IS NULL;
 
 \x off
 \t on
@@ -51,40 +51,50 @@ UPDATE dedupe_batch SET search_format = ARRAY_APPEND(search_format,'lpbook')
 
 -- now set lp for migrated records 
 DROP TABLE IF EXISTS bib_acp_lp_map;
-CREATE UNLOGGED TABLE bib_acp_lp_map AS
-WITH acl_list AS (SELECT id FROM m_asset_copy_location WHERE name ~* 'large print' OR name ~* ' lp ' OR name ~* '^lp ' OR name ~* ' lp$')
-, acn_list AS (SELECT c.id FROM m_asset_call_number c
-    JOIN m_asset_call_number_prefix p on p.id = c.prefix 
-    JOIN m_asset_call_number_suffix s on s.id = c.suffix
-    WHERE CONCAT_WS(' ',p.label,c.label,s.label) ~* 'large print'
-    OR CONCAT_WS(' ',p.label,c.label,s.label) ~* ' lp '
-    OR CONCAT_WS(' ',p.label,c.label,s.label) ~* '^lp '
-    OR CONCAT_WS(' ',p.label,c.label,s.label) ~* ' lp$'
-)
-SELECT acn.record AS bre_id, acp.id AS acp_id
-FROM m_asset_copy acp JOIN m_asset_call_number acn ON acn.id = acp.call_number
-WHERE NOT acp.deleted AND (acp.location IN (SELECT id FROM acl_list) OR acp.call_number IN (SELECT id FROM acn_list))
-AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset'));
-ALTER TABLE bib_acp_lp_map ADD COLUMN has_non_lp BOOLEAN DEFAULT FALSE;
-UPDATE bib_acp_lp_map SET has_non_lp = TRUE WHERE bre_id IN (
-  WITH all_acps AS (
-    SELECT acp.id FROM m_asset_copy acp
-    JOIN m_asset_call_number acn ON acn.id = acp.call_number
-    WHERE NOT acp.deleted
-    AND acn.record IN (SELECT DISTINCT bre_id FROM bib_acp_lp_map)
-  )
-  SELECT DISTINCT acn.record FROM m_asset_copy acp
-  JOIN m_asset_call_number acn ON acn.id = acp.call_number
-  LEFT JOIN bib_acp_lp_map balm ON balm.acp_id = acp.id
-  WHERE NOT acp.deleted
-  AND balm.acp_id IS NULL
-  AND acn.record IN (SELECT DISTINCT bre_id FROM bib_acp_lp_map)
-)
-AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset'));
-UPDATE dedupe_batch SET search_format = ARRAY_APPEND(search_format,'lpbook')
-    WHERE record IN (SELECT DISTINCT bre_id FROM bib_acp_lp_map WHERE has_non_lp = FALSE)
-    AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset'))
-;
+
+DO $$
+DECLARE 
+    row_count INTEGER DEFAULT 0;
+BEGIN
+  IF EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset')) THEN 
+    CREATE UNLOGGED TABLE bib_acp_lp_map AS
+        WITH acl_list AS (SELECT id FROM m_asset_copy_location WHERE name ~* 'large print' OR name ~* ' lp ' OR name ~* '^lp ' OR name ~* ' lp$')
+        , acn_list AS 
+          ( SELECT c.id FROM m_asset_call_number c
+            JOIN m_asset_call_number_prefix p on p.id = c.prefix 
+            JOIN m_asset_call_number_suffix s on s.id = c.suffix
+            WHERE CONCAT_WS(' ',p.label,c.label,s.label) ~* 'large print'
+            OR CONCAT_WS(' ',p.label,c.label,s.label) ~* ' lp '
+            OR CONCAT_WS(' ',p.label,c.label,s.label) ~* '^lp '
+            OR CONCAT_WS(' ',p.label,c.label,s.label) ~* ' lp$'
+          )
+        SELECT acn.record AS bre_id, acp.id AS acp_id
+            FROM m_asset_copy acp JOIN m_asset_call_number acn ON acn.id = acp.call_number
+            WHERE NOT acp.deleted AND (acp.location IN (SELECT id FROM acl_list) OR acp.call_number IN (SELECT id FROM acn_list));
+
+      ALTER TABLE bib_acp_lp_map ADD COLUMN has_non_lp BOOLEAN DEFAULT FALSE;
+      UPDATE bib_acp_lp_map SET has_non_lp = TRUE WHERE bre_id IN 
+       (
+        WITH all_acps AS (
+           SELECT acp.id FROM m_asset_copy acp
+           JOIN m_asset_call_number acn ON acn.id = acp.call_number
+           WHERE NOT acp.deleted
+           AND acn.record IN (SELECT DISTINCT bre_id FROM bib_acp_lp_map)
+        )
+        SELECT DISTINCT acn.record 
+            FROM m_asset_copy acp
+            JOIN m_asset_call_number acn ON acn.id = acp.call_number
+            LEFT JOIN bib_acp_lp_map balm ON balm.acp_id = acp.id
+            WHERE NOT acp.deleted
+            AND balm.acp_id IS NULL
+            AND acn.record IN (SELECT DISTINCT bre_id FROM bib_acp_lp_map)
+       );
+      SELECT COUNT(*) FROM dedupe_batch WHERE record IN (SELECT DISTINCT bre_id FROM bib_acp_lp_map WHERE has_non_lp = FALSE) INTO row_count;
+      UPDATE dedupe_batch SET search_format = ARRAY_APPEND(search_format,'lpbook')
+         WHERE record IN (SELECT DISTINCT bre_id FROM bib_acp_lp_map WHERE has_non_lp = FALSE);
+    END IF;
+    RAISE NOTICE 'number of records with lpbook added : %', row_count;
+END $$;
 
 UPDATE dedupe_batch SET score_penalty = score_penalty + 10 WHERE search_format IS NULL;
 UPDATE dedupe_batch SET score_penalty = score_penalty + 5 WHERE record IN 

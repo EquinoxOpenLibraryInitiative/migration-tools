@@ -11,20 +11,28 @@ CREATE UNLOGGED TABLE incumbent_titles AS
     AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset'));
 
 DO $$
+DECLARE 
+    row_count INTEGER DEFAULT 0;
 BEGIN
     IF EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset')) THEN
     CREATE UNLOGGED TABLE incoming_titles AS
         SELECT id AS record, UNNEST(oils_xpath( '//*[@tag="245"]/*[@code="a"]/text()', marc)) AS value,
         clean_title(UNNEST(oils_xpath( '//*[@tag="245"]/*[@code="a"]/text()', marc)),'primary') AS clean_title
         FROM m_biblio_record_entry;
+    SELECT COUNT(*) FROM incoming_titles INTO row_count;
     END IF;
+    RAISE NOTICE 'rows in incoming_titles : %', row_count;
 END $$;
 
 DO $$
+DECLARE 
+    row_count INTEGER DEFAULT 0;
 BEGIN
     IF EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value = 'subset') THEN
-    DELETE FROM incumbent_titles WHERE record IN (SELECT record FROM incoming_titles); 
+        SELECT COUNT(*) FROM incumbent_titles WHERE record IN (SELECT record FROM incoming_titles) INTO row_count;
+        DELETE FROM incumbent_titles WHERE record IN (SELECT record FROM incoming_titles); 
 	END IF;
+    RAISE NOTICE 'rows deleted : %', row_count;
 END $$;
 
 DROP TABLE IF EXISTS dedupe_batch;
@@ -68,6 +76,8 @@ CREATE INDEX dedupe_batch_title_part_namex ON dedupe_batch (titlepartname);
 TRUNCATE dedupe_batch;
 
 DO $$
+DECLARE 
+    row_count INTEGER DEFAULT 0;
 BEGIN
     IF EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset')) THEN
     WITH bib_list AS (
@@ -77,13 +87,12 @@ BEGIN
           UNION ALL
         SELECT id AS record FROM m_biblio_record_entry WHERE deleted = FALSE
     )
-    INSERT INTO dedupe_batch (record)
-    SELECT record FROM bib_list;
+    INSERT INTO dedupe_batch (record) SELECT record FROM bib_list;
+    SELECT COUNT(*) FROM dedupe_batch INTO row_count;
     END IF;
+    RAISE NOTICE 'rows added to dedupe_batch from incumbents : %', row_count;
 END $$;
 
--- although most of the behaviors later for subsets will be like migrations a subset of loaded bibs can 
--- get all the information from the Evergreen production tables 
 INSERT INTO dedupe_batch (record)
 SELECT id FROM biblio.record_entry WHERE NOT deleted AND id > 0
 AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value = 'inclusive')
@@ -91,10 +100,14 @@ AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value =
 
 
 DO $$
+DECLARE
+    row_count INTEGER DEFAULT 0;
 BEGIN
     IF EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset')) THEN
+        SELECT COUNT(*) FROM dedupe_batch WHERE record IN (SELECT id FROM m_biblio_record_entry);
         UPDATE dedupe_batch SET staged = TRUE WHERE record IN (SELECT id FROM m_biblio_record_entry);
     END IF;
+    RAISE NOTICE 'records marked staged : %', row_count;
 END $$;
 
 UPDATE dedupe_batch SET can_have_copies = FALSE WHERE record IN 

@@ -110,6 +110,7 @@ BEGIN
 	WHERE NOT acp.deleted AND acn.record IN (SELECT record FROM dedupe_batch WHERE search_format && sfs);
 END $$;
 
+SELECT COUNT(*) FROM copy_level_strings;
 ALTER TABLE copy_level_strings ADD COLUMN keep BOOLEAN DEFAULT FALSE;
 
 DO $$ 
@@ -117,13 +118,18 @@ DECLARE
     feature_id INTEGER;
     sf TEXT;
     str TEXT;
+    row_count INTEGER DEFAULT 0;
 BEGIN
     FOR feature_id IN SELECT id FROM dedupe_features WHERE name = 'restrict_sf_match_by_string' AND org = (SELECT shortname FROM actor.org_unit WHERE id = 1) LOOP
         SELECT value, value2 FROM dedupe_features WHERE id = feature_id INTO sf, str;
-	UPDATE copy_level_strings SET keep = TRUE 
-		WHERE record IN (SELECT record FROM dedupe_batch WHERE sf = ANY(search_format))
-		AND (label ~* str OR location ~* str);
+        SELECT COUNT(*) FROM copy_level_strings
+            WHERE record IN (SELECT record FROM dedupe_batch WHERE sf = ANY(search_format))
+            AND (label ~* str OR location ~* str);
+	    UPDATE copy_level_strings SET keep = TRUE 
+		    WHERE record IN (SELECT record FROM dedupe_batch WHERE sf = ANY(search_format))
+		    AND (label ~* str OR location ~* str);
     END LOOP;
+    RAISE NOTICE 'values in copy_level_strings set to keep : %', row_count;
 END $$;
 
 INSERT INTO exclude_from_batch (record,reason) SELECT DISTINCT record, 'restricted by string' 
