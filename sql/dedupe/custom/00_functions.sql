@@ -14,7 +14,7 @@ BEGIN
     SELECT ARRAY_AGG(ahr.id) 
         FROM action.hold_request ahr
         WHERE ahr.target = r AND ahr.cancel_time IS NULL 
-        AND ahr.fulfillment_time IS NULL AND ahr.hold_type = 't' INTO bre_ahrs;
+        AND ahr.fulfillment_time IS NULL AND ahr.hold_type = 'T' INTO bre_ahrs;
     INSERT INTO bre_rollback_log (group_id,record,merged_to,holds) VALUES (grp_id,r,lead_record,bre_ahrs) RETURNING id INTO m_id;
 
     -- log the acns 
@@ -1407,7 +1407,7 @@ DECLARE
         END IF;
 
         FOR r IN SELECT UNNEST(records) FROM groups WHERE id = fg_id LOOP
-            SELECT log_asset_merges(group_id,r,lead_record); 
+            PERFORM log_asset_merges(id,r,lead_record) FROM groups WHERE id = fg_id AND lead_record <> r; 
             PERFORM asset.merge_record_assets(lead_record,r) FROM groups WHERE id = fg_id AND lead_record <> r;
         END LOOP;
         UPDATE groups SET done = TRUE WHERE id = fg_id;
