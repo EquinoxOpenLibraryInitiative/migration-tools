@@ -552,6 +552,48 @@ return $marc_xml->as_xml_record();
 
 $function$;
 
+DROP FUNCTION IF EXISTS migration_tools.remove_sf9(TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.remove_sf9(marc_xml TEXT, nine_to_del TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict; 
+use warnings;
+
+use MARC::Record;
+use MARC::Field;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $nine_to_del = shift;
+$nine_to_del =~ s/^\s+|\s+$//g;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @uris = $marc_xml->field('856');
+return $marc_xml->as_xml_record() unless @uris;
+
+foreach my $field (@uris) {
+    $field->delete_subfield(code => '9', match => qr/$nine_to_del/);
+}
+
+return $marc_xml->as_xml_record();
+
+$function$;
+
 DROP FUNCTION IF EXISTS migration_tools.additional_sf9_qualifying_match(TEXT,TEXT,TEXT,TEXT,TEXT);
 CREATE OR REPLACE FUNCTION migration_tools.additional_sf9_qualifying_match(marc_xml TEXT, qualifying_match TEXT, new_9_to_set TEXT, qualifying_sf9 TEXT, force TEXT DEFAULT 'true')
  RETURNS TEXT
