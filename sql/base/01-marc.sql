@@ -373,6 +373,22 @@ CREATE OR REPLACE FUNCTION migration_tools.get_marc_leader (TEXT) RETURNS TEXT A
     return $field;
 $$ LANGUAGE PLPERLU STABLE;
 
+CREATE OR REPLACE FUNCTION migration_tools.get_marc_tag (TEXT, TEXT) RETURNS TEXT AS $$
+    my ($marcxml, $tag) = @_;
+
+    use MARC::Record;
+    use MARC::File::XML;
+    use MARC::Field;
+
+    my $field;
+    eval {
+        my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+        $field = $marc->field($tag);
+    };
+    return $field->as_string() if $field;
+    return;
+$$ LANGUAGE PLPERLU STABLE;
+
 CREATE OR REPLACE FUNCTION migration_tools.get_marc_tag (TEXT, TEXT, TEXT, TEXT) RETURNS TEXT AS $$
     my ($marcxml, $tag, $subfield, $delimiter) = @_;
 
