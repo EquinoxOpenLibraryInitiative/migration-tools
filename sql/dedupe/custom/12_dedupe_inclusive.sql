@@ -31,7 +31,8 @@ CREATE TABLE monograph_part_rollback_log (
     ,monograph_part     INTEGER
     ,record             INTEGER
 );
-  
+
+-- on reflection, this probably isn't needed   
 CREATE TABLE copy_part_rollback_log (
      id                  SERIAL
     ,merge_id           INTEGER

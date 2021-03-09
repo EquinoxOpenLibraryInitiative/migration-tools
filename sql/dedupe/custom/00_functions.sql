@@ -1280,41 +1280,53 @@ $BODY$ LANGUAGE plpgsql;
 
 DROP FUNCTION IF EXISTS demerge_record(BIGINT);
 CREATE OR REPLACE FUNCTION demerge_record(bre_id BIGINT)
-    RETURNS BOOLEAN AS 
-$BODY$
-DECLARE 
+    RETURNS BOOLEAN AS
+$BODY$ 
+DECLARE
     acn_id   BIGINT;
     acnx_id  BIGINT;
     lib      INTEGER;
     pre      INTEGER;
     suf      INTEGER;
-    lab      TEXT;
+    lab      TEXT;  
     h         BIGINT;
 BEGIN
     UPDATE biblio.record_entry SET deleted = FALSE WHERE id = bre_id;
-    
+    UPDATE action.hold_request SET target = bre_id WHERE id IN (SELECT UNNEST(holds) FROM bre_rollback_log WHERE record = bre_id)
+        AND capture_time IS NULL AND fulfillment_time IS NULL AND cancel_time IS NULL and hold_type = 'T';
+   
     FOR acn_id IN SELECT UNNEST(acns) FROM acn_rollback_log WHERE record = bre_id LOOP
         acnx_id := NULL;
         -- check to see if a acn has taken the place of the old one 
         SELECT owning_lib, label, prefix, suffix FROM asset.call_number WHERE id = acn_id INTO lib, lab, pre, suf;
         SELECT id FROM asset.call_number
-            WHERE id != acn_id AND suffix = suf AND prefix = pre AND label = lab AND owning_lib = lib 
+            WHERE id != acn_id AND suffix = suf AND prefix = pre AND label = lab AND owning_lib = lib
             AND record = bre_id AND deleted = FALSE
             INTO acnx_id;
         -- if it found a value then the call number has been replaced so move on, otherwise ....
-        IF acnx_id IS NULL THEN 
+        IF acnx_id IS NULL THEN
             -- repoint the call number to the correct record
-            UPDATE asset.call_number SET record = bre_id, deleted = FALSE WHERE id = acn_id;    
+            UPDATE asset.call_number SET record = bre_id, deleted = FALSE WHERE id = acn_id;
         END IF;
+        -- make sure any volume holds that got moved to a new volume get moved back 
+        UPDATE action.hold_request SET target = COALESCE(acnx_id,acn_id) WHERE hold_type = 'V' 
+           AND id IN (SELECT UNNEST(holds) FROM acn_rollback_log WHERE acn = acn_id) 
+           AND capture_time IS NULL AND fulfillment_time IS NULL AND cancel_time IS NULL
+           AND target != COALESCE(acnx_id,acn_id;
+        -- make sure copies are on the correct ACN, copy holds should never be moved so they aren't touched 
+        UPDATE asset.copy SET call_number = COALESCE(acnx_id,acn_id) WHERE id IN (SELECT acp FROM acp_rollback_log WHERE acn = acn_id)
+            AND call_number != COALESCE(acnx_id,acn_id);
     END LOOP;
 
-    FOR h IN SELECT UNNEST(holds) FROM acn_rollback_log WHERE record = bre_id LOOP 
-        UPDATE action.hold_request SET target = bre_id WHERE id = h AND capture_time IS NULL;
-    END LOOP;
+    -- now let us make sure that parts get moved back to the right record, part holds and the copy map point to the part so they shouldn't need updating 
+    UPDATE biblio.monograph_part SET record = bre_id WHERE id IN (SELECT monograph_part FROM monograph_part_rollback_log WHERE record = bre_id)
+      AND record != bre_id;
+    
 
     RETURN TRUE;
 END;
 $BODY$ LANGUAGE plpgsql;
+
 
 DROP FUNCTION IF EXISTS merge_next();
 CREATE OR REPLACE FUNCTION merge_next()
