@@ -1312,7 +1312,7 @@ BEGIN
         UPDATE action.hold_request SET target = COALESCE(acnx_id,acn_id) WHERE hold_type = 'V' 
            AND id IN (SELECT UNNEST(holds) FROM acn_rollback_log WHERE acn = acn_id) 
            AND capture_time IS NULL AND fulfillment_time IS NULL AND cancel_time IS NULL
-           AND target != COALESCE(acnx_id,acn_id;
+           AND target != COALESCE(acnx_id,acn_id);
         -- make sure copies are on the correct ACN, copy holds should never be moved so they aren't touched 
         UPDATE asset.copy SET call_number = COALESCE(acnx_id,acn_id) WHERE id IN (SELECT acp FROM acp_rollback_log WHERE acn = acn_id)
             AND call_number != COALESCE(acnx_id,acn_id);
