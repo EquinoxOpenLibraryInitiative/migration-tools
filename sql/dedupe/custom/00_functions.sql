@@ -1295,7 +1295,7 @@ BEGIN
     UPDATE action.hold_request SET target = bre_id WHERE id IN (SELECT UNNEST(holds) FROM bre_rollback_log WHERE record = bre_id)
         AND capture_time IS NULL AND fulfillment_time IS NULL AND cancel_time IS NULL and hold_type = 'T';
    
-    FOR acn_id IN SELECT UNNEST(acns) FROM acn_rollback_log WHERE record = bre_id LOOP
+    FOR acn_id IN SELECT acn FROM acn_rollback_log WHERE original_record = bre_id LOOP
         acnx_id := NULL;
         -- check to see if a acn has taken the place of the old one 
         SELECT owning_lib, label, prefix, suffix FROM asset.call_number WHERE id = acn_id INTO lib, lab, pre, suf;
