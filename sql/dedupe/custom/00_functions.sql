@@ -13,14 +13,15 @@ BEGIN
     -- log the bib merge itself 
     SELECT ARRAY_AGG(ahr.id) 
         FROM action.hold_request ahr
-        WHERE ahr.target = r AND ahr.cancel_time IS NULL 
+        WHERE ahr.target = r AND ahr.cancel_time IS NULL AND ahr.capture_time IS NULL 
         AND ahr.fulfillment_time IS NULL AND ahr.hold_type = 'T' INTO bre_ahrs;
     INSERT INTO bre_rollback_log (group_id,record,merged_to,holds) VALUES (grp_id,r,lead_record,bre_ahrs) RETURNING id INTO m_id;
 
     -- log the acns 
     FOR acn IN SELECT id FROM asset.call_number WHERE NOT deleted AND record = r LOOP
         acn_ahrs := NULL;
-        SELECT ARRAY_AGG(id) FROM action.hold_request WHERE hold_type = 'V' AND target = acn AND cancel_time IS NULL AND fulfillment_time IS NULL INTO acn_ahrs;
+        SELECT ARRAY_AGG(id) FROM action.hold_request WHERE hold_type = 'V' AND target = acn 
+            AND cancel_time IS NULL AND capture_time IS NULL AND fulfillment_time IS NULL INTO acn_ahrs;
         INSERT INTO acn_rollback_log (merge_id,original_record,acn,holds) VALUES (m_id,r,acn,acn_ahrs);
     END LOOP;
 
