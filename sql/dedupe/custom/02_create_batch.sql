@@ -104,7 +104,7 @@ DECLARE
     row_count INTEGER DEFAULT 0;
 BEGIN
     IF EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset')) THEN
-        SELECT COUNT(*) FROM dedupe_batch WHERE record IN (SELECT id FROM m_biblio_record_entry);
+        SELECT COUNT(*) FROM dedupe_batch WHERE record IN (SELECT id FROM m_biblio_record_entry) INTO row_count;
         UPDATE dedupe_batch SET staged = TRUE WHERE record IN (SELECT id FROM m_biblio_record_entry);
     END IF;
     RAISE NOTICE 'records marked staged : %', row_count;
