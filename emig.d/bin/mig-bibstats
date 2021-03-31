@@ -78,14 +78,14 @@ my $ret = GetOptions(
     'file:s'                    => \$file,
     'uri_threshold:i'           => \$uri_threshold,
     'holding_code:s'            => \$p_holding_code,
-    'barcode_subfield:s'     => \$p_barcode_subfield,
-    'item_type_subfield:s'     => \$p_item_type_subfield,
-    'branch_subfield:s'     => \$p_branch_subfield,
+    'barcode_subfield:s'        => \$p_barcode_subfield,
+    'item_type_subfield:s'      => \$p_item_type_subfield,
+    'branch_subfield:s'         => \$p_branch_subfield,
     'ignore_filetype:s'         => \$p_ignore_filetype,
     'ils:s'                     => \$p_ils_name,
-    'exportbarcodes:s'         => \$exportbarcodes,
-    'exportbarcodesfile:s'   => \$exportbarcodesfile,
-    'holding_threshold:s'     => \$holding_threshold
+    'exportbarcodes:s'          => \$exportbarcodes,
+    'exportbarcodesfile:s'      => \$exportbarcodesfile,
+    'holding_threshold:s'       => \$holding_threshold
 );
 
 if ($exportbarcodesfile and !defined $exportbarcodes) { abort('You have to provide an ILS name if you want a barcode export file.'); }
@@ -112,6 +112,7 @@ my @ilses = (
     ['Mandarin','852','p'],
     ['Evergreen','852','p'],
     ['Polaris','852','p'],
+    ['Atrium', '852', 'p'],
     ['TLC','949','g'],
     ['Koha','952','p'],
     ['Sympony','999','i'],
