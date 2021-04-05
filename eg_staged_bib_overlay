@@ -36,6 +36,7 @@ my $cutoff;
 my $wait = 1;
 my $output;
 my $link_skipped;
+my $dbport = 5432;
 
 my $ret = GetOptions(
     'action:s'      => \$action,
@@ -44,6 +45,7 @@ my $ret = GetOptions(
     'dbuser:s'      => \$dbuser,
     'dbhost:s'      => \$dbhost,
     'dbpw:s'        => \$dbpw,
+    'dbport:i'      => \$dbport,
     'batch:s'       => \$batch,
     'cutoff:s'      => \$cutoff,
     'wait:i'        => \$wait,
@@ -78,7 +80,7 @@ abort(q{--action must be "stage_bibs", "filter_bibs", "load_bibs", "stage_auths"
     $action eq 'export_skipped_auths'
 ;
 
-my $dbh = connect_db($db, $dbuser, $dbpw, $dbhost);
+my $dbh = connect_db($db, $dbuser, $dbpw, $dbhost, $dbport);
 
 if ($action eq 'stage_bibs') {
     abort('must specify at least one input file') unless @ARGV;
@@ -235,9 +237,9 @@ sub report_progress {
 }
 
 sub connect_db {
-    my ($db, $dbuser, $dbpw, $dbhost) = @_;
+    my ($db, $dbuser, $dbpw, $dbhost, $dbport) = @_;
 
-    my $dsn = "dbi:Pg:host=$dbhost;dbname=$db;port=5432";
+    my $dsn = "dbi:Pg:host=$dbhost;dbname=$db;port=$dbport";
 
     my $attrs = {
         ShowErrorStatement => 1,
