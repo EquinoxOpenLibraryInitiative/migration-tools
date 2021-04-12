@@ -28,8 +28,8 @@ of the generic 'barcodes_export.txt'
 bib types by item types.  If --branch_subfield is also provided, then the
 breakdown will be further subdivided by branch.
 
---always_look_for_marc8 Will ignore the bib type declaration to always look to 
-see if it finds likely marc8 encoded strings
+--always_look_for_utf8_isues Will ignore the bib type declaration to always look to 
+see if it finds likely marc8 encoded strings and invalid utf8 strings 
 
 =back
 =cut
@@ -52,7 +52,7 @@ use Getopt::Long;
 use MARC::Batch;
 use MARC::Record;
 use MARC::Field;
-use MARC::Charset 'marc8_to_utf8';;
+use MARC::Charset 'marc8_to_utf8';
 use Cwd 'abs_path';
 use Cwd qw(getcwd);
 use List::MoreUtils qw(uniq);
@@ -79,21 +79,21 @@ my @holdings;
 my %unique_barcodes;
 my $exportbarcodes;
 my $exportbarcodesfile;
-my $always_look_for_marc8;
+my $always_look_for_utf8_issues;
 
 my $ret = GetOptions(
-    'file:s'                    => \$file,
-    'uri_threshold:i'           => \$uri_threshold,
-    'holding_code:s'            => \$p_holding_code,
-    'barcode_subfield:s'        => \$p_barcode_subfield,
-    'item_type_subfield:s'      => \$p_item_type_subfield,
-    'branch_subfield:s'         => \$p_branch_subfield,
-    'ignore_filetype:s'         => \$p_ignore_filetype,
-    'ils:s'                     => \$p_ils_name,
-    'exportbarcodes:s'          => \$exportbarcodes,
-    'exportbarcodesfile:s'      => \$exportbarcodesfile,
-    'holding_threshold:s'       => \$holding_threshold,
-    'always_look_for_marc8'     => \$always_look_for_marc8
+    'file:s'                          => \$file,
+    'uri_threshold:i'                 => \$uri_threshold,
+    'holding_code:s'                  => \$p_holding_code,
+    'barcode_subfield:s'              => \$p_barcode_subfield,
+    'item_type_subfield:s'            => \$p_item_type_subfield,
+    'branch_subfield:s'               => \$p_branch_subfield,
+    'ignore_filetype:s'               => \$p_ignore_filetype,
+    'ils:s'                           => \$p_ils_name,
+    'exportbarcodes:s'                => \$exportbarcodes,
+    'exportbarcodesfile:s'            => \$exportbarcodesfile,
+    'holding_threshold:s'             => \$holding_threshold,
+    'always_look_for_utf8_issues'     => \$always_look_for_utf8_issues
 );
 
 if ($exportbarcodesfile and !defined $exportbarcodes) { abort('You have to provide an ILS name if you want a barcode export file.'); }
@@ -117,14 +117,10 @@ if ($p_branch_subfield) {
 
 # ils name, holding tag, barcode subfield 
 my @ilses = (
-    ['Mandarin','852','p'],
-    ['Evergreen','852','p'],
-    ['Polaris','852','p'],
-    ['Atrium', '852', 'p'],
+    ['Mandarin/Evergreen/PolarisAtribum/Destiny','852','p'],
     ['TLC','949','g'],
     ['Koha','952','p'],
-    ['Sympony','999','i'],
-    ['Destiny','852','p']
+    ['Sympony','999','i']
 );
 
 my @temp;
@@ -165,8 +161,8 @@ my $no_title = 0;
 my $record;
 my $no_author = 0;
 my @warnings;
-my @marcAuthors;
-my @marcTitles;
+my @invalidTitles;
+my @invalidAuthors;
 
 foreach (@ilses) { 
     $holding_counts{@$_[0]} = 0; 
@@ -201,13 +197,17 @@ while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; pr
     #check for author and title and look for encodings 
     my $title = $record->title();
     my $author = $record->author();
-    my $marcTitle;
-    my $marcAuthor;
-    if ($enc eq 'a' or $always_look_for_marc8) { #supposed to be unicode 
-        if ($title) { $marcTitle = is_marc8($title); }
-        if ($author) { $marcAuthor = is_marc8($author); }
-        if ($marcTitle) { push @marcTitles, $title; }
-        if ($marcAuthor) { push @marcAuthors, $author; }
+    if ($enc eq 'a' or $always_look_for_utf8_issues) {
+        my $badTitle;
+        my $badAuthor;
+        if ($title) { 
+            $badTitle = is_marc8($title);
+        }
+        if ($author) { 
+            $badAuthor = is_marc8($author);
+        }
+        if ($badTitle) { push @invalidTitles, $title; }
+        if ($badAuthor) { push @invalidAuthors, $author; } 
     }
     if (!defined $title) { $no_title++; }
     if (!defined $author) { $no_author++; }
@@ -355,30 +355,31 @@ if ($exportbarcodes) {
         if ($temp_ils_name eq $exportbarcodes) { print $out_fh "@$h[1]\n" }
     }
     close $out_fh;
-} else { print "done\n"; }
+} 
 
 print "number of bibs without a 245a $no_title \n";
 print "number of bibs without an author (100/110/111) $no_author \n";
 
-if (@marcTitles or @marcAuthors) { print "\n===== Possible MARC8 Characters found in authors and titles\n"; }
-if (@marcTitles) {
+if (@invalidTitles or @invalidAuthors) { print "\n===== Invalid UTF8 Characters found in authors and titles\n"; }
+if (@invalidTitles) {
     $i = 0;
-    foreach (@marcTitles) {
+    foreach (@invalidTitles) {
         $i++;
         print "$i title as utf8: $_ \n";
         my $marc8str = marc8_to_utf8($_);
         print "$i title as marc8: $marc8str \n";
     }
 }
-if (@marcAuthors) {
+if (@invalidAuthors) {
     $i = 0;
-    foreach (@marcAuthors) {
+    foreach (@invalidAuthors) {
         $i++;
         print "$i author as utf8: $_ \n";
         my $marc8str = marc8_to_utf8($_);
         print "$i author as marc8: $marc8str \n";
     }
 }
+
 
 close $file;
 
