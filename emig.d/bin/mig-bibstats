@@ -28,6 +28,9 @@ of the generic 'barcodes_export.txt'
 bib types by item types.  If --branch_subfield is also provided, then the
 breakdown will be further subdivided by branch.
 
+--always_look_for_marc8 Will ignore the bib type declaration to always look to 
+see if it finds likely marc8 encoded strings
+
 =back
 =cut
 
@@ -76,6 +79,7 @@ my @holdings;
 my %unique_barcodes;
 my $exportbarcodes;
 my $exportbarcodesfile;
+my $always_look_for_marc8;
 
 my $ret = GetOptions(
     'file:s'                    => \$file,
@@ -88,7 +92,8 @@ my $ret = GetOptions(
     'ils:s'                     => \$p_ils_name,
     'exportbarcodes:s'          => \$exportbarcodes,
     'exportbarcodesfile:s'      => \$exportbarcodesfile,
-    'holding_threshold:s'       => \$holding_threshold
+    'holding_threshold:s'       => \$holding_threshold,
+    'always_look_for_marc8'     => \$always_look_for_marc8
 );
 
 if ($exportbarcodesfile and !defined $exportbarcodes) { abort('You have to provide an ILS name if you want a barcode export file.'); }
@@ -198,7 +203,7 @@ while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; pr
     my $author = $record->author();
     my $marcTitle;
     my $marcAuthor;
-    if ($enc eq 'a') { #supposed to be unicode 
+    if ($enc eq 'a' or $always_look_for_marc8) { #supposed to be unicode 
         if ($title) { $marcTitle = is_marc8($title); }
         if ($author) { $marcAuthor = is_marc8($author); }
         if ($marcTitle) { push @marcTitles, $title; }
