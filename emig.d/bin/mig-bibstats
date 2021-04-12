@@ -198,10 +198,12 @@ while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; pr
     my $author = $record->author();
     my $marcTitle;
     my $marcAuthor;
-    if ($title) { $marcTitle = is_marc8($title); }
-    if ($author) { $marcAuthor = is_marc8($author); }
-    if ($marcTitle) { push @marcTitles, $title; }
-    if ($marcAuthor) { push @marcAuthors, $author; }
+    if ($enc eq 'a') { #supposed to be unicode 
+        if ($title) { $marcTitle = is_marc8($title); }
+        if ($author) { $marcAuthor = is_marc8($author); }
+        if ($marcTitle) { push @marcTitles, $title; }
+        if ($marcAuthor) { push @marcAuthors, $author; }
+    }
     if (!defined $title) { $no_title++; }
     if (!defined $author) { $no_author++; }
     # bib type by branch and by item type if item subfield (and optionally branch subfield) provided
@@ -353,23 +355,25 @@ if ($exportbarcodes) {
 print "number of bibs without a 245a $no_title \n";
 print "number of bibs without an author (100/110/111) $no_author \n";
 
-
-print "\n===== Possible MARC8 Characters found in authors and titles\n";
-$i = 0;
-foreach (@marcTitles) {
-     $i++;
-     print "$i title as utf8: $_ \n";
-     my $marc8str = marc8_to_utf8($_);
-     print "$i title as marc8: $marc8str \n";
+if (@marcTitles or @marcAuthors) { print "\n===== Possible MARC8 Characters found in authors and titles\n"; }
+if (@marcTitles) {
+    $i = 0;
+    foreach (@marcTitles) {
+        $i++;
+        print "$i title as utf8: $_ \n";
+        my $marc8str = marc8_to_utf8($_);
+        print "$i title as marc8: $marc8str \n";
+    }
 }
-$i = 0;
-foreach (@marcAuthors) {
-     $i++;
-     print "$i author as utf8: $_ \n";
-     my $marc8str = marc8_to_utf8($_);
-     print "$i author as marc8: $marc8str \n";
+if (@marcAuthors) {
+    $i = 0;
+    foreach (@marcAuthors) {
+        $i++;
+        print "$i author as utf8: $_ \n";
+        my $marc8str = marc8_to_utf8($_);
+        print "$i author as marc8: $marc8str \n";
+    }
 }
-
 
 close $file;
 
