@@ -251,9 +251,6 @@ while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; pr
     if(($i % 1000) == 0) { print "Processing bib $i.\n"; }
 }
 
-my %warningCounts;
-$warningCounts{$_} for @warnings;
-
 foreach (@ilses) {
     my $ils = @$_[0];
     my @temp_barcodes;
@@ -305,6 +302,14 @@ if ($p_item_type_subfield) {
     print "\n";
 }
 
+my %warningCounts;
+$warningCounts{$_}++ for @warnings;
+print "===== Warnings\n";
+while (my ($key,$value) = each %warningCounts) {
+    print "$key $value\n";
+}
+print "\n";
+
 print "===== Summary of Select Field Counts\n";
 print "  $uri_count 856 fields with a subfield u\n";
 print "  $uri_valid_count 856 fields with a subfield u and valid indicators\n";
@@ -343,7 +348,6 @@ print "number of bibs without a 001 $no_zzo \n";
 print "number of bibs without a 245a $no_title \n";
 print "number of bibs without an author (100/110/111) $no_author \n";
 foreach my $z (@zzo_wo_titles) { print "001 of record with no 245a (if they have a 001) : $z\n"; }
-
 
 close $file;
 
