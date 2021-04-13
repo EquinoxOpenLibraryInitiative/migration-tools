@@ -1,3 +1,99 @@
+
+DROP TABLE IF EXISTS migration_tools.ils_holdings;
+CREATE TABLE migration_tools.ils_holdings (
+     id                        SERIAL
+    ,ils                       TEXT UNIQUE
+    ,tag                       VARCHAR(3)
+);
+
+DROP TABLE IF EXISTS migration_tools.ils_holding_fields;
+CREATE TABLE migration_tools.ils_holding_fields (
+     id           SERIAL
+    ,ils          TEXT REFERENCES migration_tools.ils_holdings (ils)
+    ,subfield     VARCHAR(1)
+    ,label        VARCHAR(50)
+    ,repeatable   BOOLEAN DEFAULT FALSE 
+);
+
+INSERT INTO migration_tools.ils_holdings (ils,tag) VALUES 
+('atrium','852');
+
+INSERT INTO migration_tools.ils_holding_fields (ils,subfield,label) VALUES 
+('atrium','p','barcode') ,('atrium','9','price') ,('atrium','b','physical_location')
+,('atrium','a','current_location') ,('atrium','k','call_number_prefix') ,('atrium','h','call_number_label')
+,('atrium','7','item_circulation_class') ,('atrium','4','material_type');
+
+
+DROP FUNCTION IF EXISTS migration_tools.add_marc_holdings_fields(TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.add_marc_holdings_fields (schema TEXT, target_ils TEXT) 
+    RETURNS BOOLEAN 
+    LANGUAGE plpgsql
+AS $function$
+DECLARE 
+    holding_label    TEXT;
+    copy_table       TEXT := schema || '.m_asset_copy_legacy';
+    field_repeatable BOOLEAN;
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = ''' || schema || ''' AND table_name = 'm_asset_copy_legacy') THEN 
+        EXECUTE ('CREATE TABLE ' || copy_table || ' (x_migrate BOOLEAN DEFAULT TRUE) INHERITS (' || schema || '.m_asset_copy);');
+    END IF;
+    EXECUTE ('ALTER TABLE ' || copy_table || ' ADD COLUMN x_bre_id BIGINT;' );
+    EXECUTE ('ALTER TABLE ' || copy_table || ' ADD COLUMN l_xml TEXT;' );
+    FOR holding_label IN EXECUTE ('SELECT label FROM migration_tools.ils_holding_fields WHERE ils = ''' || target_ils || ''';' ) LOOP
+        EXECUTE ('SELECT repeatable FROM migration_tools.ils_holding_fields WHERE ils = ''' || target_ils || ''' AND label = ''' || holding_label || ''';') INTO field_repeatable;
+        IF field_repeatable THEN 
+            EXECUTE ('ALTER TABLE ' || copy_table || ' ADD COLUMN l_' || holding_label || ' TEXT[];' );
+        ELSE 
+            EXECUTE ('ALTER TABLE ' || copy_table || ' ADD COLUMN l_' || holding_label || ' TEXT;' );
+        END IF;
+    END LOOP;
+    RETURN TRUE;
+END;
+$function$
+;
+
+DROP FUNCTION IF EXISTS migration_tools.extract_holdings_from_marc(BIGINT,TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.extract_holdings_from_marc (bre_id BIGINT, schema TEXT, target_ils TEXT) 
+    RETURNS BIGINT 
+    LANGUAGE plpgsql
+AS $function$
+DECLARE 
+    bre_marc     TEXT;
+    bre_table    TEXT := schema || '.m_biblio_record_entry';
+    acp_table    TEXT := schema || '.m_asset_copy_legacy';
+    copy_xml     TEXT;
+    holding_tag  VARCHAR(3);
+    copy_id      BIGINT;
+    copy_subfield      VARCHAR(1);
+    copy_label         TEXT;
+    copy_value         TEXT;
+    copy_value_array   TEXT[];
+    copy_repeatable    BOOLEAN;
+BEGIN
+    EXECUTE ('SELECT marc from ' ||  bre_table || ' WHERE id = ' || bre_id || ';') INTO bre_marc;
+    EXECUTE ('SELECT tag FROM migration_tools.ils_holdings WHERE ils = ''' || target_ils || ''';') INTO holding_tag;
+    FOR copy_xml IN EXECUTE ('SELECT UNNEST(oils_xpath(''//*[@tag="' || holding_tag || '"]'',$_$' || bre_marc || '$_$));' ) LOOP
+        EXECUTE ('INSERT INTO ' ||  acp_table || ' (x_bre_id,l_xml) VALUES (' || bre_id || ',$_$' || copy_xml || '$_$) RETURNING id;') INTO copy_id;    
+        FOR copy_subfield IN SELECT subfield, label, repeatable FROM migration_tools.ils_holding_fields WHERE ils = target_ils LOOP
+            SELECT label, repeatable FROM migration_tools.ils_holding_fields WHERE ils = target_ils AND subfield = copy_subfield INTO copy_label, copy_repeatable;
+            IF copy_repeatable THEN 
+                EXECUTE ('SELECT oils_xpath( ''//*[@tag="' || holding_tag || '"]/*[@code="' || copy_subfield || '"]/text()'', '''|| copy_xml || ''');') INTO copy_value_array;
+                IF copy_value_array IS NOT NULL THEN 
+                    EXECUTE ('UPDATE ' || acp_table || ' SET l_' || copy_label || ' = ''' || copy_value_array || ''' WHERE id = ' || copy_id || ';');
+                END IF;
+            ELSE 
+                EXECUTE ('SELECT UNNEST(oils_xpath( ''//*[@tag="' || holding_tag || '"]/*[@code="' || copy_subfield || '"]/text()'', $_$' || copy_xml || '$_$));') INTO copy_value;
+                IF copy_value IS NOT NULL THEN 
+                    EXECUTE ('UPDATE ' || acp_table || ' SET l_' || copy_label || ' = $_$' || copy_value || '$_$ WHERE id = ' || copy_id || ';');
+                END IF;
+            END IF;
+        END LOOP;
+    END LOOP;
+    RETURN bre_id;
+END;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION migration_tools.change_call_number(copy_id BIGINT, new_label TEXT, cn_class BIGINT) RETURNS VOID AS $$
 
 DECLARE
