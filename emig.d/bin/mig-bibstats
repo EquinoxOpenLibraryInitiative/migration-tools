@@ -67,7 +67,7 @@ pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $file;
-my $uri_threshold = 10;
+my $uri_threshold = 1;
 my $p_holding_code;
 my $p_barcode_subfield;
 my $p_item_type_subfield;
@@ -334,7 +334,7 @@ print "  $bad_bibs failed to be processed\n";
 print "\n===== Holdings Analysis\n";
 foreach my $key (keys %holding_counts) {
     my $c = $holding_counts{$key};
-    if (((100/$i)*$c) >= $holding_threshold) { print "  $key $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n"; }
+    if ($c >= $holding_threshold) { print "  $key $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n"; }
 }
 
 print "\n===== URI values are domains and filtered to only show those with more than $uri_threshold\n";
