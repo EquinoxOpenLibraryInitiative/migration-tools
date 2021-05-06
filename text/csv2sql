@@ -165,6 +165,8 @@ sub write_sql_loader {
         print $sql " escape " . $dbh->quote( $auto->csv->escape_char ) unless $dbh->quote( $auto->csv->escape_char ) eq 'NULL';
     }
 	print $sql "\n";
+	print "\tset unlogged table to logged after the load\n";
+	print $sql "\nALTER TABLE $cfg->{schema}.$cfg->{table_name} SET LOGGED;\n";
 }
 
 sub main {
