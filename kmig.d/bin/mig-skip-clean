@@ -88,11 +88,11 @@ sub skip_clean {
         }
 
         my $rv = $dbh->do("
-            UPDATE $MIGSCHEMA.tracked_file
+            UPDATE m_tracked_file
             SET clean_filename = " . $dbh->quote($clean_file) . "
             WHERE base_filename = " . $dbh->quote($file) . "
             ;
-        ") || die "Error inserting into table $MIGSCHEMA.tracked_file: $!\n";
+        ") || die "Error inserting into table m_tracked_file: $!\n";
         KMig::db_disconnect($dbh);
     } else {
         die "File not currently tracked: $file\n";
