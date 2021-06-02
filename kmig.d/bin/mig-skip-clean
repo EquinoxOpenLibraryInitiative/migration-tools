@@ -64,9 +64,9 @@ sub skip_clean {
     my $file = shift;
     my $clean_file = shift;
 
-    my $tracked_file_id = Kmig::check_for_tracked_file($file);
+    my $tracked_file_id = KMig::check_for_tracked_file($file);
     if ($tracked_file_id) {
-        my $data = Kmig::status_this_file($file);
+        my $data = KMig::status_this_file($file);
 
         if (! $data->{'utf8_filename'}) {
             die "mig-iconv or mig-skip-iconv needed for UTF8 version of file: $file\n";
@@ -79,7 +79,7 @@ sub skip_clean {
 
         print "skipping cleaning of tracked file: $file\n";
 
-        my $dbh = Kmig::db_connect();
+        my $dbh = KMig::db_connect();
         if (! $clean_file) {
             $clean_file = $utf8_file . '.clean';
         }
@@ -93,7 +93,7 @@ sub skip_clean {
             WHERE base_filename = " . $dbh->quote($file) . "
             ;
         ") || die "Error inserting into table $MIGSCHEMA.tracked_file: $!\n";
-        Kmig::db_disconnect($dbh);
+        KMig::db_disconnect($dbh);
     } else {
         die "File not currently tracked: $file\n";
     }
