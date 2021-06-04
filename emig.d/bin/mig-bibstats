@@ -117,10 +117,10 @@ if ($p_branch_subfield) {
 
 # ils name, holding tag, barcode subfield 
 my @ilses = (
-    ['Mandarin/Evergreen/PolarisAtribum/Destiny','852','p'],
-    ['TLC','949','g'],
-    ['Koha','952','p'],
-    ['Sympony','999','i']
+    ['852p - Mandarin/Evergreen/Polaris/Atrium/Destiny','852','p'],
+    ['949g - TLC','949','g'],
+    ['952p - Koha','952','p'],
+    ['999i - Sympony','999','i']
 );
 
 my @temp;
