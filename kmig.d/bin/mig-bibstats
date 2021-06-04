@@ -24,6 +24,13 @@ with one of the ILSes so provide the name
 --exportbarcodesfile will use this file name for a barcode export instead 
 of the generic 'barcodes_export.txt'
 
+--item_type_subfield will make use of --holding_code and provide a breakdown of
+bib types by item types.  If --branch_subfield is also provided, then the
+breakdown will be further subdivided by branch.
+
+--always_look_for_utf8_isues Will ignore the bib type declaration to always look to 
+see if it finds likely marc8 encoded strings and invalid utf8 strings 
+
 =back
 =cut
 
@@ -31,6 +38,8 @@ of the generic 'barcodes_export.txt'
 
 use strict;
 use warnings;
+
+no warnings 'utf8';
 
 use Data::Dumper;
 use Env qw(
@@ -43,6 +52,7 @@ use Getopt::Long;
 use MARC::Batch;
 use MARC::Record;
 use MARC::Field;
+use MARC::Charset 'marc8_to_utf8';
 use Cwd 'abs_path';
 use Cwd qw(getcwd);
 use List::MoreUtils qw(uniq);
@@ -60,24 +70,28 @@ my $file;
 my $uri_threshold = 1;
 my $p_holding_code;
 my $p_barcode_subfield;
+my $p_item_type_subfield;
+my $p_branch_subfield;
 my $p_ils_name = '';
-my $holding_threshold = 50;
 my $p_ignore_filetype = 'false';
 my @holdings;
 my %unique_barcodes;
 my $exportbarcodes;
 my $exportbarcodesfile;
+my $always_look_for_utf8_issues;
 
 my $ret = GetOptions(
-    'file:s'           		 => \$file,
-	'uri_threshold:i'  		 => \$uri_threshold,
-	'holding_code:s'   		 => \$p_holding_code,
-	'barcode_subfield:s'     => \$p_barcode_subfield,
-	'ignore_filetype:s'		 => \$p_ignore_filetype,
-	'ils:s'	        		 => \$p_ils_name,
-	'exportbarcodes:s'		 => \$exportbarcodes,
-	'exportbarcodesfile:s'   => \$exportbarcodesfile,
-	'holding_threshold:s'	 => \$holding_threshold
+    'file:s'                          => \$file,
+    'uri_threshold:i'                 => \$uri_threshold,
+    'holding_code:s'                  => \$p_holding_code,
+    'barcode_subfield:s'              => \$p_barcode_subfield,
+    'item_type_subfield:s'            => \$p_item_type_subfield,
+    'branch_subfield:s'               => \$p_branch_subfield,
+    'ignore_filetype:s'               => \$p_ignore_filetype,
+    'ils:s'                           => \$p_ils_name,
+    'exportbarcodes:s'                => \$exportbarcodes,
+    'exportbarcodesfile:s'            => \$exportbarcodesfile,
+    'always_look_for_utf8_issues'     => \$always_look_for_utf8_issues
 );
 
 if ($exportbarcodesfile and !defined $exportbarcodes) { abort('You have to provide an ILS name if you want a barcode export file.'); }
@@ -85,8 +99,18 @@ if ($exportbarcodesfile and !defined $exportbarcodes) { abort('You have to provi
 if ($p_holding_code and length $p_holding_code != 3) { abort('Holdings codes must be three characters.'); }
 
 if ($p_barcode_subfield) {
-	if (!defined $p_holding_code) { abort('A barcode field can not be used without a holding code.'); }
-	if (length $p_barcode_subfield != 1) { abort('Barcode subfields must be a single character code.'); }
+    if (!defined $p_holding_code) { abort('A barcode field can not be used without a holding code.'); }
+    if (length $p_barcode_subfield != 1) { abort('Barcode subfields must be a single character code.'); }
+}
+
+if ($p_item_type_subfield) {
+	if (!defined $p_holding_code) { abort('An item type field can not be used without a holding code.'); }
+	if (length $p_item_type_subfield != 1) { abort('Item type subfields must be a single character code.'); }
+}
+
+if ($p_branch_subfield) {
+	if (!defined $p_holding_code) { abort('A branch field can not be used without a holding code.'); }
+	if (length $p_branch_subfield != 1) { abort('Branch subfields must be a single character code.'); }
 }
 
 # ils name, holding tag, barcode subfield 
@@ -98,11 +122,11 @@ my @ilses = (
 );
 
 my @temp;
-if ($p_holding_code) {
-	push @temp, $p_ils_name;
-	push @temp, $p_holding_code;
-	if ($p_barcode_subfield) { push @temp, lc $p_barcode_subfield; }
-	push @ilses, [@temp];
+if (defined $p_holding_code && defined $p_ils_name && defined $p_barcode_subfield) {
+    push @temp, $p_ils_name;
+    push @temp, $p_holding_code;
+    if ($p_barcode_subfield) { push @temp, lc $p_barcode_subfield; }
+    push @ilses, [@temp];
 }
 
 #to do - add a check for exportbarcodes being in @ilses
@@ -126,65 +150,118 @@ my @uris;
 my @fields;
 my @encodings;
 my @types;
+my %bib_types_by_item_type;
 my @holding_code_strings;
 my %holding_counts;
 my %barcode_counts;
+my $bad_bibs = 0;
+my $no_title = 0;
+my $record;
+my $no_author = 0;
+my @warnings;
+my @invalidTitles;
+my @invalidAuthors;
+my %subfield_counts;
 
 foreach (@ilses) { 
-	$holding_counts{@$_[0]} = 0; 
-	$barcode_counts{@$_[0]} = 0;
+    $holding_counts{@$_[0]} = 0; 
+    $barcode_counts{@$_[0]} = 0;
 }
 
-while ( my $record = $batch->next() ) {
+while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; print "unreadable bib found at $i\n"; next; } } ) {
+    push @warnings, $record->warnings();
     $i++;
-	#check holdings, bit time consuming but more future proof
-	foreach (@ilses) {
-		my $ils = @$_[0];
-		my $hcode = @$_[1];
-		my $barcode = @$_[2];
-		my @holding_fields = $record->field($hcode);
+    #check holdings, bit time consuming but more future proof
+    foreach (@ilses) {
+        my $ils = @$_[0];
+        my $hcode = @$_[1];
+        my $barcode = @$_[2];
+        my @holding_fields = $record->field($hcode);
+        my @subfields;
         foreach my $hf (@holding_fields) {
-			my @h;
-			my $barcode_string = $hf->subfield($barcode);
-        	push @h, $ils;
-        	push @h, $barcode_string;
-			push @holdings, [@h];
-		}
-		my $l = scalar @holding_fields;
-		my $v = $holding_counts{$ils};
-		if ($l) { $holding_counts{$ils} = $v + $l; }
-	}
-    #process 856s
-	@fields = $record->field('856');
-	my $enc = substr $record->leader(), 9, 1;
-	push @encodings, $enc;
+            my @h;
+            my $barcode_string = $hf->subfield($barcode);
+            push @h, $ils;
+            push @h, $barcode_string;
+            push @holdings, [@h];
+            @subfields = $hf->subfields();
+            foreach (@subfields) { 
+                my $sf = @$_[0]; 
+                if ($subfield_counts{$ils}{$sf}) { $subfield_counts{$ils}{$sf}++; } 
+                    else { $subfield_counts{$ils}{$sf} = 1; } 
+            }
+        }
+        my $l = scalar @holding_fields;
+        my $v = $holding_counts{$ils};
+        if ($l) { $holding_counts{$ils} = $v + $l; }
+    }
+    #check leader encoding and record type 
+    my $enc = substr $record->leader(), 9, 1;
+    push @encodings, $enc;
     my $type = substr $record->leader(), 6, 1;
     push @types, $type;
-	foreach my $f (@fields) {
-		my $u = $f->subfield('u');
+    #check for author and title and look for encodings 
+    my $title = $record->title();
+    my $author = $record->author();
+    if ($enc eq 'a' or $always_look_for_utf8_issues) {
+        my $badTitle;
+        my $badAuthor;
+        if ($title) { 
+            $badTitle = is_marc8($title);
+        }
+        if ($author) { 
+            $badAuthor = is_marc8($author);
+        }
+        if ($badTitle) { push @invalidTitles, $title; }
+        if ($badAuthor) { push @invalidAuthors, $author; } 
+    }
+    if (!defined $title) { $no_title++; }
+    if (!defined $author) { $no_author++; }
+    # bib type by branch and by item type if item subfield (and optionally branch subfield) provided
+    if (defined $p_holding_code && defined $p_item_type_subfield) {
+        my @holding_fields = $record->field($p_holding_code);
+        foreach my $hf (@holding_fields) {
+            my $item_type = $hf->subfield($p_item_type_subfield) || '<missing item type subfield>';
+            my $branch = $p_branch_subfield ? $hf->subfield($p_branch_subfield) : 'default';
+            if (! defined $bib_types_by_item_type{ $branch }) {
+                $bib_types_by_item_type{ $branch } = {};
+            }
+            if (! defined $bib_types_by_item_type{ $branch }{ $type }) {
+                $bib_types_by_item_type{ $branch }{ $type } = {};
+            }
+            if (! defined $bib_types_by_item_type{ $branch }{ $type }{ $item_type }) {
+                $bib_types_by_item_type{ $branch }{ $type }{ $item_type } = 0;
+            }
+            $bib_types_by_item_type{ $branch }{ $type }{ $item_type }++;
+        }
+    }
+    #process 856s
+    @fields = $record->field('856');
+    foreach my $f (@fields) {
+        my $u = $f->subfield('u');
         my $n = $f->subfield('9');
         if (defined $n) { $uri_sub9_count++; }
-		if (defined $u) {
-			$uri_count++;
-			my $ind1 = $f->indicator('1');
-			my $ind2 = $f->indicator('2');
-			if ($ind1 eq '4') {
-				if ($ind2 eq '0' or $ind2 eq '1') { $uri_valid_count++; }
-			}
-			my $ustring = lc $f->as_string('u');
-			$ustring =~ s/http:\/\///;
+        if (defined $u) {
+            $uri_count++;
+            my $ind1 = $f->indicator('1');
+            my $ind2 = $f->indicator('2');
+            if ($ind1 eq '4') {
+                if ($ind2 eq '0' or $ind2 eq '1') { $uri_valid_count++; }
+            }
+            my $ustring = lc $f->as_string('u');
+            $ustring =~ s/http:\/\///;
             $ustring =~ s/ftp:\/\///;
-			$ustring =~ s/https:\/\///;
-			$ustring =~ s/\/.*//;
-			push @uris, $ustring;
-		}
-	}
+            $ustring =~ s/https:\/\///;
+            $ustring =~ s/\/.*//;
+            push @uris, $ustring;
+        }
+    }
     #check for authority linking on 100s and 245s, if present may need to scrub them
-	@fields = $record->field('100');
-	foreach my $f (@fields) {
-		my $t = $f->subfield('0');
-		if (defined $t) { $title_sub0++; }	
-	}
+    @fields = $record->field('100');
+    foreach my $f (@fields) {
+        my $t = $f->subfield('0');
+        if (defined $t) { $title_sub0++; }    
+    }
     @fields = $record->field('245');
     foreach my $f (@fields) {
         my $t = $f->subfield('0');
@@ -194,11 +271,11 @@ while ( my $record = $batch->next() ) {
 }
 
 foreach (@ilses) {
-	my $ils = @$_[0];
+    my $ils = @$_[0];
     my @temp_barcodes;
     foreach my $h (@holdings) {
-		my $temp_ils_name = @$h[0];
-    	if ($temp_ils_name eq $ils) { push @temp_barcodes, @$h[1]; }
+        my $temp_ils_name = @$h[0];
+        if ($temp_ils_name eq $ils) { push @temp_barcodes, @$h[1]; }
     }
     my @uniq_barcodes = uniq @temp_barcodes;;
     $barcode_counts{$ils} = scalar @uniq_barcodes;
@@ -231,26 +308,56 @@ foreach my $key (keys %type_counts) {
 }
 print "\n";
 
+if ($p_item_type_subfield) {
+    print "===== Branch / Leader 06 / Item Type\n";
+    foreach my $branch (keys %bib_types_by_item_type) {
+        foreach my $btype (keys %{ $bib_types_by_item_type{$branch} }) {
+            foreach my $itype (keys %{ $bib_types_by_item_type{$branch}{$btype} }) {
+                my $count = $bib_types_by_item_type{$branch}{$btype}{$itype};
+                print "$branch\t$btype (" . give_type($btype) . ")\t$itype\t$count\n";
+            }
+        }
+    }
+    print "\n";
+}
+
+my %warningCounts;
+$warningCounts{$_}++ for @warnings;
+print "===== Warnings\n";
+while (my ($key,$value) = each %warningCounts) {
+    print "$key $value\n";
+}
+print "\n";
+
 print "===== Summary of Select Field Counts\n";
 print "  $uri_count 856 fields with a subfield u\n";
 print "  $uri_valid_count 856 fields with a subfield u and valid indicators\n";
 print "  $uri_sub9_count 856 fields have a subfield 9\n";
 print "  $title_sub0 100 fields have a subfield 0\n";
 print "  $author_sub0 245 fields have a subfield 0\n";
+print "  $bad_bibs failed to be processed\n";
 
 print "\n===== Holdings Analysis\n";
 foreach my $key (keys %holding_counts) {
-	my $c = $holding_counts{$key};
-	if (((100/$i)*$c) >= $holding_threshold) { 
-		if ($key ne 'Symphony') { print "  $key - $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n"; }
-		else { print "  $key - $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes - 999 FIELDS MUST BE MOVED WITH kmig prepbibs\n"; } 
-	}
+    my $c = $holding_counts{$key};
+    print "  $key $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n";
+    my $format_loop = 1;
+    foreach my $sub_key (sort keys %{$subfield_counts{$key}}) {
+        if ($format_loop == 1) { print "  "; }
+        printf ( "%-15s", "\$$sub_key x$subfield_counts{$key}{$sub_key}" );
+        $format_loop++;
+        if ($format_loop == 5) {
+             $format_loop = 1;
+             print "\n";
+        }
+    }
+    print "\n";
 }
 
 print "\n===== URI values are domains and filtered to only show those with more than $uri_threshold\n";
 foreach my $key (keys %uri_counts) {
-	my $value = $uri_counts{$key};
-	if ($value > $uri_threshold) { print "  $key   $value\n"; } 
+    my $value = $uri_counts{$key};
+    if ($value > $uri_threshold) { print "  $key   $value\n"; } 
 }
 
 if ($exportbarcodes) {
@@ -260,12 +367,36 @@ if ($exportbarcodes) {
     open my $out_fh, '>:utf8', $outfile or abort('can not open output file for barcode list');
     foreach my $h (@holdings) {
         my $temp_ils_name = @$h[0];
-		my $barcode = @$h[1];
-		if (!defined $barcode) { $barcode = 'no barcode found'; }
+        my $barcode = @$h[1];
+        if (!defined $barcode) { $barcode = 'no barcode found'; }
         if ($temp_ils_name eq $exportbarcodes) { print $out_fh "@$h[1]\n" }
     }
     close $out_fh;
-} else { print "No barcodes being exported.\n"; }
+} 
+
+print "number of bibs without a 245a $no_title \n";
+print "number of bibs without an author (100/110/111) $no_author \n";
+
+if (@invalidTitles or @invalidAuthors) { print "\n===== Invalid UTF8 Characters found in authors and titles\n"; }
+if (@invalidTitles) {
+    $i = 0;
+    foreach (@invalidTitles) {
+        $i++;
+        print "$i title as utf8: $_ \n";
+        my $marc8str = marc8_to_utf8($_);
+        print "$i title as marc8: $marc8str \n";
+    }
+}
+if (@invalidAuthors) {
+    $i = 0;
+    foreach (@invalidAuthors) {
+        $i++;
+        print "$i author as utf8: $_ \n";
+        my $marc8str = marc8_to_utf8($_);
+        print "$i author as marc8: $marc8str \n";
+    }
+}
+
 
 close $file;
 
@@ -277,8 +408,21 @@ sub abort {
     exit 1;
 }
 
+sub is_marc8 {
+    my $str = shift;
+    my @strArray = split(//, $str);
+    my $found;
+    foreach (@strArray) {
+        if (ord($_) == 225) { 
+            $found = 'true';
+            last;
+        }
+    } 
+    if ($found) { return 1; } else { return; }
+}
+
 sub give_type {
-	my $type = shift;
+    my $type = shift;
     if ($type eq 'a') { return 'Language material'; }
     if ($type eq 'c') { return 'Notated Music'; }
     if ($type eq 'd') { return 'Manuscript notated music'; }

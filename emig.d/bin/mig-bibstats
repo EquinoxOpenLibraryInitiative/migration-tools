@@ -73,7 +73,6 @@ my $p_barcode_subfield;
 my $p_item_type_subfield;
 my $p_branch_subfield;
 my $p_ils_name = '';
-my $holding_threshold = 50;
 my $p_ignore_filetype = 'false';
 my @holdings;
 my %unique_barcodes;
@@ -92,7 +91,6 @@ my $ret = GetOptions(
     'ils:s'                           => \$p_ils_name,
     'exportbarcodes:s'                => \$exportbarcodes,
     'exportbarcodesfile:s'            => \$exportbarcodesfile,
-    'holding_threshold:s'             => \$holding_threshold,
     'always_look_for_utf8_issues'     => \$always_look_for_utf8_issues
 );
 
@@ -163,6 +161,7 @@ my $no_author = 0;
 my @warnings;
 my @invalidTitles;
 my @invalidAuthors;
+my %subfield_counts;
 
 foreach (@ilses) { 
     $holding_counts{@$_[0]} = 0; 
@@ -178,12 +177,19 @@ while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; pr
         my $hcode = @$_[1];
         my $barcode = @$_[2];
         my @holding_fields = $record->field($hcode);
+        my @subfields;
         foreach my $hf (@holding_fields) {
             my @h;
             my $barcode_string = $hf->subfield($barcode);
             push @h, $ils;
             push @h, $barcode_string;
             push @holdings, [@h];
+            @subfields = $hf->subfields();
+            foreach (@subfields) { 
+                my $sf = @$_[0]; 
+                if ($subfield_counts{$ils}{$sf}) { $subfield_counts{$ils}{$sf}++; } 
+                    else { $subfield_counts{$ils}{$sf} = 1; } 
+            }
         }
         my $l = scalar @holding_fields;
         my $v = $holding_counts{$ils};
@@ -334,7 +340,18 @@ print "  $bad_bibs failed to be processed\n";
 print "\n===== Holdings Analysis\n";
 foreach my $key (keys %holding_counts) {
     my $c = $holding_counts{$key};
-    if ($c >= $holding_threshold) { print "  $key $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n"; }
+    print "  $key $holding_counts{$key} holdings in $i bibs with $barcode_counts{$key} unique barcodes\n";
+    my $format_loop = 1;
+    foreach my $sub_key (sort keys %{$subfield_counts{$key}}) {
+        if ($format_loop == 1) { print "  "; }
+        printf ( "%-15s", "\$$sub_key x$subfield_counts{$key}{$sub_key}" );
+        $format_loop++;
+        if ($format_loop == 5) {
+             $format_loop = 1;
+             print "\n";
+        }
+    }
+    print "\n";
 }
 
 print "\n===== URI values are domains and filtered to only show those with more than $uri_threshold\n";
