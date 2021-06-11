@@ -12,8 +12,6 @@ JOIN
 WHERE
     a.record != b.record
     AND a.author = b.author
-    AND a.can_have_copies
-    AND b.can_have_copies
     AND (   
             'ebook' = ANY(a.search_format)
         )
@@ -40,8 +38,6 @@ JOIN
     dedupe_batch b ON b.title = a.title AND a.search_format_str = b.search_format_str
 WHERE
     a.record != b.record
-    AND a.can_have_copies
-    AND b.can_have_copies
     AND ( ('evideo' = ANY(a.search_format) AND 'evideo' = ANY(b.search_format))
         OR ('eaudio' = ANY(a.search_format) AND 'eaudio' = ANY(b.search_format))
     )
