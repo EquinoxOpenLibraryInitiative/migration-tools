@@ -2403,7 +2403,7 @@ LANGUAGE PLPGSQL;
 
 CREATE OR REPLACE FUNCTION migration_tools.incoming_item_barcode_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
 DECLARE
-       collisions INTEGER DEFAULT 0;
+    collisions INTEGER DEFAULT 0;
 BEGIN
 
     CREATE TEMPORARY TABLE temp_incoming_collisions AS
@@ -2415,6 +2415,7 @@ BEGIN
 
     SELECT SUM(c) FROM temp_incoming_collisions INTO collisions;
 
+    IF collisions IS NULL THEN collisions := 0; END IF;
     RAISE NOTICE 'internal collisions % being prefixed', collisions;
 
     UPDATE m_asset_copy_legacy SET barcode = CONCAT_WS('_',barcode_prefix,barcode,id::TEXT)
@@ -2459,14 +2460,12 @@ DECLARE
 BEGIN
 
     CREATE TEMPORARY TABLE temp_incumbent_collisions AS
-    SELECT COUNT(*) AS c, barcode FROM m_asset_copy_legacy
+    SELECT barcode FROM m_asset_copy_legacy
     WHERE x_migrate
-    AND id NOT IN (SELECT id FROM m_asset_copy)
-    GROUP BY 2
-    HAVING COUNT(*) > 1
+    AND barcode IN (SELECT barcode FROM asset.copy WHERE NOT deleted)
     ;
 
-    SELECT SUM(c) FROM temp_incumbent_collisions INTO collisions;
+    SELECT COUNT(*) FROM temp_incumbent_collisions INTO collisions;
 
     RAISE NOTICE 'incumbent collisions % being prefixed', collisions;
 
