@@ -33,7 +33,7 @@ return $marc_xml->as_xml_record() unless @fields;
 $marc_xml->delete_fields(@fields);
 
 foreach my $f (@fields) {
-    $f->delete_subfield(code => '0');
+    $f->delete_subfield(code => $subfield);
 }
 $marc_xml->insert_fields_ordered(@fields);
 
