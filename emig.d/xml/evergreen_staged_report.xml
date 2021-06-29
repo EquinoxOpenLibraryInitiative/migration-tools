@@ -842,7 +842,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <report_title>Bibliographic Search Formats by Circ Mods</report_title>
         <tag>bibs</tag>
         <iteration>0</iteration>
-        <heading>Search Formats.Circ Mods.Count</heading>
+        <heading>Count.Circ Mods.Search Formats</heading>
         <query>
 WITH search_formats AS (
     SELECT 

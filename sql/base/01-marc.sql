@@ -33,7 +33,7 @@ return $marc_xml->as_xml_record() unless @fields;
 $marc_xml->delete_fields(@fields);
 
 foreach my $f (@fields) {
-    $f->delete_subfield(code => '0');
+    $f->delete_subfield(code => $subfield);
 }
 $marc_xml->insert_fields_ordered(@fields);
 
@@ -1034,4 +1034,20 @@ CREATE OR REPLACE FUNCTION migration_tools.insert_tags (TEXT, TEXT) RETURNS TEXT
 $$ LANGUAGE PLPERLU STABLE;
 
 
+CREATE OR REPLACE FUNCTION migration_tools.marc_set_tag (TEXT, TEXT, TEXT) RETURNS TEXT AS $$
+    my ($marcxml, $source_tag, $new_tag) = @_;
 
+    use MARC::Record;
+    use MARC::File::XML;
+    use MARC::Field;
+
+    my @fields;
+    eval {
+        my $marc = MARC::Record->new_from_xml($marcxml, 'UTF-8');
+        @fields = $marc->field($source_tag);
+    };
+    foreach my $field (@fields) {
+        $field->set_tag($new_tag);
+    }
+    return $marc->as_xml_record();
+$$ LANGUAGE PLPERLU STABLE;
