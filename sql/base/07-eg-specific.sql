@@ -2390,6 +2390,8 @@ BEGIN
 
     SELECT SUM(c) FROM temp_incoming_collisions INTO collisions;
 
+    IF collisions IS NULL THEN collisions := 0; END IF;
+
     RAISE NOTICE 'internal collisions % being prefixed', collisions;
 
     UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,usrname,id::TEXT) 
