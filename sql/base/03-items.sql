@@ -1,4 +1,3 @@
-
 DROP TABLE IF EXISTS migration_tools.ils_holdings;
 CREATE TABLE migration_tools.ils_holdings (
      id                        SERIAL
