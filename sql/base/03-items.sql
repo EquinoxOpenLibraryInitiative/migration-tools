@@ -254,3 +254,23 @@ BEGIN
 END;
 
 $$ LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS migration_tools.munge_price(TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.munge_price (text_price TEXT)
+    RETURNS NUMERIC(6,2)
+    LANGUAGE plpgsql
+AS $function$
+DECLARE
+    numeric_price NUMERIC;
+BEGIN
+    text_price := REGEXP_REPLACE(text_price,'[^0-9.]+', '', 'g');
+    numeric_price := ROUND(text_price::NUMERIC,2);
+    IF numeric_price IS NULL THEN return NULL; END IF;
+    IF numeric_price > 9999.99 THEN 
+       numeric_price := 9999.99;
+    END IF;
+    RETURN numeric_price;
+END;
+$function$
+;
+
