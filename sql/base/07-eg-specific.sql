@@ -1083,11 +1083,13 @@ CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
                 || ' SET x_shelf = b.id FROM m_asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND NULLIF(BTRIM(a.desired_shelf), '''') IS NOT NULL'
                 || ' AND b.owning_lib = x_org'
                 || ' AND NOT b.deleted';
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
                 || ' SET x_shelf = b.id FROM asset.copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND NULLIF(BTRIM(a.desired_shelf), '''') IS NOT NULL'
                 || ' AND b.owning_lib = x_org'
                 || ' AND x_shelf IS NULL'
                 || ' AND NOT b.deleted';
@@ -1096,12 +1098,14 @@ CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
                 || ' SET x_shelf = b.id FROM m_asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND NULLIF(BTRIM(a.desired_shelf), '''') IS NOT NULL'
                 || ' AND b.owning_lib = $1'
                 || ' AND NOT b.deleted'
             USING org;
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
                 || ' SET x_shelf = b.id FROM m_asset_copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND NULLIF(BTRIM(a.desired_shelf), '''') IS NOT NULL'
                 || ' AND b.owning_lib = $1'
                 || ' AND x_shelf IS NULL'
                 || ' AND NOT b.deleted'
@@ -1113,6 +1117,7 @@ CREATE OR REPLACE FUNCTION migration_tools._handle_shelf (TEXT,TEXT,TEXT,INTEGER
             EXECUTE 'UPDATE ' || quote_ident(table_name) || ' a'
                 || ' SET x_shelf = b.id FROM asset.copy_location b'
                 || ' WHERE BTRIM(UPPER(a.desired_shelf)) = BTRIM(UPPER(b.name))'
+                || ' AND NULLIF(BTRIM(a.desired_shelf), '''') IS NOT NULL'
                 || ' AND b.owning_lib = $1 AND x_shelf IS NULL'
                 || ' AND NOT b.deleted'
             USING o;
