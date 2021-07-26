@@ -503,7 +503,6 @@ $qualifying_match = lc($qualifying_match);
 foreach my $field (@uris) {
     my $str = lc($field->as_string());
     if (index($str, $qualifying_match) != -1 or $qualifying_match eq '*') { #checks whole tag not just $u
-        elog(NOTICE, "test passes for $str\n");
         my $ind1 = $field->indicator('1');
         my $ind2 = $field->indicator('2');
         if (!defined $ind1) { $field->set_indicator(1,'4'); }
