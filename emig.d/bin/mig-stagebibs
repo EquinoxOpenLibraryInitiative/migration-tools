@@ -63,8 +63,9 @@ pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
 pod2usage(-verbose => 1) if ! $ARGV[1];
 
 my $append = 0;
-my $base_table;
+my $base_table = 'm_biblio_record_entry';
 my $stage_table;
+my $prod_table;
 my $marc_column = 'marc';
 my $auth;
 my $serial;
@@ -75,7 +76,8 @@ my $dbh = EMig::db_connect();
 my $infile;
 my $i = 0;
 my $batch;
-my $prod_table;
+my $table_test;
+my $column_test;
 binmode STDIN, ':utf8';
 
 my $ret = GetOptions(
@@ -89,41 +91,34 @@ my $ret = GetOptions(
     'no_source_or_last_xact_id' => \$no_source_or_last_xact_id
 );
 
-#if in file is empty then fail
-#if auth and serial = 1 fail 
-
 if ($serial) { $base_table = 'm_authority_record_entry'; }
 if ($auth) { $base_table = 'm_serial_record_entry'; }
 if ($auth and $serial) { abort('are you sure you want to load these as authorities and serials?'); }
-
-if (!$base_table) {
-    $base_table = 'm_biblio_record_entry';
-}
 
 if ($base_table eq 'm_authority_record_entry') { $prod_table = 'authority.record_entry'; }
 if ($base_table eq 'm_serial_record_entry') { $prod_table = 'serial.record_entry'; }
 if ($base_table eq 'm_biblio_record_entry') { $prod_table = 'biblio.record_entry'; }
 
-if (!$stage_table) {
-    $stage_table = "$base_table . '_legacy';
-}
+if (!$stage_table) { $stage_table = "$base_table" . '_legacy'; }
 
-my $base_test = check_for_table($dbh,$base_table);
-my $legacy_test = check_for_table($dbh,$stage_table);
-if ($base_test == 0 and $bre_legacy_test == 0 ) { create_bre($dbh); create_child_bre($dbh); }
-if ($bre_test == 1 and $bre_legacy_test == 0 ) { create_child_bre($dbh); }
+$table_test = check_for_table($dbh,$base_table);
+if ($table_test == 0) { create_base($dbh,$base_table,$prod_table); }
 
-my $xmig_test = check_for_column($dbh,$stage_table,'x_migrate');
-if ($xmig_test == 0) { add_column($dbh,$stage_table,'x_migrate','BOOLEAN DEFAULT TRUE'); }
+$table_test = check_for_table($dbh,$stage_table);
+if ($table_test == 0) { create_stage($dbh,$base_table,$prod_table); }
 
-my $xx_source_test = check_for_column($dbh,$stage_table,'x_source');
-if ($xx_source_test == 0) { add_column($dbh,$stage_table,'x_source','TEXT'); }
+$column_test = check_for_column($dbh,$stage_table,'x_migrate');
+if ($column_test == 0) { add_column($dbh,$stage_table,'x_migrate','BOOLEAN DEFAULT TRUE'); }
 
-my $xmarc_test = check_for_column($dbh,$stage_table,$marc_column);
-if ($xmarc_test == 0) { add_column($dbh,$stage_table,$marc_column,'TEXT'); }
+$column_test = check_for_column($dbh,$stage_table,'x_migrate_reason');
+if ($column_test == 0) { add_column($dbh,$stage_table,'x_migrate_reason','TEXT[]'); }
 
+$column_test = check_for_column($dbh,$stage_table,'x_source');
+if ($column_test == 0) { add_column($dbh,$stage_table,'x_source','TEXT'); }
 
-#flatten out MARC XML FILE
+$column_test = check_for_column($dbh,$stage_table,$marc_column);
+if ($column_test == 0) { add_column($dbh,$stage_table,$marc_column,'TEXT'); }
+
 open my $xml, "<:encoding(utf8)", $infile or abort('could not open MARC XML file');
 $i = 0;
 my $record = '';
@@ -141,34 +136,34 @@ while(my $line = <$xml>) {
 close $xml;
 
 if ($i == 0) { print "No XML was processed, are you sure this is an XML file?\n"; }
-print "Finis.\n";
+print "Finis.  $i records \n";
 
 # beyond here be functions 
 
-sub create_bre {
+sub create_base {
     my $dbh = shift;
+    my $base_table = shift;
+    my $prod_table = shift;
     $dbh->do("DO \$\$ 
         DECLARE
             t   BOOLEAN;
         BEGIN
         SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = '$base_table') INTO t;
         IF t = FALSE THEN
-            PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA','$base_table');
+            PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA','$prod_table');
         END IF;
         END \$\$;");
 
     return ();
 }
 
-sub create_child_bre {
+sub create_stage {
     my $dbh = shift;
+    my $base_table = shift;
+    my $prod_table = shift;
     $dbh->do("DO \$\$ 
         BEGIN
-        CREATE TABLE $MIGSCHEMA.$stage_table (x_migrate BOOLEAN DEFAULT TRUE, x_source TEXT) INHERITS ($MIGSCHEMA.$base_table);
-        END \$\$;");
-    $dbh->do("DO \$\$ 
-        BEGIN
-        ALTER TABLE $MIGSCHEMA.$stage_table ADD COLUMN x_merge_to BIGINT;
+        CREATE TABLE $MIGSCHEMA.$stage_table (x_migrate BOOLEAN DEFAULT TRUE, x_migrate_reason TEXT[], x_source TEXT, x_merge_to BIGINT) INHERITS ($MIGSCHEMA.$base_table);
         END \$\$;");
     return ;
 }
