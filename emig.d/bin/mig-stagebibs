@@ -29,10 +29,6 @@ This will load bibs into the authority_record_entry_legacy.
 
 This will load bibs into the serial_record_entry_legacy.
 
---base_table 
-
-Allows you to define a different staging table than biblio, auth or serial.
-
 --stage_table 
 
 Allows you to define a different staging table than the default _legacy.
@@ -79,6 +75,7 @@ my $dbh = EMig::db_connect();
 my $infile;
 my $i = 0;
 my $batch;
+my $prod_table;
 binmode STDIN, ':utf8';
 
 my $ret = GetOptions(
@@ -87,7 +84,6 @@ my $ret = GetOptions(
     'auth'                => \$auth,
     'x_source:s'          => \$x_source,
     'source:i'            => \$source,
-    'base_table:s'        => \$base_table,
     'stage_table:s'       => \$stage_table,
     'marc_column:s'       => \$marc_column,
     'no_source_or_last_xact_id' => \$no_source_or_last_xact_id
@@ -96,27 +92,25 @@ my $ret = GetOptions(
 #if in file is empty then fail
 #if auth and serial = 1 fail 
 
-if ($serial) { 
-    $base_table = 'm_authority_record_entry';
-}
-
-if ($auth) {
-    $base_table = 'm_serial_record_entry';
-}
-
+if ($serial) { $base_table = 'm_authority_record_entry'; }
+if ($auth) { $base_table = 'm_serial_record_entry'; }
 if ($auth and $serial) { abort('are you sure you want to load these as authorities and serials?'); }
 
 if (!$base_table) {
     $base_table = 'm_biblio_record_entry';
 }
 
+if ($base_table eq 'm_authority_record_entry') { $prod_table = 'authority.record_entry'; }
+if ($base_table eq 'm_serial_record_entry') { $prod_table = 'serial.record_entry'; }
+if ($base_table eq 'm_biblio_record_entry') { $prod_table = 'biblio.record_entry'; }
+
 if (!$stage_table) {
-    $stage_table = $base_table . '_legacy';
+    $stage_table = "$base_table . '_legacy';
 }
 
-my $bre_test = check_for_table($dbh,$base_table);
-my $bre_legacy_test = check_for_table($dbh,$stage_table);
-if ($bre_test == 0 and $bre_legacy_test == 0 ) { create_bre($dbh); create_child_bre($dbh); }
+my $base_test = check_for_table($dbh,$base_table);
+my $legacy_test = check_for_table($dbh,$stage_table);
+if ($base_test == 0 and $bre_legacy_test == 0 ) { create_bre($dbh); create_child_bre($dbh); }
 if ($bre_test == 1 and $bre_legacy_test == 0 ) { create_child_bre($dbh); }
 
 my $xmig_test = check_for_column($dbh,$stage_table,'x_migrate');
