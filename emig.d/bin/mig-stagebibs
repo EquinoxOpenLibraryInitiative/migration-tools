@@ -159,7 +159,7 @@ sub create_bre {
         BEGIN
         SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = '$MIGSCHEMA' AND table_name = '$base_table') INTO t;
         IF t = FALSE THEN
-            PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA',REGEXP_REPLACE('$base_table','_','.'));
+            PERFORM migration_tools.build_specific_base_staging_table ('$MIGSCHEMA','$base_table'));
         END IF;
         END \$\$;");
 
