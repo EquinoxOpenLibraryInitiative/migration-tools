@@ -86,6 +86,38 @@
 
 -->
 
+    <!-- SUMMARY REPORTS -->
+    <report>
+    <name>added_this_migration</name>
+    <tag>summary</tag>
+    <iteration>0</iteration>
+    <report_title>Records Added in This Migration</report_title>
+    <heading>Record Type.Count</heading>
+    <query>
+        SELECT 'Bibs', COUNT(*) FROM biblio.record_entry WHERE NOT deleted AND id IN (SELECT id FROM m_biblio_record_entry)
+        UNION ALL
+        SELECT 'Items', COUNT(*) FROM asset.copy WHERE NOT deleted AND id IN (SELECT id FROM m_asset_copy)
+        UNION ALL 
+        SELECT 'Patrons', COUNT(*) FROM actor.usr WHERE NOT deleted AND id IN (SELECT id FROM m_actor_usr);
+    </query>
+    </report>
+
+    <report>
+    <name>totals_in_db</name>
+    <tag>summary</tag>
+    <iteration>0</iteration>
+    <report_title>System Record Totals</report_title>
+    <heading>Record Type.Count</heading>
+    <query>
+        SELECT 'Bibs', COUNT(*) FROM biblio.record_entry WHERE NOT deleted
+        UNION ALL
+        SELECT 'Items', COUNT(*) FROM asset.copy WHERE NOT deleted
+        UNION ALL 
+        SELECT 'Patrons', COUNT(*) FROM actor.usr WHERE NOT deleted;
+    </query> 
+    </report>
+
+
     <!-- CIRC REPORTS -->
     <report>
         <name>circ_count</name>
