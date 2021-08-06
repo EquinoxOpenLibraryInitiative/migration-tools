@@ -464,7 +464,7 @@ $BODY$ LANGUAGE plpgsql;
 
 DROP FUNCTION IF EXISTS migration_tools.munge_sf9(TEXT,TEXT,TEXT);
 DROP FUNCTION IF EXISTS migration_tools.munge_sf9_qualifying_match(TEXT,TEXT,TEXT,TEXT);
--- removing the depredated munge_sf9 and deprecsated version of munge_sf_qualifying_match 
+-- removing the deprecated munge_sf9 and deprecated version of munge_sf_qualifying_match 
 
 DROP FUNCTION IF EXISTS migration_trools.munge_sf9_qualifying_match(TEXT,TEXT,TEXT);
 CREATE OR REPLACE FUNCTION migration_tools.munge_sf9_qualifying_match(marc_xml text, qualifying_match text, new_9_to_set text)
