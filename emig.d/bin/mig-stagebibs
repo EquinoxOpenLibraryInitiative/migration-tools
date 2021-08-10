@@ -59,8 +59,7 @@ use lib "$FindBin::Bin/";
 use EMig;
 use Getopt::Long;
 
-pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
-pod2usage(-verbose => 1) if ! $ARGV[1];
+pod2usage(-verbose => 1) if defined $ARGV[0] && $ARGV[0] eq '--help';
 
 my $append = 0;
 my $base_table = 'm_biblio_record_entry';
@@ -81,7 +80,6 @@ my $column_test;
 binmode STDIN, ':utf8';
 
 my $ret = GetOptions(
-    'file:s'              => \$infile,
     'serial'              => \$serial,
     'auth'                => \$auth,
     'x_source:s'          => \$x_source,
@@ -90,6 +88,9 @@ my $ret = GetOptions(
     'marc_column:s'       => \$marc_column,
     'no_source_or_last_xact_id' => \$no_source_or_last_xact_id
 );
+
+bort('must specify at least a bib file') unless @ARGV;
+$infile = $ARGV[0];
 
 if ($serial) { $base_table = 'm_authority_record_entry'; }
 if ($auth) { $base_table = 'm_serial_record_entry'; }

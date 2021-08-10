@@ -63,8 +63,7 @@ use EMig;
 #use KMig;
 use open ':encoding(utf8)';
 
-pod2usage(-verbose => 2) if defined $ARGV[0] && $ARGV[0] eq '--help';
-pod2usage(-verbose => 1) if ! $ARGV[1];
+pod2usage(-verbose => 1) if defined $ARGV[0] && $ARGV[0] eq '--help';
 
 my $file;
 my $uri_threshold = 1;
@@ -81,7 +80,6 @@ my $exportbarcodesfile;
 my $always_look_for_utf8_issues;
 
 my $ret = GetOptions(
-    'file:s'                          => \$file,
     'uri_threshold:i'                 => \$uri_threshold,
     'holding_code:s'                  => \$p_holding_code,
     'barcode_subfield:s'              => \$p_barcode_subfield,
@@ -93,6 +91,9 @@ my $ret = GetOptions(
     'exportbarcodesfile:s'            => \$exportbarcodesfile,
     'always_look_for_utf8_issues'     => \$always_look_for_utf8_issues
 );
+
+abort('must specify at least a bib file') unless @ARGV;
+$file = $ARGV[0];
 
 if ($exportbarcodesfile and !defined $exportbarcodes) { abort('You have to provide an ILS name if you want a barcode export file.'); }
 
