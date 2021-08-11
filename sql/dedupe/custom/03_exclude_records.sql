@@ -124,7 +124,7 @@ BEGIN
         SELECT value, value2 FROM dedupe_features WHERE id = feature_id INTO sf, str;
         SELECT COUNT(*) FROM copy_level_strings
             WHERE record IN (SELECT record FROM dedupe_batch WHERE sf = ANY(search_format))
-            AND (label ~* str OR location ~* str);
+            AND (label ~* str OR location ~* str) INTO row_count;
 	    UPDATE copy_level_strings SET keep = TRUE 
 		    WHERE record IN (SELECT record FROM dedupe_batch WHERE sf = ANY(search_format))
 		    AND (label ~* str OR location ~* str);
