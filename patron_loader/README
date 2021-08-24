@@ -17,8 +17,7 @@ Optional parameters:
 
 --dbport Evergreen database port, defaults to 5432
 --delimter defaults to a comma can be anyother delimiter usable by TEXT::CSV
---debug if set to anything other than 1 will assume you do not want to commit
-    any database transactions and will print the SQL that would do so to STDOUT
+--debug if set to anything other than 1 will assume you want to commit the transactions
 --matchpoint defaults to 'usrname', can also be 'cardnumber'
 --date_format used if dates are not in a 'YYYY-MM-DD' format
 --ident_type available as a field but rarely used in export sources so it can
