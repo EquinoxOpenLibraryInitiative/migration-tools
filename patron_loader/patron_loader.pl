@@ -128,7 +128,7 @@ if ($home_ou) {
 my @columns = ("cardnumber","profile","usrname","passwd","net_access_level",
 "family_name","first_given_name","second_given_name","pref_first_given_name","name_keywords",
 "email","home_library","day_phone","evening_phone","other_phone","dob","ident_type","ident_value","passwd",
-"active","barred","juvenile","expire_date","photo_url","guardian",
+"active","barred","juvenile","expire_date","photo_url","guardian","suffix",
 "add1_street1","add1_street2","add1_city","add1_county","add1_state","add1_country","add1_post_code",
 "add2_street1","add2_street2","add2_city","add2_county","add2_state","add2_country","add2_post_code",
 "statcat_name1","statcat_value1","statcat_name2","statcat_value2","statcat_name3","statcat_value3");
