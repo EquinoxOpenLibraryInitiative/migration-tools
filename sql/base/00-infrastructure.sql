@@ -30,6 +30,9 @@
 DROP SCHEMA IF EXISTS migration_tools CASCADE;
 CREATE SCHEMA migration_tools;
 
+CREATE TABLE migration_tools.version (version NUMERIC, installed TIMESTAMP DEFAULT NOW());
+INSERT INTO migration_tools.version (version) VALUES (3);
+
 CREATE OR REPLACE FUNCTION migration_tools.production_tables (TEXT) RETURNS TEXT[] AS $$
     DECLARE
         migration_schema ALIAS FOR $1;
