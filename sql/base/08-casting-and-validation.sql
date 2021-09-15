@@ -145,3 +145,19 @@ CREATE OR REPLACE FUNCTION migration_tools.attempt_money_from_pennies6 (TEXT,TEX
     END;
 $$ LANGUAGE PLPGSQL STRICT STABLE;
 
+
+CREATE OR REPLACE FUNCTION migration_tools.munge_dnm (TEXT) RETURNS BOOLEAN AS $$
+    DECLARE
+        dnm_text ALIAS FOR $1;
+        dnm_value BOOLEAN DEFAULT FALSE;
+    BEGIN
+        IF dnm_text ~* 'do not migrate' OR
+           dnm_text ~* 'dnm' OR 
+           dnm_text ~* 'true' OR
+           dnm_text ~* 'yes' 
+        THEN dnm_value := TRUE;
+        END IF;
+        RETURN dnm_value;
+    END;
+$$ LANGUAGE PLPGSQL STRICT STABLE;
+
