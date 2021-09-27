@@ -474,6 +474,7 @@
         <query>SELECT barcode FROM m_asset_copy_legacy WHERE barcode ~* 'no_barocde' AND x_migrate</query>
     </report>
 
+<!--
     <report>
         <name>m_asset_barcode_patterns</name>
         <report_title>Common Barcode Starting Patterns</report_title>
@@ -482,6 +483,7 @@
         <heading>Count of Barcodes (greater than 10).Left 60% of Characters</heading>
         <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE ac.x_migrate GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
     </report>
+-->
 
     <report>
         <name>incumbent_m_asset_barcode_collisions</name>
