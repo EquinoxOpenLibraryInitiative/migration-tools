@@ -1263,7 +1263,7 @@ ORDER BY 2, 3
         <iteration>0</iteration>
         <heading>Pateron Group.Org Unit.Penalty.Threshold</heading>
         <query>SELECT pgt.name, aou.shortname, sp.name, p.threshold FROM permission.grp_penalty_threshold p 
-                JOIN actor.org_unit aou ON aou.id = p.org_unit JOIN permission.grp_tree pgt ON pgt.id = p.grp JOIN config.standing_penalty sp ON sp.id = p.penalty
+                JOIN actor.org_unit aou ON aou.id = p.org_unit JOIN permission.grp_tree pgt ON pgt.id = p.grp JOIN config.standing_penalty sp ON sp.id = p.penalty WHERE pgt.id IN (SELECT DISTINCT profile FROM m_actor_usr_legacy WHERE x_migrate)
                 ORDER BY 2, 1, 3</query>
     </report>
 
