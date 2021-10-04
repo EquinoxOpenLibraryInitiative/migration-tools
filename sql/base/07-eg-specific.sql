@@ -2476,7 +2476,7 @@ BEGIN
 
     RAISE NOTICE 'incumbent collisions % being prefixed', collisions;
 
-    UPDATE m_asset_copy_legacy SET barcode = CONCAT_WS('_',barcode_prefix,barcode,id::TEXT)
+    UPDATE m_asset_copy_legacy SET barcode = CONCAT_WS('_',barcode_prefix,barcode)
     WHERE barcode IN (SELECT barcode FROM temp_incumbent_collisions) AND x_migrate;
 
     DROP TABLE temp_incumbent_collisions;
