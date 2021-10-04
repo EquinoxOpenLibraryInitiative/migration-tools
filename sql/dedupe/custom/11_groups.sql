@@ -38,7 +38,6 @@ SELECT 'SELECT * FROM find_lead_record(' || id || ',''' || (SELECT value FROM de
 -- had some recent trouble with ARRAY_REMOVE working consistently so a sanity check
 UPDATE groups SET records = ARRAY_REMOVE(records,lead_record);
 
-DROP TABLE IF EXISTS pairs;
 DROP TABLE IF EXISTS incoming_bibs;
 DROP TABLE IF EXISTS phys_desc;
 DROP TABLE IF EXISTS subjects;
