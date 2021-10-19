@@ -1,0 +1,145 @@
+#!/usr/bin/perl
+# -*- coding: iso-8859-15 -*-
+###############################################################################
+=pod
+
+=item B<split-bibs> foo.mrc
+
+Reads through a marc file to split it into MARC8 and UNICODE bibs.  It first 
+checks the file for MARC8 encoding and if it does not find any falls back on 
+the declaration in the leader.
+
+=back
+=cut
+
+###############################################################################
+
+use strict;
+use warnings;
+
+no warnings 'utf8';
+
+use Data::Dumper;
+use Env qw(
+    HOME PGHOST PGPORT PGUSER PGDATABASE MIGSCHEMA
+    MIGBASEWORKDIR MIGBASEGITDIR MIGGITDIR MIGWORKDIR
+);
+use Pod::Usage;
+use Switch;
+use Getopt::Long;
+use MARC::Batch;
+use MARC::Record;
+use MARC::Field;
+use MARC::Charset 'marc8_to_utf8';
+use Cwd 'abs_path';
+use Cwd qw(getcwd);
+use List::MoreUtils qw(uniq);
+use FindBin;
+my $mig_bin = "$FindBin::Bin/";
+use lib "$FindBin::Bin/";
+use EMig;
+#use KMig;
+use open ':encoding(utf8)';
+
+pod2usage(-verbose => 1) if defined $ARGV[0] && $ARGV[0] eq '--help';
+
+my $file;
+$file = $ARGV[0];
+
+open my $out_utf8_fh, '>:utf8', $file . '.utf8' or die "Can't open output file $!\n";
+open my $out_marc8_fh, '>', $file . '.marc8' or die "Can't open output file $!\n";
+
+my @temp;
+#to do - add a check for exportbarcodes being in @ilses
+
+my $filetype = `file $file`;
+my $batch;
+if ($filetype =~ m/MARC21/) {
+    $batch = MARC::Batch->new( 'USMARC', $file );
+} else {
+    $batch = MARC::Batch->new( 'XML', $file );
+}
+$batch->strict_off();
+
+my $i = 0;
+my @encodings;
+my $bad_bibs = 0;
+my $record;
+my @warnings;
+my $marc8_found = 0;
+my $leader_is_marc8 = 0;
+my $leader_is_utf8 = 0;
+
+#todo - add outputs to the unicode and the marc8 files and output files appropriates 
+
+while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; print "unreadable bib found at $i\n"; next; } } ) {
+    push @warnings, $record->warnings();
+    $i++;
+    my $enc = substr $record->leader(), 9, 1;
+    push @encodings, $enc;
+    my @fields = $record->fields();
+    my $marc8_found_in_record;
+    foreach my $f (@fields) {
+        my $str = $f->as_string();
+        my $is_really_marc8 = is_marc8($str);
+        if ($is_really_marc8) {
+            $marc8_found_in_record = 1;
+            last;
+        }
+    }
+    if ($marc8_found_in_record) { 
+        $marc8_found++;
+        print $out_marc8_fh $record->as_usmarc(),"\n";        
+    } else {
+        if ($enc ne 'a') { $leader_is_marc8++; print $out_marc8_fh $record->as_usmarc(),"\n"; } 
+        else { $leader_is_utf8++; print $out_utf8_fh $record->as_usmarc(),"\n"; }
+    }
+    if(($i % 1000) == 0) { print "Processing bib $i.\n"; }
+}
+
+print "\n$filetype\n";
+print "$i bibs read in file\n\n";
+
+my %encoding_counts;
+$encoding_counts{$_}++ for @encodings;
+
+print "===== Leader 09, # = MARC-8, a = UCS/Unicode\n";
+foreach my $key (keys %encoding_counts) {
+    my $value = $encoding_counts{$key};
+    print "  $key   $value\n"; 
+}
+print "\n";
+
+print "Records with marc8 found in them: $marc8_found\n";
+print "Records with no marc8 found but declared as marc8 in leader: $leader_is_marc8\n";
+print "Records with no marc8 found but declared as utf8 in leader: $leader_is_utf8\n";
+
+print "===== Summary of Select Field Counts\n";
+print "  $bad_bibs failed to be processed\n";
+
+
+close $file;
+close $out_utf8_fh;
+close $out_marc8_fh;
+
+########### functions
+
+sub abort {
+    my $msg = shift;
+    print STDERR "$0: $msg", "\n";
+    exit 1;
+}
+
+sub is_marc8 {
+    my $str = shift;
+    my @strArray = split(//, $str);
+    my $found;
+    foreach (@strArray) {
+        if (ord($_) == 225) { 
+            $found = 'true';
+            last;
+        }
+    } 
+    if ($found) { return 1; } else { return; }
+}
+
