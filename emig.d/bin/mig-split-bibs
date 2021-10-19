@@ -7,7 +7,8 @@
 
 Reads through a marc file to split it into MARC8 and UNICODE bibs.  It first 
 checks the file for MARC8 encoding and if it does not find any falls back on 
-the declaration in the leader.
+the declaration in the leader. Although written to separate files for checking 
+both should be econded as UNICODE and have had leaders corrected to reflect this.
 
 =back
 =cut
@@ -47,7 +48,7 @@ my $file;
 $file = $ARGV[0];
 
 open my $out_utf8_fh, '>:utf8', $file . '.utf8' or die "Can't open output file $!\n";
-open my $out_marc8_fh, '>', $file . '.marc8' or die "Can't open output file $!\n";
+open my $out_marc8_fh, '>:utf8', $file . '.was_marc8' or die "Can't open output file $!\n";
 
 my @temp;
 #to do - add a check for exportbarcodes being in @ilses
@@ -91,7 +92,7 @@ while ( eval { $record = $batch->next()} or do { if ($@) { $i++; $bad_bibs++; pr
         $marc8_found++;
         print $out_marc8_fh $record->as_usmarc(),"\n";        
     } else {
-        if ($enc ne 'a') { $leader_is_marc8++; print $out_marc8_fh $record->as_usmarc(),"\n"; } 
+        if ($enc ne 'a') { $leader_is_marc8++; $record->encoding( 'UTF-8' ); print $out_marc8_fh $record->as_usmarc(),"\n"; } 
         else { $leader_is_utf8++; print $out_utf8_fh $record->as_usmarc(),"\n"; }
     }
     if(($i % 1000) == 0) { print "Processing bib $i.\n"; }
