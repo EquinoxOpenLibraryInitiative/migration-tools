@@ -3,7 +3,7 @@
 ###############################################################################
 =pod
 
-=item B<bibstats> --file foo.mrc
+=item B<bibstats> foo.mrc
 
 Reads through a marc file to generate statistical information about the file 
 for quick analysis.
