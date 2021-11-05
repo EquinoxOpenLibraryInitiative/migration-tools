@@ -2400,7 +2400,7 @@ BEGIN
     RAISE NOTICE 'internal collisions % being prefixed', collisions;
 
     UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,usrname,id::TEXT) 
-    WHERE usrname IN (SELECT usrname FROM temp_incoming_collisions) AND x_migrate;
+    WHERE usrname IN (SELECT usrname FROM temp_incoming_collisions);
 
     DROP TABLE temp_incoming_collisions;
 
@@ -2426,7 +2426,7 @@ BEGIN
     RAISE NOTICE 'internal collisions % being prefixed', collisions;
 
     UPDATE m_asset_copy_legacy SET barcode = CONCAT_WS('_',barcode_prefix,barcode,id::TEXT)
-    WHERE barcode IN (SELECT barcode FROM temp_incoming_collisions) AND x_migrate;
+    WHERE barcode IN (SELECT barcode FROM temp_incoming_collisions);
 
     DROP TABLE temp_incoming_collisions;
 
@@ -2453,7 +2453,7 @@ BEGIN
     RAISE NOTICE 'incumbent collisions % being prefixed', collisions;
 
     UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,usrname,id::TEXT) 
-    WHERE usrname IN (SELECT usrname FROM temp_incumbent_collisions) AND x_migrate;
+    WHERE usrname IN (SELECT usrname FROM temp_incumbent_collisions);
 
     DROP TABLE temp_incumbent_collisions;
 
@@ -2477,7 +2477,7 @@ BEGIN
     RAISE NOTICE 'incumbent collisions % being prefixed', collisions;
 
     UPDATE m_asset_copy_legacy SET barcode = CONCAT_WS('_',barcode_prefix,barcode)
-    WHERE barcode IN (SELECT barcode FROM temp_incumbent_collisions) AND x_migrate;
+    WHERE barcode IN (SELECT barcode FROM temp_incumbent_collisions);
 
     DROP TABLE temp_incumbent_collisions;
 
@@ -2490,12 +2490,12 @@ CREATE OR REPLACE FUNCTION migration_tools.set_blank_usrnames (barcode_prefix TE
 DECLARE 
        collisions INTEGER DEFAULT 0;
 BEGIN
-    SELECT COUNT(*) FROM m_actor_usr_legacy WHERE x_migrate AND usrname IS NULL OR usrname = '' INTO collisions;
+    SELECT COUNT(*) FROM m_actor_usr_legacy WHERE usrname IS NULL OR usrname = '' INTO collisions;
 
     RAISE NOTICE 'blank usernames % being set', collisions;
 
     UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,id::TEXT) 
-    WHERE usrname IS NULL OR usrname = '' AND x_migrate;
+    WHERE usrname IS NULL OR usrname = '';
 
 END
 $func$
