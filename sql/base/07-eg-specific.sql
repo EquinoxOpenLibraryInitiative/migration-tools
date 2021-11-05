@@ -2434,33 +2434,6 @@ END
 $func$
 LANGUAGE PLPGSQL;
 
-
-CREATE OR REPLACE FUNCTION migration_tools.incumbent_usrname_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
-DECLARE 
-       collisions INTEGER DEFAULT 0;
-BEGIN
-
-    CREATE TEMPORARY TABLE temp_incumbent_collisions AS 
-    SELECT COUNT(*) AS c, usrname FROM m_actor_usr_legacy 
-    WHERE x_migrate
-    AND id NOT IN (SELECT id FROM m_actor_usr)
-    GROUP BY 2
-    HAVING COUNT(*) > 1
-    ;
-
-    SELECT SUM(c) FROM temp_incumbent_collisions INTO collisions;
-
-    RAISE NOTICE 'incumbent collisions % being prefixed', collisions;
-
-    UPDATE m_actor_usr_legacy SET usrname = CONCAT_WS('_',barcode_prefix,usrname,id::TEXT) 
-    WHERE usrname IN (SELECT usrname FROM temp_incumbent_collisions);
-
-    DROP TABLE temp_incumbent_collisions;
-
-END
-$func$
-LANGUAGE PLPGSQL;
-
 CREATE OR REPLACE FUNCTION migration_tools.incumbent_item_barcode_collisions (barcode_prefix TEXT) RETURNS VOID AS $func$
 DECLARE
        collisions INTEGER DEFAULT 0;
@@ -2469,7 +2442,7 @@ BEGIN
     CREATE TEMPORARY TABLE temp_incumbent_collisions AS
     SELECT barcode FROM m_asset_copy_legacy
     WHERE x_migrate
-    AND barcode IN (SELECT barcode FROM asset.copy WHERE NOT deleted AND id NOT IN (SELECT id FROM m_asset_copy))
+    AND barcode IN (SELECT barcode FROM asset.copy WHERE NOT deleted) AND id NOT IN (SELECT id FROM m_asset_copy))
     ;
 
     SELECT COUNT(*) FROM temp_incumbent_collisions INTO collisions;
@@ -2510,7 +2483,7 @@ BEGIN
     RAISE NOTICE 'blank barcodes % being set', collisions;
 
     UPDATE m_asset_copy_legacy SET barcode = CONCAT_WS('_',barcode_prefix,id::TEXT)
-    WHERE barcode IS NULL OR barcode = '' AND x_migrate;
+    WHERE barcode IS NULL OR barcode = '';
 
 END
 $func$
@@ -2522,10 +2495,12 @@ DECLARE
 BEGIN
 
     CREATE TEMPORARY TABLE temp_incumbent_collisions AS 
-    SELECT usrname FROM m_actor_usr_legacy WHERE usrname IN (SELECT usrname FROM actor.usr) AND x_migrate;
+    SELECT usrname FROM m_actor_usr_legacy WHERE usrname IN 
+       (SELECT usrname FROM actor.usr WHERE id NOT IN (SELECT id FROM m_actor_usr));
 
     INSERT INTO temp_incumbent_collisions (usrname) 
-    SELECT usrname FROM m_actor_usr_legacy WHERE usrname IN (SELECT barcode FROM actor.card) AND x_migrate;
+    SELECT usrname FROM m_actor_usr_legacy WHERE usrname IN 
+       (SELECT barcode FROM actor.card WHERE id NOT IN (SELECT id FROM m_actor_card));
 
     SELECT COUNT(DISTINCT usrname) FROM temp_incumbent_collisions INTO collisions;
 
