@@ -2442,7 +2442,7 @@ BEGIN
     CREATE TEMPORARY TABLE temp_incumbent_collisions AS
     SELECT barcode FROM m_asset_copy_legacy
     WHERE x_migrate
-    AND barcode IN (SELECT barcode FROM asset.copy WHERE NOT deleted) AND id NOT IN (SELECT id FROM m_asset_copy))
+    AND barcode IN (SELECT barcode FROM asset.copy WHERE NOT deleted AND id NOT IN (SELECT id FROM m_asset_copy))
     ;
 
     SELECT COUNT(*) FROM temp_incumbent_collisions INTO collisions;
