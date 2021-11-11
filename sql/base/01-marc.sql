@@ -794,6 +794,57 @@ return $marc_xml->as_xml_record();
 
 $function$;
 
+
+-- removes tags based on text in any subfield 
+-- examples strip_tag(marc,'856','rbdigital')
+DROP FUNCTION IF EXISTS migration_tools.strip_tag(TEXT,TEXT,TEXT);
+CREATE OR REPLACE FUNCTION migration_tools.strip_tag(marc TEXT, tag TEXT, evidence TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $tag = shift;
+my $evidence = shift;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @fields = $marc_xml->field($tag);
+return $marc_xml->as_xml_record() unless @fields;
+
+my @fields_to_delete;
+
+foreach my $f (@fields) {
+    my $str = lc($f->as_string());
+    if ($str =~ m/$evidence/) { push @fields_to_delete, $f; }
+}
+
+$marc_xml->delete_fields(@fields_to_delete);
+
+return $marc_xml->as_xml_record();
+
+$function$;
+
+
+
 -- removes tags from record based on tag, subfield and evidence
 -- example: strip_tag(marc, '500', 'a', 'gift') will remove 500s with 'gift' as a part of the $a
 DROP FUNCTION IF EXISTS migration_tools.strip_tag(TEXT,TEXT,TEXT,TEXT);
