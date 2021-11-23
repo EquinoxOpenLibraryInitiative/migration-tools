@@ -2577,3 +2577,42 @@ CREATE OR REPLACE FUNCTION migration_tools.duplicate_perm_group (INTEGER, TEXT, 
         RETURN currval('permission.grp_tree_id_seq');
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.get_ou_references(ouname TEXT) RETURNS TABLE (
+    nsp TEXT,
+    tab TEXT,
+    col TEXT,
+    cnt INT
+) AS $func$
+DECLARE
+  ou_id actor.org_unit.id%TYPE;
+  fk RECORD;
+BEGIN
+    SELECT INTO ou_id id FROM actor.org_unit WHERE shortname = ouname;
+    FOR fk IN
+        SELECT nsp.nspname AS nsp,
+           clp.relname AS tab,
+           attname AS col
+        FROM  pg_constraint con
+        JOIN pg_class clp ON clp.oid = con.conrelid
+        JOIN pg_class clc ON clc.oid = con.confrelid
+        JOIN pg_namespace nsp ON clp.relnamespace = nsp.oid
+        JOIN pg_namespace nsc ON clc.relnamespace = nsc.oid
+        JOIN pg_attribute attp ON (attp.attrelid = clp.oid AND attp.attnum IN (SELECT UNNEST(con.conkey)))
+        WHERE contype = 'f'
+        AND nsc.nspname = 'actor'
+        AND clc.relname = 'org_unit'
+        ORDER BY nsp, tab, col
+    LOOP
+        nsp = fk.nsp;
+        tab = fk.tab;
+        col = fk.col;
+        cnt = 0;
+        EXECUTE 'SELECT COUNT(*) FROM ' || nsp || '.' || tab || ' WHERE ' || col || ' = ' || ou_id
+            INTO cnt;
+        IF cnt > 0 THEN
+            RETURN NEXT;
+        END IF;
+    END LOOP;
+END;
+$func$ LANGUAGE PLPGSQL;
