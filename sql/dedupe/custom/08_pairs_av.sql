@@ -30,36 +30,3 @@ WHERE
     AND dedupe_setting('merge tacs upc') = 'TRUE'
 ;
 
--- not recommended for most libraries 
-INSERT INTO pairs (merge_set,records,match_set)
-SELECT
-    'tacs forgiving av'
-    ,ARRAY[a.record,b.record]
-    ,a.title
-FROM
-    dedupe_batch a
-JOIN
-    dedupe_batch b ON b.title = a.title AND a.search_format_str = b.search_format_str
-WHERE
-    a.record != b.record
-    AND a.can_have_copies
-    AND b.can_have_copies
-    AND ( ('dvd' = ANY(a.search_format) AND 'dvd' = ANY(b.search_format))
-        OR ('cd' = ANY(a.search_format) AND 'cd' = ANY(b.search_format))
-        OR ('cdaudiobook' = ANY(a.search_format) AND 'cdaudiobook' = ANY(b.search_format))
-        OR ('blu-ray' = ANY(a.search_format) AND 'blu-ray' = ANY(b.search_format))
-    )
-    AND ((a.added_entries && b.added_entries) OR (a.added_entries IS NULL AND b.added_entries IS NULL))
-    AND ( 
-          (a.record > b.record AND dedupe_setting('dedupe_type') = 'inclusive')
-            OR
-          (a.staged = FALSE AND b.staged = TRUE AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('subset','migration')))
-        )
-    AND ((a.titlepart = b.titlepart) OR (a.titlepart IS NULL AND b.titlepart IS NULL))
-    AND ((a.titlepartname = b.titlepartname) OR (a.titlepartname IS NULL AND b.titlepartname IS NULL))
-    AND get_descr_part(a.description,'minutes') = get_descr_part(b.description,'minutes')
-    AND get_descr_part(a.description,'discs') = get_descr_part(b.description,'discs')
-    AND dedupe_setting('merge tacs forgiving av') = 'TRUE'
-;
-
-
