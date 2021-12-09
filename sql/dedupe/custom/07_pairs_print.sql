@@ -48,59 +48,6 @@ WHERE
     AND dedupe_setting('merge tacs isbn') = 'TRUE'
 ;
 
--- not recommended for most libraries 
-INSERT INTO pairs (merge_set,records,match_set)
-SELECT
-    'tacs forgiving print'
-    ,ARRAY[a.record,b.record]
-    ,a.title
-FROM
-    dedupe_batch a
-JOIN
-    dedupe_batch b ON b.title = a.title AND a.search_format_str = b.search_format_str
-WHERE
-    a.record != b.record
-    AND a.author = b.author
-    AND a.can_have_copies
-    AND b.can_have_copies
-    AND (   
-            'book' = ANY(a.search_format)
-        )
-    AND a.manga = FALSE AND b.manga = FALSE
-    AND ( 
-          (a.record > b.record AND dedupe_setting('dedupe_type') = 'inclusive')
-            OR
-          (a.staged = FALSE AND b.staged = TRUE AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('subset','migration')))
-        )
-    AND ((a.added_entries && b.added_entries) OR (a.added_entries IS NULL AND b.added_entries IS NULL))
-    AND ((a.languages = b.languages) OR (a.languages IS NULL AND b.languages IS NULL))
-    AND ( 
-          get_descr_part(b.description,'color') = 0
-            OR
-          ( get_descr_part(a.description,'color') = 1 AND get_descr_part(b.description,'color') = 1 )
-            OR
-          ( get_descr_part(a.description,'color') = 2 AND get_descr_part(b.description,'color') = 2 )
-        )
-    AND ( 
-          ( 
-            get_descr_part(a.description,'pages') > ( get_descr_part(b.description,'pages') - current_setting('var.description_page_range')::INTEGER )
-              AND
-            get_descr_part(a.description,'pages') < ( get_descr_part(b.description,'pages') + current_setting('var.description_page_range')::INTEGER )
-          )
-        )
-    AND (
-          (
-            get_descr_part(a.description,'centimeters') > ( get_descr_part(b.description,'centimeters') - current_setting('var.description_cm_range')::INTEGER )
-              AND
-            get_descr_part(a.description,'centimeters') < ( get_descr_part(b.description,'centimeters') + current_setting('var.description_cm_range')::INTEGER )
-          )
-        )
-    AND ((a.titlepart = b.titlepart) OR (a.titlepart IS NULL AND b.titlepart IS NULL))
-    AND ((a.titlepartname = b.titlepartname) OR (a.titlepartname IS NULL AND b.titlepartname IS NULL))
-    AND dedupe_setting('merge tacs forgiving print') = 'TRUE'
-	AND (current_setting('var.description_cm_range')::INTEGER != 1234567 AND current_setting('var.description_cm_range')::INTEGER != 1234567)
-;
-
 -- stock manga match set based on publisher list 
 INSERT INTO pairs (merge_set,records,match_set)
 SELECT
