@@ -36,7 +36,7 @@ WHERE inventory_workstation IN (
     SELECT id FROM actor.workstation WHERE owning_lib IN
     (
         SELECT (actor.org_unit_descendants(id)).id from
-        actor.org_unit where shortname = 'YCYTS'
+        actor.org_unit where shortname = :ou_to_del
     )   
 ); 
 
