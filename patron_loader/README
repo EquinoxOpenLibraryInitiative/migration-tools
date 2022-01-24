@@ -12,7 +12,7 @@ Required parameters:
 --file path to the CSV file used as the data source
 --org_unit the org unit name of the org unit patrons are being loaded for
     used to match mapped variables
-`
+
 Optional parameters:
 
 --dbport Evergreen database port, defaults to 5432
@@ -133,3 +133,7 @@ The database holds a patron_loader.log table that logs (assuming it can create t
 connection) a log when loads, begin, finish some basic counts and why some rows are 
 skipped.
 
+Problematic Characters:
+
+Valid unicode should process fine but if you are having errant characters screw up columns 
+you can try using iconv -c -f utf-8 -t ascii foo.csv to clean up your source.
