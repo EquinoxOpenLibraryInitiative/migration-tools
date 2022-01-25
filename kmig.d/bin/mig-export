@@ -786,7 +786,7 @@ sub backup_preferences {
     my $xml = XML::Writer->new(OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 2, );
     $xml->xmlDecl('UTF-8');
     $xml->startTag('preferences');
-    my $sth = sql_giveback($dbh,"SELECT variable,value FROM systempreferences WHERE value != '' AND value IS NOT NULL");
+    my $sth = sql_giveback($dbh,"SELECT variable,value FROM systempreferences WHERE value IS NOT NULL");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('pref');
         $xml->dataElement('variable',$row[0]);
