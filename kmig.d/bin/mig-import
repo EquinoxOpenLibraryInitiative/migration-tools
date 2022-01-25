@@ -235,6 +235,7 @@ sub reset_memcache {
 	}
 	
 	system("sudo memcdump --servers localhost | grep '$instance:' | xargs memcrm --servers localhost");	
+    system("sudo systemctl restart memcached");
 	system("sudo koha-plack --restart $instance");
 
 	return;
