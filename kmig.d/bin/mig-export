@@ -654,7 +654,7 @@ sub backup_libraries {
         $xml->endTag('library_group');
     }
 
-    $sth = sql_giveback($dbh,"SELECT branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchprinter,branchnotes,opac_info,geolocation,marcorgcode,pickup_location FROM branches");
+    $sth = sql_giveback($dbh,"SELECT branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchnotes,opac_info,geolocation,marcorgcode,pickup_location FROM branches");
     while (my @row = $sth->fetchrow_array) {
         $xml->startTag('library');
         $xml->dataElement('branchcode',$row[0]);
@@ -674,12 +674,11 @@ sub backup_libraries {
         $xml->dataElement('branchurl',$row[14]);
         $xml->dataElement('issuing',$row[15]);
         $xml->dataElement('branchip',$row[16]);
-        $xml->dataElement('branchprinter',$row[17]);
-        $xml->dataElement('branchnotes',$row[18]);
-        $xml->dataElement('opac_info',$row[19]);
-        $xml->dataElement('geolocation',$row[20]);
-        $xml->dataElement('marcorgcode',$row[21]);
-        $xml->dataElement('pickup_location',$row[22]);
+        $xml->dataElement('branchnotes',$row[17]);
+        $xml->dataElement('opac_info',$row[18]);
+        $xml->dataElement('geolocation',$row[19]);
+        $xml->dataElement('marcorgcode',$row[20]);
+        $xml->dataElement('pickup_location',$row[21]);
         $xml->endTag('library');
     }
 
