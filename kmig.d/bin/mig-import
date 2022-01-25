@@ -121,7 +121,7 @@ foreach my $restore (@taglist) {
         print "Restoring from $restorefile ... \n";
         if ($restorefile) { restore_patrontypes($dbh,$restorefile); }
     }
-    if ($restore eq 'preferences') {
+    if ($restore eq 'preferences' or $restore eq 'systempreferences') {
         my $timestamp = most_recent_single($MIGGITDIR,'systempreferences');
         if ($timestamp) { $restorefile = $MIGGITDIR . 'systempreferences' . '.' . $timestamp . '.xml'; }
         print "Restoring from $restorefile ... \n";
