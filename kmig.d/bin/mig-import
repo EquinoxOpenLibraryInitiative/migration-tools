@@ -234,7 +234,7 @@ sub reset_memcache {
 		return;
 	}
 	
-	system("sudo memcdump --servers localhost | grep '$instance:' | grep 'syspref\|MarcStructure\|AuthorisedValues\|MarcSubfieldStructure' | xargs memcrm --servers localhost");	
+	system("sudo memcdump --servers localhost | grep '$instance:' | xargs memcrm --servers localhost");	
 	system("sudo koha-plack --restart $instance");
 
 	return;
