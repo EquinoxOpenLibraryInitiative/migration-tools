@@ -716,7 +716,6 @@ sub restore_libraries {
         my $branchurl = sql_str($node->findvalue('./branchurl'));
         my $issuing = sql_str($node->findvalue('./issuing'));
         my $branchip = sql_str($node->findvalue('./branchip'));
-        my $branchprinter = sql_str($node->findvalue('./branchprinter'));
         my $branchnotes = sql_str($node->findvalue('./branchnotes'));
         my $opac_info = sql_str($node->findvalue('./opac_info'));
         my $geolocation = sql_str($node->findvalue('./geolocation'));
@@ -724,9 +723,9 @@ sub restore_libraries {
         my $pickup_location = $node->findvalue('./pickup_location');
 		$check = check_branchcode($dbh,$branchcode);
         if ($check == 0) { 
-            sql_noresult($dbh,"INSERT INTO branches (branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchprinter,branchnotes,opac_info,geolocation,marcorgcode,pickup_location) VALUES ($branchcode,$branchname,$branchaddress1,$branchaddress2,$branchaddress3,$branchzip,$branchcity,$branchstate,$branchcountry,$branchphone,$branchfax,$branchemail,$branchreplyto,$branchreturnpath,$branchurl,$issuing,$branchip,$branchprinter,$branchnotes,$opac_info,$geolocation,$marcorgcode,$pickup_location)");
+            sql_noresult($dbh,"INSERT INTO branches (branchcode,branchname,branchaddress1,branchaddress2,branchaddress3,branchzip,branchcity,branchstate,branchcountry,branchphone,branchfax,branchemail,branchreplyto,branchreturnpath,branchurl,issuing,branchip,branchnotes,opac_info,geolocation,marcorgcode,pickup_location) VALUES ($branchcode,$branchname,$branchaddress1,$branchaddress2,$branchaddress3,$branchzip,$branchcity,$branchstate,$branchcountry,$branchphone,$branchfax,$branchemail,$branchreplyto,$branchreturnpath,$branchurl,$issuing,$branchip,$branchnotes,$opac_info,$geolocation,$marcorgcode,$pickup_location)");
         } else {
-            sql_noresult($dbh,"UPDATE branches SET branchname = $branchname,branchaddress1 = $branchaddress1,branchaddress2 = $branchaddress2,branchaddress3 = $branchaddress3,branchzip = $branchzip,branchcity = $branchcity,branchstate = $branchstate,branchcountry = $branchcountry,branchphone = $branchphone,branchfax = $branchfax,branchemail = $branchemail,branchreplyto = $branchreplyto,branchreturnpath = $branchreturnpath,branchurl = $branchurl,issuing = $issuing,branchip = $branchip,branchprinter = $branchprinter,branchnotes = $branchnotes,opac_info = $opac_info,geolocation = $geolocation,marcorgcode = $marcorgcode,pickup_location = $pickup_location WHERE branchcode = $branchcode");
+            sql_noresult($dbh,"UPDATE branches SET branchname = $branchname,branchaddress1 = $branchaddress1,branchaddress2 = $branchaddress2,branchaddress3 = $branchaddress3,branchzip = $branchzip,branchcity = $branchcity,branchstate = $branchstate,branchcountry = $branchcountry,branchphone = $branchphone,branchfax = $branchfax,branchemail = $branchemail,branchreplyto = $branchreplyto,branchreturnpath = $branchreturnpath,branchurl = $branchurl,issuing = $issuing,branchip = $branchip,branchnotes = $branchnotes,opac_info = $opac_info,geolocation = $geolocation,marcorgcode = $marcorgcode,pickup_location = $pickup_location WHERE branchcode = $branchcode");
         }
     }
 
