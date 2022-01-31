@@ -763,23 +763,23 @@ sub restore_messages {
 
     foreach my $node ($dom->findnodes('/document/message_attributes/value')) {
         my $message_attribute_id = sql_num($node->findvalue('./message_attribute_id'));
-        my $message_name = sql_num($node->findvalue('./message_name'));
+        my $message_name = sql_str($node->findvalue('./message_name'));
         my $takes_days = sql_num($node->findvalue('./takes_days'));
         sql_noresult($dbh,"INSERT INTO message_attributes (message_attribute_id,message_name,takes_days) VALUES ($message_attribute_id,$message_name,$takes_days)");
     }
 
     foreach my $node ($dom->findnodes('/document/message_transport_types/value')) {
-        my $message_transport_type = sql_num($node->findvalue('./message_attribute_id'));
+        my $message_transport_type = sql_str($node->findvalue('./message_transport_type'));
         sql_noresult($dbh,"INSERT INTO message_transport_types (message_transport_type) VALUES ($message_transport_type)");
     }
 
     foreach my $node ($dom->findnodes('/document/message_transports/value')) {
         my $message_attribute_id = sql_num($node->findvalue('./message_attribute_id'));
-        my $message_transport_type = sql_num($node->findvalue('./message_transport_type'));
+        my $message_transport_type = sql_str_not_null($node->findvalue('./message_transport_type'));
         my $is_digest = sql_num($node->findvalue('./is_digest'));
-        my $letter_module = sql_num($node->findvalue('./letter_module'));
-        my $letter_code = sql_num($node->findvalue('./letter_code'));
-        my $branchcode = sql_num($node->findvalue('./branchcode'));
+        my $letter_module = sql_str($node->findvalue('./letter_module'));
+        my $letter_code = sql_str($node->findvalue('./letter_code'));
+        my $branchcode = sql_str_not_null($node->findvalue('./branchcode'));
         sql_noresult($dbh,"INSERT INTO message_transports (message_attribute_id,message_transport_type,is_digest,letter_module,letter_code,branchcode) VALUES ($message_attribute_id,$message_transport_type,$is_digest,$letter_module,$letter_code,$branchcode)");
     }
 
