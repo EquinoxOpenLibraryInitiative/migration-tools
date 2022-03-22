@@ -1470,7 +1470,7 @@ foreach my $oclc (@$oclcs) {
     #check to see $oclc is in @unique and if so skip it
     if ( grep( /^$oclc$/, @unique ) ) { next; }
     my $valid = test_oclc($oclc);
-    if ($valid = 0) { next; }
+    if ($valid == 0) { next; }
     my $field = MARC::Field->new( '035', '', '', 'a' => $oclc);
     $to_marc->insert_fields_ordered($field);
 }
