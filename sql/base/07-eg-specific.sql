@@ -158,7 +158,7 @@ $func$
 LANGUAGE PLPGSQL;
 
 -- make sure legacy function is gone 
-DROP FUNCTION migration_tools.create_staff_user (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
+DROP FUNCTION IF EXISTS migration_tools.create_staff_user (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 
 CREATE OR REPLACE FUNCTION migration_tools.create_staff_user(
     pbarcode TEXT,
@@ -1005,22 +1005,30 @@ $$ LANGUAGE SQL;
 
 -- set a new salted password
 
-CREATE OR REPLACE FUNCTION migration_tools.set_salted_passwd(INTEGER,TEXT) RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION migration_tools.set_salted_passwd(INTEGER,TEXT,TEXT) RETURNS BOOLEAN AS $$
     DECLARE
         usr_id              ALIAS FOR $1;
         plain_passwd        ALIAS FOR $2;
+        passwd_type         ALIAS FOR $3;
         plain_salt          TEXT;
         md5_passwd          TEXT;
     BEGIN
 
-        SELECT actor.create_salt('main') INTO plain_salt;
+        SELECT actor.create_salt(passwd_type) INTO plain_salt;
 
         SELECT MD5(plain_passwd) INTO md5_passwd;
         
-        PERFORM actor.set_passwd(usr_id, 'main', MD5(plain_salt || md5_passwd), plain_salt);
+        PERFORM actor.set_passwd(usr_id, passwd_type, MD5(plain_salt || md5_passwd), plain_salt);
 
         RETURN TRUE;
 
+    END;
+$$ LANGUAGE PLPGSQL STRICT VOLATILE;
+
+CREATE OR REPLACE FUNCTION migration_tools.set_salted_passwd(INTEGER,TEXT) RETURNS BOOLEAN AS $$
+    BEGIN
+        PERFORM migration_tools.set_salted_passwd($1,$2,'main'::TEXT);
+        RETURN TRUE;
     END;
 $$ LANGUAGE PLPGSQL STRICT VOLATILE;
 
