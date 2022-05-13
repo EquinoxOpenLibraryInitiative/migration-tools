@@ -1356,6 +1356,7 @@ DECLARE
     update_isbn BOOLEAN DEFAULT FALSE;
     update_upc  BOOLEAN DEFAULT FALSE;
     update_oclc BOOLEAN DEFAULT FALSE;
+    update_500  BOOLEAN DEFAULT FALSE;
     create_tags BOOLEAN DEFAULT FALSE;
     del_binding BOOLEAN DEFAULT FALSE;
     lead_xml    TEXT;  
@@ -1366,7 +1367,8 @@ DECLARE
     lead_id     BIGINT;
     isbns       TEXT[];
     upcs        TEXT[];
-    oclcs       TEXT[]; 
+    oclcs       TEXT[];
+    notes       TEXT[]; 
     BEGIN
         SELECT lead_record FROM groups WHERE id = fg_id INTO lead_id;
         RAISE INFO 'group is %', fg_id;
@@ -1388,33 +1390,44 @@ DECLARE
         IF dedupe_setting('keep secondary oclcs') = 'TRUE' THEN
             update_oclc := TRUE;
         END IF;
+        IF dedupe_setting('keep secondary 500s') = 'TRUE' THEN
+            update_500 := TRUE;
+        END IF;
 
-        IF update_upc OR update_isbn OR update_oclc OR create_tags OR del_binding THEN
-            SELECT marc FROM biblio.record_entry WHERE id = lead_id INTO lead_xml;
-            SELECT isbn_values, upc_values, oclc_values FROM dedupe_batch WHERE record = lead_id INTO isbns, upcs, oclcs;
-        END IF;
-        IF update_oclc AND oclcs IS NOT NULL THEN
-            SELECT * FROM migrate_oclcs(oclcs,lead_xml) INTO lead_xml;
-            RAISE INFO 'migrating oclcs are %', oclcs;
-        END IF;
-        IF update_isbn AND isbns IS NOT NULL THEN
-            SELECT * FROM migrate_isbns(isbns,lead_xml) INTO lead_xml;
-            RAISE INFO 'migrating isbns are %', isbns;
-        END IF;
-        IF update_upc AND upcs IS NOT NULL THEN
-            SELECT * FROM migrate_upcs(upcs,lead_xml) INTO lead_xml;
-            RAISE INFO 'migrating upcs are %', upcs;
-        END IF;
         IF create_tags THEN
            FOR feature_id IN SELECT id FROM dedupe_features WHERE name = 'create single subfield tag' LOOP
                SELECT value, value2, value3 FROM dedupe_features WHERE id = feature_id INTO create_tag, create_sf, create_txt;
                SELECT * FROM insert_single_subfield_tag(create_tag, create_sf, create_txt, lead_xml) INTO lead_xml;
            END LOOP;
         END IF;
+
+        FOR r IN SELECT UNNEST(records) FROM groups WHERE id = fg_id LOOP
+            IF update_upc OR update_isbn OR update_oclc OR create_tags OR del_binding OR update_500 THEN
+                SELECT marc FROM biblio.record_entry WHERE id = lead_id INTO lead_xml;
+                SELECT isbn_values, upc_values, oclc_values FROM dedupe_batch WHERE record = r INTO isbns, upcs, oclcs;
+            END IF;
+            IF update_oclc AND oclcs IS NOT NULL THEN
+                SELECT * FROM migrate_oclcs(oclcs,lead_xml) INTO lead_xml;
+                RAISE INFO 'migrating oclcs are %', oclcs;
+            END IF;
+            IF update_isbn AND isbns IS NOT NULL THEN
+                SELECT * FROM migrate_isbns(isbns,lead_xml) INTO lead_xml;
+                RAISE INFO 'migrating isbns are %', isbns;
+            END IF;
+            IF update_upc AND upcs IS NOT NULL THEN
+                SELECT * FROM migrate_upcs(upcs,lead_xml) INTO lead_xml;
+                RAISE INFO 'migrating upcs are %', upcs;
+            END IF;
+            IF update_500 THEN
+                SELECT OILS_XPATH('//*[@tag="500"]/*[@code="a"]/text()',marc) FROM biblio.record_entry WHERE id = r INTO notes;
+                SELECT * FROM migrate_500s(notes,lead_xml) INTO lead_xml;
+                RAISE INFO 'migrating notes are %', notes;
+            END IF;
+        END LOOP;
         IF del_binding THEN
             SELECT * FROM remove_binding_statements(lead_xml) INTO lead_xml;
         END IF;
-        IF update_upc OR update_isbn OR update_oclc OR create_tags OR del_binding THEN
+        IF update_upc OR update_isbn OR update_oclc OR create_tags OR del_binding OR update_500 THEN
             UPDATE biblio.record_entry SET marc = lead_xml WHERE id = lead_id;
             PERFORM PG_SLEEP(1);
         END IF;
@@ -1427,6 +1440,52 @@ DECLARE
         RETURN fg_id;
     END;
 $BODY$ LANGUAGE plpgsql;
+
+DROP FUNCTION IF EXISTS migrate_500s(TEXT[], TEXT);
+CREATE OR REPLACE FUNCTION migrate_500s(note_array TEXT[], merge_to text)
+ RETURNS text
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDERR, ':bytes');
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $notes = shift;
+my $to_xml = shift;
+
+$to_xml =~ s/(<leader>.........)./${1}a/;
+my $to_marc;
+eval {
+    $to_marc = MARC::Record->new_from_xml($to_xml);
+};
+if ($@) {
+    #elog("could not parse: $@\n");
+    return;
+}
+my @lead_500_fields = $to_marc->field('500');
+my @lead_500s;
+foreach my $l (@lead_500_fields) {
+    my $a = $l->subfield('a');
+    if ($a) { push @lead_500s, $a; }
+}
+my @unique = do { my %seen; grep { !$seen{$_}++ } @lead_500s };
+
+foreach my $n (@$notes) {
+    #check to see $n is in @unique and if so skip it
+    if ( grep( /^$n$/, @unique ) ) { next; }
+    my $field = MARC::Field->new( '500', '', '', 'a' => $n);
+    $to_marc->insert_fields_ordered($field);
+}
+
+return $to_marc->as_xml_record();
+
+$function$;
 
 DROP FUNCTION IF EXISTS migrate_oclcs(TEXT[], TEXT);
 CREATE OR REPLACE FUNCTION migrate_oclcs(oclc_array TEXT[], merge_to text)
