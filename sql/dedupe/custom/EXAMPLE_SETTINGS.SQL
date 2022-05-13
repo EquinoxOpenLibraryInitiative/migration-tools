@@ -1,7 +1,7 @@
 \timing on
 
 DROP TABLE IF EXISTS dedupe_features;
-CREATE TABLE dedupe_features (id SERIAL, name TEXT, org TEXT, value TEXT);
+CREATE TABLE dedupe_features (id SERIAL, name TEXT, org TEXT, value TEXT, value2 TEXT);
 
 INSERT INTO dedupe_features (name, org, value) VALUES ('use_staging_bibs', 'EXAMPLELIB', 'inclusive');
 INSERT INTO dedupe_features (name, org, value) VALUES ('incoming floor', 'EXAMPLELIB', '1');
