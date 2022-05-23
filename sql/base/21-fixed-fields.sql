@@ -25,6 +25,7 @@ INSERT INTO migration_tools.search_format_map (code, itype, iform, phy, phyv, ph
     ,('phonospoken',    'i',  NULL, 's',  'a',  3,    NULL, NULL,                NULL)
     ,('picture',        'k',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
     ,('preloadedaudio', 'i',  'q',  NULL, NULL, NULL, NULL, NULL,                '{a,b,c,d,e,f,s}')
+    ,('rpbook',         'a',  'd',  NULL, NULL, NULL, 'a' , NULL,                NULL)
     ,('score',          'c',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
     ,('serial',         NULL, NULL, NULL, NULL, NULL, 's' , NULL,                NULL)
     ,('software',       'm',  NULL, NULL, NULL, NULL, NULL, NULL,                NULL)
@@ -474,6 +475,17 @@ my $zzs_str;
             $zedzedseven = MARC::Field->new('007', $zzs_str);
             $marc->insert_fields_ordered($zedzedseven);
     }
+my $text_zzs;
+my $text_zzs_str = 't0';
+if ($code eq 'rpbook' or $code eq 'lpbook' or $code eq 'braille') {
+    if ($code eq 'rpbook') { substr($text_zzs_str,1,1) == 'a'; }
+    if ($code eq 'lpbook') { substr($text_zzs_str,1,1) == 'b'; } 
+    if ($code eq 'braille') { substr($text_zzs_str,1,1) == 'c'; }  
+    $text_zzs = MARC::Field->new('007', $text_zzs_str);
+    $marc->insert_fields_ordered($text_zzs);
+}
+
+
 return $marc->as_xml_record;
 $function$;
 
