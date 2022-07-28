@@ -36,7 +36,7 @@ Optional parameters:
 --profile if no profile is given in the file one can be specified by parameter,
     if a combination of parameter and in file is used the parameter will be used as 
     a fall back from the file 
---home_org if no library is provided in the file it can be overriden by this, like 
+--home_ou if no library is provided in the file it can be overriden by this, like 
     similar settings if a column with library is present but null in a given row 
     this will be used instead; expects short org name 
 --fill_with_matchpoint
@@ -47,7 +47,7 @@ Optional parameters:
 Required Data:
 
 Seven columns are considered required for loading the file, the cardnumber, usrname, 
-profile, home_library, family_name and first_given_name.  With the home_org and  
+profile, home_library, family_name and first_given_name.  With the home_ou and  
 profile parameters you can leave the columns for profile and home_library empty but 
 you still need the columns in the file.  If you use the --fill_with_matchpoint 
 option you can skip one so long as you have the other but still need the column in your 
