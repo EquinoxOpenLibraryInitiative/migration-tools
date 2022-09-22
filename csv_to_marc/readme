@@ -1,0 +1,4 @@
+todo: better docs
+
+sample invocation:
+./make_marc_from_csv.pl --marc_out foo.mrc --csv_in $1 --config sample_config.csv --def_rec_type book --def_942 BK --progress 100

@@ -1,0 +1,16 @@
+# format is 0 column header in the csv file  
+# 1 "b" for bib field, "t" is for bib type 
+# 6 optional delimiter if multi value in the field if != ""; delimited fields are ignored on grouped rows
+# 7 is a value that will be used if the field is empty and if the column does not exist at all will create it 
+# 9 is a suffix field 
+# 0                              1    2      3    4    5     6       7      8          9                  10
+#                                     tag    subf ind1 ind2                 group      field suffix       field prefix
+ "Title",                        "b", "245", "a", " ", " ",  "",     "",    "",        "",                ""
+ "Authors",                      "b", "100", "a", " ", " ",  "",     "",    "",        "",                ""
+ "Serial",                       "b", "909", "s", " ", " ",  "",     "",    "",        "",                ""
+ "Publisher",                    "b", "260", "b", " ", " ",  "",     "",    "pub",     "",                ""
+ "Pub Year",                     "b", "260", "b", " ", " ",  "",     "",    "pub",     "",                ""
+ "Notes",                        "b", "500", "a", " ", " ",  "",     "",    "",        "",                ""
+#TODO: the splitting a field based on delimiters is not yet supported 
+#NOTE: here I'm tossing item information into a 951 instead of 952 for koha b/c the values don't line up 
+#      with koha exactly so I'll manipulate with sql later to create copies  
