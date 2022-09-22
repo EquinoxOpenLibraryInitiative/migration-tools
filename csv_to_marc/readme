@@ -1,4 +1,37 @@
-todo: better docs
+The program is driven by a config file specified on the command line.
 
-sample invocation:
-./make_marc_from_csv.pl --marc_out foo.mrc --csv_in $1 --config sample_config.csv --def_rec_type book --def_942 BK --progress 100
+Parameters:
+
+make_marc_from_csv.pl 
+
+--marc_out foo.marc 
+This specifies the name of the marc21 file to output.
+
+--csv_in 
+The name of the csv file being used as the input data to build marc from.
+
+--config 
+The config file which will be in CSV format. Sample file is included.
+
+--def_rec_type 
+Possible values are: 
+3-4 
+audiobook
+book 
+dvd
+equipment
+kit
+mp4
+seri 
+16mm
+vhs 
+This option specifies the default format data for the fixed fields of the bib record. 
+These are easy to add to. 
+
+--def_942 
+This is optional and defines a default 942 bib item type used in Koha. 
+
+--progress 
+This is an integer that simply is used for how often to reprot progress to the screen. 
+
+Comments in the sample_config.csv file give details about how to fill out the config file.
