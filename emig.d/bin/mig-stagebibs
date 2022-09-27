@@ -92,8 +92,8 @@ my $ret = GetOptions(
 bort('must specify at least a bib file') unless @ARGV;
 $infile = $ARGV[0];
 
-if ($serial) { $base_table = 'm_authority_record_entry'; }
-if ($auth) { $base_table = 'm_serial_record_entry'; }
+if ($serial) { $base_table = 'm_serial_record_entry'; }
+if ($auth) { $base_table = 'm_authority_record_entry'; }
 if ($auth and $serial) { abort('are you sure you want to load these as authorities and serials?'); }
 
 if ($base_table eq 'm_authority_record_entry') { $prod_table = 'authority.record_entry'; }
