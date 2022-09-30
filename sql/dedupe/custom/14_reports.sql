@@ -80,6 +80,7 @@ WHERE
 SELECT 'Count of Records Analyzed', COUNT(*)FROM dedupe_batch;
 SELECT 'Lowest Bib ID of Match Set B', get_floor();
 SELECT 'Highest Bib ID of Match Set B', get_ceiling();
+SELECT 'Percetange Dedupped', get_dedupe_percent();
 SELECT 'Subordinate Records Merged Into Leads', SUM(ARRAY_LENGTH(records,1)) FROM groups;
 SELECT 'Count of Final Merge Groups', COUNT(*) FROM groups;
 SELECT 'Count of Groups w/ 1 Subordinate Record', COUNT(*)  FROM groups WHERE ARRAY_LENGTH(records,1) = 1;

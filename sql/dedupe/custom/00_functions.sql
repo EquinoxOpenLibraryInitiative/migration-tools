@@ -1835,3 +1835,26 @@ return $to_marc->as_xml_record();
 
 $function$;
 
+DROP FUNCTION IF EXISTS get_dedupe_percent();
+CREATE OR REPLACE FUNCTION get_dedupe_percent()
+RETURNS NUMERIC AS
+$BODY$
+DECLARE
+    migration      BOOLEAN DEFAULT FALSE;
+    subordinates   BIGINT  DEFAULT 0;
+    pool           BIGINT  DEFAULT 0;
+    calced_percent NUMERIC(6,2);
+BEGIN
+    SELECT EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('subset','migration')) 
+        INTO migration;
+    SELECT SUM(ARRAY_LENGTH(records,1)) FROM groups INTO subordinates;
+    IF migration = true THEN 
+        SELECT COUNT(*) FROM m_biblio_record_entry WHERE NOT deleted INTO pool;
+    ELSE 
+        SELECT COUNT(*) FROM biblio.record_entry WHERE NOT deleted INTO pool;
+    END IF;
+    SELECT ((100::NUMERIC / pool::NUMERIC) * subordinates)::NUMERIC(6,2) INTO calced_percent;
+    RETURN calced_percent;
+END;
+$BODY$ LANGUAGE plpgsql;
+
