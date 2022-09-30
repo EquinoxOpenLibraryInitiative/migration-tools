@@ -6,13 +6,13 @@ UPDATE dedupe_batch SET populated = FALSE WHERE populated OR populated IS NULL;
 
 \x off
 \t on
-\o ~/vivisect_records.sql
+\o vivisect_records.sql
 SELECT 'SELECT * FROM vivisect_record(' || record || ',''' || (SELECT * FROM get_6xx_scoring_method()) || ''',''production'');' FROM dedupe_batch WHERE staged = FALSE ORDER BY record;
 SELECT 'SELECT * FROM vivisect_record(' || record || ',''' || (SELECT * FROM get_6xx_scoring_method()) || ''',''production'');' FROM dedupe_batch WHERE staged = TRUE AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value = 'subset') ORDER BY record;
 SELECT 'SELECT * FROM vivisect_record(' || record || ',''' || (SELECT * FROM get_6xx_scoring_method()) || ''',''staging'');' FROM dedupe_batch WHERE staged = TRUE AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value = 'migration') ORDER BY record;
 \o
 \t off
-\i ~/vivisect_records.sql;
+\i vivisect_records.sql;
 
 -- if all records are marked as large print in call number or shelving location then make the bib large print
 DROP TABLE IF EXISTS bib_acp_lp_map;

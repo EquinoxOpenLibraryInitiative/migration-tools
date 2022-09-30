@@ -43,7 +43,7 @@ CREATE TABLE copy_part_rollback_log (
 \pset format unaligned
 \x off
 \t on
-\o ~/bib_dedupe_merges.sql
+\o bib_dedupe_merges.sql
 SELECT '\timing on';
 SELECT '\set ECHO all';
 SELECT 'SELECT merge_group(' || id || '); SELECT * FROM PG_SLEEP(1);' FROM groups WHERE done = FALSE AND EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('subset','inclusive')) ORDER BY id;
@@ -51,4 +51,4 @@ SELECT 'SELECT merge_group(' || id || '); SELECT * FROM PG_SLEEP(1);' FROM group
 \t off
 \pset format aligned
 
-\i ~/bib_dedupe_merges.sql
+\i bib_dedupe_merges.sql

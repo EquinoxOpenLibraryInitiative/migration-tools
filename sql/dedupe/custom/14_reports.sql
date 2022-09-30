@@ -31,7 +31,7 @@ GROUP BY 1;
 \pset format unaligned
 \f ','
 
-\o ~/dedupe_groups_all_report.csv
+\o dedupe_groups_all_report.csv
 SELECT 
     '"' || g.lead_record::TEXT || '"' AS "Lead Record"
     ,'"' || b.o_title || '"' AS "Title"
@@ -39,9 +39,9 @@ SELECT
     ,'"' || ARRAY_TO_STRING(b.all_pubdates,'/') || '"' AS "Pubdates"
     ,'"' || ARRAY_TO_STRING(b.isbn_values,'/') || '"' AS "ISBNs"
     ,'"' || ARRAY_TO_STRING(b.upc_values,'/') || '"' AS "UPCs"
-  ,'"' || ARRAY_TO_STRING(g.merge_sets,'/') || '"' AS "Merge Sets"
-  ,'"' || COALESCE(gcs.acp_count::TEXT,'No Copies') || '"' AS "Copy Counts"
-  ,'"' || COALESCE(ARRAY_TO_STRING(gcs.circ_mods,' | '),'No Copies') || '"' AS "Circ Mods"
+    ,'"' || ARRAY_TO_STRING(g.merge_sets,'/') || '"' AS "Merge Sets"
+    ,'"' || COALESCE(gcs.acp_count::TEXT,'No Copies') || '"' AS "Copy Counts"
+    ,'"' || COALESCE(ARRAY_TO_STRING(gcs.circ_mods,' | '),'No Copies') || '"' AS "Circ Mods"
     ,'"' || ARRAY_TO_STRING(g.records,' | ') || '"' AS "Subordinate Records"
 FROM 
     groups g
@@ -52,7 +52,7 @@ JOIN
 ;
 \o
 
-\o ~/dedupe_groups_morethan4_subordinates.csv
+\o dedupe_groups_morethan4_subordinates.csv
 SELECT 
     '"' || g.lead_record::TEXT || '"' AS "Lead Record"
     ,'"' || b.o_title || '"' AS "Title"
@@ -60,9 +60,9 @@ SELECT
     ,'"' || ARRAY_TO_STRING(b.all_pubdates,'/') || '"' AS "Pubdates"
     ,'"' || ARRAY_TO_STRING(b.isbn_values,'/') || '"' AS "ISBNs"
     ,'"' || ARRAY_TO_STRING(b.upc_values,'/') || '"' AS "UPCs"
-  ,'"' || ARRAY_TO_STRING(g.merge_sets,'/') || '"' AS "Merge Sets"
-  ,'"' || COALESCE(gcs.acp_count::TEXT,'No Copies') || '"' AS "Copy Counts"
-  ,'"' || COALESCE(ARRAY_TO_STRING(gcs.circ_mods,' | '),'No Copies') || '"' AS "Circ Mods"
+    ,'"' || ARRAY_TO_STRING(g.merge_sets,'/') || '"' AS "Merge Sets"
+    ,'"' || COALESCE(gcs.acp_count::TEXT,'No Copies') || '"' AS "Copy Counts"
+    ,'"' || COALESCE(ARRAY_TO_STRING(gcs.circ_mods,' | '),'No Copies') || '"' AS "Circ Mods"
     ,'"' || ARRAY_TO_STRING(g.records,' | ') || '"' AS "Subordinate Records"
 FROM 
     groups g
@@ -76,7 +76,7 @@ WHERE
 \o
 
 \t on
-\o ~/dedupe_summary_information.csv
+\o dedupe_summary_information.csv
 SELECT 'Count of Records Analyzed', COUNT(*)FROM dedupe_batch;
 SELECT 'Lowest Bib ID of Match Set B', get_floor();
 SELECT 'Highest Bib ID of Match Set B', get_ceiling();

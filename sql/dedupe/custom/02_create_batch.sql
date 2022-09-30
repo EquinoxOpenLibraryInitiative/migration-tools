@@ -124,10 +124,10 @@ DROP TABLE IF EXISTS incoming_titles;
 UPDATE dedupe_batch SET populated = FALSE WHERE populated = TRUE OR populated IS NULL;
 \x off
 \t on
-\o ~/assign_attributes.sql
+\o assign_attributes.sql
 SELECT 'SELECT ' || record || ' FROM assign_attributes(' || record || ',''production'');' FROM dedupe_batch WHERE staged = FALSE ORDER BY record;
 SELECT 'SELECT ' || record || ' FROM assign_attributes(' || record || ',''production'');' FROM dedupe_batch WHERE staged = TRUE AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value = 'subset') ORDER BY record;
 SELECT 'SELECT ' || record || ' FROM assign_attributes(' || record || ',''staging'');' FROM dedupe_batch WHERE staged = TRUE AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value = 'migration') ORDER BY record;
 \o
 \t off
-\i ~/assign_attributes.sql;
+\i assign_attributes.sql;

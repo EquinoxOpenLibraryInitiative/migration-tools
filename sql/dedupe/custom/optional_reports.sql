@@ -16,7 +16,7 @@ as part of cleanup during the dedupe process.
 \pset format unaligned
 \f ','
 
-\o ~/tacs_isbn_pairs.csv
+\o tacs_isbn_pairs.csv
 SELECT
 	'"' || p.records[1]::TEXT || '"' AS "Record A"
 	,'"' || p.records[2]::TEXT || '"' AS "Record B"
@@ -42,7 +42,7 @@ WHERE
 ;   
 \o
 
-\o ~/tcs_manga_pairs.csv
+\o tcs_manga_pairs.csv
 SELECT
     '"' || p.records[1]::TEXT || '"' AS "Record A"
     ,'"' || p.records[2]::TEXT || '"' AS "Record B"
@@ -73,7 +73,7 @@ WHERE
 \o
 
 
-\o ~/tacs_issn_pairs.csv
+\o tacs_issn_pairs.csv
 SELECT
     '"' || p.records[1]::TEXT || '"' AS "Record A"
     ,'"' || p.records[2]::TEXT || '"' AS "Record B"
@@ -101,7 +101,7 @@ WHERE
 ;
 \o
 
-\o ~/tacs_upc_pairs.csv
+\o tacs_upc_pairs.csv
 SELECT
     '"' || p.records[1]::TEXT || '"'  AS "Record A"
     ,'"' || p.records[2]::TEXT || '"'  AS "Record B"
@@ -127,7 +127,7 @@ WHERE
 ;   
 \o
 
-\o ~/tacs_pubdate_pairs.csv
+\o tacs_pubdate_pairs.csv
 SELECT
     '"' || p.records[1]::TEXT || '"' AS "Record A"
     ,'"' || p.records[2]::TEXT || '"' AS "Record B"
@@ -159,7 +159,7 @@ WHERE
 ;   
 \o
 
-\o ~/tcs_av_pairs.csv
+\o tcs_av_pairs.csv
 SELECT
     '"' || p.records[1]::TEXT || '"' AS "Record A"
     ,'"' || p.records[2]::TEXT || '"' AS "Record B"
@@ -189,7 +189,7 @@ WHERE
 ;
 \o
 
-\o ~/local_history_pairs.csv
+\o local_history_pairs.csv
 SELECT
     '"' || p.records[1]::TEXT || '"' AS "Record A"
     ,'"' || p.records[2]::TEXT || '"' AS "Record B"
@@ -212,7 +212,7 @@ WHERE
 ;
 \o
 
-\o ~/dedupe_groups_all_report.csv
+\o dedupe_groups_all_report.csv
 SELECT 
 	'"' || g.lead_record::TEXT || '"' AS "Lead Record"
 	,'"' || b.o_title || '"' AS "Title"
@@ -229,7 +229,7 @@ JOIN
 ;
 \o
 
-\o ~/dedupe_groups_morethan4_subordinates.csv
+\o dedupe_groups_morethan4_subordinates.csv
 SELECT
     '"' || g.lead_record::TEXT || '"' AS "Lead Record"
     ,'"' || b.o_title || '"' AS "Title"
@@ -249,7 +249,7 @@ WHERE
 \o
 
 \t on
-\o ~/dedupe_summary_information.csv
+\o dedupe_summary_information.csv
 SELECT 'Count of Records Analyzed', COUNT(*)FROM dedupe_batch;
 SELECT 'Lowest Bib ID of Match Set B', get_floor();
 SELECT 'Highest Bib ID of Match Set B', get_ceiling();

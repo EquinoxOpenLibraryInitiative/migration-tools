@@ -6,11 +6,11 @@ CREATE INDEX dedupe_groups_match_set_x ON groups (match_set);
 
 \x off
 \t on
-\o ~/group_pairs.sql
+\o group_pairs.sql
 SELECT 'SELECT * FROM group_pairs(' || id || ');' FROM pairs ORDER BY id;
 \o
 \t off
-\i ~/group_pairs.sql;
+\i group_pairs.sql;
 
 DO $$
 DECLARE 
@@ -29,11 +29,11 @@ END $$;
 
 \x off
 \t on
-\o ~/find_lead_record.sql
+\o find_lead_record.sql
 SELECT 'SELECT * FROM find_lead_record(' || id || ',''' || (SELECT value FROM dedupe_features WHERE name = 'dedupe_type') || ''');' FROM groups ORDER BY id;
 \o
 \t off
-\i ~/find_lead_record.sql;
+\i find_lead_record.sql;
 
 -- had some recent trouble with ARRAY_REMOVE working consistently so a sanity check
 UPDATE groups SET records = ARRAY_REMOVE(records,lead_record);
