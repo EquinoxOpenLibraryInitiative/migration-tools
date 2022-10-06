@@ -1,14 +1,14 @@
-Patron Loader is a perl program to bulk load and update patrons in Evergreen.
+Patron Loader is a Perl program to bulk load and update patrons in Evergreen.
 
-sample invocation: 
+sample invocation:
 
-./patron_loader.pl --db evergreen --dbhost myserver -dbuser admin --dbpw demo123 --file sample.csv --org_unit INNS --date_format "MM/DD/YYYY" --default_password 4444 --alert_message "patron has left swim cap at desk"  --debug 1
+./patron_loader.pl --db evergreen --dbhost myserver --dbuser admin --dbpw demo123 --file sample.csv --org_unit INNS --date_format "MM/DD/YYYY" --default_password 4444 --alert_message "patron has left swim cap at desk"  --debug 1
 
 Required parameters:
 
 --db the Evergreen database
 --dbuser the user of the Evergreen database
---dbhost the ip or domain name of the Evergreen database
+--dbhost the IP or domain name of the Evergreen database
 --file path to the CSV file used as the data source
 --org_unit the org unit name of the org unit patrons are being loaded for
     used to match mapped variables
@@ -16,43 +16,43 @@ Required parameters:
 Optional parameters:
 
 --dbport Evergreen database port, defaults to 5432
---delimter defaults to a comma can be anyother delimiter usable by TEXT::CSV
+--delimiter defaults to a comma can be any other delimiter usable by TEXT::CSV
 --debug if set to anything other than 1 will assume you want to commit the transactions
 --matchpoint defaults to 'usrname', can also be 'cardnumber'
 --date_format used if dates are not in a 'YYYY-MM-DD' format
 --ident_type available as a field but rarely used in export sources so it can
     be specified from the command line
---default_password allows you to define a default password for accounts where one 
-    is not defined in the file, be very careful, this option is dangerous as it 
-    _will_ overwrite existing passwords 
-    if some rows have a paasswd value and the default is used the default will only 
+--default_password allows you to define a default password for accounts where one
+    is not defined in the file, be very careful, this option is dangerous as it
+    _will_ overwrite existing passwords
+    if some rows have a password value and the default is used the default will only
     be used where the column is null
---alert_mesage this is meanst for scenarios where the script is being used for bulk 
-    loading students and an alert message is needed such as "verify address" 
-    it only adds an alert and does not check for duplications 
-    sending library will be set to the org unit used in the parameters 
---alert_title defaults to 'Needs Staff Attention', only appears when --alert_message 
+--alert_message this is meant for scenarios where the script is being used for bulk
+    loading students and an alert message is needed such as "verify address"
+    it only adds an alert and does not check for duplication
+    sending library will be set to the org unit used in the parameters
+--alert_title defaults to 'Needs Staff Attention', only appears when --alert_message
     is defined
 --profile if no profile is given in the file one can be specified by parameter,
-    if a combination of parameter and in file is used the parameter will be used as 
-    a fall back from the file 
---home_ou if no library is provided in the file it can be overriden by this, like 
-    similar settings if a column with library is present but null in a given row 
-    this will be used instead; expects short org name 
+    if a combination of parameter and in file is used the parameter will be used as
+    a fall back from the file
+--home_ou if no library is provided in the file it can be overridden by this, like
+    similar settings if a column with library is present but null in a given row
+    this will be used instead; expects short org name
 --fill_with_matchpoint
-    if set will allow you to only have cardnumber or usrname but it must also 
-    be your matchpoint, e.g. if you have a cardnumber but not username and cardnumber 
-    if your matchpoint with this set the cardnumber will be used for both  
+    if set will allow you to only have cardnumber or usrname but it must also
+    be your matchpoint, e.g. if you have a cardnumber but not username and cardnumber
+    if your matchpoint with this set the cardnumber will be used for both
 
 Required Data:
 
-Seven columns are considered required for loading the file, the cardnumber, usrname, 
-profile, home_library, family_name and first_given_name.  With the home_ou and  
-profile parameters you can leave the columns for profile and home_library empty but 
-you still need the columns in the file.  If you use the --fill_with_matchpoint 
-option you can skip one so long as you have the other but still need the column in your 
-file.  Having the columns present even if empty for some columns allows a mix of present 
-and absent row data and avoids unitialized variable warnings. 
+Seven columns are considered required for loading the file, the cardnumber, usrname,
+profile, home_library, family_name and first_given_name.  With the home_ou and
+profile parameters you can leave the columns for profile and home_library empty but
+you still need the columns in the file.  If you use the --fill_with_matchpoint
+option you can skip one so long as you have the other but still need the column in your
+file.  Having the columns present even if empty for some columns allows a mix of present
+and absent row data and avoids uninitialized variable warnings.
 
 Optional Columns:
 
@@ -64,9 +64,9 @@ email
 day_phone
 evening_phone
 other_phone
-expire_date 
-ident_type   <-- needs id value 
-ident_value 
+expire_date
+ident_type   <-- needs id value
+ident_value
 passwd       <-- if not supplied for a new user a random one will be created on NULL or empty string
 add1_street1
 add1_street2
@@ -82,31 +82,31 @@ add2_county
 add2_state
 add2_country
 add2_post_code
-statcat_name1 
+statcat_name1
 statcat_value1
-tatcat_name2  
+statcat_name2
 statcat_value2
-statcat_name3 
+statcat_name3
 statcat_value3
 photo_url
 
-Mapping: 
+Mapping:
 
-Not all data sources can customize the data in the CSV so some mapping is allowed. 
-The patron_loader.header table allows for mapping incoming header names to ones that 
-are natively expected.  For example if an incoming header says 'student_type' and is 
-mapped to 'profile' it will be used as the profile column.  Additionally the profile 
-and library columns are mappable on a datafield level.  For example if an Evergreen 
-org unit's shortname is 'NEMS' but a student management system can only export 
-'North Eastern Middle School' you can map those values in patron_loader.mapping using 
-a mapping type of 'library'.  A mapping type of 'profile' is also available.  
+Not all data sources can customize the data in the CSV so some mapping is allowed.
+The patron_loader.header table allows for mapping incoming header names to ones that
+are natively expected.  For example if an incoming header says 'student_type' and is
+mapped to 'profile' it will be used as the profile column.  Additionally the profile
+and library columns are mappable on a data field level.  For example if an Evergreen
+org unit's shortname is 'NEMS' but a student management system can only export
+'North Eastern Middle School' you can map those values in patron_loader.mapping using
+a mapping type of 'library'.  A mapping type of 'profile' is also available.
 
-As a convention the Evergreen database column names are mostly used for the actor.usr 
-columns but it was found in testing that home_ou was very confusing so the label of 
-'library' is used instead and internally adjusted to use 'home_ou'.  
+As a convention the Evergreen database column names are mostly used for the actor.usr
+columns but it was found in testing that home_ou was very confusing so the label of
+'library' is used instead and internally adjusted to use 'home_ou'.
 
-The column ident_type is treated specially.  It is required by actor.usr and does not 
-have a default but usually doesn't correspond to a exported value from others systems 
+The column ident_type is treated specially.  It is required by actor.usr and does not
+have a default but usually doesn't correspond to a exported value from others systems
 so it defaults to '3' or 'Other' but you can definite through an optional parameter.
 
 Overview:
@@ -114,26 +114,26 @@ Overview:
 The script is very conservative checking for an existing cardnumber and usrname.  If
 either is found on an account that differs from the one using the match point then it
 will skip adding or updating that user.  The match point specified is considered
-authoratative and it will update the matching account unless debug is on.
+authoritative and it will update the matching account unless debug is on.
 
-Currently only two set of address columns are supported add1_foo and add2_foo. The script 
-assumes the addresses being added are authoratative mailing addresses, removes any existing 
-mailing addresses, adds these and sets the user's mailing_address field to the one from the 
-addr1_street1 field or addr2_street1 if there is no addr1_street1.  If only a partial address 
-is given the entire address will be written so long as there is a street1.  Empty strings will 
-be used for the other values.  If there is no address given then addresses will not be 
-touched.  Part of the aggressiveness of removing non-specified addresses is to esnure 
+Currently only two set of address columns are supported add1_foo and add2_foo. The script
+assumes the addresses being added are authoritative mailing addresses, removes any existing
+mailing addresses, adds these and sets the user's mailing_address field to the one from the
+add1_street1 field or add2_street1 if there is no add1_street1.  If only a partial address
+is given the entire address will be written so long as there is a street1.  Empty strings will
+be used for the other values.  If there is no address given then addresses will not be
+touched.  Part of the aggressiveness of removing non-specified addresses is to ensure
 identifying information for patrons is removed when updating, especially for the use case
-of schools bulk updating juveniles.  
+of schools bulk updating juveniles.
 
 
-Database and Logging: 
+Database and Logging:
 
 The database holds a patron_loader.log table that logs (assuming it can create the db
-connection) a log when loads, begin, finish some basic counts and why some rows are 
+connection) a log when loads, begin, finish some basic counts and why some rows are
 skipped.
 
 Problematic Characters:
 
-Valid unicode should process fine but if you are having errant characters screw up columns 
+Valid Unicode should process fine but if you are having errant characters screw up columns
 you can try using iconv -c -f utf-8 -t ascii foo.csv to clean up your source.
