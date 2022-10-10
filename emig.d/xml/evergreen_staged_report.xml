@@ -298,6 +298,14 @@
         <query>SELECT count(*), ARRAY_TO_STRING(x_migrate_reason,', ') FROM m_action_circulation_legacy WHERE NOT x_migrate GROUP BY 2</query>
     </report>
 
+     <report>
+        <name>circ_reading_history</name>
+        <tag>circs</tag>
+        <iteration>0</iteration>
+        <report_title>Count of Migrated Circ History</report_title>
+        <heading>Count.Causes</heading>
+        <query>SELECT count(*) FROM m_action_usr_circ_history</query>
+    </report>
 
     <!-- HOLDS REPORTS -->
 
