@@ -196,7 +196,7 @@ function export_patrons {
     export_table_patron_subset actor.card usr $outdir/patrons
     export_table_patron_subset actor.usr_setting usr $outdir/patrons
     export_table_patron_subset actor.usr_standing_penalty usr $outdir/patrons
-    export_table_patron_subset actor.usr_note usr $outdir/patrons
+    export_table_patron_subset actor.usr_message usr $outdir/patrons
     export_table_patron_subset actor.usr_address usr $outdir/patrons
     export_table_patron_subset actor.usr_saved_search owner $outdir/patrons
     export_table_patron_subset actor.stat_cat_entry_usr_map target_usr $outdir/patrons
