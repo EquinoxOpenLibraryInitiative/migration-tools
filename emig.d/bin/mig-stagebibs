@@ -111,11 +111,19 @@ if ($table_test == 0) { create_stage($dbh,$base_table,$prod_table); }
 $column_test = check_for_column($dbh,$stage_table,'x_migrate');
 if ($column_test == 0) { add_column($dbh,$stage_table,'x_migrate','BOOLEAN DEFAULT TRUE'); }
 
-$column_test = check_for_column($dbh,$stage_table,'x_migrate_reason');
-if ($column_test == 0) { add_column($dbh,$stage_table,'x_migrate_reason','TEXT[]'); }
-
 $column_test = check_for_column($dbh,$stage_table,'x_source');
 if ($column_test == 0) { add_column($dbh,$stage_table,'x_source','TEXT'); }
+
+if ($base_table eq 'm_biblio_record_entry') {
+    $column_test = check_for_column($dbh,$stage_table,'x_search_format');
+    if ($column_test == 0) { add_column($dbh,$stage_table,'x_search_format','TEXT[]'); }
+
+    $column_test = check_for_column($dbh,$stage_table,'x_circ_mods');
+    if ($column_test == 0) { add_column($dbh,$stage_table,'x_circ_mods','TEXT[]'); }
+
+    $column_test = check_for_column($dbh,$stage_table,'x_ff_action');
+    if ($column_test == 0) { add_column($dbh,$stage_table,'x_ff_action','TEXT'); }
+}
 
 $column_test = check_for_column($dbh,$stage_table,$marc_column);
 if ($column_test == 0) { add_column($dbh,$stage_table,$marc_column,'TEXT'); }
