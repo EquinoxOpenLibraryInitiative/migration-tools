@@ -803,7 +803,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry bre LEFT JOIN m_asset_call_number acn ON acn.record = bre.id WHERE acn.record IS NULL</query>
+        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry bre LEFT JOIN m_asset_call_number acn ON acn.record = bre.id WHERE acn.record IS NULL AND bre.x_merge_to IS NULL</query>
         <note>These records would not have been loaded but many may be deduplicated against incumbent records.</note>
     </report>
 
