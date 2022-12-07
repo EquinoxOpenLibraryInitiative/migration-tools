@@ -86,38 +86,6 @@
 
 -->
 
-    <!-- SUMMARY REPORTS -->
-    <report>
-    <name>added_this_migration</name>
-    <tag>summary</tag>
-    <iteration>0</iteration>
-    <report_title>Records Added in This Migration</report_title>
-    <heading>Record Type.Count</heading>
-    <query>
-        SELECT 'Bibs', COUNT(*) FROM biblio.record_entry WHERE NOT deleted AND id IN (SELECT id FROM m_biblio_record_entry)
-        UNION ALL
-        SELECT 'Items', COUNT(*) FROM asset.copy WHERE NOT deleted AND id IN (SELECT id FROM m_asset_copy)
-        UNION ALL 
-        SELECT 'Patrons', COUNT(*) FROM actor.usr WHERE NOT deleted AND id IN (SELECT id FROM m_actor_usr);
-    </query>
-    </report>
-
-    <report>
-    <name>totals_in_db</name>
-    <tag>summary</tag>
-    <iteration>0</iteration>
-    <report_title>System Record Totals</report_title>
-    <heading>Record Type.Count</heading>
-    <query>
-        SELECT 'Bibs', COUNT(*) FROM biblio.record_entry WHERE NOT deleted
-        UNION ALL
-        SELECT 'Items', COUNT(*) FROM asset.copy WHERE NOT deleted
-        UNION ALL 
-        SELECT 'Patrons', COUNT(*) FROM actor.usr WHERE NOT deleted;
-    </query> 
-    </report>
-
-
     <!-- CIRC REPORTS -->
     <report>
         <name>circ_count</name>
@@ -271,12 +239,12 @@
         <iteration>1</iteration>
         <report_title>Circs Missing Rules</report_title>
         <heading>Count.Field Missing</heading>
-        <query>SELECT COUNT(id), 'Duration Rule Value' FROM m_action_circulation WHERE duration IS NULL 
-            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule Value' FROM m_action_circulation WHERE recurring_fine IS NULL 
-            UNION ALL SELECT COUNT(id), 'Max Fine Rule Value' FROM m_action_circulation WHERE max_fine IS NULL
-            UNION ALL SELECT COUNT(id), 'Duration Rule' FROM m_action_circulation WHERE duration_rule IS NULL       
-            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule' FROM m_action_circulation WHERE recurring_fine_rule IS NULL      
-            UNION ALL SELECT COUNT(id), 'Max Fine Rule' FROM m_action_circulation WHERE max_fine_rule IS NULL
+        <query>SELECT COUNT(id), 'Duration Rule Value' FROM m_action_circulation_legacy WHERE duration IS NULL AND x_migrate 
+            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule Value' FROM m_action_circulation_legacy WHERE recurring_fine IS NULL AND x_migrate 
+            UNION ALL SELECT COUNT(id), 'Max Fine Rule Value' FROM m_action_circulation_legacy WHERE max_fine IS NULL AND x_migrate
+            UNION ALL SELECT COUNT(id), 'Duration Rule' FROM m_action_circulation_legacy WHERE duration_rule IS NULL AND x_migrate AND duration_rule != 'migrate'       
+            UNION ALL SELECT COUNT(id), 'Recurring Fine Rule' FROM m_action_circulation_legacy WHERE recurring_fine_rule IS NULL  AND x_migrate AND duration_rule != 'migrate'
+            UNION ALL SELECT COUNT(id), 'Max Fine Rule' FROM m_action_circulation_legacy WHERE max_fine_rule IS NULL  AND x_migrate AND duration_rule != 'migrate'
         </query>
     </report>
 
@@ -482,17 +450,6 @@
         <query>SELECT barcode FROM m_asset_copy_legacy WHERE barcode ~* 'no_barocde' AND x_migrate</query>
     </report>
 
-<!--
-    <report>
-        <name>m_asset_barcode_patterns</name>
-        <report_title>Common Barcode Starting Patterns</report_title>
-        <tag>assets</tag>
-        <iteration>0</iteration>
-        <heading>Count of Barcodes (greater than 10).Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE ac.x_migrate GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
-    </report>
--->
-
     <report>
         <name>incumbent_m_asset_barcode_collisions</name>
         <report_title>Incumbent Copy Barcode Collisions</report_title>
@@ -553,26 +510,6 @@
         <query>SELECT ac.barcode FROM m_asset_copy ac WHERE ac.barcode ~* '_' ORDER BY 1 LIMIT 50</query>
         <note>This is a shortlist of patron barcode collisions that maxes out at 50.  If there are more collisions we will need a supplemental report.</note>
     </report>
-
-<!--
-    <report>
-        <name>m_asset_barcode_collision_patterns</name>
-        <report_title>Common Copy Barcode Collision Patterns</report_title>
-        <tag>assets</tag>
-        <iteration>0</iteration>
-        <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy_legacy ac WHERE barcode ~* '^x_' AND ac.x_migrate GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
-    </report>
-
-    <report>
-        <name>m_asset_barcode_collision_patterns</name>
-        <report_title>Common Copy Barcode Collision Patterns</report_title>
-        <tag>assets</tag>
-        <iteration>1</iteration>
-        <heading>Number of Barcodes Matching Pattern Greater than 10.Left 60% of Characters</heading>
-        <query>SELECT COUNT(ac.id), LEFT(ac.barcode,(ROUND(LENGTH(ac.barcode)*.6))::INT) FROM m_asset_copy ac WHERE barcode ~* '^x_' GROUP BY 2 HAVING COUNT(ac.id) > 10 ORDER BY 2</query>
-    </report>
--->
 
     <report>
         <name>m_asset_floating</name>
@@ -803,7 +740,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count</heading>
-        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry bre LEFT JOIN m_asset_call_number acn ON acn.record = bre.id WHERE acn.record IS NULL AND bre.x_merge_to IS NULL</query>
+        <query>SELECT COUNT(bre.id) FROM m_biblio_record_entry_legacy bre LEFT JOIN m_asset_call_number acn ON acn.record = bre.id WHERE acn.record IS NULL AND bre.x_merge_to IS NULL</query>
         <note>These records would not have been loaded but many may be deduplicated against incumbent records.</note>
     </report>
 
@@ -876,7 +813,7 @@ id = ac_sc.owner GROUP BY 2,3 ORDER BY 2,3</query>
         <tag>bibs</tag>
         <iteration>0</iteration>
         <heading>Count.Original Search Format.New Search Format</heading>
-        <query>SELECT COUNT(*), ARRAY_TO_STRING(x_search_format,','), ARRAY_TO_STRING(x_after_search_format,',') FROM m_biblio_record_entry_legacy WHERE x_migrate AND x_after_search_format IS NOT NULL GROUP BY 2, 3 ORDER BY 3,2</query>
+        <query>SELECT COUNT(*), ARRAY_TO_STRING(x_search_format,','), x_ff_action FROM m_biblio_record_entry_legacy WHERE x_migrate AND x_ff_action IS NOT NULL GROUP BY 2, 3 ORDER BY 3,2</query>
     </report>
 
     <report>
@@ -911,7 +848,7 @@ circ_mods AS (
 )
 SELECT 
     COUNT(*)
-    ,cm.value AS "Circ Modifiiers"
+    ,cm.value AS "Circ Modifiers"
     ,sf.value AS "Search Formats"
 FROM 
     circ_mods cm 
@@ -1345,22 +1282,48 @@ ORDER BY 2, 3
 
     <!-- DEDUPE REPORTS -->
 
-    <asset>
-        <name>dedupe_explain</name>
-        <tag>dedupe</tag>
-        <file>dedupe_process.asciidoc</file> 
-    </asset>
-
     <report>
-        <name></name>
+        <name>dedupe_counts</name>
         <tag>dedupe</tag>
         <iteration>0</iteration>
-        <report_title>Dedupe Summary</report_title>
-        <heading>Dedupe Statistic.Count</heading>
+        <report_title>Dedupe Counts</report_title>
+        <heading>Records.Count</heading>
         <query>
-SELECT 'Incoming Records Analyzed', COUNT(*)FROM dedupe_batch UNION ALL
-SELECT 'Incoming Records Merged Into Leads', SUM(ARRAY_LENGTH(records,1)) FROM groups UNION ALL
-SELECT CONCAT_WS(' ',merge_set,'match set'), COUNT(*) FROM pairs GROUP BY 1 ORDER BY 1 UNION ALL
+            SELECT 'Incoming Records Analyzed', COUNT(*) FROM m_biblio_record_entry_legacy WHERE x_migrate UNION ALL
+            SELECT 'Incoming Records Merged Into Leads', SUM(ARRAY_LENGTH(records,1)) FROM groups
+	</query>
+    </report>
+
+    <report>
+        <name>dedupe_counts</name>
+        <tag>dedupe</tag>
+        <iteration>1</iteration>
+        <report_title>Dedupe Counts</report_title>
+        <heading>Records.Count</heading>
+        <query>
+            SELECT 'Incoming Records Analyzed', COUNT(*) FROM m_biblio_record_entry UNION ALL
+            SELECT 'Incoming Records Merged Into Leads', SUM(ARRAY_LENGTH(records,1)) FROM groups
+    </query> 
+    </report>
+
+    <report>
+        <name>match_sets</name>
+        <tag>dedupe</tag>
+        <iteration>0</iteration>
+        <report_title>Merges by Match Set</report_title>
+        <heading>Match Set.Count</heading>
+        <query>
+            SELECT CONCAT_WS(' ',merge_set,'match set'), COUNT(*) FROM pairs GROUP BY 1 ORDER BY 1
+	</query>
+    </report>
+
+    <report>
+        <name>dedupe_subordinate_counts</name>
+        <tag>dedupe</tag>
+        <iteration>0</iteration>
+        <report_title>Dedupe Subordinate Counts</report_title>
+        <heading>Records.Count</heading>
+        <query>
 SELECT 'Count of Final Merge Groups', COUNT(*) FROM groups UNION ALL
 SELECT 'Count of Groups w/ 1 Subordinate Record', COUNT(*)  FROM groups WHERE ARRAY_LENGTH(records,1) = 1 UNION ALL
 SELECT 'Count of Groups w/ 2 Subordinate Record', COUNT(*)  FROM groups WHERE ARRAY_LENGTH(records,1) = 2 UNION ALL
@@ -1370,8 +1333,7 @@ SELECT 'Count of Groups w/ 5-9 Subordinate Records', COUNT(*)  FROM groups WHERE
 SELECT 'Count of Groups w/ 10-14 Subordinate Records', COUNT(*)  FROM groups WHERE ARRAY_LENGTH(records,1) BETWEEN 10 AND 14 UNION ALL
 SELECT 'Count of Groups w/ 15-19 Subordinate Records', COUNT(*)  FROM groups WHERE ARRAY_LENGTH(records,1) BETWEEN 15 AND 19 UNION ALL
 SELECT 'Count of Groups w/ 20+ Subordinate Records', COUNT(*)  FROM groups WHERE ARRAY_LENGTH(records,1) >= 20
-
-        </query>
+	</query>
     </report>
 
     <!-- NOTICES REPORTS -->
