@@ -211,6 +211,14 @@ sub populate_marc {
       if ($record->field('245') and 
           $record->field('245')->subfield('b') and 
           not $conf->{ignoresubtitle});
+    $marc{title} .= ' ' . $record->field('245')->subfield('n')
+      if ($record->field('245') and
+          $record->field('245')->subfield('n') and
+          not $conf->{ignore245n});
+    $marc{title} .= ' ' . $record->field('245')->subfield('p')
+      if ($record->field('245') and
+          $record->field('245')->subfield('p') and
+          not $conf->{ignore245p});
     $marc{edition} = $record->field('250')->subfield('a')
       if $record->field('250');
     if ($record->field('260')) {
@@ -763,6 +771,8 @@ sub initialize {
                          'newwins',
                          'excludelist=s',
                          'ignoresubtitle|i',
+                         'ignore245n',
+                         'ignore245p',
                          'quiet|q',
                          'help|h',
                        );
@@ -862,6 +872,8 @@ Options
   --subfield=X      -s  Which subfield to use (default 'a')
   --quiet           -q  Don't write status messages to STDOUT
   --ignoresubtitle  -i  Ignore 245\$b and construct the title from 245\$a alone.
+  --ignore245n          Don't include the 245n in the fingerprint (affects bib matching)
+  --ignore245p          Don't include the 245p in the fingerprint (affects bib matching)
 
   --fingerprints=LIST  Fingerprints to generate, comma separated
                        Default: oclc,isbn,edition,issn,lccn,accomp,authpub
