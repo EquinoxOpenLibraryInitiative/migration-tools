@@ -112,6 +112,22 @@ DELETE FROM metabib.real_full_rec WHERE record IN
     WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
 );
 
+DELETE FROM url_verify.url WHERE item IN (
+    SELECT id FROM container.biblio_record_entry_bucket_item 
+    WHERE target_biblio_record_entry
+    IN (     SELECT record FROM esi.:vol_del_table x
+         WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
+         AND record IN (SELECT id FROM biblio.record_entry)
+    )
+);
+
+DELETE FROM container.biblio_record_entry_bucket_item 
+WHERE target_biblio_record_entry
+IN (     SELECT record FROM esi.:vol_del_table x
+         WHERE NOT EXISTS (select 1 from asset.call_number where record = x.record)
+         AND record IN (SELECT id FROM biblio.record_entry)
+); 
+
 COMMIT;
 
 
