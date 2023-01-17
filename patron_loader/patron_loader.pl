@@ -268,7 +268,7 @@ while (my $line = <$fh>) {
                     or !defined $column_values{'passwd'}
                 ) { 
                     $skipped++;
-                    $msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'$cardnumber'} insert failed";
+                    $msg = "usrname $column_values{'usrname'} or cardnumber $column_values{'cardnumber'} insert failed";
                     log_event($dbh,$session,$msg);
                     if ($debug != 0) { print "$msg\n" }
                 }
