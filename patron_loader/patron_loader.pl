@@ -302,6 +302,8 @@ while (my $line = <$fh>) {
             my @set = ('0' ..'9', 'a' .. 'z', 'A' .. 'Z');
             my $prepped_password;
             if ($insert_usr_str) {
+                if (!defined $column_values{'passwd'} or $column_values{'passwd'} eq '' and $default_password)
+                    { $column_values{'passwd'} = $default_password; }
                 if (!defined $column_values{'passwd'} or $column_values{'passwd'} eq '') {
                     $column_values{'passwd'} = join '' => map $set[rand @set], 1 .. 16;
                 }
