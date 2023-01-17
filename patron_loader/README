@@ -27,6 +27,7 @@ Optional parameters:
     _will_ overwrite existing passwords
     if some rows have a password value and the default is used the default will only
     be used where the column is null
+    password must be at least four characters or a random password will be used
 --alert_message this is meant for scenarios where the script is being used for bulk
     loading students and an alert message is needed such as "verify address"
     it only adds an alert and does not check for duplication

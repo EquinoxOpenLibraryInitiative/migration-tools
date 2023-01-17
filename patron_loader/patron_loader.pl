@@ -88,6 +88,11 @@ open(my $fh, '<', $file) or abort("Could not open $file!");
 
 if ($matchpoint ne 'usrname' and $matchpoint ne 'cardnumber') { abort('invalid matchpoint defined'); }
 
+if ($default_password and length($default_password) < 4) {
+    print "password must be at least four characters long, setting the passwords to random\n";
+    undef $default_password;
+}
+
 if (!defined $org_unit) { abort('no org_unit defined'); }
 my $prepped_org_unit = sql_wrap_text($org_unit);
 if ($debug == 0) { log_event($dbh,$session,"beginning load for $org_unit"); } 
