@@ -190,6 +190,10 @@ BEGIN
 
 	SELECT * FROM migration_tools.create_user(pbarcode,username,password,org,perm_group,first_name,last_name) INTO au_id;
 
+    --clean arrays 
+    working_ous := migration_tools.anyarray_uniq(migration_tools.anyarray_remove_null(working_ous));
+    secondary_profiles := migration_tools.anyarray_uniq(migration_tools.anyarray_remove_null(secondary_profiles));
+
 	FOR org_name IN SELECT UNNEST(working_ous) LOOP
         INSERT INTO permission.usr_work_ou_map (usr,work_ou) SELECT au_id, id FROM actor.org_unit WHERE shortname = org_name;	
 	END LOOP;
