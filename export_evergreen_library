@@ -172,6 +172,7 @@ function export_items {
     export_entire_table config.rule_recurring_fine $outdir/items
     export_entire_table asset.call_number_prefix $outdir/items
     export_entire_table asset.call_number_suffix $outdir/items
+    export_entire_table asset.call_number_class $outdir/items 
     export_entire_table asset.stat_cat $outdir/items
     export_entire_table asset.stat_cat_entry $outdir/items
     export_table_ou_subset actor.org_unit id $outdir/items
