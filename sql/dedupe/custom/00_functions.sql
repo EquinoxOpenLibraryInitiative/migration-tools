@@ -706,37 +706,25 @@ my @pubdates = $marc->field('260');
 my @norm_pubdates;
 if (scalar @pubdates > 0) { @norm_pubdates = norm_pubdates(@pubdates); }
 my $concat_pubdates = '';
-foreach my $pubdate (@norm_pubdates) {
-   if (!defined $concat_pubdates) { $concat_pubdates = $pubdate; }
-    else { $concat_pubdates = $concat_pubdates . ',' . $pubdate; }
-}
+foreach my $pubdate (@norm_pubdates) { $concat_pubdates = $concat_pubdates . ',' . $pubdate; }
 
 my @rda_pubdates = $marc->field('264');
 my @norm_rda_pubdates;
-if (scalar @rda_pubdates > 0) { @rda_pubdates = norm_rda_pubdates(@rda_pubdates); }
+if (scalar @rda_pubdates > 0) { @norm_rda_pubdates = norm_rda_pubdates(@rda_pubdates); }
 my $concat_rda_pubdates = '';
-foreach my $rda_pubdate (@norm_rda_pubdates) {
-   if (!defined $concat_rda_pubdates) { $concat_rda_pubdates = $rda_pubdate; }
-    else { $concat_rda_pubdates = $concat_rda_pubdates . ',' . $rda_pubdate; }
-}
+foreach my $rda_pubdate (@norm_rda_pubdates) { $concat_rda_pubdates = $concat_rda_pubdates . ',' . $rda_pubdate; }
 
 my @publishers = $marc->field('260');
 my @norm_publishers;
-if (scalar @publishers > 0) { @publishers = norm_publishers(@publishers); }
+if (scalar @publishers > 0) { @norm_publishers = norm_publishers(@publishers); }
 my $concat_publishers = '';
-foreach my $publisher (@norm_publishers) {
-   if (!defined $concat_publishers) { $concat_publishers = $publisher; }
-    else { $concat_publishers = $concat_publishers . ',' . $publisher; }
-}
+foreach my $publisher (@norm_publishers) { $concat_publishers = $concat_publishers . ',' . $publisher; }
 
 my @rda_publishers = $marc->field('264');
 my @norm_rda_publishers;
-if (scalar @rda_publishers > 0) { @rda_publishers = norm_rda_publishers(@rda_publishers); }
+if (scalar @rda_publishers > 0) { @norm_rda_publishers = norm_rda_publishers(@rda_publishers); }
 my $concat_rda_publishers = '';
-foreach my $rda_publisher (@norm_rda_publishers) {
-   if (!defined $concat_rda_publishers) { $concat_rda_publishers = $rda_publisher; }
-    else { $concat_rda_publishers = $concat_rda_publishers . ',' . $rda_publisher; }
-}
+foreach my $rda_publisher (@norm_rda_publishers) { $concat_rda_publishers = $concat_rda_publishers . ',' . $rda_publisher; }
 
 my @descrip = $marc->field('300');
 my @norm_descriptions = norm_descriptions(@descrip);
