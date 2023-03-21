@@ -37,6 +37,8 @@ my $wait = 1;
 my $output;
 my $link_skipped;
 my $dbport = 5432;
+my $osrf_config = '/openils/bin/opensrf_core.xml';
+my $eg_bindir = '/openils/bin';
 
 my $ret = GetOptions(
     'action:s'      => \$action,
@@ -51,6 +53,8 @@ my $ret = GetOptions(
     'wait:i'        => \$wait,
     'output:s'      => \$output,
     'link-skipped'  => \$link_skipped,
+    'osrf-config:s' => \$osrf_config,
+    'eg-bindir:s'   => \$eg_bindir,
 );
 
 abort('must specify --action') unless defined $action;
@@ -77,7 +81,8 @@ abort(q{--action must be "stage_bibs", "filter_bibs", "load_bibs", "stage_auths"
     $action eq 'link_auth_auth' or
     $action eq 'link_auth_bib' or
     $action eq 'export_skipped_bibs' or
-    $action eq 'export_skipped_auths'
+    $action eq 'export_skipped_auths' or
+    $action eq 'report'
 ;
 
 my $dbh = connect_db($db, $dbuser, $dbpw, $dbhost, $dbport);
@@ -133,6 +138,9 @@ if ($action eq 'export_skipped_bibs') {
 if ($action eq 'export_skipped_auths') {
     abort('must specify output file') unless defined $output;
     handle_export_skipped_auths($dbh, $schema, $batch, $output);
+}
+if ($action eq 'report') {
+    handle_report($dbh, $schema, $batch);
 }
 
 sub abort {
@@ -197,17 +205,23 @@ This program has several modes controlled by the --action switch:
                                   specified by --output those authorities
                                   that could not be definitively
                                   handled as updates or adds.
+  --action report               - output a summary of the processing of the
+                                  batch.
 
 Several switches are used regardless of the specified action:
 
-  --schema  - Pg schema in which staging table will live; should be
-              created beforehand
-  --batch   - name of bib batch; will also be used as the name
-              of the staging tables
-  --db      - database name
-  --dbuser  - database user
-  --dbpw    - database password
-  --dbhost  - database host
+  --schema      - Pg schema in which staging table will live; should be
+                  created beforehand
+  --batch       - name of bib batch; will also be used as the name
+                  of the staging tables
+  --db          - database name
+  --dbuser      - database user
+  --dbpw        - database password
+  --dbhost      - database host
+  --osrf-config - path to OpenSRF core configuration file. Defaults
+                  to /openils/conf/opensrf.xml
+  --eg-bindir   - directory containing Evergreen's scripts. Defaults
+                  to /openils/bin
 
 Examples:
 
@@ -261,12 +275,13 @@ sub handle_stage_bibs {
         DROP TABLE IF EXISTS $schema.$batch;
     });
     $dbh->do(qq{
-        CREATE TABLE $schema.$batch (
+        CREATE UNLOGGED TABLE $schema.$batch (
             id          SERIAL,
             marc        TEXT,
             bib_id      BIGINT,
             imported    BOOLEAN DEFAULT FALSE,
             to_import   BOOLEAN DEFAULT TRUE,
+            linked      BOOLEAN DEFAULT FALSE,
             skip_reason TEXT
         )
     });
@@ -401,7 +416,7 @@ sub handle_load_bibs {
                 FROM $schema.$batch
                 WHERE to_import
                 AND NOT imported
-                ORDER BY id
+                ORDER BY bib_id DESC
                 LIMIT 1
             )
         });
@@ -419,7 +434,7 @@ sub handle_stage_auths {
         DROP TABLE IF EXISTS $schema.auths_$batch;
     });
     $dbh->do(qq{
-        CREATE TABLE $schema.auths_$batch (
+        CREATE UNLOGGED TABLE $schema.auths_$batch (
             id          SERIAL,
             marc        TEXT,
             auth_id     BIGINT,
@@ -805,7 +820,7 @@ sub handle_link_auth_auth {
     foreach my $id (@ids) {
         $i++;
         report_progress('... auth-auth linkings processed', $i) if 0 == $i % 10 or $i == scalar(@ids);
-        system "/openils/bin/authority_authority_linker.pl -r $id -c /openils/conf/opensrf_core.xml";
+        system "$eg_bindir/authority_authority_linker.pl -r $id -c $osrf_config";
     }
 
     $dbh->do(q{
@@ -833,7 +848,7 @@ sub handle_link_auth_bib {
         $query = qq{
             SELECT bib_id AS id
             FROM $schema.$batch
-            WHERE imported
+            WHERE imported AND NOT linked
             ORDER BY 1
         };
     }
@@ -846,7 +861,10 @@ sub handle_link_auth_bib {
     foreach my $id (@ids) {
         $i++;
         report_progress('... auth-bib linkings processed', $i) if 0 == $i % 10 or $i == scalar(@ids);
-        system "/openils/bin/authority_control_fields.pl --record $id -c /openils/conf/opensrf_core.xml";
+        system "$eg_bindir/authority_control_fields.pl --record $id -c $osrf_config";
+        $query = qq{ UPDATE $schema.$batch SET linked = TRUE WHERE bib_id = $id };
+        $sth = $dbh->prepare($query);
+        $sth->execute();
     }
 
 }
@@ -868,7 +886,7 @@ sub handle_export_skipped_bibs {
         ORDER BY id
     });
     $sth->execute();
-   
+
     while (my $row  = $sth->fetchrow_hashref()) {
         my $marc = MARC::Record->new_from_xml($row->{marc});
         print $outfh $marc->as_usmarc();
@@ -893,10 +911,117 @@ sub handle_export_skipped_auths {
         ORDER BY id
     });
     $sth->execute();
-   
+
     while (my $row  = $sth->fetchrow_hashref()) {
         my $marc = MARC::Record->new_from_xml($row->{marc});
         print $outfh $marc->as_usmarc();
     }
     $outfh->close();
+}
+
+sub handle_report {
+    my $dbh = shift;
+    my $schema = shift;
+    my $batch = shift;
+
+    my @outputa;
+    my @outputb;
+
+    my $quoted_schema = '\'' . $schema . '\'';
+    my $quoted_batch = '\'' . $batch . '\'';
+    my $quoted_auths = '\'' . 'auths_' . $batch . '\'';
+
+    my $query = qq{
+        SELECT 1 WHERE EXISTS(SELECT table_catalog
+        FROM information_schema.tables
+        WHERE table_schema = $quoted_schema AND table_name = $quoted_batch)
+    };
+
+    my $sth = $dbh->prepare($query);
+    $sth->execute();
+    my $bib_table = $sth->fetchrow_array;
+
+    $query = qq{
+        SELECT 1 WHERE EXISTS(SELECT table_catalog
+        FROM information_schema.tables
+        WHERE table_schema = $quoted_schema AND table_name = $quoted_auths)
+    };
+    $sth = $dbh->prepare($query);
+    $sth->execute();
+    my $auth_table = $sth->fetchrow_array;
+
+    if ($auth_table) {
+        $query = qq{
+            SELECT
+                COUNT(id) AS "Record Count"
+                ,imported::TEXT AS "Imported"
+                ,COALESCE(skip_reason,'') AS "Skip Reason"
+            FROM $schema.auths_$batch
+            GROUP BY 2, 3
+        };
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+        print "Auths Record Count\tImported\tLinked\tSkip Reason\n";
+        while (@outputa = $sth->fetchrow_array) {
+            print join("\t\t", @outputa), "\n";
+        }
+        print "\n";
+    }
+
+    if ($bib_table) {
+        $query = qq{
+            SELECT
+                COUNT(id) AS "Record Count"
+                ,imported::TEXT AS "Imported"
+                ,linked::TEXT AS "Linked"
+                ,COALESCE(skip_reason,'') AS "Skip Reason"
+            FROM $schema.$batch
+            GROUP BY 2, 3, 4
+        };
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+        print "Bibs Count\tImported\tLinked\tSkip Reason\n";
+        while (@outputa = $sth->fetchrow_array) {
+            print join("\t\t", @outputa), "\n";
+        }
+        print "\n";
+
+        $query = qq{
+            SELECT
+                'Neither Linked nor Imported' AS "Update Status"
+                ,ARRAY_TO_STRING(ARRAY_AGG(bib_id),',') AS "Bib IDs"
+                ,skip_reason AS "Skip Reason"
+            FROM
+                $schema.$batch
+            WHERE
+                imported IS FALSE AND linked IS FALSE
+            GROUP BY 1,3
+            UNION ALL
+            SELECT
+                'Imported but not Linked'
+                ,ARRAY_TO_STRING(ARRAY_AGG(bib_id),',')
+                ,skip_reason AS "Skip Reason"
+            FROM
+                $schema.$batch
+            WHERE
+                imported IS TRUE AND linked IS FALSE
+            GROUP BY 1,3
+            UNION ALL
+            SELECT
+                'Linked but not Imported'
+                ,ARRAY_TO_STRING(ARRAY_AGG(bib_id),',')
+                ,skip_reason AS "Skip Reason"
+            FROM
+                $schema.$batch
+            WHERE
+                imported IS FALSE AND linked IS TRUE
+            GROUP BY 1,3
+        };
+        $sth = $dbh->prepare($query);
+        $sth->execute();
+        print "Update Status\tBib IDs\n";
+        while (@outputb = $sth->fetchrow_array) {
+            print join(", ", @outputb), "\n";
+        }
+    }
 }
