@@ -468,9 +468,8 @@ DECLARE
     p_records     BIGINT[];
     p_record_a    BIGINT;
     p_record_b    BIGINT;
-    p_merge_set   TEXT;
+    p_merge_set   TEXT[];
     p_title       TEXT;
-    x             BOOLEAN DEFAULT FALSE;
 BEGIN
     SELECT records[1], records[2], records, merge_set, title FROM pairs WHERE id = pair_id
         INTO p_record_a, p_record_b, p_records, p_merge_set, p_title;
@@ -480,27 +479,33 @@ BEGIN
 
     IF g_ida IS NULL AND g_idb IS NULL THEN
         INSERT INTO groups (records, pairs, merge_sets, title)
-            SELECT p_records, ('{' || pair_id::TEXT || '}')::INTEGER[], ('{' || p_merge_set::TEXT || '}')::TEXT[], p_title;
-        x := TRUE;
+            SELECT p_records, ARRAY[pair_id], p_merge_set, p_title;
     END IF;
 
     IF g_ida IS NOT NULL AND g_idb IS NOT NULL AND g_ida != g_idb THEN
-        UPDATE groups a SET records = a.records || b.records, pairs = a.pairs || b.pairs, merge_sets = a.merge_sets || b.merge_sets
+        UPDATE groups a SET records = a.records || b.records, 
+            pairs = a.pairs || b.pairs, 
+            merge_sets = a.merge_sets || b.merge_sets
             FROM (SELECT * FROM groups WHERE id = g_idb) b WHERE a.id = g_ida;
         DELETE FROM groups WHERE id = g_idb;
-        UPDATE groups SET records = ANYARRAY_UNIQ(records), merge_sets = ANYARRAY_UNIQ(merge_sets) WHERE id = g_ida;
+        UPDATE groups SET records = ANYARRAY_UNIQ(records), merge_sets = ANYARRAY_UNIQ(merge_sets) WHERE id = g_ida; 
         RETURN pair_id;
     END IF;
 
     IF g_ida IS NOT NULL AND g_idb IS NULL THEN
-        UPDATE groups SET records = records || p_records, pairs = pairs || pair_id, merge_sets = merge_sets || p_merge_set WHERE id = g_ida;
-        UPDATE groups SET records = ANYARRAY_UNIQ(records), merge_sets = ANYARRAY_UNIQ(merge_sets) WHERE id = g_ida;
-        x := TRUE;
+        UPDATE groups SET
+             records = records || p_records
+            ,pairs = ANYARRAY_UNIQ(pairs || pair_id)
+            ,merge_sets = ANYARRAY_UNIQ(merge_sets || p_merge_set)
+        WHERE id = g_ida;
     END IF;
 
-    IF (g_ida IS NULL AND g_idb IS NOT NULL) OR x = TRUE THEN
-        UPDATE groups SET records = records || p_records, pairs = pairs || pair_id, merge_sets = merge_sets || p_merge_set WHERE id = g_idb;
-        UPDATE groups SET records = ANYARRAY_UNIQ(records), merge_sets = ANYARRAY_UNIQ(merge_sets) WHERE id = g_idb;
+    IF g_ida IS NULL AND g_idb IS NOT NULL THEN
+        UPDATE groups SET
+             records = records || p_records
+            ,pairs = ANYARRAY_UNIQ(pairs || pair_id)
+            ,merge_sets = ANYARRAY_UNIQ(merge_sets || p_merge_set)
+        WHERE id = g_idb;
     END IF;
 
     UPDATE pairs SET grouped = TRUE WHERE id = pair_id;
