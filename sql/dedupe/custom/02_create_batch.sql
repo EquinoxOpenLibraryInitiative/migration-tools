@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS incoming_titles;
 
 -- these basically save time by not vivisecting titles that will never be compared
 CREATE UNLOGGED TABLE incumbent_titles AS 
-    SELECT record, value, clean_title(value,'primary') AS clean_title
+    SELECT record, value, clean_title(value) AS clean_title
     FROM metabib.real_full_rec 
     WHERE record IN (SELECT id FROM biblio.record_entry WHERE deleted = FALSE) AND tag = '245' AND subfield = 'a'
     AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset'));
@@ -17,7 +17,7 @@ BEGIN
     IF EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('migration','subset')) THEN
     CREATE UNLOGGED TABLE incoming_titles AS
         SELECT id AS record, UNNEST(oils_xpath( '//*[@tag="245"]/*[@code="a"]/text()', marc)) AS value,
-        clean_title(UNNEST(oils_xpath( '//*[@tag="245"]/*[@code="a"]/text()', marc)),'primary') AS clean_title
+        clean_title(UNNEST(oils_xpath( '//*[@tag="245"]/*[@code="a"]/text()', marc))) AS clean_title
         FROM m_biblio_record_entry;
     SELECT COUNT(*) FROM incoming_titles INTO row_count;
     END IF;

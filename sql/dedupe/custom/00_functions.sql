@@ -1,4 +1,4 @@
-DROP FUNCTION IF EXISTS log_asset_merges(INTEGER,BIGINT,BIGINT);
+ FUNCTION IF EXISTS log_asset_merges(INTEGER,BIGINT,BIGINT);
 CREATE OR REPLACE FUNCTION log_asset_merges(grp_id INTEGER, r BIGINT, lead_record BIGINT)
    RETURNS BOOLEAN
    LANGUAGE plpgsql
@@ -62,7 +62,7 @@ CREATE OR REPLACE FUNCTION dedupe_setting(setting_name TEXT)
    LANGUAGE plpgsql
 AS $function$
 DECLARE
-    setting_value TEXT DEFAULT '';
+    setting_value TEXT DEFAULT NULL;
     setting_exists INTEGER DEFAULT 0;
 BEGIN
     SELECT dedupe_setting_exists(setting_name) INTO setting_exists;
@@ -70,14 +70,13 @@ BEGIN
         SELECT value FROM dedupe_features WHERE name = setting_name 
             AND org = (SELECT shortname FROM actor.org_unit WHERE id = 1)
             INTO setting_value;
+    ELSE         
+        RETURN NULL;
     END IF;
-    IF setting_name = 'page variation' AND setting_value = '' THEN
-        setting_value = '1234567';
+    IF BTRIM(setting_value) = '' THEN
+        setting_value = NULL;
     END IF;
-    IF setting_name = 'cm variation' AND setting_value = '' THEN
-        setting_value = '1234567';
-    END IF;
-    IF setting_name = 'merge_group_limit' AND setting_value = '' THEN  
+    IF setting_name = 'merge_group_limit' AND BTRIM(setting_value) = '' THEN  
         setting_value = '15';
 	END IF;
     RETURN setting_value;
@@ -470,40 +469,40 @@ DECLARE
     p_record_a    BIGINT;
     p_record_b    BIGINT;
     p_merge_set   TEXT;
-    p_match_set   TEXT;
+    p_title       TEXT;
     x             BOOLEAN DEFAULT FALSE;
 BEGIN
-    SELECT records[1], records[2], records, merge_set, match_set FROM pairs WHERE id = pair_id 
-        INTO p_record_a, p_record_b, p_records, p_merge_set, p_match_set;
+    SELECT records[1], records[2], records, merge_set, title FROM pairs WHERE id = pair_id
+        INTO p_record_a, p_record_b, p_records, p_merge_set, p_title;
 
-    SELECT id FROM groups WHERE match_set = p_match_set AND p_record_a = ANY(records) INTO g_ida;
-    SELECT id FROM groups WHERE match_set = p_match_set AND p_record_b = ANY(records) INTO g_idb;
+    SELECT id FROM groups WHERE title = p_title AND p_record_a = ANY(records) INTO g_ida;
+    SELECT id FROM groups WHERE title = p_title AND p_record_b = ANY(records) INTO g_idb;
 
     IF g_ida IS NULL AND g_idb IS NULL THEN
-        INSERT INTO groups (records, pairs, merge_sets, match_set)
-            SELECT p_records, ('{' || pair_id::TEXT || '}')::INTEGER[], ('{' || p_merge_set::TEXT || '}')::TEXT[], p_match_set;
+        INSERT INTO groups (records, pairs, merge_sets, title)
+            SELECT p_records, ('{' || pair_id::TEXT || '}')::INTEGER[], ('{' || p_merge_set::TEXT || '}')::TEXT[], p_title;
         x := TRUE;
     END IF;
 
     IF g_ida IS NOT NULL AND g_idb IS NOT NULL AND g_ida != g_idb THEN
-        UPDATE groups a SET records = a.records || b.records, pairs = a.pairs || b.pairs, merge_sets = a.merge_sets || b.merge_sets 
+        UPDATE groups a SET records = a.records || b.records, pairs = a.pairs || b.pairs, merge_sets = a.merge_sets || b.merge_sets
             FROM (SELECT * FROM groups WHERE id = g_idb) b WHERE a.id = g_ida;
         DELETE FROM groups WHERE id = g_idb;
         UPDATE groups SET records = ANYARRAY_UNIQ(records), merge_sets = ANYARRAY_UNIQ(merge_sets) WHERE id = g_ida;
         RETURN pair_id;
     END IF;
 
-    IF g_ida IS NOT NULL AND g_idb IS NULL THEN 
+    IF g_ida IS NOT NULL AND g_idb IS NULL THEN
         UPDATE groups SET records = records || p_records, pairs = pairs || pair_id, merge_sets = merge_sets || p_merge_set WHERE id = g_ida;
         UPDATE groups SET records = ANYARRAY_UNIQ(records), merge_sets = ANYARRAY_UNIQ(merge_sets) WHERE id = g_ida;
         x := TRUE;
     END IF;
 
-    IF (g_ida IS NULL AND g_idb IS NOT NULL) OR x = TRUE THEN 
+    IF (g_ida IS NULL AND g_idb IS NOT NULL) OR x = TRUE THEN
         UPDATE groups SET records = records || p_records, pairs = pairs || pair_id, merge_sets = merge_sets || p_merge_set WHERE id = g_idb;
         UPDATE groups SET records = ANYARRAY_UNIQ(records), merge_sets = ANYARRAY_UNIQ(merge_sets) WHERE id = g_idb;
     END IF;
-   
+
     UPDATE pairs SET grouped = TRUE WHERE id = pair_id;
     RETURN pair_id;
 END;
@@ -513,8 +512,16 @@ DROP FUNCTION IF EXISTS clean_author(TEXT);
 CREATE OR REPLACE FUNCTION clean_author(author TEXT)
     RETURNS TEXT AS
 $BODY$
+DECLARE 
+    old   TEXT;
+    new   TEXT;
 BEGIN
     author := LOWER(author);
+
+    FOR old, new IN SELECT to_replace, replace_with FROM chars_to_normalize LOOP
+        author := REPLACE(author,old,new);
+    END LOOP;
+
     author := REGEXP_REPLACE(author,'\[(.*?)\]','');
     author := REGEXP_REPLACE(author,'\((.*?)\)','');
     author := BTRIM(REGEXP_REPLACE(author, '[^a-z]', '', 'g'));
@@ -523,57 +530,24 @@ BEGIN
 END;
 $BODY$ LANGUAGE plpgsql;
 
-DROP FUNCTION IF EXISTS clean_title(TEXT,TEXT);
-CREATE OR REPLACE FUNCTION clean_title(title TEXT, t TEXT)
+DROP FUNCTION IF EXISTS clean_title(TEXT);
+CREATE OR REPLACE FUNCTION clean_title(title TEXT)
     RETURNS TEXT AS
 $BODY$
 DECLARE 
-    t_length            INTEGER;
+    old        TEXT;
+    new        TEXT;        
 BEGIN
     title := LOWER(title);
-    title := REPLACE(title,'0','zero');
-    title := REPLACE(title,'1','one');
-    title := REPLACE(title,'2','two');
-    title := REPLACE(title,'3','three');
-    title := REPLACE(title,'4','four');
-    title := REPLACE(title,'5','five');
-    title := REPLACE(title,'6','six');
-    title := REPLACE(title,'7','seven');
-    title := REPLACE(title,'8','eight');
-    title := REPLACE(title,'9','nine');
-    title := REPLACE(title,' videorecording ',' ');
-    title := REGEXP_REPLACE(title,' videorecording$','');
-    title := REGEXP_REPLACE(title,'^videorecording ','');
-    title := REPLACE(title,' dvd ',' ');
-    title := REGEXP_REPLACE(title,' dvd$','');
-    title := REGEXP_REPLACE(title,'^dvd ','');
-    title := REPLACE(title,' vhs ',' ');
-    title := REGEXP_REPLACE(title,' vhs$','');
-    title := REGEXP_REPLACE(title,'^vhs ','');
-    title := REPLACE(title,' videorecording ',' ');
-    title := REGEXP_REPLACE(title,' videorecording$','');
-    title := REGEXP_REPLACE(title,'^videorecording ','');
-    title := REPLACE(title,' hc ',' ');
-    title := REGEXP_REPLACE(title,' hc$','');
-    title := REGEXP_REPLACE(title,'^hc ','');
-    title := REPLACE(title,' pb ',' ');
-    title := REGEXP_REPLACE(title,' pb$','');
-    title := REGEXP_REPLACE(title,'^pb ','');
-    title := REPLACE(title,' pbk ',' ');
-    title := REGEXP_REPLACE(title,' pbk$','');
-    title := REGEXP_REPLACE(title,'^pbk ','');
-    title := REPLACE(title,' a ',' ');
-    title := REGEXP_REPLACE(title,' a$','');
-    title := REGEXP_REPLACE(title,'^a ','');
-    title := REPLACE(title,' the ',' ');
-    title := REGEXP_REPLACE(title,' the$','');
-    title := REGEXP_REPLACE(title,'^the ','');
-    title := REPLACE(title,' novel ',' ');
-    title := REGEXP_REPLACE(title,' novel$','');
-    title := REGEXP_REPLACE(title,'^novel ','');
-    title := REPLACE(title,'&','and');
-    title := REGEXP_REPLACE(title,'\[(.*?)\]','');
-    title := REGEXP_REPLACE(title,'\((.*?)\)','');
+
+    FOR old, new IN SELECT to_replace, replace_with FROM chars_to_normalize LOOP
+        title := REPLACE(title,old,new);
+    END LOOP;
+
+    FOR old, new IN SELECT to_replace, replace_with FROM title_strings LOOP
+        title := REGEXP_REPLACE(title,old,new);
+    END LOOP;
+
     title := BTRIM(REGEXP_REPLACE(title, '[^a-z0-9]', '', 'g'));
 
     RETURN title;
@@ -1846,3 +1820,15 @@ BEGIN
 END;
 $BODY$ LANGUAGE plpgsql;
 
+DROP FUNCTION IF EXISTS csv_wrap(TEXT);
+CREATE OR REPLACE FUNCTION csv_wrap(str TEXT)
+ RETURNS TEXT
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    str := REGEXP_REPLACE(str, E'[\\n\\r]+', ' ', 'g' );
+    str := REPLACE(str,'"','""');
+    str := CONCAT_WS('','"',str,'"');
+    RETURN str;
+END;
+$function$;
