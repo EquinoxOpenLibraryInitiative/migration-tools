@@ -7,11 +7,22 @@ CREATE TABLE chars_to_normalize (
 );
 
 INSERT INTO chars_to_normalize (to_replace,replace_with) VALUES 
--- spanish characters 
-  ('á','a'), ('Á','A'), ('é','e'), ('É','E')
-, ('í','i'), ('Í','I'), ('ó','o'), ('Ó','O')
-, ('ú','u'), ('Ú','U'), ('ñ','n'), ('Ñ','N')
-, ('ü','u'), ('Ü','U')
+-- judgement call since there is no telling what catalogers will do 
+-- common unicode characters 
+  ('á','a'), ('Á','A'), ('à','a'), ('À','A')
+, ('â','a'), ('Â','A'), ('ä','a'), ('Ä','A')  
+, ('é','e'), ('É','E'), ('è','e'), ('È','E')
+, ('ê','e'), ('Ê','E'), ('ë','e'), ('Ë','E')
+, ('í','i'), ('Í','I')
+, ('î','i'), ('Î','I'), ('ï','i'), ('Ï','I')
+, ('ó','o'), ('Ó','O'), ('ô','o'), ('Ô','O')
+, ('ö','o'), ('Ö','O')
+, ('ú','u'), ('Ú','U'), ('ü','u'), ('Ü','U')
+, ('ù','u'), ('Ù','U'), ('û','u'), ('Û','U')
+, ('ÿ','y'), ('Ÿ','Y')
+, ('ñ','n'), ('Ñ','N')
+-- , ('ç','c'), ('Ç','C') on the fence
+
 -- numbers to words 
 , ('0','zero')
 , ('1','one')
