@@ -240,6 +240,84 @@ function export_serials {
     export_entire_table serial.subscription_note $outdir/serials
 }
 
+function export_bookings {
+    mkdir -p $outdir/bookings
+    export_table_patron_subset booking.reservation usr $outdir/bookings
+    export_entire_table booking.reservation_attr_value_map $outdir/bookings
+    export_table_ou_subset booking.resource owner $outdir/bookings
+    export_entire_table booking.resource_attr $outdir/bookings
+    export_entire_table booking.resource_attr_map $outdir/bookings
+    export_entire_table booking.resource_attr_value $outdir/bookings
+    export_entire_table booking.resource_type $outdir/bookings
+}
+
+function export_acq {
+     mkdir -p $outdir/acq
+     export_entire_table acq.acq_lineitem_history $outdir/acq
+     export_entire_table acq.acq_purchase_order_history $outdir/acq
+     export_entire_table acq.cancel_reason $outdir/acq
+     export_entire_table acq.claim $outdir/acq
+     export_entire_table acq.claim_event $outdir/acq
+     export_entire_table acq.claim_event_type $outdir/acq
+     export_entire_table acq.claim_policy $outdir/acq
+     export_entire_table acq.claim_policy_action $outdir/acq
+     export_entire_table acq.claim_type $outdir/acq
+     export_entire_table acq.currency_type $outdir/acq
+     export_entire_table acq.debit_attribution $outdir/acq
+     export_entire_table acq.distribution_formula $outdir/acq
+     export_entire_table acq.distribution_formula_application $outdir/acq
+     export_entire_table acq.distribution_formula_entry $outdir/acq
+     export_entire_table acq.edi_account $outdir/acq
+     export_entire_table acq.edi_attr $outdir/acq
+     export_entire_table acq.edi_attr_set $outdir/acq
+     export_entire_table acq.edi_attr_set_map $outdir/acq
+     export_entire_table acq.edi_message $outdir/acq
+     export_entire_table acq.exchange_rate $outdir/acq
+     export_entire_table acq.fiscal_calendar $outdir/acq
+     export_entire_table acq.fiscal_year $outdir/acq
+     export_entire_table acq.fund $outdir/acq
+     export_entire_table acq.fund_allocation $outdir/acq
+     export_entire_table acq.fund_allocation_percent $outdir/acq
+     export_entire_table acq.fund_debit $outdir/acq
+     export_entire_table acq.fund_tag $outdir/acq
+     export_entire_table acq.fund_tag_map $outdir/acq
+     export_entire_table acq.fund_transfer $outdir/acq
+     export_entire_table acq.funding_source $outdir/acq
+     export_entire_table acq.funding_source_credit $outdir/acq
+     export_entire_table acq.invoice $outdir/acq
+     export_entire_table acq.invoice_entry $outdir/acq
+     export_entire_table acq.invoice_item $outdir/acq
+     export_entire_table acq.invoice_item_type $outdir/acq
+     export_entire_table acq.invoice_method $outdir/acq
+     export_entire_table acq.invoice_payment_method $outdir/acq
+     export_entire_table acq.lineitem $outdir/acq
+     export_entire_table acq.lineitem_alert_text $outdir/acq
+     export_entire_table acq.lineitem_attr $outdir/acq
+     export_entire_table acq.lineitem_attr_definition $outdir/acq
+     export_entire_table acq.lineitem_detail $outdir/acq
+     export_entire_table acq.lineitem_generated_attr_definition $outdir/acq
+     export_entire_table acq.lineitem_local_attr_definition $outdir/acq
+     export_entire_table acq.lineitem_marc_attr_definition $outdir/acq
+     export_entire_table acq.lineitem_note $outdir/acq
+     export_entire_table acq.lineitem_provider_attr_definition $outdir/acq
+     export_entire_table acq.lineitem_usr_attr_definition $outdir/acq
+     export_entire_table acq.picklist $outdir/acq
+     export_entire_table acq.po_item $outdir/acq
+     export_entire_table acq.po_note $outdir/acq
+     export_entire_table acq.provider $outdir/acq
+     export_entire_table acq.provider_address $outdir/acq
+     export_entire_table acq.provider_contact $outdir/acq
+     export_entire_table acq.provider_contact_address $outdir/acq
+     export_entire_table acq.provider_holding_subfield_map $outdir/acq
+     export_entire_table acq.provider_note $outdir/acq
+     export_entire_table acq.purchase_order $outdir/acq
+     export_entire_table acq.serial_claim $outdir/acq
+     export_entire_table acq.serial_claim_event $outdir/acq
+     export_entire_table acq.user_request $outdir/acq
+     export_entire_table acq.user_request_status_type $outdir/acq
+     export_entire_table acq.user_request_type $outdir/acq
+}
+
 select_bibs
 export_marc_bibs
 export_items
@@ -247,6 +325,8 @@ export_patrons
 export_loans
 export_hold_requests
 export_billings
+export_bookings
+export_acq 
 
 select_bibs_with_mfhds
 export_bibs_with_mfhds
