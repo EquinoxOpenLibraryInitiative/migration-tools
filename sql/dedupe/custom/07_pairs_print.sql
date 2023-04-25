@@ -15,6 +15,7 @@ WHERE
     AND ( titlepartname OR titlepartname IS NULL )
     AND ( dedupe_setting('page variation') IS NULL OR pages ) -- pages will be null if no setting 
     AND ( dedupe_setting('centimeter variation') IS NULL or centimeters )  
+    AND dedupe_setting('merge tacs isbn') = 'TRUE'
 ;
 
 UPDATE pairs
@@ -32,6 +33,8 @@ WHERE
     AND ( titlepartname OR titlepartname IS NULL )
     AND ( dedupe_setting('page variation') IS NULL OR pages ) -- pages will be null if no setting 
     AND ( dedupe_setting('centimeter variation') IS NULL or centimeters )
+    AND dedupe_setting('merge tacs pubdate') = 'TRUE'
+;
 
 UPDATE pairs SET merge_set = ARRAY_APPEND(merge_set,'tacs oclc')
 WHERE
@@ -46,6 +49,7 @@ WHERE
     AND ( dedupe_setting('page variation') IS NULL OR pages ) -- pages will be null if 
 no setting 
     AND ( dedupe_setting('centimeter variation') IS NULL or centimeters )
+    AND dedupe_setting('merge tacs oclc') = 'TRUE'
 ;
 
 -- stock manga match set based on publisher list 
@@ -62,6 +66,7 @@ WHERE
     AND ( titlepartname OR titlepartname IS NULL )
     AND ( dedupe_setting('page variation') IS NULL OR pages ) -- pages will be null if no setting 
     AND ( dedupe_setting('centimeter variation') IS NULL OR centimeters ) -- " 
+    AND dedupe_setting('merge tacs manga') = 'TRUE'
 ;
 
 
@@ -77,5 +82,6 @@ WHERE
     AND NOT manga
     AND ( titlepart OR titlepart IS NULL )
     AND ( titlepartname OR titlepartname IS NULL )
+    AND dedupe_setting('merge tacs issn') = 'TRUE'
 ;
 
