@@ -14,5 +14,6 @@ WHERE
     AND ( all_pubdates OR all_pubdates IS NULL)
     AND ( dedupe_setting('disc variation') IS NULL OR discs ) -- discs will be null if no setting 
     AND ( dedupe_setting('minutes variation') IS NULL OR minutes ) -- "
+    AND dedupe_setting('merge tacs upc') = 'TRUE' 
 ;
 
