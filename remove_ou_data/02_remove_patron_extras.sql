@@ -26,9 +26,6 @@ ALTER TABLE actor.usr_message DISABLE RULE protect_usr_message_delete;
 CREATE INDEX tmp_addr_replaces ON actor.usr_address(replaces);
 BEGIN;
 
-DELETE FROM actor.usr_note WHERE usr IN
-(SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
-
 DELETE FROM actor.stat_cat_entry_usr_map WHERE target_usr IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
