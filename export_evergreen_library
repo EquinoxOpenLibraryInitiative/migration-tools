@@ -182,6 +182,7 @@ function export_items {
     export_table_item_subset asset.copy_note owning_copy $outdir/items
     export_table_item_subset asset.stat_cat_entry_copy_map owning_copy $outdir/items
     export_table_item_subset asset.copy_part_map target_copy $outdir/items
+    export_table_item_subset asset.copy_alert copy $outdir/items
     export_table_bib_subset biblio.monograph_part record $outdir/items
 }
 
