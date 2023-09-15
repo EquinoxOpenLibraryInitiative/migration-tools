@@ -272,7 +272,7 @@ while (my $line = <$fh>) {
                     or !defined $column_values{'profile'}
                 ) { 
                     $skipped++;
-                    $msg = "usrname: $column_values{'usrname'}  | cardnumber: $column_values{'cardnumber'} | home_library: $col    umn_values{'home_library'} | family_name: $column_values{'family_name'} | first_given_name: $column_values{'first_given_name'} 
+                    $msg = "usrname: $column_values{'usrname'}  | cardnumber: $column_values{'cardnumber'} | home_library: $column_values{'home_library'} | family_name: $column_values{'family_name'} | first_given_name: $column_values{'first_given_name'} 
     | profile: $column_values{'profile'} || insert failed";
                     log_event($dbh,$session,$msg);
                     if ($debug != 0) { print "$msg\n" }
