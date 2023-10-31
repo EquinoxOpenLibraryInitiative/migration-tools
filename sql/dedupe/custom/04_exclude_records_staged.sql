@@ -2,6 +2,8 @@
 
 -- migration stuff is in DO loops to prevent errors 
 
+ALTER TABLE exclude_from_batch ALTER COLUMN staged SET DEFAULT TRUE;
+
 DO $$
 DECLARE
     use_staged BOOLEAN DEFAULT FALSE;
@@ -39,14 +41,14 @@ BEGIN
         SELECT COUNT(record)  FROM m_biblio_monograph_part WHERE NOT deleted
              AND EXISTS(SELECT 1 FROM dedupe_features WHERE name = 'skip parts' AND value = 'TRUE' AND org = (SELECT shortname FROM actor.org_unit WHERE id = 1))
              INTO report_count;
-        RAISE INFO 'exclude based on parts %', report_count;
+        RAISE INFO 'exclude based on parts (staged and incumbent) %', report_count;
 
         INSERT INTO exclude_from_batch (record,reason)
            SELECT DISTINCT acn.record, 'circ mod exclude' FROM m_asset_call_number acn JOIN m_asset_copy acp ON acp.call_number = acn.id WHERE NOT acp.deleted
            AND acp.circ_modifier IN (SELECT BTRIM(value) FROM dedupe_features WHERE name = 'exclude_circ_mod' AND org = (SELECT shortname FROM actor.org_unit WHERE id = 1));
         SELECT COUNT(*) FROM exclude_from_batch WHERE reason = 'circ mod exclude' 
            INTO report_count;
-        RAISE INFO 'exclude based on circ mod %', report_count;
+        RAISE INFO 'exclude based on circ mod (staged and incumbent) %', report_count;
 
         -- #potential issue if non migrated copy locations are used as well, uncommong but could happen
         INSERT INTO exclude_from_batch (record,reason)
@@ -56,21 +58,21 @@ BEGIN
             AND BTRIM(acl.name) IN (SELECT BTRIM(value) FROM dedupe_features WHERE name = 'exclude_copy_location' AND org = (SELECT shortname FROM actor.org_unit WHERE id = 1));
         SELECT COUNT(*) FROM exclude_from_batch WHERE reason = 'shelving location exclude'
             INTO report_count;
-        RAISE INFO 'exclude based on shelving loc %', report_count; 
+        RAISE INFO 'exclude based on shelving loc (staged and incumbent) %', report_count; 
 
         INSERT INTO exclude_from_batch (record,reason)
             SELECT record, 'excluded search format' FROM dedupe_batch WHERE search_format && (SELECT array_agg(value) FROM dedupe_features 
             WHERE name = 'exclude_search_format' AND org = (SELECT shortname FROM actor.org_unit WHERE id = 1));
         SELECT COUNT(*) FROM exclude_from_batch WHERE reason = 'excluded search format'
             INTO report_count;
-        RAISE INFO 'exclude based on search format %', report_count;
+        RAISE INFO 'exclude based on search format (staged and incumbent) %', report_count;
 
         INSERT INTO exclude_from_batch (record,reason)
             SELECT record, 'no search format' FROM dedupe_batch WHERE search_format IS NULL
             AND EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'exclude_null_search_format' AND value = 'TRUE' AND org = (SELECT shortname FROM actor.org_unit WHERE id = 1));
         SELECT COUNT(*) FROM exclude_from_batch WHERE reason = 'no search format'
             INTO report_count;
-        RAISE INFO 'exclude based on no search format %', report_count;
+        RAISE INFO 'exclude based on no search format (staged and incumbent) %', report_count;
 
         FOR feature_id IN SELECT id FROM dedupe_features WHERE name = 'exclude_partial_call_number' LOOP
             SELECT value, value2 FROM dedupe_features WHERE id = feature_id INTO partial_label, str;
@@ -80,7 +82,7 @@ BEGIN
                 AND acn.record IN (SELECT record FROM dedupe_batch);
         END LOOP;
         SELECT COUNT(*) FROM exclude_from_batch WHERE reason = 'partial call number' INTO report_count;
-        RAISE INFO 'excluded due to circ mod %', report_count;
+        RAISE INFO 'excluded due to partial call number (staged and incument) %', report_count;
 
         FOR feature_id IN SELECT id FROM dedupe_features WHERE name = 'restrict_sf_match_by_cm' LOOP
             SELECT value, value2 FROM dedupe_features WHERE id = feature_id INTO sf, str;
@@ -90,7 +92,7 @@ BEGIN
                 AND acn.record IN (SELECT record FROM dedupe_batch WHERE sf = ANY(search_format));
         END LOOP;
         SELECT COUNT(*) FROM exclude_from_batch WHERE reason = 'restricted by circ mod' INTO report_count;
-        RAISE INFO 'excluded due to circ mod restriction %', report_count;
+        RAISE INFO 'excluded due to circ mod restriction (staged and incumbent) %', report_count;
     END IF;
 END $$;
 
