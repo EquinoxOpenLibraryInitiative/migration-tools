@@ -384,8 +384,8 @@ sub handle_load_bibs {
 
         my $skip_reason;
         if ($deleted eq 1) { $skip_reason = 'deleted'; }
-        if ($edited_after_cutoff eq 1) { $skip_reason = 'edited after cutoff'; }
-        if ($xml_not_well_formed eq 1) { $skip_reason = 'xml not well formed'; }
+        if ($edited_after_cutoff eq 1) { $skip_reason = "edited after cutoff of $cutoff"; }
+        if ($xml_not_well_formed eq 1) { $skip_reason = 'XML is not well-formed'; }
 
         $dbh->begin_work;
         if ($skip_reason) {
