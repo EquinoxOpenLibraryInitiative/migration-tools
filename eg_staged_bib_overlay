@@ -65,11 +65,10 @@ abort('must specify --dbhost') unless defined $dbhost;
 abort('must specify --dbpw') unless defined $dbpw;
 abort('must specify --batch') unless defined $batch;
 
-abort(q{--action must be "stage_bibs", "filter_bibs", "load_bibs", "stage_auths",
+abort(q{--action must be "stage_bibs", "load_bibs", "stage_auths",
 "match_auths", "load_new_auths", "overlay_auths_stage1",
 "overlay_auths_stage2", "overlay_auths_stage3", "link_auth_auth",
 "link_auth_bib", "export_skipped_bibs", or "export_skipped_auths"}) unless
-    $action eq 'filter_bibs' or
     $action eq 'stage_bibs' or
     $action eq 'load_bibs' or
     $action eq 'stage_auths' or
@@ -92,13 +91,8 @@ if ($action eq 'stage_bibs') {
     handle_stage_bibs($dbh, $schema, $batch);
 }
 
-if ($action eq 'filter_bibs') {
-    abort('must specify cutoff date when filtering') unless defined $cutoff;
-    handle_filter_bibs($dbh, $schema, $batch, $cutoff);
-}
-
 if ($action eq 'load_bibs' ) {
-    handle_load_bibs($dbh, $schema, $batch, $wait);
+    handle_load_bibs($dbh, $schema, $batch, $wait, $cutoff);
 }
 
 if ($action eq 'stage_auths') {
@@ -324,62 +318,12 @@ sub handle_stage_bibs {
     /);
 }
 
-sub handle_filter_bibs {
-    my $dbh = shift;
-    my $schema = shift;
-    my $batch = shift;
-    my $cutoff = shift;
-
-    my $sth1 = $dbh->prepare(qq{
-        UPDATE $schema.$batch
-        SET to_import = FALSE,
-            skip_reason = 'deleted'
-        WHERE bib_id IN (
-            SELECT id
-            FROM biblio.record_entry
-            WHERE deleted
-        )
-        AND to_import
-        AND NOT imported
-    });
-    $sth1->execute();
-    my $ct = $sth1->rows;
-    report_progress("Filtering out $ct records that are currently deleted");
-
-    my $sth2 = $dbh->prepare(qq{
-        UPDATE $schema.$batch
-        SET to_import = FALSE,
-            skip_reason = 'edited after cutoff of $cutoff'
-        WHERE bib_id IN (
-            SELECT id
-            FROM biblio.record_entry
-            WHERE edit_date >= ?
-        )
-        AND to_import
-        AND NOT imported
-    });
-    $sth2->execute($cutoff);
-    $ct = $sth2->rows;
-    report_progress("Filtering out $ct records edited after cutoff date of $cutoff");
-
-    my $sth3 = $dbh->prepare(qq{
-        UPDATE $schema.$batch
-        SET to_import = FALSE,
-            skip_reason = 'XML is not well-formed'
-        WHERE NOT xml_is_well_formed(marc)
-        AND to_import
-        AND NOT imported
-    });
-    $sth3->execute();
-    $ct = $sth3->rows;
-    report_progress("Filtering out $ct records whose XML is not well-formed");
-}
-
 sub handle_load_bibs {
     my $dbh = shift;
     my $schema = shift;
     my $batch = shift;
     my $wait = shift;
+    my $cutoff = shift;
 
     my $getct = $dbh->prepare(qq{
         SELECT COUNT(*)
@@ -393,35 +337,80 @@ sub handle_load_bibs {
     report_progress('Number of bibs to update', $max);
     for (my $i = 1; $i <= $max; $i++) {
         report_progress('... bibs updated', $i) if 0 == $i % 10 or $i == $max;
+
+        my $query = qq{
+            SELECT bib_id FROM $schema.$batch
+            WHERE to_import AND NOT imported
+            ORDER BY bib_id DESC LIMIT 1
+        };
+        my $getbibid = $dbh->prepare($query);
+        $getbibid->execute();
+        my $target_bib_id = $getbibid->fetchrow_arrayref()->[0];
+
+        $query = qq{
+            SELECT EXISTS(
+                SELECT id
+                FROM biblio.record_entry
+                WHERE deleted
+                AND id = $target_bib_id
+            )
+        };
+        my $getdeleted = $dbh->prepare($query);
+        $getdeleted->execute();
+        my $deleted = $getdeleted->fetchrow_arrayref()->[0];
+
+        $query = qq{
+            SELECT EXISTS(
+                SELECT id
+                FROM biblio.record_entry
+                WHERE NOT deleted AND edit_date >= ?
+                AND id = $target_bib_id
+            )
+        };
+        my $editedafter = $dbh->prepare($query);
+        $editedafter->execute($cutoff);
+        my $edited_after_cutoff = $editedafter->fetchrow_arrayref()->[0];
+
+        $query = qq{
+            SELECT EXISTS(
+                SELECT id
+                FROM $schema.$batch
+                WHERE xml_is_well_formed(marc) AND id = $target_bib_id
+            )
+        };
+        my $notwellformed = $dbh->prepare($query);
+        $notwellformed->execute();
+        my $xml_not_well_formed = $notwellformed->fetchrow_arrayref()->[0];
+
+        my $skip_reason;
+        if ($deleted eq 1) { $skip_reason = 'deleted'; }
+        if ($edited_after_cutoff eq 1) { $skip_reason = 'edited after cutoff'; }
+        if ($xml_not_well_formed eq 1) { $skip_reason = 'xml not well formed'; }
+
         $dbh->begin_work;
-        $dbh->do(qq{
-            UPDATE biblio.record_entry a
-            SET marc = b.marc
-            FROM $schema.$batch b
-            WHERE a.id = b.bib_id
-            AND bib_id IN (
-                SELECT bib_id
-                FROM $schema.$batch
-                WHERE to_import
-                AND NOT imported
-                ORDER BY bib_id DESC
-                LIMIT 1
-            )
-        });
-        $dbh->do(qq{
-            UPDATE $schema.$batch
-            SET imported = TRUE
-            WHERE bib_id IN (
-                SELECT bib_id
-                FROM $schema.$batch
-                WHERE to_import
-                AND NOT imported
-                ORDER BY bib_id DESC
-                LIMIT 1
-            )
-        });
+        if ($skip_reason) {
+            $dbh->do(qq{
+                UPDATE $schema.$batch
+                SET to_import = FALSE, skip_reason = \'$skip_reason\'
+                WHERE bib_id = $target_bib_id
+            })
+        } else {
+            $dbh->do(qq{
+                UPDATE biblio.record_entry a
+                SET marc = b.marc
+                FROM $schema.$batch b
+                WHERE a.id = b.bib_id
+                AND bib_id = $target_bib_id
+            });
+
+            $dbh->do(qq{
+                UPDATE $schema.$batch
+                SET imported = TRUE
+                WHERE bib_id = $target_bib_id
+            });
+            sleep $wait;
+        }
         $dbh->commit;
-        sleep $wait;
     }
 }
 
@@ -961,7 +950,7 @@ sub handle_report {
         };
         $sth = $dbh->prepare($query);
         $sth->execute();
-        print "Auths Record Count\tImported\tLinked\tSkip Reason\n";
+        print "Auths Record Count\tImported\tSkip Reason\n";
         while (@outputa = $sth->fetchrow_array) {
             print join("\t\t", @outputa), "\n";
         }
