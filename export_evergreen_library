@@ -219,6 +219,7 @@ function export_billings {
     export_table_xact_subset money.billing xact $outdir/patron_bills
     export_table_xact_subset money.payment xact $outdir/patron_bills
     export_table_patron_subset money.grocery usr $outdir/patron_bills
+    export_table_patron_subset money.materialized_billable_xact_summary usr $outdir/patron_bills
 }
 
 function export_serials {
