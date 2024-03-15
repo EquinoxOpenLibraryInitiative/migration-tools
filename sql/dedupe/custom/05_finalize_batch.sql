@@ -197,10 +197,10 @@ UPDATE dedupe_batch SET search_format_str = ARRAY_TO_STRING(search_format,',');
 UPDATE
     dedupe_batch
 SET
-    title = clean_title(o_title,'primary'),
-	subtitle = clean_title(o_subtitle,'sub'),
-	titlepart = clean_title(o_titlepart,'part'),
-	titlepartname = clean_title(o_titlepartname,'partname'),
+    title = clean_title(o_title),
+	subtitle = clean_title(o_subtitle),
+	titlepart = clean_title(o_titlepart),
+	titlepartname = clean_title(o_titlepartname),
     author = clean_author(o_author)
 ;
 

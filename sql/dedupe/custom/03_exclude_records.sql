@@ -1,7 +1,7 @@
 \timing on
 
 DROP TABLE IF EXISTS exclude_from_batch;
-CREATE TABLE exclude_from_batch (record BIGINT, reason TEXT);
+CREATE TABLE exclude_from_batch (record BIGINT, staged BOOLEAN DEFAULT FALSE, reason TEXT);
 
 INSERT INTO exclude_from_batch (record,reason) 
 SELECT record, 'has parts' FROM biblio.monograph_part WHERE NOT deleted

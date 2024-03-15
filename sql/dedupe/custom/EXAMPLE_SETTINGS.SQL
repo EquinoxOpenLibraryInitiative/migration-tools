@@ -37,6 +37,7 @@ INSERT INTO dedupe_features (name, org, value) VALUES ('derived sf on blu-ray', 
 INSERT INTO dedupe_features (name, org, value) VALUES ('merge tacs isbn', 'EXAMPLELIB', 'TRUE');
 INSERT INTO dedupe_features (name, org, value) VALUES ('merge tacs issn', 'EXAMPLELIB', 'TRUE');
 INSERT INTO dedupe_features (name, org, value) VALUES ('merge tacs upc', 'EXAMPLELIB', 'TRUE');
+INSERT INTO dedupe_features (name, org, value) VALUES ('merge tacs oclc', 'EXAMPLELIB', 'TRUE');
 INSERT INTO dedupe_features (name, org, value) VALUES ('merge tacs pubdate', 'EXAMPLELIB', 'TRUE');
 INSERT INTO dedupe_features (name, org, value) VALUES ('merge authorless av', 'EXAMPLELIB', 'TRUE');
 INSERT INTO dedupe_features (name, org, value) VALUES ('merge tac manga', 'EXAMPLELIB', 'TRUE');

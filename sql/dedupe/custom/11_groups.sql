@@ -1,13 +1,13 @@
 DROP TABLE IF EXISTS groups;
-CREATE TABLE groups (id SERIAL, records BIGINT[], pairs INTEGER [], match_set TEXT, merge_sets TEXT[],
+CREATE TABLE groups (id SERIAL, records BIGINT[], pairs INTEGER [], title TEXT, merge_sets TEXT[],
 								lead_record BIGINT, lead_selected BOOLEAN DEFAULT FALSE, score INTEGER, done BOOLEAN DEFAULT FALSE);
 CREATE INDEX dedupe_groups_records_x ON groups USING GIN (records);
-CREATE INDEX dedupe_groups_match_set_x ON groups (match_set);
+CREATE INDEX dedupe_groups_title_x ON groups (title);
 
 \x off
 \t on
 \o group_pairs.sql
-SELECT 'SELECT * FROM group_pairs(' || id || ');' FROM pairs ORDER BY id;
+SELECT 'SELECT * FROM group_pairs(' || id || ');' FROM pairs WHERE merge_set IS NOT NULL ORDER BY id;
 \o
 \t off
 \i group_pairs.sql;
