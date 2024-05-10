@@ -18,6 +18,7 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 01-marc.sql:migration_tools.get_marc_tags_filtered
 # 01-marc.sql:migration_tools.insert_tags
 # 01-marc.sql:migration_tools.make_stub_bib
+# 01-marc.sql:migration_tools.marc_diff
 # 01-marc.sql:migration_tools.marc_parses
 # 01-marc.sql:migration_tools.marc_set_tag
 # 01-marc.sql:migration_tools.merge_marc_fields
@@ -131,6 +132,7 @@ grep -i 'CREATE OR REPLACE FUNCTION' *.sql | perl -ne 'if (/^(.+?):.*(migration_
 # 09-misc.sql:migration_tools.is_blank
 # 09-misc.sql:migration_tools.null_empty_columns
 # 09-misc.sql:migration_tools.null_empty_lcolumns
+# 09-misc.sql:migration_tools.safer_truncate
 # 10-staging.sql:migration_tools.simple_import_new_rows_by_value
 # 10-staging.sql:migration_tools.split_rows_on_column_with_delimiter
 # 10-staging.sql:migration_tools.stage_not_applicable_asset_stat_cats
