@@ -1,3 +1,42 @@
+CREATE OR REPLACE FUNCTION migration_tools.marc_diff (marc1 TEXT, marc2 TEXT)
+ RETURNS TEXT
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+
+use MARC::Record;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+use Text::Diff;
+
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml1 = shift;
+my $marc_xml2 = shift;
+my $marc1;
+my $marc2;
+
+eval {
+    $marc1 = MARC::Record->new_from_xml($marc_xml1);
+};
+if ($@) {
+    return "ERROR: Could not parse first MARC record: $@";
+}
+eval {
+    $marc2 = MARC::Record->new_from_xml($marc_xml2);
+};
+if ($@) {
+    return "ERROR: Could not parse second MARC record: $@";
+}
+
+
+my $diff = diff(\($marc1->as_formatted), \($marc2->as_formatted));
+
+return $diff;
+
+$function$;
+
 DROP FUNCTION IF EXISTS migration_tools.strip_subfield(TEXT,CHAR(3),CHAR(1));
 CREATE OR REPLACE FUNCTION migration_tools.strip_subfield(marc TEXT, tag CHAR(3), subfield CHAR(1))
  RETURNS TEXT
