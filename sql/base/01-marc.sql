@@ -1053,3 +1053,65 @@ CREATE OR REPLACE FUNCTION migration_tools.marc_set_tag (TEXT, TEXT, TEXT) RETUR
     }
     return $marc->as_xml_record();
 $$ LANGUAGE PLPERLU STABLE;
+
+CREATE OR REPLACE FUNCTION migration_tools.remove_sf9_qualifying_match(marc_xml text, qualifying_sfu text, qualifying_sf9 text, force text DEFAULT 'true'::text)
+ RETURNS text
+ LANGUAGE plperlu
+AS $function$
+use strict;
+use warnings;
+use MARC::Record;
+use MARC::Field;
+use MARC::File::XML (BinaryEncoding => 'utf8');
+
+binmode(STDOUT, ':utf8');
+binmode(STDERR, ':utf8');
+
+my $marc_xml = shift;
+my $qualifying_sfu = shift;
+my $qualifying_sf9 = shift;
+my $force = shift;
+
+$marc_xml =~ s/(<leader>.........)./${1}a/;
+eval {
+    $marc_xml = MARC::Record->new_from_xml($marc_xml);
+};
+if ($@) {
+    #elog("could not parse $bibid: $@\n");
+    import MARC::File::XML (BinaryEncoding => 'utf8');
+    return $marc_xml;
+}
+
+my @uris = $marc_xml->field('856');
+return $marc_xml unless @uris;
+
+$qualifying_sfu =~ s/^\s+|\s+$//g;
+$qualifying_sfu = lc($qualifying_sfu);
+
+$qualifying_sf9 =~ s/^\s+|\s+$//g;
+$qualifying_sf9 = lc($qualifying_sf9);
+
+foreach my $field (@uris) {
+    my @us = $field->subfield('u');
+    my @nines = $field->subfield('9');
+    my $ind1 = $field->indicator('1');
+    my $ind2 = $field->indicator('2');
+    my $clean_sf9;
+    if ($ind1 ne '1' && $ind1 ne '4' && $force eq 'true') { $field->set_indicator(1,'4'); }
+    if ($ind2 ne '0' && $ind2 ne '1' && $force eq 'true') { $field->set_indicator(2,'0'); }
+    foreach my $u (@us) {
+        if ($u =~ m/($qualifying_sfu)/) { 
+            foreach my $nine (@nines) {
+                $clean_sf9 = $nine;
+                $clean_sf9 =~ s/^\s+|\s+$//g;
+                $clean_sf9 = lc($clean_sf9);        
+                if ($clean_sf9 =~ m/($qualifying_sf9)/) { $field->delete_subfield(code => '9', match => qr/^$nine/); }
+            }   
+        }
+    }
+}
+return $marc_xml->as_xml_record();
+
+$function$
+;
+
