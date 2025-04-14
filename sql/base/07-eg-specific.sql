@@ -160,53 +160,42 @@ LANGUAGE PLPGSQL;
 -- make sure legacy function is gone 
 DROP FUNCTION IF EXISTS migration_tools.create_staff_user (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 
-CREATE OR REPLACE FUNCTION migration_tools.create_staff_user(
-    pbarcode TEXT,
-    username TEXT,
-    password TEXT,
-    org TEXT,
-    perm_group TEXT,
-    first_name TEXT DEFAULT '',
-    last_name TEXT DEFAULT '',
-    secondary_profiles TEXT[] DEFAULT NULL,
-    working_ous TEXT[] DEFAULT NULL
-) RETURNS INTEGER AS $func$
-DECLARE 
-	au_id INTEGER;
+REATE OR REPLACE FUNCTION migration_tools.create_staff_user(pbarcode text, username text, password text, org text, perm_group text, first_name text DEFAULT ''::text, last_name text DEFAULT ''::text, secondary_profiles text[] DEFAULT NULL::text[], working_ous text[] DEFAULT NULL::text[])
+ RETURNS integer
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    au_id INTEGER;
     acard_id INTEGER;
-	profile_name TEXT;
-	org_name TEXT;
+    profile_name TEXT;
+    org_name TEXT;
 BEGIN
-	
-	SELECT id FROM actor.usr WHERE usrname = username INTO au_id;
+
+    SELECT id FROM actor.usr WHERE usrname = username INTO au_id;
     SELECT id FROM actor.card WHERE barcode = pbarcode INTO acard_id;
 
-	IF au_id IS NOT NULL THEN 
-		RETURN -1;
-	END IF;
-	IF acard_id IS NOT NULL THEN 
-		RETURN -2;
-	END IF;
+    IF au_id IS NOT NULL THEN
+        RAISE NOTICE 'failing username is %', username;
+        RETURN -1;
+    END IF;
+    IF acard_id IS NOT NULL THEN
+        RAISE NOTICE 'failing card number is %', pbarcode;
+        RETURN -2;
+    END IF;
 
-	SELECT * FROM migration_tools.create_user(pbarcode,username,password,org,perm_group,first_name,last_name) INTO au_id;
+    SELECT * FROM migration_tools.create_user(pbarcode,username,password,org,perm_group,first_name,last_name) INTO au_id;
 
-    --clean arrays 
-    working_ous := migration_tools.anyarray_uniq(migration_tools.anyarray_remove_null(working_ous));
-    secondary_profiles := migration_tools.anyarray_uniq(migration_tools.anyarray_remove_null(secondary_profiles));
+    FOR org_name IN SELECT UNNEST(working_ous) LOOP
+        INSERT INTO permission.usr_work_ou_map (usr,work_ou) SELECT au_id, id FROM actor.org_unit WHERE shortname = BTRIM(org_name);
+    END LOOP;
 
-	FOR org_name IN SELECT UNNEST(working_ous) LOOP
-        INSERT INTO permission.usr_work_ou_map (usr,work_ou) SELECT au_id, id FROM actor.org_unit WHERE shortname = org_name;	
-	END LOOP;
+    FOR profile_name IN SELECT UNNEST(secondary_profiles) LOOP
+        INSERT INTO permission.usr_grp_map (usr,grp) SELECT au_id, id FROM permission.grp_tree WHERE LOWER(name) = LOWER(BTRIM(profile_name));
+    END LOOP;
 
-	FOR profile_name IN SELECT UNNEST(secondary_profiles) LOOP
-		INSERT INTO permission.usr_grp_map (usr,grp) SELECT au_id, id FROM permission.grp_tree WHERE name = profile_name;
-	END LOOP;
-
-    RETURN au_id; 
-END   
-$func$
-LANGUAGE PLPGSQL;
-
+    RETURN au_id;
+END
+$function$;
 
 -- FIXME: testing for STAFF_LOGIN perm is probably better
 CREATE OR REPLACE FUNCTION migration_tools.is_staff_profile (INT) RETURNS BOOLEAN AS $$
