@@ -47,9 +47,6 @@ DELETE FROM actor.usr_setting WHERE usr IN
 DELETE FROM actor.usr_standing_penalty WHERE usr IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 
-DELETE FROM actor.usr_standing_penalty WHERE usr_message IN 
-(SELECT id FROM actor.usr_message WHERE sending_lib IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname in :ou_to_del));
-
 DELETE FROM actor.card WHERE usr IN
 (SELECT id FROM actor.usr WHERE home_ou IN (SELECT (actor.org_unit_descendants(id)).id from actor.org_unit where shortname = :ou_to_del));
 UPDATE actor.usr SET card = NULL
