@@ -160,7 +160,7 @@ LANGUAGE PLPGSQL;
 -- make sure legacy function is gone 
 DROP FUNCTION IF EXISTS migration_tools.create_staff_user (TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 
-REATE OR REPLACE FUNCTION migration_tools.create_staff_user(pbarcode text, username text, password text, org text, perm_group text, first_name text DEFAULT ''::text, last_name text DEFAULT ''::text, secondary_profiles text[] DEFAULT NULL::text[], working_ous text[] DEFAULT NULL::text[])
+CREATE OR REPLACE FUNCTION migration_tools.create_staff_user(pbarcode text, username text, password text, org text, perm_group text, first_name text DEFAULT ''::text, last_name text DEFAULT ''::text, secondary_profiles text[] DEFAULT NULL::text[], working_ous text[] DEFAULT NULL::text[])
  RETURNS integer
  LANGUAGE plpgsql
 AS $function$
