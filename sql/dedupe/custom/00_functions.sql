@@ -1814,9 +1814,9 @@ DECLARE
 BEGIN
     SELECT EXISTS (SELECT 1 FROM dedupe_features WHERE name = 'dedupe_type' AND value IN ('subset','migration')) 
         INTO migration;
-    SELECT SUM(ARRAY_LENGTH(records,1)) FROM groups INTO subordinates;
+    SELECT COUNT(*) FROM m_biblio_record_entry_legacy WHERE x_merge_to IS NOT NULL INTO subordinates;
     IF migration = true THEN 
-        SELECT COUNT(*) FROM m_biblio_record_entry_legacy WHERE x_migrate INTO pool;
+        SELECT COUNT(*) FROM m_biblio_record_entry_legacy INTO pool;
     ELSE 
         SELECT COUNT(*) FROM biblio.record_entry WHERE NOT deleted INTO pool;
     END IF;
