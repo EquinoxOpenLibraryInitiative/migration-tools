@@ -73,6 +73,7 @@ SET subtitle = CASE
 FROM dedupe_batch a, dedupe_batch b
 WHERE p.records[1] = a.record AND p.records[2] = b.record;
 
+/* old author match
 UPDATE pairs p
 SET author = CASE
     WHEN (a.author = b.author) THEN TRUE
@@ -81,6 +82,15 @@ SET author = CASE
     END
 FROM dedupe_batch a, dedupe_batch b
 WHERE p.records[1] = a.record AND p.records[2] = b.record;
+*/
+
+UPDATE pairs p
+SET author = determine_author_array_match(a.author_array,b.author_array)
+FROM dedupe_batch a, dedupe_batch b
+WHERE p.records[1] = a.record AND p.records[2] = b.record
+    AND ARRAY_LENGTH(a.author_array,1) > 0 
+    AND ARRAY_LENGTH(b.author_array,1) > 0 
+;
 
 UPDATE pairs p
 SET search_format_str = CASE

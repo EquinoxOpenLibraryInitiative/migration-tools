@@ -15,21 +15,38 @@ SELECT 'SELECT * FROM vivisect_record(' || record || ',''' || (SELECT * FROM get
 \i vivisect_records.sql;
 
 -- if all records are marked as large print in call number or shelving location then make the bib large print
+-- this has gotten really, really slow 
+-- so breaking it up to make more viable 
+DROP TABLE IF EXISTS acn_list;
+CREATE UNLOGGED TABLE acn_list AS 
+SELECT c.id, CONCAT_WS(' ',p.label,c.label,s.label) AS label 
+FROM asset.call_number c
+JOIN asset.call_number_prefix p on p.id = c.prefix
+JOIN asset.call_number_suffix s on s.id = c.suffix
+WHERE NOT c.deleted;
+
+DELETE FROM acn_list 
+WHERE label !~* 'large print' 
+    AND label !~* ' lp '
+    AND label !~* '^lp '
+    AND label !~* ' lp$'
+;   
+CREATE INDEX acn_list_id ON acn_list (id);
+
+DROP TABLE IF EXISTS acl_list;
+CREATE TABLE acl_list AS 
+SELECT id FROM asset.copy_location 
+WHERE NOT deleted 
+    AND (name ~* 'large print' OR name ~* ' lp ' OR name ~* '^lp ' OR name ~* ' lp$')
+;
+
 DROP TABLE IF EXISTS bib_acp_lp_map;
-CREATE UNLOGGED TABLE bib_acp_lp_map AS 
-WITH acl_list AS (SELECT id FROM asset.copy_location WHERE name ~* 'large print' OR name ~* ' lp ' OR name ~* '^lp ' OR name ~* ' lp$')
-, acn_list AS (SELECT c.id FROM asset.call_number c 
-    JOIN asset.call_number_prefix p on p.id = c.prefix 
-    JOIN asset.call_number_suffix s on s.id = c.suffix 
-    WHERE CONCAT_WS(' ',p.label,c.label,s.label) ~* 'large print'
-    OR CONCAT_WS(' ',p.label,c.label,s.label) ~* ' lp '
-    OR CONCAT_WS(' ',p.label,c.label,s.label) ~* '^lp '
-    OR CONCAT_WS(' ',p.label,c.label,s.label) ~* ' lp$'
-)
-SELECT acn.record AS bre_id, acp.id AS acp_id 
+CREATE UNLOGGED TABLE bib_acp_lp_map AS
+SELECT acn.record AS bre_id, acp.id AS acp_id
 FROM asset.copy acp JOIN asset.call_number acn ON acn.id = acp.call_number
 WHERE NOT acp.deleted AND (acp.location IN (SELECT id FROM acl_list) OR acp.call_number IN (SELECT id FROM acn_list))
 ;
+
 ALTER TABLE bib_acp_lp_map ADD COLUMN has_non_lp BOOLEAN DEFAULT FALSE;
 UPDATE bib_acp_lp_map SET has_non_lp = TRUE WHERE bre_id IN (
   WITH all_acps AS (
@@ -194,15 +211,18 @@ UPDATE dedupe_batch SET issn_values = ANYARRAY_SORT(ANYARRAY_UNIQ(ARRAY_REMOVE(i
 
 UPDATE dedupe_batch SET search_format_str = ARRAY_TO_STRING(search_format,',');
 
-UPDATE
-    dedupe_batch
-SET
-    title = clean_title(o_title),
+UPDATE dedupe_batch
+SET title = clean_title(o_title),
 	subtitle = clean_title(o_subtitle),
 	titlepart = clean_title(o_titlepart),
 	titlepartname = clean_title(o_titlepartname),
     author = clean_author(o_author)
 ;
+
+UPDATE dedupe_batch 
+SET author_array = STRING_TO_ARRAY(REPLACE(BTRIM(o_author),'  ',' '),' ');
+
+UPDATE dedupe_batch SET author_array = clean_author_elements(author_array);
 
 SELECT * FROM find_manga_records();
 
@@ -210,4 +230,6 @@ SELECT * FROM find_manga_records();
 
 DROP TABLE IF EXISTS bib_acp_lp_map;
 DROP TABLE IF EXISTS copy_level_strings;
+DROP TABLE IF EXISTS acl_list;
+DROP TABLE IF EXISTS acn_list;
 ALTER TABLE dedupe_batch SET LOGGED; 

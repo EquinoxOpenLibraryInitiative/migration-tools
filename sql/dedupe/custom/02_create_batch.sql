@@ -41,7 +41,7 @@ CREATE UNLOGGED TABLE dedupe_batch (
 		populated BOOLEAN DEFAULT FALSE,  
 		isbn_values TEXT[], upc_values TEXT[], issn_values TEXT[], avdisc_flag BOOLEAN DEFAULT FALSE,
 		search_format_str TEXT,
-        title TEXT, o_title TEXT, subtitle TEXT, o_subtitle TEXT, author TEXT, o_author TEXT,
+        title TEXT, o_title TEXT, subtitle TEXT, o_subtitle TEXT, author TEXT, author_array TEXT[], o_author TEXT,
 		titlepart TEXT, o_titlepart TEXT, titlepartname TEXT, o_titlepartname TEXT,
 		pubdate TEXT[], rda_pubdate TEXT[], all_pubdates TEXT[],  
 		publisher TEXT[], rda_publisher TEXT[], all_publishers TEXT[], manga BOOLEAN DEFAULT FALSE, 
