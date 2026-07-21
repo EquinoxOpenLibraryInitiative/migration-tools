@@ -2120,6 +2120,47 @@ BEGIN
 END
 $function$ LANGUAGE plpgsql;
 
+-- alternate version: replaced row-by-row with SQL logic
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_asset_barcode_collisions3(migration_schema TEXT) RETURNS VOID AS $function$
+DECLARE
+    row_count NUMERIC;
+    internal_collision_count NUMERIC := 0;
+    incumbent_collision_count NUMERIC := 0;
+BEGIN
+    -- Dynamically set search_path locally for the current transaction
+    PERFORM set_config('search_path', quote_ident(migration_schema) || ', asset, public', true);
+
+    -- 1. Internal collisions: barcodes duplicated within m_asset_copy_legacy
+    UPDATE m_asset_copy_legacy
+    SET barcode = migration_schema || '_internal_collision_' || id || '_' || barcode
+    WHERE id IN (
+        SELECT id FROM m_asset_copy_legacy
+        WHERE x_migrate AND barcode IN (
+            SELECT barcode FROM m_asset_copy_legacy
+            WHERE x_migrate
+            GROUP BY 1 HAVING COUNT(*) > 1
+        )
+    );
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+    internal_collision_count := row_count;
+    RAISE INFO '% internal collisions', internal_collision_count;
+
+    -- 2. Incumbent collisions: barcodes that collide with active asset.copy rows
+    UPDATE m_asset_copy_legacy
+    SET barcode = migration_schema || '_' || barcode
+    WHERE x_migrate
+      AND barcode IN (
+        SELECT barcode
+        FROM asset.copy
+        WHERE deleted IS FALSE
+    );
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+    incumbent_collision_count := row_count;
+    RAISE INFO '% incumbent collisions', incumbent_collision_count;
+END;
+$function$ LANGUAGE plpgsql;
+
 -- alternate version: convenience function for handling patron barcode/usrname collisions in m_actor_usr_legacy
 -- this should be ran prior to populating m_actor_card
 
@@ -2167,6 +2208,57 @@ BEGIN
     END LOOP;
     RAISE INFO '% incumbent usrname collisions (post barcode collision munging)', incumbent_usrname_collision_count;
 END
+$function$ LANGUAGE plpgsql;
+
+-- alternate version: replaced row-by-row with SQL logic
+
+CREATE OR REPLACE FUNCTION migration_tools.handle_actor_barcode_collisions3(migration_schema TEXT) RETURNS VOID AS $function$
+DECLARE
+    row_count NUMERIC;
+    internal_collision_count NUMERIC := 0;
+    incumbent_barcode_collision_count NUMERIC := 0;
+    incumbent_usrname_collision_count NUMERIC := 0;
+BEGIN
+    -- Dynamically set search_path locally for the current transaction
+    PERFORM set_config('search_path', quote_ident(migration_schema) || ', actor, public', true);
+
+    -- 1. Internal collisions
+    UPDATE m_actor_usr_legacy
+    SET usrname = migration_schema || '_internal_collision_' || id || '_' || usrname
+    WHERE id IN (
+        SELECT id FROM m_actor_usr_legacy
+        WHERE x_migrate AND usrname IN (
+            SELECT usrname FROM m_actor_usr_legacy
+            WHERE x_migrate
+            GROUP BY 1 HAVING COUNT(*) > 1
+        )
+    );
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+    internal_collision_count := row_count;
+    RAISE INFO '% internal usrname/barcode collisions', internal_collision_count;
+
+    -- 2. Incumbent barcode collisions
+    UPDATE m_actor_usr_legacy
+    SET usrname = migration_schema || '_' || usrname
+    WHERE x_migrate
+      AND usrname IN (
+        SELECT barcode FROM actor.card
+    );
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+    incumbent_barcode_collision_count := row_count;
+    RAISE INFO '% incumbent barcode collisions', incumbent_barcode_collision_count;
+
+    -- 3. Incumbent usrname collisions
+    UPDATE m_actor_usr_legacy
+    SET usrname = migration_schema || '_' || usrname
+    WHERE x_migrate
+      AND usrname IN (
+        SELECT usrname FROM actor.usr
+    );
+    GET DIAGNOSTICS row_count = ROW_COUNT;
+    incumbent_usrname_collision_count := row_count;
+    RAISE INFO '% incumbent usrname collisions (post barcode collision munging)', incumbent_usrname_collision_count;
+END;
 $function$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION migration_tools.is_circ_rule_safe_to_delete( test_matchpoint INTEGER ) RETURNS BOOLEAN AS $func$
